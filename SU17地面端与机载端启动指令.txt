@@ -1,0 +1,169 @@
+SU17 竞赛系统启动指令（当前单机 UAV1 测试）
+================================================
+
+固定地址
+--------
+地面 Windows IP：192.168.1.123
+UAV1 机载计算机 IP：192.168.1.88
+地面网页端口：8000
+无人机 TCP 控制与遥测端口：56100
+
+重要说明
+--------
+1. 启动顺序：地面端服务器 -> UAV1 机载端服务器 -> 浏览器前端。
+2. 地面端的 AuthToken 和机载端的 auth_token 必须完全相同。
+3. enable_motion:=true 会允许程序真实控制飞机；实飞前必须确认场地、定位、遥控器和人工接管方式。
+4. 数据采集功能已经集成在网页中，不需要单独启动采集程序。
+5. 规划范围始终为 UAV1～UAV6；ActiveUavIds 只决定本次实际分派、预检和控制哪些无人机。
+6. 搜索区域右下角为原点，竖直向上为 X 正轴，水平向左为 Y 正轴；3m×3m 区域范围为 X=0～3m、Y=0～3m。
+7. 实验室高度方案不检查起飞电量是否达到60%；竞赛高度方案仍检查。飞行中的30%低电量自动返航在两种方案下都保留。
+8. 六机状态卡片可以点击；弹窗显示该机主摄视频、六机规划/实时位置/速度矢量以及该机实时数据。
+9. 视频使用独立的浏览器视频地址，不经过56100控制与遥测TCP通道。未配置视频不影响飞行控制。
+
+
+一、启动地面端服务器（Windows PowerShell）
+------------------------------------------
+
+1. 打开一个新的 Windows PowerShell。
+
+2. 进入项目根目录：
+
+cd F:\Projects\ZhiXin\competition_development
+
+3. 设置本次使用的共享令牌。把下面引号内的内容改成你实际使用的令牌：
+
+$AuthToken = "在这里填写共享AuthToken"
+
+例如：
+
+$AuthToken = "YOUR_AUTH_TOKEN"
+
+4. 以“本次仅启用 UAV1”模式启动多机地面后端：
+
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File ".\tools\start_competition_backend_tcp.ps1" `
+  -ActiveUavIds "1" `
+  -AuthToken $AuthToken `
+  -RecordingSshHosts "1=192.168.1.88" `
+  -ConfirmLiveConfig
+
+如果已经有 UAV1 主摄的 HTTP MJPEG/浏览器视频地址，改用下面的完整启动命令：
+
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File ".\tools\start_competition_backend_tcp.ps1" `
+  -ActiveUavIds "1" `
+  -AuthToken $AuthToken `
+  -VideoSources "1=http://192.168.1.88:8080/stream?topic=/uav1/gimbal/image_original" `
+  -RecordingSshHosts "1=192.168.1.88" `
+  -ConfirmLiveConfig
+
+注意：这个示例是 ROS web_video_server 的常见地址格式，只有机载端对应视频服务已经启动时才有效。
+PrometheusGroundStation 的 RTSP/RTMP 或 Qt 视频窗口不能直接作为浏览器地址，需先转换为 HTTP 视频源。
+
+正常启动后应看到：
+
+Web UI:      http://127.0.0.1:8000/
+UAV TCP:     0.0.0.0:56100
+Active UAVs: 1
+Live config: CONFIRMED
+
+保持这个 PowerShell 窗口运行，不要关闭。
+
+
+二、启动 UAV1 机载端服务器（机载 Ubuntu 终端）
+------------------------------------------------
+
+1. 打开机载计算机终端。
+
+2. 依次加载 ROS 和工作空间环境：
+
+cd /home/amov/competition_development
+source /opt/ros/noetic/setup.bash
+source /home/amov/su17_experiment/devel/setup.bash
+source devel/setup.bash
+
+3. 启动 UAV1 任务执行器。
+
+注意：下面 auth_token:= 后面的值必须替换为 Windows 地面端使用的同一个 AuthToken。
+
+roslaunch su17_competition_executor onboard_task_executor.launch uav_id:=1 transport:=tcp ground_host:=192.168.1.123 ground_port:=56100 auth_token:=在这里填写共享AuthToken enable_motion:=true log_full_task:=true
+
+使用上面的示例令牌时，完整命令为：
+
+roslaunch su17_competition_executor onboard_task_executor.launch uav_id:=1 transport:=tcp ground_host:=192.168.1.123 ground_port:=56100 auth_token:=YOUR_AUTH_TOKEN enable_motion:=true log_full_task:=true
+
+保持这个 Ubuntu 终端运行，不要关闭。
+
+如果只想验证连接、遥测和任务接收，不允许飞机运动，把：
+
+enable_motion:=true
+
+改为：
+
+enable_motion:=false
+
+
+三、打开前端界面（Windows PowerShell）
+--------------------------------------
+
+地面后端启动成功后，在另一个 Windows PowerShell 执行：
+
+Start-Process "http://127.0.0.1:8000/"
+
+也可以直接在浏览器地址栏输入：
+
+http://127.0.0.1:8000/
+
+前端不是独立服务器，它由第一步启动的地面后端直接提供。因此不需要再运行 npm、Node.js 或其他前端命令。
+
+
+四、网页中的操作顺序
+--------------------
+
+1. 确认 UAV1 显示“已连接”，并且能看到电量、位置和定位状态。
+2. 点击“规划并分派”。
+3. 规划图会显示六机完整区域；UAV2～UAV6 标记为“仅规划，本次不执行”。
+4. 等待 UAV1 卡片中的“任务分派”显示“已确认”。
+5. 如需记录飞行数据，点击“开始采集”。
+6. 按安全流程解锁飞机，并切换到已经验证的 COMMAND_CONTROL 状态。
+7. 点击“一键起飞预检”。
+8. 全部检查通过后，再点击“确认起飞”。
+   确认起飞后，规划图中的实线为规划航线、虚线为实际XY轨迹、圆点和标签为无人机实时XY坐标、箭头为实时XY速度矢量。
+   点击任一无人机状态卡片，可打开大窗口查看该机视频、六机规划图和该机实时XYZ位置/速度/执行阶段。
+9. 飞机降落并锁定后，点击“停止并生成报告”。
+10. 等待报告生成完成，然后点击“打开报告”。
+11. 如需释放机载硬盘空间，点击“删除机载备份”后会直接删除本次已校验的备份，不再要求输入 DELETE。
+
+
+五、关闭顺序
+------------
+
+确认飞机已经降落并锁定后：
+
+1. 如果正在采集，先在网页点击“停止并生成报告”，等待处理完成。
+2. 在 UAV1 机载任务执行器终端按 Ctrl+C。
+3. 在 Windows 地面后端终端按 Ctrl+C。
+4. 关闭飞机电源。
+5. 最后关闭遥控器。
+
+
+六、常见问题
+------------
+
+1. 网页提示“没有收到遥测”：
+   检查机载 roslaunch 是否真正启动，以及两端 AuthToken 是否一致。
+
+2. 机载终端出现“>”并一直等待：
+   说明上一行命令末尾写了反斜杠但没有继续输入。按 Ctrl+C 取消，然后使用本文件提供的单行 roslaunch 命令。
+
+3. 点击“开始采集”提示 SSH key login is not ready：
+   说明 Windows 到 UAV1 的 SSH 密钥登录尚未配置成功。先执行：
+
+ssh -o BatchMode=yes -o ConnectTimeout=5 amov@192.168.1.88 "echo SSH_KEY_OK"
+
+只有无需输入密码并直接输出 SSH_KEY_OK，网页采集功能才能自动启动、停止、复制和删除机载备份。
+
+4. 网页打不开：
+   确认地面后端窗口仍在运行，并检查：
+
+http://127.0.0.1:8000/health

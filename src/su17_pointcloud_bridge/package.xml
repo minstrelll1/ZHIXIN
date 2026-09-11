@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>su17_pointcloud_bridge</name>
+  <version>0.1.0</version>
+  <description>Decode Prometheus PCL octree-compressed point clouds for the competition ground station.</description>
+  <maintainer email="amov@example.com">competition development</maintainer>
+  <license>MIT</license>
+  <buildtool_depend>catkin</buildtool_depend>
+  <depend>roscpp</depend>
+  <depend>sensor_msgs</depend>
+  <depend>pcl_ros</depend>
+  <depend>pcl_conversions</depend>
+</package>

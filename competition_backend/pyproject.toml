@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "su17-competition-backend"
+version = "0.1.0"
+description = "Six-UAV competition mission orchestration backend"
+requires-python = ">=3.8"
+dependencies = [
+  "fastapi>=0.110,<0.116",
+  "uvicorn[standard]>=0.27,<0.31",
+  "websockets>=10,<18",
+]
+
+[project.optional-dependencies]
+test = ["httpx>=0.26,<0.28"]
+
+[project.scripts]
+su17-competition-backend = "competition_backend.api:run"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["competition_backend*"]
+
+[tool.setuptools.package-data]
+competition_backend = ["web/*.html"]

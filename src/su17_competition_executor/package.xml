@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>su17_competition_executor</name>
+  <version>0.1.0</version>
+  <description>Onboard executor for per-UAV competition search tasks.</description>
+  <maintainer email="amov@todo.todo">amov</maintainer>
+  <license>MIT</license>
+  <buildtool_depend>catkin</buildtool_depend>
+  <depend>rospy</depend>
+  <depend>std_msgs</depend>
+  <depend>prometheus_msgs</depend>
+</package>

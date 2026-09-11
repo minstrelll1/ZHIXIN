@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>su17_image_transfer</name>
+  <version>0.3.0</version>
+  <description>Reliable geotagged target-image transfer from SU17 UAVs to a ground computer.</description>
+
+  <maintainer email="amov@todo.todo">Competition Development Team</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <depend>cv_bridge</depend>
+  <depend>message_filters</depend>
+  <depend>rospy</depend>
+  <depend>sensor_msgs</depend>
+  <depend>std_msgs</depend>
+  <depend>std_srvs</depend>
+  <exec_depend>python3-pil</exec_depend>
+
+  <export/>
+</package>

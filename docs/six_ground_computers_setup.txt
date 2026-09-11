@@ -1,0 +1,79 @@
+SU17 六台地面电脑 / 六架无人机启动模板
+===========================================
+
+一、所有地面电脑的共同配置
+
+1. 厂家配置六台电脑和六套图数传的 IP 后，记录六台地面电脑在交换机上的地址。
+2. 所有地面电脑部署同一份 competition_development 地面项目，并使用同一个 PeerToken；不要修改从无人机拷回的 su17_experiment 源码目录。
+3. 每台电脑的 mediamtx.yml 只配置本机视频路径 uavN：
+
+   paths:
+     uavN:
+       source: rtsp://本机厂家图传地址:端口/test.sdp
+       rtspTransport: tcp
+       sourceOnDemand: false
+
+4. 把下面 GROUND_PC_N_IP 全部换成厂家配置的六台地面电脑地址：
+
+$Peers = "1=http://GROUND_PC_1_IP:8000;2=http://GROUND_PC_2_IP:8000;3=http://GROUND_PC_3_IP:8000;4=http://GROUND_PC_4_IP:8000;5=http://GROUND_PC_5_IP:8000;6=http://GROUND_PC_6_IP:8000"
+
+# 科目三点云：复用 PrometheusGroundStation RViz 所在电脑的本地 ROS 中继。
+# 网页后端只访问 127.0.0.1，不再分别直连机载 IP，避免产生第二份无线点云流。
+$PointCloudSource = "groundstation_relay"
+$PointCloudRelayHost = "127.0.0.1"
+$PointCloudRelayPort = 9090
+$PointCloudRelayUavIds = "1,2,3,4,5,6"
+$PointCloudRelayTopicTemplate = "/uav{uav_id}/octomap_point_cloud_centers/reduce_the_frequency"
+
+# 仅在没有 GroundStation 本机中继时使用 direct 模式并填写机载地址：
+# $PointCloudSource = "onboard"
+# $PointCloudHosts = "1=192.168.1.88;2=192.168.1.89;3=192.168.1.90;4=192.168.1.91;5=192.168.1.92;6=192.168.1.93"
+# $PointCloudTopics = "1=/uav1/octomap_point_cloud_centers/reduce_the_frequency;2=/uav2/octomap_point_cloud_centers/reduce_the_frequency"
+
+二、每台 Windows 地面电脑启动
+
+   cd F:\Projects\ZhiXin\competition_development
+   $AuthToken = "与六台机载执行器相同的令牌"
+   $PeerToken = "仅六台地面电脑共享的令牌"
+
+UAV1 对应电脑：
+   powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\tools\start_competition_backend_tcp.ps1" -LocalUavId 1 -GroundNodeId "ground-uav1" -GroundPeers $Peers -AuthToken $AuthToken -PeerToken $PeerToken -PointCloudSource $PointCloudSource -PointCloudRelayHost $PointCloudRelayHost -PointCloudRelayPort $PointCloudRelayPort -PointCloudRelayUavIds $PointCloudRelayUavIds -PointCloudRelayTopicTemplate $PointCloudRelayTopicTemplate -ImageAuthToken $AuthToken -RecordingSshHosts "1=厂家配置的UAV1机载SSH地址" -ConfirmLiveConfig
+
+UAV2～UAV6 对应电脑执行同一行，只把 LocalUavId 和 GroundNodeId 改为本机编号。
+
+启动脚本自动启动：
+- F:\Applications\mediamtx_v1.20.1_windows_amd64\mediamtx.exe mediamtx.yml
+- 本机图片接收器（56010，只接受本机 UAV ID）
+- 分布式竞赛后端和网页（8000）
+
+三、每架无人机启动
+
+每架机的 uav_id 使用自身编号，ground_host 使用“该机对应地面电脑”的厂家配置 IP；不是临时主控
+电脑的地址。六机 AuthToken 必须与地面启动参数 AuthToken 一致。
+
+   source /opt/ros/noetic/setup.bash
+   source /home/amov/su17_experiment/devel/setup.bash
+   source /home/amov/su17_experiment/devel/setup.bash
+
+   roslaunch su17_competition_executor onboard_task_executor.launch \
+     uav_id:=N local_ros_uav_id:=1 transport:=tcp ground_host:=对应地面电脑IP ground_port:=56100 \
+     auth_token:=同一个AuthToken enable_motion:=true
+
+图片发送节点也只发往对应地面电脑：
+
+   roslaunch su17_image_transfer onboard_image_sender.launch \
+     uav_id:=N local_ros_uav_id:=1 ground_host:=对应地面电脑IP ground_port:=56010 \
+     auth_token:=与地面ImageAuthToken一致的值 \
+     enable_offline_recovery:=true reconcile_after_minutes:=19.0
+
+四、任务操作
+
+1. 打开任意一台电脑的 http://127.0.0.1:8000/，该电脑即可以成为本次主控。
+2. 后端平时持续同步六机连接状态、位置、速度、电量和任务状态。点击规划时直接使用缓存，不再逐台等待网络探测；始终生成六个区域的完整规划，只锁定已连接 UAV 对应的地面节点；未连接 UAV 保留规划但不下发、不参与本次预检。若六架机均未连接，界面仍展示完整规划，但不会取得租约或发送任务，起飞预检会锁定；飞机连接后需要重新点击规划才会分派。
+3. 等六架机全部显示任务已确认后，点击一键起飞预检，再进行确认。
+4. 每架机达到自己的高度后独立开始航线，不等待其他飞机。
+5. 主控电脑自动汇总六架机的目标图片；所有电脑显示六机位置/速度/任务阶段。
+6. 每台电脑只显示本机配对 UAV 的实时视频。
+
+安全说明：同一时刻只在一台电脑操作规划/起飞。软件还有 30 秒主控租约防冲突，但它不能替代
+现场口令和操作员确认。正式带桨测试前先完成无桨联调、定位、坐标原点、返航和急停验证。

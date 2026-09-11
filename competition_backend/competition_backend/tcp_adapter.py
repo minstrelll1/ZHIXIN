@@ -1,0 +1,318 @@
+from __future__ import annotations
+
+import hmac
+import json
+import socket
+import threading
+import time
+from dataclasses import replace
+from typing import Any, Dict, Iterable, Optional, Tuple
+
+from .adapter import FleetAdapter
+from .models import Telemetry
+
+
+PROTOCOL_VERSION = 1
+MAX_MESSAGE_BYTES = 4 * 1024 * 1024
+
+
+class _ClientConnection:
+    def __init__(self, connection: socket.socket, address: Tuple[str, int]) -> None:
+        self.connection = connection
+        self.address = address
+        self.send_lock = threading.Lock()
+
+    def send(self, payload: Dict[str, Any]) -> None:
+        encoded = (
+            json.dumps(payload, ensure_ascii=False, separators=(",", ":")) + "\n"
+        ).encode("utf-8")
+        if len(encoded) > MAX_MESSAGE_BYTES:
+            raise RuntimeError("TCP message exceeds the size limit")
+        with self.send_lock:
+            self.connection.sendall(encoded)
+
+    def close(self) -> None:
+        try:
+            self.connection.shutdown(socket.SHUT_RDWR)
+        except OSError:
+            pass
+        try:
+            self.connection.close()
+        except OSError:
+            pass
+
+
+class TcpFleetAdapter(FleetAdapter):
+    """Cross-platform TCP server used by the Windows ground backend."""
+
+    def __init__(
+        self,
+        uav_ids: Iterable[int],
+        bind_host: str = "0.0.0.0",
+        port: int = 56100,
+        auth_token: str = "",
+    ) -> None:
+        super().__init__()
+        self.uav_ids = set(int(value) for value in uav_ids)
+        self.bind_host = bind_host
+        self.port = int(port)
+        self.auth_token = auth_token
+        self._server: Optional[socket.socket] = None
+        self._stop_event = threading.Event()
+        self._accept_thread: Optional[threading.Thread] = None
+        self._client_threads = []
+        self._lock = threading.RLock()
+        self._clients: Dict[int, _ClientConnection] = {}
+        self._telemetry: Dict[int, Telemetry] = {}
+        self._latest_assignments: Dict[int, Dict[str, Any]] = {}
+
+    @property
+    def bound_port(self) -> int:
+        if self._server is None:
+            return self.port
+        return int(self._server.getsockname()[1])
+
+    @property
+    def connected_uav_ids(self):
+        with self._lock:
+            return sorted(self._clients)
+
+    def telemetry_snapshot(self, uav_id: int) -> Optional[Telemetry]:
+        """Return a copy suitable for publishing to another ground computer."""
+        with self._lock:
+            telemetry = self._telemetry.get(int(uav_id))
+            return replace(telemetry) if telemetry is not None else None
+
+    def forward_command(
+        self, uav_id: int, command_type: str, payload: Dict[str, Any]
+    ) -> None:
+        """Forward an authenticated peer command to this computer's local UAV."""
+        handlers = {
+            "assign_task": self.command_assign_task,
+            "takeoff": self.command_takeoff,
+            "execute_task": self.command_task,
+            "return_home": self.command_return,
+            "restart_executor": lambda uid, data: self._send_command(uid, "restart_executor", data),
+            "restart_takeoff": lambda uid, data: self._send_command(uid, "restart_takeoff", data),
+            "restart_all_programs": lambda uid, data: self._send_command(uid, "restart_all_programs", data),
+        }
+        try:
+            handler = handlers[command_type]
+        except KeyError as error:
+            raise ValueError("unsupported peer command type") from error
+        handler(int(uav_id), dict(payload))
+
+    def start(self) -> None:
+        if self._server is not None:
+            return
+        server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        server.bind((self.bind_host, self.port))
+        server.listen(max(12, len(self.uav_ids) * 2))
+        server.settimeout(0.5)
+        self._server = server
+        self._stop_event.clear()
+        self._accept_thread = threading.Thread(
+            target=self._accept_loop, name="fleet-tcp-accept", daemon=True
+        )
+        self._accept_thread.start()
+
+    def stop(self) -> None:
+        self._stop_event.set()
+        server = self._server
+        self._server = None
+        if server is not None:
+            try:
+                server.close()
+            except OSError:
+                pass
+        with self._lock:
+            clients = list(self._clients.values())
+            self._clients.clear()
+        for client in clients:
+            client.close()
+        if self._accept_thread is not None:
+            self._accept_thread.join(timeout=2.0)
+        for thread in list(self._client_threads):
+            thread.join(timeout=1.0)
+        self._client_threads = []
+
+    def _accept_loop(self) -> None:
+        while not self._stop_event.is_set():
+            try:
+                assert self._server is not None
+                connection, address = self._server.accept()
+            except socket.timeout:
+                continue
+            except (OSError, AssertionError):
+                break
+            connection.settimeout(1.0)
+            thread = threading.Thread(
+                target=self._client_loop,
+                args=(connection, address),
+                name="fleet-tcp-client-{}".format(address[0]),
+                daemon=True,
+            )
+            self._client_threads.append(thread)
+            thread.start()
+
+    def _read_message(self, stream: Any) -> Optional[Dict[str, Any]]:
+        line = stream.readline(MAX_MESSAGE_BYTES + 1)
+        if not line:
+            return None
+        if len(line.encode("utf-8")) > MAX_MESSAGE_BYTES or not line.endswith("\n"):
+            raise ValueError("invalid or oversized TCP message")
+        payload = json.loads(line)
+        if not isinstance(payload, dict):
+            raise ValueError("TCP JSON root must be an object")
+        return payload
+
+    def _client_loop(self, connection: socket.socket, address: Tuple[str, int]) -> None:
+        client = _ClientConnection(connection, address)
+        uav_id: Optional[int] = None
+        try:
+            connection.settimeout(5.0)
+            stream = connection.makefile("r", encoding="utf-8", newline="\n")
+            hello = self._read_message(stream)
+            if hello is None or hello.get("type") != "hello":
+                raise ValueError("first TCP message must be hello")
+            if int(hello.get("protocol_version", -1)) != PROTOCOL_VERSION:
+                raise ValueError("unsupported TCP protocol version")
+            uav_id = int(hello.get("uav_id", -1))
+            if uav_id not in self.uav_ids:
+                raise ValueError("unknown UAV ID")
+            supplied_token = str(hello.get("auth_token", ""))
+            if self.auth_token and not hmac.compare_digest(
+                supplied_token, self.auth_token
+            ):
+                raise ValueError("TCP authentication failed")
+
+            with self._lock:
+                previous = self._clients.get(uav_id)
+                self._clients[uav_id] = client
+                assignment = self._latest_assignments.get(uav_id)
+            if previous is not None and previous is not client:
+                previous.close()
+            client.send(
+                {
+                    "type": "hello_ack",
+                    "uav_id": uav_id,
+                    "protocol_version": PROTOCOL_VERSION,
+                    "server_time": time.time(),
+                }
+            )
+            if assignment is not None:
+                client.send(assignment)
+
+            connection.settimeout(None)
+            while not self._stop_event.is_set():
+                message = self._read_message(stream)
+                if message is None:
+                    break
+                if int(message.get("uav_id", -1)) != uav_id:
+                    raise ValueError("message UAV ID changed after hello")
+                self._handle_message(uav_id, message)
+        except (OSError, ValueError, TypeError, json.JSONDecodeError):
+            pass
+        finally:
+            if uav_id is not None:
+                with self._lock:
+                    if self._clients.get(uav_id) is client:
+                        self._clients.pop(uav_id, None)
+                        telemetry = self._get_telemetry_locked(uav_id)
+                        telemetry.connected = False
+                        telemetry.received_at = time.time()
+                        snapshot = replace(telemetry)
+                    else:
+                        snapshot = None
+                if snapshot is not None:
+                    self.emit_telemetry(snapshot)
+            client.close()
+
+    def _get_telemetry_locked(self, uav_id: int) -> Telemetry:
+        telemetry = self._telemetry.get(uav_id)
+        if telemetry is None:
+            telemetry = Telemetry(uav_id=uav_id, received_at=time.time())
+            self._telemetry[uav_id] = telemetry
+        return telemetry
+
+    def _handle_message(self, uav_id: int, message: Dict[str, Any]) -> None:
+        message_type = message.get("type")
+        with self._lock:
+            telemetry = self._get_telemetry_locked(uav_id)
+            telemetry.received_at = time.time()
+            if message_type == "telemetry":
+                telemetry.connected = bool(message.get("connected", False))
+                telemetry.armed = bool(message.get("armed", False))
+                telemetry.odom_valid = bool(message.get("odom_valid", False))
+                telemetry.failsafe = bool(message.get("failsafe", False))
+                telemetry.control_state = int(message.get("control_state", 0))
+                telemetry.battery_percentage = float(
+                    message.get("battery_percentage", 0.0)
+                )
+                position = [float(value) for value in message["position"]]
+                velocity = [float(value) for value in message["velocity"]]
+                if len(position) != 3 or len(velocity) != 3:
+                    raise ValueError("telemetry position and velocity must have 3 values")
+                telemetry.position = position
+                telemetry.velocity = velocity
+                telemetry.task_phase = str(message.get("task_phase", ""))
+                if "task_complete" in message:
+                    telemetry.task_complete = bool(message["task_complete"])
+                    telemetry.task_assignment_acked = bool(message.get("task_assignment_acked"))
+                    telemetry.task_assignment_mission_id = str(message.get("task_assignment_mission_id", ""))
+                    telemetry.task_assignment_checksum = str(message.get("task_assignment_checksum", ""))
+            elif message_type == "task_status":
+                status = message.get("status", {})
+                if not isinstance(status, dict):
+                    raise ValueError("task_status.status must be an object")
+                state = str(status.get("state", ""))
+                if state in ("completed", "done"):
+                    telemetry.task_complete = True
+                if bool(status.get("task_assignment_acked")) or state in (
+                    "task_received",
+                    "task_assigned",
+                    "accepted",
+                ):
+                    telemetry.task_assignment_acked = True
+                    mission_id = str(status.get("mission_id", ""))
+                    checksum = str(status.get("assignment_checksum", ""))
+                    if mission_id:
+                        telemetry.task_assignment_mission_id = mission_id
+                    if checksum:
+                        telemetry.task_assignment_checksum = checksum
+            elif message_type in ("heartbeat", "hello"):
+                pass
+            else:
+                raise ValueError("unsupported onboard TCP message")
+            snapshot = replace(telemetry)
+        self.emit_telemetry(snapshot)
+
+    def _send_command(self, uav_id: int, command_type: str, payload: Dict[str, Any]) -> None:
+        message = {"type": command_type, **payload, "uav_id": uav_id}
+        with self._lock:
+            client = self._clients.get(uav_id)
+        if client is None:
+            if command_type == "assign_task":
+                return
+            raise RuntimeError("UAV{} TCP link is not connected".format(uav_id))
+        try:
+            client.send(message)
+        except OSError as error:
+            client.close()
+            raise RuntimeError("UAV{} TCP send failed".format(uav_id)) from error
+
+    def command_assign_task(self, uav_id: int, payload: Dict[str, Any]) -> None:
+        message = {"type": "assign_task", **payload, "uav_id": uav_id}
+        with self._lock:
+            self._latest_assignments[uav_id] = message
+        self._send_command(uav_id, "assign_task", payload)
+
+    def command_takeoff(self, uav_id: int, payload: Dict[str, Any]) -> None:
+        self._send_command(uav_id, "takeoff", payload)
+
+    def command_task(self, uav_id: int, payload: Dict[str, Any]) -> None:
+        self._send_command(uav_id, "execute_task", payload)
+
+    def command_return(self, uav_id: int, payload: Dict[str, Any]) -> None:
+        self._send_command(uav_id, "return_home", payload)

@@ -1,0 +1,29 @@
+<launch>
+  <arg name="uav_id" />
+  <arg name="local_ros_uav_id" default="1" />
+  <arg name="ground_host" />
+  <arg name="auth_token" />
+  <arg name="enable_motion" default="true" />
+  <arg name="enable_offline_recovery" default="true" />
+  <arg name="reconcile_after_minutes" default="19.0" />
+
+  <include file="$(find su17_competition_executor)/launch/onboard_task_executor.launch">
+    <arg name="uav_id" value="$(arg uav_id)" />
+    <arg name="local_ros_uav_id" value="$(arg local_ros_uav_id)" />
+    <arg name="transport" value="tcp" />
+    <arg name="ground_host" value="$(arg ground_host)" />
+    <arg name="ground_port" value="56100" />
+    <arg name="auth_token" value="$(arg auth_token)" />
+    <arg name="enable_motion" value="$(arg enable_motion)" />
+  </include>
+
+  <include file="$(find su17_image_transfer)/launch/onboard_image_sender.launch">
+    <arg name="uav_id" value="$(arg uav_id)" />
+    <arg name="local_ros_uav_id" value="$(arg local_ros_uav_id)" />
+    <arg name="ground_host" value="$(arg ground_host)" />
+    <arg name="ground_port" value="56010" />
+    <arg name="auth_token" value="$(arg auth_token)" />
+    <arg name="enable_offline_recovery" value="$(arg enable_offline_recovery)" />
+    <arg name="reconcile_after_minutes" value="$(arg reconcile_after_minutes)" />
+  </include>
+</launch>

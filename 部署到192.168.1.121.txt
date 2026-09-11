@@ -1,0 +1,45 @@
+部署到 192.168.1.121（UAV1 地面电脑）
+=====================================
+
+1. 把 ZIP 解压到任意目录，例如：
+
+   D:\SU17\competition_development
+
+2. 安装 Python 3，并勾选 Add Python to PATH。打开 PowerShell：
+
+   cd D:\SU17\competition_development
+   powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\tools\install_ground_station.ps1"
+
+3. 两台电脑都允许专用网络上的 TCP 端口 8000、56100、56010。
+
+4. 两台电脑使用完全相同的 AuthToken、PeerToken 和 Peers：
+
+   $AuthToken = "填写相同的AuthToken"
+   $PeerToken = "填写相同的PeerToken"
+   $Peers = "1=http://192.168.1.121:8000;3=http://192.168.1.123:8000"
+
+5. 在 192.168.1.121 启动 UAV1 地面端：
+
+   powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\tools\start_competition_backend_tcp.ps1" -LocalUavId 1 -GroundNodeId "ground-uav1" -GroundPeers $Peers -AuthToken $AuthToken -PeerToken $PeerToken -ImageAuthToken $AuthToken -VideoSources "1=http://127.0.0.1:8889/uav1/" -RecordingSshHosts "1=UAV1机载计算机IP" -ConfirmLiveConfig
+
+6. 在 192.168.1.123 重新启动 UAV3 地面端：
+
+   $AuthToken = "填写相同的AuthToken"
+   $PeerToken = "填写相同的PeerToken"
+   $Peers = "1=http://192.168.1.121:8000;3=http://192.168.1.123:8000"
+
+   powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\tools\start_competition_backend_tcp.ps1" -LocalUavId 3 -GroundNodeId "ground-uav3" -GroundPeers $Peers -AuthToken $AuthToken -PeerToken $PeerToken -ImageAuthToken $AuthToken -VideoSources "3=http://127.0.0.1:8889/uav3/" -RecordingSshHosts "3=192.168.1.88" -ConfirmLiveConfig
+
+7. UAV1 机载任务执行器连接 192.168.1.121：
+
+   roslaunch su17_competition_executor onboard_task_executor.launch uav_id:=1 local_ros_uav_id:=1 transport:=tcp ground_host:=192.168.1.121 ground_port:=56100 auth_token:="$AUTH_TOKEN" enable_motion:=true
+
+8. UAV1 机载图片发送器连接 192.168.1.121：
+
+   roslaunch su17_image_transfer onboard_image_sender.launch uav_id:=1 local_ros_uav_id:=1 ground_host:=192.168.1.121 ground_port:=56010 auth_token:="$AUTH_TOKEN" enable_offline_recovery:=true reconcile_after_minutes:=19.0
+
+9. 两台电脑分别打开：
+
+   http://127.0.0.1:8000/
+
+连接成功后，两台网页都应显示 UAV1 和 UAV3 的位置、速度、电量与状态；每台电脑只播放对应 UAV 的视频。任意一台可点击规划，规划图仍保留六机完整区域，但只向已连接的 UAV1、UAV3 发派和执行。

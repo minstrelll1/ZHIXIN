@@ -1,0 +1,42 @@
+uav_id: 1
+# 新接口：图像和目标经纬度由两个ROS进程分别发布，按header.stamp配对。
+input_mode: paired_topics
+target_image_topic: /uav1/image_transfer/target_image
+target_coordinate_topic: /uav1/image_transfer/target_coordinate
+sync_queue_size: 20
+sync_slop_sec: 0.5
+coordinate_font_path: ""
+coordinate_font_size: 28
+
+# 仅在input_mode为capture_request时使用的旧接口。
+image_topic: /uav1/gimbal/image_original
+compressed_input: false
+
+# Windows地面端在无人机网络中的IPv4地址。
+ground_host: 192.168.1.123
+ground_port: 56010
+
+jpeg_quality: 80
+max_frame_age_sec: 2.0
+queue_size: 10
+connect_timeout_sec: 3.0
+ack_timeout_sec: 5.0
+max_retries: 3
+retry_delay_sec: 1.0
+# 实时发送失败后暂停联网尝试，期间仍继续将所有抓拍写入机载硬盘。
+live_retry_interval_sec: 5.0
+
+# 首次联调可留空；部署时发送端和接收端应设置相同的随机字符串。
+auth_token: ""
+
+# 科目一离线保护：先写入机载硬盘，再尝试TCP发送。
+enable_offline_recovery: true
+cache_root: /home/amov/competition_development/image_cache
+
+# 从收到任务start指令起计时；第19分钟核对地面端文件名并补传。
+reconcile_after_minutes: 19.0
+# 如果第19分钟网络仍不可用，每30秒继续尝试一次。
+reconcile_retry_sec: 30.0
+
+# 留空时节点启动自动生成；正式任务建议通过mission_control Topic指定。
+mission_id: ""

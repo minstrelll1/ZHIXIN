@@ -1,0 +1,15 @@
+logLevel: info
+logDestinations: [stdout]
+
+rtsp: true
+rtspAddress: :8554
+
+webrtc: true
+webrtcAddress: :__WEBRTC_PORT__
+webrtcAllowOrigins: ["*"]
+
+paths:
+  __UAV_PATH__:
+    source: __RTSP_SOURCE__
+    rtspTransport: automatic
+    sourceOnDemand: false

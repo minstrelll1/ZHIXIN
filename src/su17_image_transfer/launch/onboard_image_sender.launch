@@ -1,0 +1,48 @@
+<launch>
+  <arg name="uav_id" default="1"/>
+  <!-- Fleet identity can be 1..6; vendor camera topics stay below /uav1. -->
+  <arg name="local_ros_uav_id" default="1"/>
+  <arg name="ground_host" default="192.168.1.123"/>
+  <arg name="ground_port" default="56010"/>
+  <arg name="image_topic" default="/uav$(arg local_ros_uav_id)/gimbal/image_original"/>
+  <arg name="input_mode" default="paired_topics"/>
+  <arg name="target_image_topic" default="/uav$(arg uav_id)/image_transfer/target_image"/>
+  <arg name="target_coordinate_topic" default="/uav$(arg uav_id)/image_transfer/target_coordinate"/>
+  <arg name="sync_queue_size" default="20"/>
+  <arg name="sync_slop_sec" default="0.5"/>
+  <arg name="coordinate_font_path" default=""/>
+  <arg name="coordinate_font_size" default="28"/>
+  <arg name="compressed_input" default="false"/>
+  <arg name="enable_offline_recovery" default="true"/>
+  <arg name="reconcile_after_minutes" default="19.0"/>
+  <arg name="reconcile_retry_sec" default="30.0"/>
+  <arg name="cache_root" default="/home/amov/competition_development/image_cache"/>
+  <arg name="mission_id" default=""/>
+  <arg name="auth_token" default=""/>
+
+  <node pkg="su17_image_transfer"
+        type="onboard_image_sender.py"
+        name="su17_onboard_image_sender"
+        output="screen">
+    <rosparam command="load" file="$(find su17_image_transfer)/config/image_transfer.yaml"/>
+    <param name="uav_id" value="$(arg uav_id)"/>
+    <param name="local_ros_uav_id" value="$(arg local_ros_uav_id)"/>
+    <param name="ground_host" value="$(arg ground_host)"/>
+    <param name="ground_port" value="$(arg ground_port)"/>
+    <param name="image_topic" value="$(arg image_topic)"/>
+    <param name="input_mode" value="$(arg input_mode)"/>
+    <param name="target_image_topic" value="$(arg target_image_topic)"/>
+    <param name="target_coordinate_topic" value="$(arg target_coordinate_topic)"/>
+    <param name="sync_queue_size" value="$(arg sync_queue_size)"/>
+    <param name="sync_slop_sec" value="$(arg sync_slop_sec)"/>
+    <param name="coordinate_font_path" value="$(arg coordinate_font_path)"/>
+    <param name="coordinate_font_size" value="$(arg coordinate_font_size)"/>
+    <param name="compressed_input" value="$(arg compressed_input)"/>
+    <param name="enable_offline_recovery" value="$(arg enable_offline_recovery)"/>
+    <param name="reconcile_after_minutes" value="$(arg reconcile_after_minutes)"/>
+    <param name="reconcile_retry_sec" value="$(arg reconcile_retry_sec)"/>
+    <param name="cache_root" value="$(arg cache_root)"/>
+    <param name="mission_id" value="$(arg mission_id)"/>
+    <param name="auth_token" value="$(arg auth_token)"/>
+  </node>
+</launch>
