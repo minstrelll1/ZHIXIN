@@ -1,0 +1,78 @@
+SU17 两台地面端部署与使用
+========================
+
+一、部署方法
+------------
+
+1. 解压部署包并进入项目根目录（该目录包含 competition_backend、tools、src）。
+2. 安装 Python 3，并勾选 Add Python to PATH。
+3. 在项目根目录执行(部署在另外一个路径，方便后续更新程序)：
+
+   powershell.exe -NoProfile -ExecutionPolicy Bypass `
+     -File ".\tools\install_ground_station.ps1"
+
+4. 两台电脑允许 TCP 端口 8000、56100、56010 通过防火墙。
+5. 首次更新 UAV3 机载代码，在项目根目录执行：
+
+   powershell.exe -NoProfile -ExecutionPolicy Bypass `
+     -File ".\tools\deploy_onboard_stack.ps1" `
+     -UavAddress "机载计算机IP"
+
+6. 新无人机首次部署：
+cd F:\Projects\ZhiXin\competition_development
+   powershell.exe -NoProfile -ExecutionPolicy Bypass `
+     -File ".\tools\deploy_onboard_stack.ps1" `
+     -UavAddress "192.168.1.88"
+二、使用方法
+------------
+
+地面端之间固定使用 Wi‑Fi 网段 `192.168.2.0/24`。两台地面端的 Peer 配置必须完全一致。Peer 表示“无人机编号=对应地面端后端地址”：
+
+   $Peers = "1=http://192.168.2.121:8000;2=http://192.168.2.122:8000;3=http://192.168.2.123:8000;4=http://192.168.2.124:8000;5=http://192.168.2.125:8000;6=http://192.168.2.126:8000"
+
+两台电脑必须使用相同的 `$Peers`、`PeerToken`，并且可以互相访问 TCP 8000 端口。当前只有 UAV3 时，Peer 表仍保留 UAV1 和 UAV3；UAV1 未连接不影响 UAV3 的规划和控制。
+
+地面端1：
+
+   powershell.exe -NoProfile -ExecutionPolicy Bypass `
+     -File ".\tools\start_ground_node.ps1" `
+     -LocalUavId 1 `
+     -AuthToken "26e00da4cc7442d0730a7c79d9cd008f331deafa658e903671597f47a8ca7db4" `
+     -PeerToken "91372e7f2508f481f5d082406a81823d397c389b62d934ef90d754efefb4a556"
+
+UAV1 机载端启动（任务和图片一起启动）：
+
+   cd ~/competition_development
+   bash ./tools/start_onboard_stack.sh \
+     1 \
+     192.168.1.121 \
+     '26e00da4cc7442d0730a7c79d9cd008f331deafa658e903671597f47a8ca7db4'
+
+地面端3：
+cd F:\Projects\ZhiXin\competition_development
+
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File ".\tools\start_ground_node.ps1" `
+  -LocalUavId 3 `
+  -AuthToken "26e00da4cc7442d0730a7c79d9cd008f331deafa658e903671597f47a8ca7db4" `
+  -PeerToken "91372e7f2508f481f5d082406a81823d397c389b62d934ef90d754efefb4a556" `
+  -PointCloudSource onboard `
+  -PointCloudRosbridgeHosts "3=192.168.1.88" `
+  -PointCloudTopics "3=/uav1/octomap_point_cloud_centers/reduce_the_frequency" `
+  -PointCloudRosbridgePort 9090
+
+UAV3 机载端（任务和图片一起启动）：
+
+   cd ~/competition_development
+   bash ./tools/start_onboard_stack.sh \
+     3 \
+     192.168.1.123 \
+     '26e00da4cc7442d0730a7c79d9cd008f331deafa658e903671597f47a8ca7db4'
+
+
+
+网页地址：
+
+   http://127.0.0.1:8000/
+
+当前只有 UAV3 时，UAV1 显示未连接是正常的；任意一台地面端都可对 UAV3 规划、分派和控制。
