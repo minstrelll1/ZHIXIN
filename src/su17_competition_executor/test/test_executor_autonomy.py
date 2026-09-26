@@ -129,7 +129,57 @@ class AutonomyTest(unittest.TestCase):
         payload = json.loads(node.external_mission_pub.publish.call_args.args[0].data)
         self.assertEqual(payload["coordinate_frame"], "WGS84")
         self.assertEqual(payload["relative_altitude_m"], 0.5)
+        self.assertEqual(payload["target_altitude_m"], 0.5)
+        self.assertEqual(payload["altitude_frame"], "RELATIVE_TO_TAKEOFF")
+        self.assertTrue(all(point["altitude_m"] == 0.5 for point in payload["waypoints"]))
+        self.assertEqual(node.external_path_pub.publish.call_args.args[0].data[2::3], [0.5] * 3)
+        self.assertEqual(node.external_landing_pub.publish.call_args.args[0].data, [30.0, 103.0, 0.5])
+        self.assertEqual(payload["return_home"]["altitude_m"], 0.5)
         self.assertEqual(len(payload["waypoints"]), 3)
+
+    def test_external_gps_uses_selected_relative_height_for_direct_and_legacy_points(self):
+        original = module.String
+        module.String = lambda data: types.SimpleNamespace(data=data)
+        try:
+            for key, points in (
+                ("waypoints_wgs84", [[30.123, 103.456]]),
+                ("waypoints_wgs84", [[30.123, 103.456, 44.598]]),
+                ("waypoints_gps", [{"latitude": 30.123, "longitude": 103.456, "altitude_m": 44.598}]),
+            ):
+                for height in (0.5, 4.5, 40.0):
+                    with self.subTest(key=key, points=points, height=height):
+                        node = self.executor(tempfile.gettempdir())
+                        node._gps_home = (30.0, 103.0, 44.098)
+                        node._assignment.update(controller_mode="external", coordinate_frame="WGS84",
+                                                target_altitude_m=height, landing_point_wgs84=[30.0, 103.0, 44.598])
+                        node._assignment["task"][key] = points
+                        node._publish_external_mission({})
+                        payload = json.loads(node.external_mission_pub.publish.call_args.args[0].data)
+                        self.assertEqual(node.external_path_pub.publish.call_args.args[0].data,
+                                         [30.123, 103.456, height])
+                        self.assertEqual(node.external_landing_pub.publish.call_args.args[0].data,
+                                         [30.0, 103.0, height])
+                        self.assertEqual(payload["target_altitude_m"], height)
+                        self.assertEqual(payload["relative_altitude_m"], height)
+                        self.assertEqual(payload["return_home"]["altitude_m"], height)
+                        self.assertEqual(payload["waypoints"][0]["altitude_m"], height)
+        finally:
+            module.String = original
+
+    def test_external_gps_converts_local_landing_without_adding_sea_level_altitude(self):
+        node = self.executor(tempfile.gettempdir())
+        node._gps_home = (30.0, 103.0, 44.098)
+        node._assignment.update(controller_mode="external", coordinate_frame="WGS84", landing_point_m=[2.0, 3.0])
+        original = module.String
+        module.String = lambda data: types.SimpleNamespace(data=data)
+        try:
+            node._publish_external_mission({})
+        finally:
+            module.String = original
+        landing = node.external_landing_pub.publish.call_args.args[0].data
+        self.assertAlmostEqual(landing[0], 30.0 + 2.0 / 111111.0)
+        self.assertAlmostEqual(landing[1], 103.0 - 3.0 / (111111.0 * module.math.cos(module.math.radians(30.0))))
+        self.assertEqual(landing[2], 0.5)
 
     def test_external_lab_mode_publishes_local_enu_without_gps(self):
         node = self.executor(tempfile.gettempdir())

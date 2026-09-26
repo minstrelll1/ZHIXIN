@@ -931,7 +931,7 @@ class OnboardTaskExecutor:
             return False
 
     def _publish_external_mission(self, payload: Dict[str, Any]) -> None:
-        """Publish a WGS84 or local ENU mission for external program B."""
+        """向程序 B 发布经纬度或 ENU 航点，高度统一相对起飞点。"""
         with self._lock:
             assignment = self._assignment
             gps_home = self._gps_home
@@ -942,7 +942,7 @@ class OnboardTaskExecutor:
             raise ValueError("external mission coordinate frame must be WGS84 or ENU")
         if frame == "WGS84" and gps_home is None:
             raise ValueError("GPS home is not available for WGS84 external mission")
-        lat0, lon0, alt0 = gps_home if gps_home is not None else (0.0, 0.0, 0.0)
+        lat0, lon0, _ = gps_home if gps_home is not None else (0.0, 0.0, 0.0)
         target_relative_alt = float(assignment["target_altitude_m"])
         task = assignment["task"]
         points = []
@@ -953,7 +953,8 @@ class OnboardTaskExecutor:
                     points.append({
                         "latitude": float(point[0] if isinstance(point, (list, tuple)) else point["latitude"]),
                         "longitude": float(point[1] if isinstance(point, (list, tuple)) else point["longitude"]),
-                        "altitude_m": float((point[2] if len(point) > 2 else alt0 + target_relative_alt) if isinstance(point, (list, tuple)) else point.get("altitude_m", alt0 + target_relative_alt)),
+                        # 规划高度是唯一高度源，避免旧航点的绝对海拔被透传。
+                        "altitude_m": target_relative_alt,
                     })
             else:
                 cos_lat = max(1e-6, abs(math.cos(math.radians(lat0))))
@@ -961,13 +962,11 @@ class OnboardTaskExecutor:
                     points.append({
                         "latitude": lat0 + float(x) / 111111.0,
                         "longitude": lon0 - float(y) / (111111.0 * cos_lat),
-                        "altitude_m": alt0 + target_relative_alt,
+                        "altitude_m": target_relative_alt,
                     })
-            absolute_target_alt = float(points[0]["altitude_m"]) if points else alt0 + target_relative_alt
         else:
             points = [{"x_m": float(x), "y_m": float(y), "z_m": target_relative_alt}
                       for x, y in task["waypoints_m"]]
-            absolute_target_alt = target_relative_alt
         message = {
             "type": "external_mission",
             "uav_id": self.uav_id,
@@ -975,7 +974,8 @@ class OnboardTaskExecutor:
             "assignment_checksum": assignment["assignment_checksum"],
             "flight_profile": assignment.get("flight_profile", "competition"),
             "coordinate_frame": frame,
-            "target_altitude_m": absolute_target_alt,
+            "altitude_frame": "RELATIVE_TO_TAKEOFF",
+            "target_altitude_m": target_relative_alt,
             "relative_altitude_m": target_relative_alt,
             "waypoints": points,
             "speed_mps": task.get("speed_mps", self.search_speed),
@@ -983,7 +983,7 @@ class OnboardTaskExecutor:
             "reconnaissance_mode": task.get("reconnaissance_mode", "continuous"),
             "hover_scan_seconds": task.get("hover_scan_seconds", 0),
             "return_home": ({
-                "latitude": lat0, "longitude": lon0, "altitude_m": alt0,
+                "latitude": lat0, "longitude": lon0, "altitude_m": target_relative_alt,
             } if frame == "WGS84" else {
                 "x_m": 0.0, "y_m": 0.0, "z_m": target_relative_alt,
             }),
@@ -1007,20 +1007,20 @@ class OnboardTaskExecutor:
             landing = [
                 lat0 + float(px) / 111111.0,
                 lon0 - float(py) / (111111.0 * cos_lat),
-                alt0 + target_relative_alt,
+                target_relative_alt,
             ]
         if landing is None:
             # 固定比赛方案的降落点就是记录的起飞点。外部程序 B 仍需收到
             # jiangluodian，因此没有显式降落点时使用任务原点/起飞点。
             landing = (
-                [lat0, lon0, alt0 + target_relative_alt]
+                [lat0, lon0, target_relative_alt]
                 if frame == "WGS84"
                 else [0.0, 0.0, target_relative_alt]
             )
         if landing is not None:
             landing_msg = Float64MultiArray()
             if frame == "WGS84":
-                landing_msg.data = [float(value) for value in landing]
+                landing_msg.data = [float(landing[0]), float(landing[1]), target_relative_alt]
             else:
                 landing_msg.data = [float(landing[0]), float(landing[1]), target_relative_alt]
             self.external_landing_pub.publish(landing_msg)

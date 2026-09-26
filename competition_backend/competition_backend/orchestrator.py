@@ -196,7 +196,6 @@ class CompetitionOrchestrator:
                         try:
                             latitude = float(raw_points[0][0])
                             longitude = float(raw_points[0][1])
-                            altitude = float((gps_origin or {}).get("altitude_m", area.get("altitude_m", 0.0)))
                         except (IndexError, TypeError, ValueError) as error:
                             raise MissionError("GPS area points must contain latitude and longitude") from error
                         if abs(latitude) > 90.0 or abs(longitude) > 180.0:
@@ -223,7 +222,7 @@ class CompetitionOrchestrator:
                             return local_points
                         area_points_m = gps_to_local(raw_points)
                         landing_points_m = gps_to_local(raw_landing_points)
-                        input_gps_origin = {"latitude": latitude, "longitude": longitude, "altitude_m": altitude}
+                        input_gps_origin = {"latitude": latitude, "longitude": longitude}
                     else:
                         try:
                             area_points_m = [[float(point[0]), float(point[1])] for point in raw_points]
@@ -342,30 +341,32 @@ class CompetitionOrchestrator:
                         source = normalized_gps_origin or gps_origin or {}
                         latitude = float(source["latitude"])
                         longitude = float(source["longitude"])
-                        altitude = float(source["altitude_m"])
                     except (KeyError, TypeError, ValueError) as error:
                         raise MissionError(
-                            "GPS 外部任务需要 latitude、longitude 和 altitude_m"
+                            "GPS 外部任务需要 latitude 和 longitude"
                         ) from error
-                    if not all(math.isfinite(value) for value in (latitude, longitude, altitude)):
+                    if not all(math.isfinite(value) for value in (latitude, longitude)):
                         raise MissionError("GPS origin values must be finite")
                     if abs(latitude) > 90.0 or abs(longitude) > 180.0:
                         raise MissionError("GPS origin latitude or longitude is out of range")
                     normalized_gps_origin = {
                         "latitude": latitude,
                         "longitude": longitude,
-                        "altitude_m": altitude,
                     }
                     cos_lat = max(1e-6, abs(math.cos(math.radians(latitude))))
                     for uav_id, task in list(task_source.items()):
                         converted = dict(task)
-                        converted["waypoints_wgs84"] = task.get("waypoints_wgs84") or [
+                        gps_points = task.get("waypoints_wgs84") or [
                             [
                                 latitude + float(point[0]) / 111111.0,
                                 longitude - float(point[1]) / (111111.0 * cos_lat),
-                                altitude + float(selected_altitudes[uav_id]),
                             ]
                             for point in task["waypoints_m"]
+                        ]
+                        # GPS 经纬度保持不变，高度统一使用相对起飞点的分配高度。
+                        converted["waypoints_wgs84"] = [
+                            [point[0], point[1], float(selected_altitudes[uav_id])]
+                            for point in gps_points
                         ]
                         task_source[uav_id] = converted
                     if area is not None:
@@ -433,7 +434,7 @@ class CompetitionOrchestrator:
                     assignment_payload["landing_point_wgs84"] = [
                         lat0 + float(px) / 111111.0,
                         lon0 - float(py) / (111111.0 * cos_lat),
-                        normalized_gps_origin["altitude_m"] + runtime.target_altitude_m,
+                        runtime.target_altitude_m,
                     ]
                 runtime.assignment_checksum = assignment_checksum(
                     {"type": "assign_task", "uav_id": uav_id, **assignment_payload}

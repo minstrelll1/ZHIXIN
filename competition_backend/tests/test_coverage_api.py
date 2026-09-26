@@ -41,6 +41,32 @@ class CoverageApiTest(unittest.TestCase):
             self.assertEqual(client.post('/api/v1/planning/competition-coverage',json={'uav_count':5}).status_code,409)
             self.assertEqual(client.post('/api/v1/planning/competition-coverage',json={'uav_count':True}).status_code,422)
 
+    def test_saved_gps_plan_keeps_selected_height_without_adding_sea_level_altitude(self):
+        with tempfile.TemporaryDirectory() as data, patch.dict(os.environ, {
+                'COMPETITION_ADAPTER': 'sim', 'COMPETITION_DATA_DIR': data}, clear=False):
+            client = TestClient(create_app())
+            for scene in ('lab', 'outdoor5', 'lab10'):
+                with self.subTest(scene=scene):
+                    response = client.post('/api/v1/plan', json={
+                        'subject': 'subject1', 'planning_mode': 'competition',
+                        'coordinate_mode': 'gps', 'flight_profile': scene,
+                        'flight_altitude_plan': 'around1m', 'controller_mode': 'external',
+                        'gps_origin': {'latitude': 30.78528, 'longitude': 103.86102,
+                                       'altitude_m': 44.098},
+                    })
+                    self.assertEqual(response.status_code, 200, response.text)
+                    mission = response.json()['mission']
+                    self.assertEqual(mission['flight_altitude_plan'], 'around1m')
+                    expected = [0.5, 1.5, 0.5, 1.0, 1.5, 1.0]
+                    self.assertEqual([mission['uavs'][str(uid)]['target_altitude_m']
+                                      for uid in range(1, 7)], expected)
+                    task = mission['uavs']['1']['task']
+                    self.assertTrue(task['waypoints_wgs84'])
+                    self.assertTrue(all(len(point) == 2 for point in task['waypoints_wgs84']))
+                    first_lat, first_lon = task['waypoints_wgs84'][0]
+                    self.assertGreaterEqual(first_lat, 30.78528)
+                    self.assertLessEqual(first_lon, 103.86102)
+
     def test_competition_shape_can_be_scaled_for_lab_xyz(self):
         with tempfile.TemporaryDirectory() as data, patch.dict(os.environ,{
                 'COMPETITION_ADAPTER':'sim','COMPETITION_DATA_DIR':data},clear=False):

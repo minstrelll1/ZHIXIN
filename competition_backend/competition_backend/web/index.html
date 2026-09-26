@@ -262,7 +262,7 @@
       <div class="field"><label for="forestEdge">林缘向内保留（米）</label><input id="forestEdge" type="number" min="1" max="200" step="1" value="5"></div>
     </div>
     <div class="area-actions"><span><label><input id="terrainExclusions" type="checkbox" checked>使用地图地类免侦察范围</label> <label><input id="terrainDisplayToggle" type="checkbox" checked>显示地形信息</label></span><button id="exportCoverage" class="secondary" disabled>导出六机方案 JSON</button></div>
-    <p class="area-note">固定比赛区域 · 六机 · 林缘 5 米。参数已锁定，页面直接读取赛前保存的方案，不在比赛时重新求解。基准纬度、经度和海拔仅用于 GPS/XYZ 坐标换算。</p>
+    <p class="area-note">固定比赛区域 · 六机 · 林缘 5 米。参数已锁定，页面直接读取赛前保存的方案，不在比赛时重新求解。基准纬度、经度用于 GPS/XYZ 平面坐标换算；飞行高度相对起飞点，不叠加 GPS 海拔。</p>
     <p id="coverageNote" class="area-note">优化目标：最小化六机任务时间之和（各机行程÷速度＋扫描次数×扫描时间）。每个航点悬停扫描一次后再前往下一航点；当前仅规划区域内航线，实际起降点、高度和往返航段待配置。</p>
   </details>
   <section class="summary" aria-label="任务概要">

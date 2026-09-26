@@ -81,7 +81,7 @@ Windows 部署工具现在支持选择机型，例如：
 | 图片回传与科目一提交 | 仍按图像时间戳精确匹配，缓存 0.5 秒/30fps 最多 15 帧；画目标框、保存 JPEG/元数据与提交 JSON，保留断线补传 |
 | 点云 | `/uavN/octomap_point_cloud_centers/reduce_the_frequency/compressed`；共用原有解码与网页显示链路 |
 | 视频 | 每架配置实际 RTSP，地面 MediaMTX 转为浏览器视频；浏览器远程访问地面网页时替换本机回环地址 |
-| 外部飞行算法 B | `/uavN/competition/external_mission`、`external_status`；路径 `/ground_mission_planner/vehicle_N/path_stage_1`、降落点 `/ground_mission_planner/vehicle_N/jiangluodian`；GPS 模式为 `[纬度,经度,绝对海拔]`，XYZ 模式为 `[x,y,z]` |
+| 外部飞行算法 B | `/uavN/competition/external_mission`、`external_status`；路径 `/ground_mission_planner/vehicle_N/path_stage_1`、降落点 `/ground_mission_planner/vehicle_N/jiangluodian`；GPS 模式为 `[纬度,经度,相对起飞点高度]`，XYZ 模式为 `[x,y,z]`；GPS 不叠加海拔 |
 
 必须让检测算法订阅 `image_stamped` 并原样回传其 `image.header.stamp`。只让回传节点订阅适配图像，而算法继续使用零时间戳原图，无法完成匹配。可以通过算法启动参数或 ROS remap 切换订阅，不需要改动厂商源码。接收时刻不是相机曝光时刻；若算法要求严格的曝光时间，应选择 `require_source`，并使用能提供原始时间戳的相机驱动。
 

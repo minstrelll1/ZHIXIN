@@ -8,6 +8,7 @@ from unittest.mock import Mock, patch
 from fastapi.testclient import TestClient
 
 from competition_backend.api import create_app
+from competition_backend.models import Telemetry
 from competition_backend import polygon_coverage
 from competition_shared.fleet import default_fleet, apply_fixed_binding
 
@@ -51,6 +52,11 @@ class CompetitionDispatchTest(unittest.TestCase):
                 r = clients[uid].post('/api/v1/operator', json={'ground_terminal_id': uid, 'model': 'p600', 'task_publisher': uid == 1})
                 self.assertEqual(r.status_code, 200, r.text)
             apps[1].state.adapter.connected_uav_ids_snapshot = Mock(return_value=list(range(1, 7)))
+            # 真机 GPS 分派需先收到任务发布端的有效经纬度。
+            apps[1].state.orchestrator.update_telemetry(Telemetry(
+                uav_id=1, received_at=apps[1].state.orchestrator.clock(), connected=True,
+                latitude=30.78528, longitude=103.86102, altitude=44.098,
+            ))
             with patch.object(polygon_coverage, '_compute', side_effect=AssertionError('不得临场重算')):
                 response = clients[1].post('/api/v1/plan', json={'subject': 'subject1', 'planning_mode': 'competition'})
             self.assertEqual(response.status_code, 200, response.text)

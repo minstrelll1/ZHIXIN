@@ -181,6 +181,116 @@ class OrchestratorTest(unittest.TestCase):
         self.assertEqual(len(assignments), 6)
         self.assertTrue(all(item["payload"]["coordinate_frame"] == "ENU" for item in assignments))
 
+    def test_explicit_gps_origin_uses_relative_route_and_landing_heights(self):
+        for origin_altitude in (None, 44.0):
+            for uav1_altitude in (0.5, 1.0):
+                with self.subTest(origin_altitude=origin_altitude, uav1_altitude=uav1_altitude):
+                    self.config.takeoff_altitudes_m[1] = uav1_altitude
+                    self.adapter.commands.clear()
+                    gps_origin = {"latitude": 30.0, "longitude": 103.0}
+                    if origin_altitude is not None:
+                        gps_origin["altitude_m"] = origin_altitude
+                    mission = self.backend.plan(
+                        "subject1", controller_mode="external", gps_origin=gps_origin
+                    )["mission"]
+                    assignments = [
+                        item for item in self.adapter.commands if item["type"] == "assign_task"
+                    ]
+                    self.assertEqual(len(assignments), 6)
+                    for assignment in assignments:
+                        uav_id = assignment["uav_id"]
+                        payload = assignment["payload"]
+                        expected_height = self.config.takeoff_altitudes_m[uav_id]
+                        self.assertEqual(payload["coordinate_frame"], "WGS84")
+                        self.assertEqual(payload["target_altitude_m"], expected_height)
+                        self.assertTrue(payload["task"]["waypoints_wgs84"])
+                        self.assertTrue(all(
+                            point[2] == expected_height
+                            for point in payload["task"]["waypoints_wgs84"]
+                        ))
+                        self.assertEqual(payload["landing_point_wgs84"][2], expected_height)
+                        self.assertEqual(
+                            payload["task"]["waypoints_wgs84"],
+                            mission["uavs"][str(uav_id)]["task"]["waypoints_wgs84"],
+                        )
+                        first_latitude, first_longitude = payload["task"]["waypoints_wgs84"][0][:2]
+                        self.assertAlmostEqual(first_latitude, 30.0, delta=0.001)
+                        self.assertAlmostEqual(first_longitude, 103.0, delta=0.001)
+                        self.assertAlmostEqual(payload["landing_point_wgs84"][0], 30.0, delta=0.001)
+                        self.assertAlmostEqual(payload["landing_point_wgs84"][1], 103.0, delta=0.001)
+
+    def test_existing_gps_routes_replace_absolute_heights_in_plan_and_assignment(self):
+        self.config.takeoff_altitudes_m[1] = 0.5
+        supplied_points = [[30.0, 103.0, 44.598],
+                           [30.0001, 103.0002, 500.0], [30.0003, 103.0004]]
+        tasks = {
+            uav_id: {
+                "type": "lawnmower_search",
+                "waypoints_m": [[0.0, 0.0]],
+                "waypoints_wgs84": [list(point) for point in supplied_points],
+            }
+            for uav_id in self.config.uav_ids
+        }
+        mission = self.backend.plan(
+            "subject1", tasks_by_uav=tasks, controller_mode="external",
+            gps_origin={"latitude": 30.0, "longitude": 103.0, "altitude_m": 44.0},
+        )["mission"]
+        assignments = [
+            item for item in self.adapter.commands if item["type"] == "assign_task"
+        ]
+        self.assertEqual(len(assignments), 6)
+        for assignment in assignments:
+            uav_id = assignment["uav_id"]
+            expected_height = self.config.takeoff_altitudes_m[uav_id]
+            expected_points = [[point[0], point[1], expected_height] for point in supplied_points]
+            self.assertEqual(assignment["payload"]["task"]["waypoints_wgs84"], expected_points)
+            self.assertEqual(mission["uavs"][str(uav_id)]["task"]["waypoints_wgs84"], expected_points)
+            self.assertEqual(mission["planned_uavs"][str(uav_id)]["task"]["waypoints_wgs84"], expected_points)
+
+    def test_gps_quadrilateral_heights_do_not_depend_on_origin_altitude(self):
+        for origin_altitude in (None, 44.0):
+            for uav1_altitude in (0.5, 1.0):
+                with self.subTest(origin_altitude=origin_altitude, uav1_altitude=uav1_altitude):
+                    self.config.takeoff_altitudes_m[1] = uav1_altitude
+                    self.adapter.commands.clear()
+                    self.backend.plan(
+                        "subject1",
+                        controller_mode="external",
+                        search_area={
+                            "coordinate_mode": "gps",
+                            "points": [[31.2304, 121.4737], [31.2304, 121.4837],
+                                       [31.2358, 121.4854], [31.2350, 121.4737]],
+                            "lane_spacing_m": 150,
+                            "turn_radius_m": 5,
+                        },
+                        landing_area={
+                            "coordinate_mode": "gps",
+                            "points": [[31.2307, 121.4740], [31.2314, 121.4740],
+                                       [31.2314, 121.4747], [31.2307, 121.4747]],
+                        },
+                        gps_origin=({"altitude_m": origin_altitude}
+                                    if origin_altitude is not None else None),
+                    )
+                    assignments = [
+                        item for item in self.adapter.commands if item["type"] == "assign_task"
+                    ]
+                    self.assertEqual(len(assignments), 6)
+                    for assignment in assignments:
+                        payload = assignment["payload"]
+                        expected_height = self.config.takeoff_altitudes_m[assignment["uav_id"]]
+                        self.assertEqual(payload["coordinate_frame"], "WGS84")
+                        self.assertTrue(payload["task"]["waypoints_wgs84"])
+                        self.assertTrue(all(
+                            point[2] == expected_height
+                            for point in payload["task"]["waypoints_wgs84"]
+                        ))
+                        landing_point = payload["landing_point_wgs84"]
+                        self.assertEqual(landing_point[2], expected_height)
+                        self.assertGreaterEqual(landing_point[0], 31.2307)
+                        self.assertLessEqual(landing_point[0], 31.2314)
+                        self.assertGreaterEqual(landing_point[1], 121.4740)
+                        self.assertLessEqual(landing_point[1], 121.4747)
+
     def test_preflight_rejects_missing_telemetry(self):
         self.backend.plan("subject1")
         result = self.backend.prepare_takeoff()
