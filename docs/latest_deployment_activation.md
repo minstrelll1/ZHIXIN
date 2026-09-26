@@ -54,7 +54,7 @@ P600 机载地址：
 
 ```powershell
 cd .\competition_development
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\start_ground.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\start_ground.ps1 -ConfirmLiveConfig
 ```
 
 浏览器打开：
@@ -63,7 +63,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\start_ground.ps1
 http://127.0.0.1:8000/
 ```
 
-进入网页后选择本机地面终端编号和任务发布角色。
+核对实机配置后使用上述命令；`-ConfirmLiveConfig` 表示操作员已确认配置，不代替定位、遥测、任务回执等预检。进入网页后选择本机地面终端编号和任务发布角色。更改启动参数时，先在旧后端终端按 `Ctrl+C`，再重新启动。
 
 ### 2. 机载厂商程序
 
