@@ -61,7 +61,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\tools\deploy_onboard_
 
 1. 在每台地面电脑打开 PowerShell：
 
-cd F:\Projects\ZhiXin\competition_development
+cd <任意部署目录>\competition_development
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\tools\start_ground.ps1"
 
 2. 在本机浏览器打开：
