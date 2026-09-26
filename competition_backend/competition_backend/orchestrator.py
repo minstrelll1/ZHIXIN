@@ -36,10 +36,12 @@ def _altitude_profile_for(flight_profile: str, flight_altitude_plan: str) -> str
     """Resolve the selected scene and altitude scheme to a config profile."""
     scene = str(flight_profile or "lab").strip().lower()
     altitude_plan = str(flight_altitude_plan or "default").strip().lower()
-    if altitude_plan not in ("default", "around1m", "around5m", "around45m"):
+    if altitude_plan not in ("default", "around1m", "around2m", "around5m", "around45m"):
         raise MissionError("unknown flight altitude plan: %s" % altitude_plan)
     if altitude_plan == "around1m":
         return "lab"
+    if altitude_plan == "around2m":
+        return "lab2"
     if altitude_plan == "around5m":
         return "lab5"
     if altitude_plan == "around45m":

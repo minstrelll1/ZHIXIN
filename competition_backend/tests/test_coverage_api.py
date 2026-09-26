@@ -67,6 +67,43 @@ class CoverageApiTest(unittest.TestCase):
                     self.assertGreaterEqual(first_lat, 30.78528)
                     self.assertLessEqual(first_lon, 103.86102)
 
+    def test_two_meter_scheme_reaches_all_six_assignments_in_each_scene_and_coordinate_mode(self):
+        expected = [1.5, 2.0, 2.5, 1.5, 2.0, 2.5]
+        with tempfile.TemporaryDirectory() as data, patch.dict(os.environ, {
+                'COMPETITION_ADAPTER': 'sim', 'COMPETITION_DATA_DIR': data}, clear=False):
+            app = create_app()
+            client = TestClient(app)
+            for scene in ('lab', 'outdoor5', 'lab10', 'competition'):
+                for coordinate in ('gps', 'xyz'):
+                    for controller in ('internal', 'external'):
+                        with self.subTest(scene=scene, coordinate=coordinate, controller=controller):
+                            payload = {
+                                'subject': 'subject1', 'planning_mode': 'competition',
+                                'coordinate_mode': coordinate, 'flight_profile': scene,
+                                'flight_altitude_plan': 'around2m', 'controller_mode': controller,
+                                'gps_origin': {'latitude': 30.78528, 'longitude': 103.86102,
+                                               'altitude_m': 44.098},
+                            }
+                            preview = client.post('/api/v1/planning/competition-coverage', json=payload)
+                            self.assertEqual(preview.status_code, 200, preview.text)
+                            self.assertEqual(preview.json()['flight_altitude_plan'], 'around2m')
+                            app.state.adapter.commands.clear()
+                            response = client.post('/api/v1/plan', json=payload)
+                            self.assertEqual(response.status_code, 200, response.text)
+                            mission = response.json()['mission']
+                            self.assertEqual(mission['flight_altitude_plan'], 'around2m')
+                            self.assertEqual([mission['uavs'][str(uid)]['target_altitude_m']
+                                              for uid in range(1, 7)], expected)
+                            self.assertEqual([mission['planned_uavs'][str(uid)]['target_altitude_m']
+                                              for uid in range(1, 7)], expected)
+                            assignments = [item for item in app.state.adapter.snapshot()
+                                           if item['type'] == 'assign_task']
+                            self.assertEqual(len(assignments), 6)
+                            for assignment in assignments:
+                                uid = assignment['uav_id']
+                                self.assertEqual(assignment['payload']['target_altitude_m'], expected[uid - 1])
+                                self.assertEqual(assignment['payload']['controller_mode'], controller)
+
     def test_competition_shape_can_be_scaled_for_lab_xyz(self):
         with tempfile.TemporaryDirectory() as data, patch.dict(os.environ,{
                 'COMPETITION_ADAPTER':'sim','COMPETITION_DATA_DIR':data},clear=False):

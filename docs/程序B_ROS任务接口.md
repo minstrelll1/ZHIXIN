@@ -47,7 +47,7 @@
 
 实验室 XYZ 任务的 `coordinate_frame` 为 `ENU`。此时 `path_stage_1` 的连续三元组是 `[x米, y米, z米, ...]`，`jiangluodian` 是 `[x米, y米, z米]`；JSON 的 `waypoints` 使用 `x_m`、`y_m`、`z_m`。比赛 GPS 任务的 `coordinate_frame` 为 `WGS84`，兼容话题使用 `[纬度, 经度, 相对起飞点高度, ...]`。降落顺序不再通过 ROS 话题发送。
 
-`altitude_frame` 固定为 `RELATIVE_TO_TAKEOFF`；`target_altitude_m`、`relative_altitude_m`、GPS 航点和 `return_home` 的 `altitude_m` 均为分配的相对起飞点高度。例如 UAV1 选择约 1 米方案时，这些值及两个数组话题的第三个值均为 `0.5`，无论 GPS 海拔是多少。经纬度仍为 WGS84。旧任务中附带的 GPS 航点海拔不会覆盖选定高度；程序 B 需按这一相对高度协议读取。程序 B 收到任务后独占向 Prometheus 飞控发布后续航点、返航和降落指令，本工程不会再发布搜索阶段的 Prometheus 移动指令。
+`altitude_frame` 固定为 `RELATIVE_TO_TAKEOFF`；`target_altitude_m`、`relative_altitude_m`、GPS 航点和 `return_home` 的 `altitude_m` 均为分配的相对起飞点高度。例如 UAV1 选择约 1 米方案时，这些值及两个数组话题的第三个值均为 `0.5`，无论 GPS 海拔是多少。经纬度仍为 WGS84。“约 2 米”方案的 UAV1～6 高度依次为 `1.5、2.0、2.5、1.5、2.0、2.5` 米，GPS 和 XYZ 模式使用同一组相对高度。旧任务中附带的 GPS 航点海拔不会覆盖选定高度；程序 B 需按这一相对高度协议读取。程序 B 收到任务后独占向 Prometheus 飞控发布后续航点、返航和降落指令，本工程不会再发布搜索阶段的 Prometheus 移动指令。
 
 当前界面规划的局部坐标约定为：`+X` 向地图上方（北），`+Y` 向地图左侧（西）。机载端按该约定转换为 WGS84：纬度随 `+X` 增大，经度随 `+Y` 增大而减小。正式比赛前必须用已知坐标点核验该方向与程序 B 的坐标约定一致。
 
