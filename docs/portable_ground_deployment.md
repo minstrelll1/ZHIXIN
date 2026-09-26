@@ -27,6 +27,29 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\start_ground.ps1
 
 浏览器打开 `http://127.0.0.1:8000/`，选择本机地面终端编号和任务发布角色。终端编号、机型以及机地 IP 由仓库中的固定配置绑定。
 
+## MediaMTX 和端口
+
+默认端口已经写在 `config/fleet.json`，六台地面电脑可以使用相同的端口号，因为每台电脑分别监听：
+
+|用途|默认端口|端口所在位置|
+|---|---:|---|
+|网页后端|8000|本机 Windows|
+|任务/遥测 TCP|56100|本机 Windows，机载端连接|
+|图片回传 TCP|56010|本机 Windows，机载端连接|
+|MediaMTX RTSP|8554|本机 Windows，读取机载 RTSP|
+|MediaMTX WebRTC|8891|本机 Windows，网页播放|
+|ROSBridge/点云|9090|机载端或点云中继|
+
+正常部署不需要额外确认端口。启动网页时选择的终端会从 `config/fleet.json` 读取本终端的端口和视频地址；MediaMTX 会根据模板自动生成 `ground_runtime\mediamtx_uavN.yml`。只有端口被其他程序占用或网络策略要求改端口时，才编辑 `config/fleet.json` 中对应终端的 `web_port`、`task_port`、`image_port`、`video_webrtc_port`、`rosbridge_port`，并确保机载配置使用同一个任务端口和图片端口。RTSP 源端口 `8554` 必须与无人机相机地址一致。
+
+启动失败时先检查：
+
+```powershell
+Get-NetTCPConnection -LocalPort 8000,56100,56010,8554,8891 -State Listen -ErrorAction SilentlyContinue
+```
+
+不要把六台电脑的端口改成不同值来“避让”；它们位于不同电脑，保持固定映射更便于机载和地面配置一致。
+
 ## 机载端部署
 
 地面电脑到无人机的首次 SSH 公钥配置和机载部署仍使用 `六机六地面端快速部署与启动.txt` 中的相对项目命令。机载厂商工作区（`p600_experiment` 或 `su17_experiment`）属于厂商代码，不上传、不修改；竞赛代码通过 `tools\deploy_onboard_stack.ps1` 同步并在机载端构建。
