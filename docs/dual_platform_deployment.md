@@ -81,7 +81,7 @@ Windows 部署工具现在支持选择机型，例如：
 | 图片回传与科目一提交 | 仍按图像时间戳精确匹配，缓存 0.5 秒/30fps 最多 15 帧；画目标框、保存 JPEG/元数据与提交 JSON，保留断线补传 |
 | 点云 | `/uavN/octomap_point_cloud_centers/reduce_the_frequency/compressed`；共用原有解码与网页显示链路 |
 | 视频 | 每架配置实际 RTSP，地面 MediaMTX 转为浏览器视频；浏览器远程访问地面网页时替换本机回环地址 |
-| 外部飞行算法 B | `/uavN/competition/external_mission`、`external_status`；路径 `/ground_mission_planner/vehicle_N/path_stage_1`、降落点 `/ground_mission_planner/vehicle_N/jiangluodian`；GPS 模式为 `[纬度,经度,相对起飞点高度]`，XYZ 模式为 `[x,y,z]`；GPS 不叠加海拔 |
+| 外部飞行算法 B | `/uavN/competition/external_mission`、`external_status`；路径 `/ground_mission_planner/vehicle_N/path_stage_1`、降落点 `/ground_mission_planner/vehicle_N/jiangluodian`；GPS 模式为 `[经度,纬度,相对起飞点高度]`，XYZ 模式为 `[x,y,z]`；GPS 不叠加海拔 |
 
 必须让检测算法订阅 `image_stamped` 并原样回传其 `image.header.stamp`。只让回传节点订阅适配图像，而算法继续使用零时间戳原图，无法完成匹配。可以通过算法启动参数或 ROS remap 切换订阅，不需要改动厂商源码。接收时刻不是相机曝光时刻；若算法要求严格的曝光时间，应选择 `require_source`，并使用能提供原始时间戳的相机驱动。
 
@@ -95,7 +95,7 @@ Windows 部署工具现在支持选择机型，例如：
 
 请求话题 `/uav3/competition/scan/request`，类型 `std_msgs/String`；扫描算法在 `/uav3/competition/scan/status` 回传同样的 `uav_id`、`mission_id`、`request_id` 以及 `"state":"completed"`。`failed` 或超时会停止推进航点。旧扫描回执不能完成新航点；`timed_hover` 仅适合测试等待，不证明实际光学扫描已经完成。
 
-外部 B 的 JSON 任务包含坐标系、航速、扫描模式、每航点动作和扫描时长；比赛可使用 WGS84 经纬高或 XYZ/ENU，实验室使用本地 ENU 的 `x_m、y_m、z_m`。实验室区域沿用比赛多边形形状并按比例缩放到最大 3m × 3m，实际区域不固定为 3m × 3m。旧的 `Float64MultiArray` 路径只作兼容输出，不能单独表达扫描动作。外部 B 必须处理 JSON 中的动作并报告进度。当前拷贝的厂商目录不包含完整的 `recon_ws`/`paotou_ws` 算法工程，其具体扫描/避障/投放行为需要与该算法实机联调。
+外部 B 的 JSON 任务包含坐标系、航速、扫描模式、每航点动作和扫描时长；比赛可使用 WGS84 经纬高或 XYZ/ENU，实验室使用本地 ENU 的 `x_m、y_m、z_m`。实验室区域沿用比赛多边形形状并按比例缩放到最大 3m × 3m，实际区域不固定为 3m × 3m。内部任务的 `waypoints_wgs84` 仍按 `[纬度, 经度]` 存储；程序 B 的两个 GPS 数组话题统一按 `[经度, 纬度, 相对起飞点高度]` 发布。JSON 的 WGS84 航点和返航点使用具名字段 `latitude`、`longitude`、`altitude_m`。旧的 `Float64MultiArray` 路径只作兼容输出，不能单独表达扫描动作。外部 B 必须处理 JSON 中的动作并报告进度。当前拷贝的厂商目录不包含完整的 `recon_ws`/`paotou_ws` 算法工程，其具体扫描/避障/投放行为需要与该算法实机联调。
 
 ## 验证范围
 

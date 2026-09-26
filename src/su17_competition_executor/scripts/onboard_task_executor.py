@@ -115,6 +115,8 @@ class OnboardTaskExecutor:
         self._assignment_acked = False
         self._home: Optional[Tuple[float, float, float, float]] = None
         self._gps_home: Optional[Tuple[float, float, float]] = None
+        self._ground_origin_z: Optional[float] = None
+        self._ground_origin_source = ""
         self._motion_thread: Optional[threading.Thread] = None
         self._pending_execute: Optional[Dict[str, Any]] = None
         self._abort_motion = threading.Event()
@@ -290,6 +292,12 @@ class OnboardTaskExecutor:
             rospy.logerr_throttle(5, self._identity_error)
             return
         with self._lock:
+            # 持续记录未解锁时的地面 Z，解锁后冻结；首个已解锁遥测可能
+            # 因丢帧而已在空中，不能用它覆盖地面基准并重复叠加高度。
+            if (message.connected and message.odom_valid and not message.armed
+                    and math.isfinite(float(message.position[2]))):
+                self._ground_origin_z = float(message.position[2])
+                self._ground_origin_source = "未解锁地面遥测"
             self._state = message
             self._state_received = time.monotonic()
 
@@ -309,6 +317,8 @@ class OnboardTaskExecutor:
                 phase=phase,
                 home=self._home,
                 gps_home=self._gps_home,
+                ground_origin_z=getattr(self, "_ground_origin_z", None),
+                ground_origin_source=getattr(self, "_ground_origin_source", ""),
                 boot_id=self._boot_id,
                 device_id=getattr(self, "identity", {}).get("device_id"),
                 model=getattr(self, "identity", {}).get("model"),
@@ -339,6 +349,22 @@ class OnboardTaskExecutor:
             self._progress = progress
             self._home = tuple(progress["home"]) if progress.get("home") else None
             self._gps_home = tuple(progress["gps_home"]) if progress.get("gps_home") else None
+            origin = progress.get("ground_origin_z")
+            same_boot = progress.get("boot_id") == self._boot_id
+            has_ground_origin = same_boot and origin is not None and math.isfinite(float(origin))
+            if has_ground_origin:
+                self._ground_origin_z = float(origin)
+                self._ground_origin_source = str(progress.get("ground_origin_source") or "同次开机保存的地面基准")
+            if self._uses_ground_height_reference(assignment) and self._home is not None:
+                if not has_ground_origin:
+                    # 旧缓存可能把空中悬停 Z 当成地面；不得自动沿用旧基准飞行。
+                    self._home = None
+                    self._gps_home = None
+                    self._progress.pop("resolved_waypoints", None)
+                    self._resume_pending = False
+                    rospy.logwarn("GPS 缓存缺少本次开机的地面高度基准，已停止自动恢复，请重新规划并分派任务")
+                    return
+                self._home = (self._home[0], self._home[1], float(origin), self._home[3])
             self._resume_pending = progress.get("phase") in (
                 "taking_off", "executing", "returning", "landing",
                 "external_waiting", "external_executing"
@@ -450,7 +476,7 @@ class OnboardTaskExecutor:
                 "control_state": int(control.control_state),
                 "battery_percentage": float(state.battery_percetage),
                 "position": [float(value) for value in state.position],
-                "mission_altitude_m": float(state.position[2]) - self._home[2] if self._home and self._assignment and self._assignment["task"]["coordinate_frame"] == "LOCAL_NORTH_WEST" else None,
+                "mission_altitude_m": float(state.position[2]) - self._home[2] if self._home and self._assignment and self._uses_ground_height_reference(self._assignment) else None,
                 "velocity": [float(value) for value in state.velocity],
                 "task_phase": self._progress.get("phase", "idle"),
                 "gps_status": int(getattr(state, "gps_status", 0)),
@@ -865,6 +891,34 @@ class OnboardTaskExecutor:
             rate.sleep()
         return False, "ros_shutdown"
 
+    @staticmethod
+    def _uses_ground_height_reference(assignment: Dict[str, Any]) -> bool:
+        return (assignment["task"].get("coordinate_frame") == "LOCAL_NORTH_WEST"
+                or str(assignment.get("coordinate_frame", "")).upper() == "WGS84")
+
+    def _ground_height_reference(self, state: UAVState) -> Tuple[float, str]:
+        with self._lock:
+            origin = getattr(self, "_ground_origin_z", None)
+            if origin is not None and math.isfinite(float(origin)):
+                return float(origin), getattr(self, "_ground_origin_source", "") or "已记录地面遥测"
+            local_z = float(state.position[2])
+            if not math.isfinite(local_z):
+                raise ValueError("本地 Z 高度无效，无法确定地面高度基准")
+            if not bool(getattr(state, "armed", False)):
+                origin, source = local_z, "当前未解锁地面遥测"
+            else:
+                # 在空中启动竞赛程序时，GPS rel_alt 是飞控相对 Home 高度。
+                # 用它还原本地坐标中的地面 Z，不增加当前已有的飞行高度。
+                try:
+                    relative = float(state.rel_alt)
+                except (AttributeError, TypeError, ValueError) as error:
+                    raise ValueError("缺少地面高度记录和有效 GPS 相对高度，无法确定起飞高度基准") from error
+                if int(getattr(state, "location_source", -1)) not in (4, 5) or not math.isfinite(relative):
+                    raise ValueError("缺少地面高度记录和有效 GPS 相对高度，无法确定起飞高度基准")
+                origin, source = local_z - relative, "GPS 相对高度反推"
+            self._ground_origin_z, self._ground_origin_source = origin, source
+            return origin, source
+
     def _run_takeoff(self, payload: Dict[str, Any]) -> bool:
         ready, reason = self._ready()
         if not ready:
@@ -881,7 +935,8 @@ class OnboardTaskExecutor:
             except (ValueError, rospy.ROSException, rospy.ServiceException) as error:
                 self._publish_status("takeoff_failed", error=str(error))
                 return False
-        target_z = float(payload["target_altitude_m"])
+        target_relative_alt = float(payload["target_altitude_m"])
+        target_z = target_relative_alt
         self._home = (
             float(state.position[0]),
             float(state.position[1]),
@@ -889,12 +944,21 @@ class OnboardTaskExecutor:
             float(state.attitude[2]),
         )
         global_task = bool(self._assignment and self._assignment["task"]["coordinate_frame"] == "LOCAL_NORTH_WEST")
+        uses_ground_height = bool(self._assignment and self._uses_ground_height_reference(self._assignment))
+        altitude_source = "本地 ENU 高度"
+        if uses_ground_height:
+            try:
+                ground_z, altitude_source = self._ground_height_reference(state)
+                self._home = (self._home[0], self._home[1], ground_z, self._home[3])
+                target_z = ground_z + target_relative_alt
+            except ValueError as error:
+                self._publish_status("takeoff_failed", error=str(error))
+                return False
         if global_task:
             try:
                 self._gps_home = self._valid_gps(state)
                 points = resolve_waypoints(self._assignment["task"], self._home, self._gps_home, self.max_distance_from_home)
                 self._progress["resolved_waypoints"] = points
-                target_z += self._home[2]
             except ValueError as error:
                 self._publish_status("takeoff_failed", error=str(error))
                 return False
@@ -919,12 +983,20 @@ class OnboardTaskExecutor:
                 # 实验室外部程序 B 使用相对起飞点的 ENU，不需要 GPS。
                 self._gps_home = None
         self._checkpoint("taking_off", next_waypoint=0, execution=dict(payload))
-        self._publish_status("taking_off", target_altitude_m=target_z)
+        altitude_details = {
+            "target_altitude_m": target_relative_alt,
+            "target_local_z_m": target_z,
+            "ground_origin_z_m": self._home[2] if uses_ground_height else None,
+            "altitude_reference_source": altitude_source,
+        }
+        rospy.loginfo("起飞高度：任务高度=%.3f 米，本地 Z 目标=%.3f 米，基准来源=%s",
+                      target_relative_alt, target_z, altitude_source)
+        self._publish_status("taking_off", **altitude_details)
         ok, reason = self._fly_to(
             self._home[0], self._home[1], target_z, self._home[3], self.search_speed
         )
         if ok:
-            self._publish_status("at_altitude", target_altitude_m=target_z)
+            self._publish_status("at_altitude", **altitude_details)
             return True
         else:
             self._publish_status("takeoff_failed", error=reason)
@@ -993,7 +1065,7 @@ class OnboardTaskExecutor:
         path_msg = Float64MultiArray()
         if frame == "WGS84":
             path_msg.data = [value for point in points for value in (
-                point["latitude"], point["longitude"], point["altitude_m"]
+                point["longitude"], point["latitude"], point["altitude_m"]
             )]
         else:
             path_msg.data = [value for point in points for value in (
@@ -1020,7 +1092,7 @@ class OnboardTaskExecutor:
         if landing is not None:
             landing_msg = Float64MultiArray()
             if frame == "WGS84":
-                landing_msg.data = [float(landing[0]), float(landing[1]), target_relative_alt]
+                landing_msg.data = [float(landing[1]), float(landing[0]), target_relative_alt]
             else:
                 landing_msg.data = [float(landing[0]), float(landing[1]), target_relative_alt]
             self.external_landing_pub.publish(landing_msg)
@@ -1046,7 +1118,10 @@ class OnboardTaskExecutor:
             assignment = self._assignment
         if assignment is None:
             return False
-        if assignment["task"]["coordinate_frame"] == "LOCAL_NORTH_WEST" and (self._home is None or self._gps_home is None):
+        if self._uses_ground_height_reference(assignment) and self._home is None:
+            self._publish_status("task_failed", error="GPS 任务尚未记录有效地面高度基准，请重新规划并起飞")
+            return False
+        if assignment["task"]["coordinate_frame"] == "LOCAL_NORTH_WEST" and self._gps_home is None:
             self._publish_status("task_failed", error="地图任务尚未记录起飞锚点")
             return False
         requested_speed = float(assignment["task"].get("speed_mps", self.search_speed))
@@ -1131,7 +1206,7 @@ class OnboardTaskExecutor:
 
     def _target_z(self, assignment):
         relative = float(assignment["target_altitude_m"])
-        return relative + self._home[2] if assignment["task"]["coordinate_frame"] == "LOCAL_NORTH_WEST" and self._home else relative
+        return relative + self._home[2] if self._uses_ground_height_reference(assignment) and self._home else relative
 
     def _scan_callback(self, message):
         try:

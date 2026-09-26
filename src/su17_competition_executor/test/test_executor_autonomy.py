@@ -15,6 +15,7 @@ rospy = types.ModuleType("rospy")
 rospy.is_shutdown = lambda: False
 rospy.loginfo = Mock()
 rospy.logerr = Mock()
+rospy.logwarn = Mock()
 sys.modules.setdefault("rospy", rospy)
 for name in ("prometheus_msgs", "std_msgs"):
     sys.modules.setdefault(name, types.ModuleType(name))
@@ -39,6 +40,9 @@ class AutonomyTest(unittest.TestCase):
         node.cache_path = str(Path(directory) / "task.json")
         node._home = (0., 0., 0., 0.)
         node._gps_home = (30.0, 103.0, 500.0)
+        node._state = None
+        node._ground_origin_z = None
+        node._ground_origin_source = ""
         node._progress = {"phase": "executing", "next_waypoint": 1}
         node._assignment = {"type": "assign_task", "uav_id": 3, "mission_id": "test", "target_altitude_m": .5, "task": {"type": "lawnmower_search", "coordinate_frame": "ENU", "waypoints_m": [[0, 0], [1, 0], [1, 1]]}}
         node._assignment["assignment_checksum"] = assignment_checksum(node._assignment)
@@ -133,7 +137,7 @@ class AutonomyTest(unittest.TestCase):
         self.assertEqual(payload["altitude_frame"], "RELATIVE_TO_TAKEOFF")
         self.assertTrue(all(point["altitude_m"] == 0.5 for point in payload["waypoints"]))
         self.assertEqual(node.external_path_pub.publish.call_args.args[0].data[2::3], [0.5] * 3)
-        self.assertEqual(node.external_landing_pub.publish.call_args.args[0].data, [30.0, 103.0, 0.5])
+        self.assertEqual(node.external_landing_pub.publish.call_args.args[0].data, [103.0, 30.0, 0.5])
         self.assertEqual(payload["return_home"]["altitude_m"], 0.5)
         self.assertEqual(len(payload["waypoints"]), 3)
 
@@ -146,7 +150,7 @@ class AutonomyTest(unittest.TestCase):
                 ("waypoints_wgs84", [[30.123, 103.456, 44.598]]),
                 ("waypoints_gps", [{"latitude": 30.123, "longitude": 103.456, "altitude_m": 44.598}]),
             ):
-                for height in (0.5, 4.5, 40.0):
+                for height in (0.5, 1.5, 4.5, 40.0):
                     with self.subTest(key=key, points=points, height=height):
                         node = self.executor(tempfile.gettempdir())
                         node._gps_home = (30.0, 103.0, 44.098)
@@ -156,13 +160,13 @@ class AutonomyTest(unittest.TestCase):
                         node._publish_external_mission({})
                         payload = json.loads(node.external_mission_pub.publish.call_args.args[0].data)
                         self.assertEqual(node.external_path_pub.publish.call_args.args[0].data,
-                                         [30.123, 103.456, height])
+                                         [103.456, 30.123, height])
                         self.assertEqual(node.external_landing_pub.publish.call_args.args[0].data,
-                                         [30.0, 103.0, height])
+                                         [103.0, 30.0, height])
                         self.assertEqual(payload["target_altitude_m"], height)
                         self.assertEqual(payload["relative_altitude_m"], height)
                         self.assertEqual(payload["return_home"]["altitude_m"], height)
-                        self.assertEqual(payload["waypoints"][0]["altitude_m"], height)
+                        self.assertEqual(payload["waypoints"][0], {"latitude": 30.123, "longitude": 103.456, "altitude_m": height})
         finally:
             module.String = original
 
@@ -177,8 +181,8 @@ class AutonomyTest(unittest.TestCase):
         finally:
             module.String = original
         landing = node.external_landing_pub.publish.call_args.args[0].data
-        self.assertAlmostEqual(landing[0], 30.0 + 2.0 / 111111.0)
-        self.assertAlmostEqual(landing[1], 103.0 - 3.0 / (111111.0 * module.math.cos(module.math.radians(30.0))))
+        self.assertAlmostEqual(landing[0], 103.0 - 3.0 / (111111.0 * module.math.cos(module.math.radians(30.0))))
+        self.assertAlmostEqual(landing[1], 30.0 + 2.0 / 111111.0)
         self.assertEqual(landing[2], 0.5)
 
     def test_external_lab_mode_publishes_local_enu_without_gps(self):
@@ -274,6 +278,120 @@ class AutonomyTest(unittest.TestCase):
             node._fly_to.reset_mock()
             self.assertTrue(node._run_task({}))
             self.assertEqual(node._fly_to.call_args.args[:3],(100,200,15))
+
+    def gps_height_executor(self, directory, controller="external"):
+        node = self.executor(directory)
+        node._ready = Mock(return_value=(True, "ready"))
+        node.max_distance_from_home = 2000
+        node._assignment.update(target_altitude_m=1.5, controller_mode=controller, coordinate_frame="WGS84")
+        node._assignment["task"].update(coordinate_frame="LOCAL_NORTH_WEST", waypoints_m=[[0, 0]],
+                                         waypoints_wgs84=[[33, 113]])
+        node._assignment["assignment_checksum"] = assignment_checksum(node._assignment)
+        node._snapshot = lambda: (node._state, None)
+        return node
+
+    def gps_state(self, z, armed, rel_alt):
+        return types.SimpleNamespace(uav_id=3, connected=True, position=[100, 200, z],
+                                     velocity=[0, 0, 0], attitude=[0, 0, 0], armed=armed,
+                                     odom_valid=True, gps_status=6, location_source=5,
+                                     latitude=33, longitude=113, altitude=40 + rel_alt, rel_alt=rel_alt)
+
+    def test_gps_takeoff_does_not_add_height_to_existing_command_control_hover(self):
+        for controller in ("internal", "external"):
+            with tempfile.TemporaryDirectory() as directory, self.subTest(controller=controller):
+                node = self.gps_height_executor(directory, controller)
+                node._state_callback(self.gps_state(0.410475, False, 0.0))
+                node._state_callback(self.gps_state(0.410475, True, 0.0))
+                node._state_callback(self.gps_state(1.907061, True, 1.496586))
+                self.assertTrue(node._run_takeoff({"target_altitude_m": 1.5}))
+                self.assertAlmostEqual(node._home[2], 0.410475)
+                self.assertAlmostEqual(node._fly_to.call_args.args[2], 1.910475)
+                self.assertAlmostEqual(node._target_z(node._assignment), 1.910475)
+                status = node._publish_status.call_args.kwargs
+                self.assertEqual(status["target_altitude_m"], 1.5)
+                self.assertAlmostEqual(status["target_local_z_m"], 1.910475)
+                self.assertAlmostEqual(status["ground_origin_z_m"], 0.410475)
+
+    def test_gps_starting_in_air_recovers_ground_origin_from_relative_altitude(self):
+        with tempfile.TemporaryDirectory() as directory:
+            node = self.gps_height_executor(directory)
+            node._state_callback(self.gps_state(1.907061, True, 1.496586))
+            self.assertIsNone(node._ground_origin_z)
+            self.assertTrue(node._run_takeoff({"target_altitude_m": 1.5}))
+            self.assertAlmostEqual(node._home[2], 0.410475)
+            self.assertAlmostEqual(node._fly_to.call_args.args[2], 1.910475)
+            self.assertEqual(node._publish_status.call_args.kwargs["altitude_reference_source"], "GPS 相对高度反推")
+
+    def test_gps_airborne_without_any_ground_reference_does_not_issue_a_takeoff_target(self):
+        for relative in (None, float("nan")):
+            with tempfile.TemporaryDirectory() as directory, self.subTest(relative=relative):
+                node = self.gps_height_executor(directory)
+                node._state = self.gps_state(1.9, True, 1.5)
+                node._state.rel_alt = relative
+                self.assertFalse(node._run_takeoff({"target_altitude_m": 1.5}))
+                node._fly_to.assert_not_called()
+                self.assertEqual(node._publish_status.call_args.args[0], "takeoff_failed")
+
+    def test_gps_external_manual_enu_route_still_uses_relative_takeoff_height(self):
+        with tempfile.TemporaryDirectory() as directory:
+            node = self.gps_height_executor(directory)
+            node._assignment["task"]["coordinate_frame"] = "ENU"
+            node._state = self.gps_state(1.907061, True, 1.496586)
+            self.assertTrue(node._run_takeoff({"target_altitude_m": 1.5}))
+            self.assertAlmostEqual(node._fly_to.call_args.args[2], 1.910475)
+            self.assertAlmostEqual(node._target_z(node._assignment), 1.910475)
+
+    def test_saved_ground_origin_survives_same_boot_task_recovery(self):
+        with tempfile.TemporaryDirectory() as directory:
+            node = self.gps_height_executor(directory)
+            node._state_callback(self.gps_state(0.410475, False, 0.0))
+            node._state_callback(self.gps_state(1.907061, True, 1.496586))
+            self.assertTrue(node._run_takeoff({"target_altitude_m": 1.5}))
+            restored = self.gps_height_executor(directory)
+            restored._restore_progress()
+            self.assertAlmostEqual(restored._ground_origin_z, 0.410475)
+            self.assertAlmostEqual(restored._target_z(restored._assignment), 1.910475)
+
+    def test_old_gps_cache_cannot_resume_with_airborne_home_height(self):
+        for frame in ("LOCAL_NORTH_WEST", "ENU"):
+            with tempfile.TemporaryDirectory() as directory, self.subTest(frame=frame):
+                node = self.gps_height_executor(directory)
+                node._assignment["task"]["coordinate_frame"] = frame
+                node._assignment["assignment_checksum"] = assignment_checksum(node._assignment)
+                node._home = (100, 200, 1.907061, 0)
+                node._progress["resolved_waypoints"] = [[100, 200]]
+                node._checkpoint("taking_off", execution={"target_altitude_m": 1.5})
+                restored = self.gps_height_executor(directory)
+                restored._restore_progress()
+                self.assertFalse(restored._resume_pending)
+                self.assertIsNone(restored._home)
+                self.assertIsNone(restored._gps_home)
+                self.assertNotIn("resolved_waypoints", restored._progress)
+                self.assertFalse(restored._run_task({}))
+                restored._fly_to.assert_not_called()
+
+    def test_gps_cache_restores_home_height_from_saved_ground_origin(self):
+        with tempfile.TemporaryDirectory() as directory:
+            node = self.gps_height_executor(directory)
+            node._home = (100, 200, 1.907061, 0)
+            node._ground_origin_z = 0.410475
+            node._checkpoint("taking_off", execution={"target_altitude_m": 1.5})
+            restored = self.gps_height_executor(directory)
+            restored._restore_progress()
+            self.assertTrue(restored._resume_pending)
+            self.assertAlmostEqual(restored._home[2], 0.410475)
+            self.assertAlmostEqual(restored._target_z(restored._assignment), 1.910475)
+
+    def test_ground_origin_is_not_restored_from_another_boot(self):
+        with tempfile.TemporaryDirectory() as directory:
+            node = self.gps_height_executor(directory)
+            node._ground_origin_z = 10.0
+            node._checkpoint("executing")
+            restored = self.gps_height_executor(directory)
+            restored._boot_id = "new-boot"
+            restored._restore_progress()
+            self.assertIsNone(restored._ground_origin_z)
+            self.assertFalse(restored._resume_pending)
 
     def test_failed_scan_does_not_advance_checkpoint(self):
         with tempfile.TemporaryDirectory() as directory:
