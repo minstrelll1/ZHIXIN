@@ -1,0 +1,21 @@
+logLevel: info
+logDestinations: [stdout]
+
+rtsp: true
+rtspAddress: :8554
+
+# 竞赛网页只使用 RTSP 拉流和 WebRTC 播放；禁用未使用的服务，避免
+# Windows 上保留的 RTMP 1935 端口导致整个 MediaMTX 进程退出。
+rtmp: false
+hls: false
+srt: false
+
+webrtc: true
+webrtcAddress: :__WEBRTC_PORT__
+webrtcAllowOrigins: ["*"]
+
+paths:
+  __UAV_PATH__:
+    source: __RTSP_SOURCE__
+    rtspTransport: automatic
+    sourceOnDemand: false

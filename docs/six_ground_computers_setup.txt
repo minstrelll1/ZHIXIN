@@ -1,0 +1,137 @@
+P600 / SU17 六地面终端使用与机载部署说明
+更新：2026-09-18
+
+一、目录、身份与网络
+地面工程：F:\Projects\ZhiXin\competition_development
+机载工程：/home/amov/competition_development
+P600、SU17 使用同一套竞赛代码，使用 --model p600 或 --model su17 选择环境。
+p600_experiment、su17_experiment 仅作为厂商依赖读取，部署脚本不写入厂商目录。
+飞控编号来自 MAVROS 的 MAV_SYS_ID，并与 /uavN/prometheus/state 核对；
+界面选择不会修改飞控编号。默认终端 N 配对 UAV N。
+
+终端/UAV    机载 IP          机地直连网卡 IP    地面互联 IP       相机 RTSP
+1           192.168.1.202    192.168.1.121      192.168.2.202     rtsp://192.168.1.202:8554/live
+2           192.168.1.207    192.168.1.122      192.168.2.207     rtsp://192.168.1.207:8554/live
+3           192.168.1.212    192.168.1.123      192.168.2.212     rtsp://192.168.1.212:8554/live
+4           192.168.1.217    192.168.1.124      192.168.2.217     rtsp://192.168.1.217:8554/live
+5           192.168.1.222    192.168.1.125      192.168.2.222     rtsp://192.168.1.222:8554/live
+6           192.168.1.227    192.168.1.126      192.168.2.227     rtsp://192.168.1.227:8554/live
+
+配置文件：config/fleet.json。
+onboard_host：机载 IP；ground_host：机载电脑经 LQ-10 能访问到的配对地面机地网卡 IP，默认为 192.168.1.121～.126。
+peer_host：地面电脑之间的互联 IP，默认仍为 192.168.2.202、.207、.212、.217、.222、.227。
+device_id：仍会随 hello 上报并显示，但不再作为启动前的人工绑定步骤。
+端口默认值：网页 8000；任务/遥测 56100；照片 56010；视频网页 8891；ROSBridge 9090。
+修改工程配置不会自动修改 Windows 网卡或 LQ-10 硬件网络设置。
+
+二、启动地面程序并选择角色
+首次安装环境：在工程目录运行 tools/install_ground_station.ps1。
+固定令牌使用 tools/local_tokens.ps1 中的 AUTH_TOKEN、PEER_TOKEN，不写入 fleet.json。
+六地面端使用相同 PeerToken；机地两端使用相同 AuthToken。
+
+所有地面终端使用相同命令，在管理员 PowerShell 执行一行：
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "F:\Projects\ZhiXin\competition_development\tools\start_ground.ps1"
+
+命令不再需要 GroundTerminalId，编号只在网页中选择。仅检查可加 -CheckOnly。
+完成真机配置核对后可加 -ConfirmLiveConfig；未确认时真机起飞保持锁定。
+打开 http://127.0.0.1:8000/，只选择本机编号以及是否为任务发布端；机型由固定配置自动读取。
+选择前仅启动网页入口，不绑定任何无人机；选定后后台启动对应的任务、图片和视频服务。
+角色检查和配置同步在后台并行进行，进入界面无需逐台等待离线终端超时。
+后台检查完成前任务按钮锁定；失败时在页面查看原因，通过“终端设置”重试。
+换编号需停止本机地面程序，用同一行命令重启后重新选择。
+如果网页端口已被旧后端占用，先关闭旧后端；不要重复启动图片接收器或 MediaMTX。
+多个浏览器窗口共享同一后端角色；刷新页面不能绕过接口权限。
+
+三、任务权限与冲突
+1. 指定一台任务发布端，允许向其他地面端分派，再由各端转交配对机。
+2. 普通端只能向自己的配对机分派任务、起飞和维护，不能跨机发送命令。
+3. 普通端可查看发布端任务，但不能对镜像任务批量起飞；仍可让自己的配对机返航。
+4. 发布端控制中的无人机不能被本地独立规划覆盖，须先结束原任务。
+5. 页面不自动读取或显示方案。点击“规划并分派”后读取保存的六区域方案，
+   经发布端 → 各配对地面端 → 无人机下发，等待各机回执；不在现场重复求解。
+   只对已连接且身份核验成功的飞机下发；全离线时仅显示规划，不声称已分派。
+   扫描半径 75 米、航速 5 米/秒、每点扫描 10 秒，沿用保存的六区分配。
+   起飞仍须独立预检和确认；使用配置中的竞赛高度，各机返回自身记录的起飞点。
+   区域规划不再沿用实验室虚拟降落点；实际起降点配置可后续扩展。
+   总览和单机详情规划窗保持区域图比例；区域参数、数据采集及说明可展开查看。
+6. 跨机任务使用 30 秒控制租约，约每 5 秒续租，任务状态约每秒广播；
+   续租是刷新控制权有效期，不是重新派发。网络延迟会影响这些周期。
+7. 在线发布角色冲突会被拒绝。网络分区时不能保证立即发现全网角色冲突，
+   接收端仍核验发布身份和控制租约；恢复网络后须统一发布角色再分派任务。
+
+四、配置生成、同步和生效
+六套 P600 的 IP 配对已经写入 `config/fleet.json`；进入网页不会再生成临时配对或逐台探测。
+普通端只能选择自己的终端编号；发布端才可以修改共享配置并同步。
+普通端的选择仅上报，不能自行修改共享配置。
+后加入或换机型的终端：由发布端进入“机队配置 / 网络与设备绑定”，点击
+“根据各终端选择生成配置”，核对草稿，填入 PeerToken，再“保存并同步配置”。
+普通端页面为只读，后端接口同样禁止其修改和推送配置。
+SU17 机载 IP 固定为 192.168.1.88；地面机地网卡使用现场实际接通的 192.168.1.121～192.168.1.126 之一，由发布端在配置页选择。SU17 不套用 P600 的机载地址。
+换机型时清除旧设备标识及旧机载/视频地址，重新绑定实际设备。
+正式使用前只需确认固定 IP、端口和 RTSP 地址；device_id 不再阻塞启动。
+
+保存采用配置版本检查，旧窗口不能覆盖新版本。
+保存后推送其他地面端；离线或被拒绝的终端会列为同步失败。
+失败终端恢复后，由发布端再次“保存并同步配置”重试；没有后台离线自动补发。
+生效顺序：
+保存同步 → 同步同一份 fleet.json 到所有使用中的机载端 →
+重启地面脚本和机载竞赛程序 → 在网页选择本机终端。
+新配置等待重启时锁定新任务/起飞，不在运行中的任务里切换设备和端口。
+机地核验整份配置版本，因此修改任意条目后都应同步全部使用中的机载端。
+
+五、上传机载代码
+先停止相关竞赛任务。以下命令只上传竞赛代码，编译独立竞赛工作空间。
+首次 SSH 按提示核对主机指纹，登录密码直接在 SSH 提示中输入。
+
+首次部署先把 Windows 地面电脑的 SSH 公钥写入 UAV1（只需做一次；后续部署不再输入密码）：
+1. 在 Windows PowerShell 生成密钥（已有 id_ed25519.pub 时不要重复生成）：
+   $SshDir = Join-Path $env:USERPROFILE ".ssh"
+   $KeyPath = Join-Path $SshDir "id_ed25519"
+   New-Item -ItemType Directory -Force -Path $SshDir | Out-Null
+   if (-not (Test-Path "$KeyPath.pub")) { ssh-keygen -t ed25519 -f $KeyPath -N "" -C "competition-ground" }
+2. 将公钥复制到 UAV1 的 authorized_keys（按提示输入一次 Ubuntu 用户 amov 的密码）：
+   Get-Content "$KeyPath.pub" | ssh amov@192.168.1.202 "umask 077; mkdir -p ~/.ssh; cat >> ~/.ssh/authorized_keys; chmod 700 ~/.ssh; chmod 600 ~/.ssh/authorized_keys"
+3. 验证免密码登录：
+   ssh -o BatchMode=yes -o PreferredAuthentications=publickey -o PasswordAuthentication=no amov@192.168.1.202 "printf SSH_KEY_OK"
+   输出 SSH_KEY_OK 即配置完成。UAV2～6 将 192.168.1.202 替换为 .207、.212、.217、.222、.227。
+   这里的“复制公钥”就是把 Windows 的 id_ed25519.pub 内容追加到无人机 ~/.ssh/authorized_keys；不要复制私钥 id_ed25519。
+
+Windows PowerShell 上传并编译 UAV1（P600）：
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "F:\Projects\ZhiXin\competition_development\tools\deploy_onboard_stack.ps1" -UavAddress "192.168.1.202" -UavUser amov -Model p600 -SyncConfig
+
+UAV2～6 将 IP 改为 .207、.212、.217、.222、.227。
+SU17 使用实际 IP 和 -Model su17；默认远端目录是 /home/amov/competition_development。
+本机 tools/local_tokens.env 若存在，也会上传；其中只设置 AUTH_TOKEN，不放 PeerToken。
+脚本不会启动飞行，不启动或修改厂商程序。
+
+上传后在机载 Ubuntu 运行（UAV1 示例）：
+cd ~/competition_development
+bash tools/start_onboard_stack.sh --model p600 --expect-uav-id 1 --direct --check
+
+--direct --check 只检查固定机队配置，不访问 ROS/MAVROS，也不启动任务；去掉 --direct 才是严格读取飞控和 Prometheus 话题的核验模式。
+输出的设备标识用于诊断显示，不需要再填回配置。
+配置变更后只需再次传配置，不必重传全部代码。Windows 示例：
+scp "F:\Projects\ZhiXin\competition_development\config\fleet.json" amov@192.168.1.202:/home/amov/competition_development/config/fleet.json
+
+完整配置同步后，在机载端启动联调（飞行控制关闭）：
+bash tools/start_onboard_stack.sh --model p600 --expect-uav-id 1 --direct
+
+执行已核验的真机任务时：
+bash tools/start_onboard_stack.sh --model p600 --expect-uav-id 1 --direct --enable-motion
+
+其他飞机替换编号；SU17 替换机型参数。启动脚本自动加载 ROS、对应厂商环境、
+devel_p600 或 devel_su17，以及本工程 tools/local_tokens.env。
+
+实验室没有 GPS 时使用 XYZ/ENU；实验室任务沿用比赛区域形状并按比例缩放到最大 3m × 3m，实际区域不固定为 3m × 3m。外部程序 B 可以接收 `coordinate_frame: ENU` 的本地航点，航点字段为 `x_m、y_m、z_m`。比赛任务可选择 WGS84 或 XYZ/ENU。只有一个控制程序可以实际发送运动命令。
+
+如果没有任何无人机连接，点击“规划并分派”仍生成完整六机结果，但结果标记为“仅规划”，
+不会发送任务、获取控制租约或启动飞行。
+
+六、视频、点云与照片
+视频：相机 RTSP → LQ-10 → 配对地面 MediaMTX → 浏览器 WebRTC。
+每台地面端只拉取配对机的一路视频，网页地址 http://127.0.0.1:8891/uavN/。
+video_rtsp_source 是 MediaMTX 的输入，不是浏览器直接播放地址。
+点云：保持 groundstation_shared，复用 GroundStation 接收的点云流；按实际网卡捕获。
+GroundStation 必须打开点云显示；细节见 docs/groundstation_pointcloud_windows.md。
+照片：机载缓存图像与算法时间戳匹配、画框后经 56010 发给配对地面端，
+任务发布端汇总各端保存的目标照片与提交信息。目标照片与实时视频用途不同。

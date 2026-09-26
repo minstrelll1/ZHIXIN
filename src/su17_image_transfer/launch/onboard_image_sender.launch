@@ -1,0 +1,56 @@
+<launch>
+  <arg name="uav_id" default="1"/>
+  <!-- 飞控编号与本机 ROS 命名空间保持一致。 -->
+  <arg name="local_ros_uav_id" default="$(arg uav_id)"/>
+  <arg name="ground_host" default=""/>
+  <arg name="ground_port" default="56010"/>
+  <arg name="image_topic" default="/uav$(arg local_ros_uav_id)/gimbal/image_original"/>
+  <arg name="input_mode" default="completed_target_array"/>
+  <arg name="detection_topic" default="/uav$(arg uav_id)/image_transfer/target_detection"/>
+  <arg name="completed_target_topic" default="/target_stcheduler/complemend_targets"/>
+  <arg name="frame_cache_sec" default="0.5"/>
+  <arg name="camera_fps" default="30.0"/>
+  <arg name="image_buffer_bytes" default="67108864"/>
+  <arg name="target_image_topic" default="/uav$(arg uav_id)/image_transfer/target_image"/>
+  <arg name="target_coordinate_topic" default="/uav$(arg uav_id)/image_transfer/target_coordinate"/>
+  <arg name="sync_queue_size" default="20"/>
+  <arg name="sync_slop_sec" default="0.5"/>
+  <arg name="compressed_input" default="false"/>
+  <arg name="enable_offline_recovery" default="true"/>
+  <arg name="reconcile_after_minutes" default="19.0"/>
+  <arg name="reconcile_retry_sec" default="30.0"/>
+  <arg name="cache_root" default="$(env HOME)/competition_development/image_cache"/>
+  <arg name="mission_id" default=""/>
+  <arg name="start_on_node_start" default="false"/>
+  <arg name="auth_token" default=""/>
+
+  <node pkg="su17_image_transfer"
+        type="onboard_image_sender.py"
+        name="su17_onboard_image_sender"
+        output="screen">
+    <rosparam command="load" file="$(find su17_image_transfer)/config/image_transfer.yaml"/>
+    <param name="uav_id" value="$(arg uav_id)"/>
+    <param name="local_ros_uav_id" value="$(arg local_ros_uav_id)"/>
+    <param name="ground_host" value="$(arg ground_host)"/>
+    <param name="ground_port" value="$(arg ground_port)"/>
+    <param name="image_topic" value="$(arg image_topic)"/>
+    <param name="input_mode" value="$(arg input_mode)"/>
+    <param name="detection_topic" value="$(arg detection_topic)"/>
+    <param name="completed_target_topic" value="$(arg completed_target_topic)"/>
+    <param name="frame_cache_sec" value="$(arg frame_cache_sec)"/>
+    <param name="camera_fps" value="$(arg camera_fps)"/>
+    <param name="image_buffer_bytes" value="$(arg image_buffer_bytes)"/>
+    <param name="target_image_topic" value="$(arg target_image_topic)"/>
+    <param name="target_coordinate_topic" value="$(arg target_coordinate_topic)"/>
+    <param name="sync_queue_size" value="$(arg sync_queue_size)"/>
+    <param name="sync_slop_sec" value="$(arg sync_slop_sec)"/>
+    <param name="compressed_input" value="$(arg compressed_input)"/>
+    <param name="enable_offline_recovery" value="$(arg enable_offline_recovery)"/>
+    <param name="reconcile_after_minutes" value="$(arg reconcile_after_minutes)"/>
+    <param name="reconcile_retry_sec" value="$(arg reconcile_retry_sec)"/>
+    <param name="cache_root" value="$(arg cache_root)"/>
+    <param name="mission_id" value="$(arg mission_id)"/>
+    <param name="start_on_node_start" value="$(arg start_on_node_start)"/>
+    <param name="auth_token" value="$(arg auth_token)"/>
+  </node>
+</launch>

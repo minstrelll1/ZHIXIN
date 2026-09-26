@@ -1,0 +1,58 @@
+SU17 启动指令
+
+一、地面端服务器
+
+在每台 Windows 地面电脑执行，只修改本机的 UAV 编号和节点名称：
+
+cd F:\Projects\ZhiXin\competition_development
+
+$AuthToken = "填写六台机载与地面端共用的AuthToken"
+$PeerToken = "填写六台地面电脑共用的PeerToken"
+$Peers = "1=http://地面电脑1的IP:8000;2=http://地面电脑2的IP:8000;3=http://地面电脑3的IP:8000;4=http://地面电脑4的IP:8000;5=http://地面电脑5的IP:8000;6=http://地面电脑6的IP:8000"
+
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File ".\tools\start_competition_backend_tcp.ps1" `
+  -LocalUavId 1 `
+  -GroundNodeId "ground-uav1" `
+  -GroundPeers $Peers `
+  -AuthToken $AuthToken `
+  -PeerToken $PeerToken `
+  -ImageAuthToken $AuthToken `
+  -RecordingSshHosts "1=对应机载计算机IP" `
+  -ConfirmLiveConfig
+
+该指令会同时启动 MediaMTX、本机图片接收器和竞赛地面后端。
+
+二、地面端界面
+
+地面服务器启动后，在本机浏览器打开：
+
+http://127.0.0.1:8000/
+
+三、机载服务器
+
+每架无人机执行以下指令，替换 UAV 编号、对应地面电脑 IP 和 AuthToken：
+
+source /opt/ros/noetic/setup.bash
+source /home/amov/su17_experiment/devel/setup.bash
+source /home/amov/competition_development/devel/setup.bash
+
+roslaunch su17_competition_executor onboard_task_executor.launch \
+  uav_id:=1 \
+  local_ros_uav_id:=1 \
+  transport:=tcp \
+  ground_host:=对应地面电脑IP \
+  ground_port:=56100 \
+  auth_token:=填写AuthToken \
+  enable_motion:=true
+
+roslaunch su17_image_transfer onboard_image_sender.launch \
+  uav_id:=1 \
+  local_ros_uav_id:=1 \
+  ground_host:=对应地面电脑IP \
+  ground_port:=56010 \
+  auth_token:=填写AuthToken \
+  enable_offline_recovery:=true \
+  reconcile_after_minutes:=19.0
+
+核心内容：每台地面电脑只直连对应无人机；任意一台地面电脑可以成为六机任务主控；六机遥测互通，目标图片自动汇总到主控电脑。

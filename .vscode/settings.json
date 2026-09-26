@@ -1,0 +1,28 @@
+{
+  "C_Cpp.default.compilerPath": "/usr/bin/g++",
+  "C_Cpp.default.cppStandard": "c++14",
+  "C_Cpp.default.intelliSenseMode": "linux-gcc-x64",
+  "cmake.configureOnOpen": false,
+  "cmake.sourceDirectory": "${workspaceFolder}/src",
+  "files.eol": "\n",
+  "python.defaultInterpreterPath": "/usr/bin/python3",
+  "python.analysis.extraPaths": [
+    "${workspaceFolder}/devel/lib/python3/dist-packages",
+    "/opt/ros/noetic/lib/python3/dist-packages"
+  ],
+  "ros.distro": "noetic",
+  "files.associations": {
+    "*.launch": "xml",
+    "*.msg": "plaintext",
+    "*.srv": "plaintext"
+  },
+  "files.watcherExclude": {
+    "**/build/**": true,
+    "**/devel/**": true,
+    "**/.git/**": true
+  },
+  "search.exclude": {
+    "build": true,
+    "devel": true
+  }
+}

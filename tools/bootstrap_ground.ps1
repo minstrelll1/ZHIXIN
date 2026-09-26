@@ -1,0 +1,131 @@
+<#
+.SYNOPSIS
+    从 GitHub 获取竞赛地面端，并在当前电脑完成相对路径部署。
+
+.DESCRIPTION
+    该脚本可以直接从 raw.githubusercontent.com 执行，也可以在项目中执行。
+    它不会把认证令牌写入 GitHub。首次部署且目标目录没有 tools/local_tokens.ps1
+    时，会在本机交互式询问 AuthToken 和 PeerToken，并把它们保存到被 .gitignore
+    忽略的本机文件中。
+#>
+[CmdletBinding()]
+param(
+    [string]$Repository = "minstrelll1/ZHIXIN",
+    [string]$Branch = "codex/portable-ground-deployment",
+    [string]$Destination = (Join-Path (Get-Location) "competition_development"),
+    [string]$AuthToken = "",
+    [string]$PeerToken = "",
+    [switch]$SkipInstall,
+    [switch]$ForceTokenConfig
+)
+
+$ErrorActionPreference = "Stop"
+
+function Get-PlainSecureValue([string]$Prompt) {
+    $secure = Read-Host -Prompt $Prompt -AsSecureString
+    $ptr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
+    try { return [Runtime.InteropServices.Marshal]::PtrToStringBSTR($ptr) }
+    finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($ptr) }
+}
+
+function Test-Token([string]$Value) {
+    return (-not [string]::IsNullOrWhiteSpace($Value))
+}
+
+function Get-PythonCommand {
+    $python = Get-Command python -ErrorAction SilentlyContinue
+    if ($python) {
+        & $python.Source -c "import sys; raise SystemExit(0 if sys.version_info >= (3,8) else 1)" 2>$null
+        if ($LASTEXITCODE -eq 0) { return $python.Source }
+    }
+    $py = Get-Command py -ErrorAction SilentlyContinue
+    if ($py) {
+        & $py.Source -3 -c "import sys; raise SystemExit(0 if sys.version_info >= (3,8) else 1)" 2>$null
+        if ($LASTEXITCODE -eq 0) { return $py.Source }
+    }
+    return $null
+}
+
+function Ensure-Python {
+    $python = Get-PythonCommand
+    if ($python) { return $python }
+
+    $winget = Get-Command winget -ErrorAction SilentlyContinue
+    if (-not $winget) {
+        throw "未找到 Python 3.8+，且本机没有 winget。请先安装 Python 3.11+，再重新执行本命令。"
+    }
+    Write-Host "未找到 Python，正在尝试用 winget 安装 Python 3.11（用户范围）..." -ForegroundColor Yellow
+    & $winget.Source install --id Python.Python.3.11 --exact --scope user --accept-source-agreements --accept-package-agreements
+    if ($LASTEXITCODE -ne 0) { throw "Python 安装失败，请手动安装 Python 3.11+ 后重试。" }
+    $python = Get-PythonCommand
+    if (-not $python) { throw "Python 已安装但当前 PowerShell 尚未刷新 PATH。请关闭并重新打开 PowerShell 后重试。" }
+    return $python
+}
+
+function Ensure-TokenConfig([string]$Root) {
+    $tokenFile = Join-Path $Root "tools\local_tokens.ps1"
+    if ((Test-Path -LiteralPath $tokenFile) -and (-not $ForceTokenConfig)) {
+        Write-Host "已保留本机令牌配置：$tokenFile" -ForegroundColor Green
+        return
+    }
+    if (-not (Test-Token $AuthToken)) { $script:AuthToken = Get-PlainSecureValue "请输入 AuthToken（不会显示）" }
+    if (-not (Test-Token $PeerToken)) { $script:PeerToken = Get-PlainSecureValue "请输入 PeerToken（不会显示）" }
+    if (-not (Test-Token $AuthToken) -or -not (Test-Token $PeerToken)) {
+        throw "AuthToken 和 PeerToken 不能为空。"
+    }
+    $lines = @(
+        "# 本机认证配置；不要提交到版本库。",
+        ('$env:AUTH_TOKEN = "' + $AuthToken + '"'),
+        ('$env:PEER_TOKEN = "' + $PeerToken + '"')
+    )
+    Set-Content -LiteralPath $tokenFile -Value $lines -Encoding UTF8
+    Write-Host "已写入本机令牌配置（令牌未输出，且不会上传 GitHub）。" -ForegroundColor Green
+}
+
+$Destination = [IO.Path]::GetFullPath($Destination)
+$parent = Split-Path $Destination -Parent
+if (-not (Test-Path -LiteralPath $parent)) { New-Item -ItemType Directory -Path $parent -Force | Out-Null }
+
+$tempRoot = Join-Path ([IO.Path]::GetTempPath()) ("zhixin_ground_" + [guid]::NewGuid().ToString("N"))
+$zipPath = Join-Path $tempRoot "source.zip"
+$extractRoot = Join-Path $tempRoot "extract"
+New-Item -ItemType Directory -Path $tempRoot,$extractRoot -Force | Out-Null
+try {
+    $encodedRepo = $Repository -replace "^https?://github.com/", "" -replace "/$", ""
+    if ($Branch -match '\.\.' -or $Branch.Contains('\') -or $Branch.Contains('"')) { throw "分支名包含不安全字符。" }
+    $zipUrl = "https://github.com/$encodedRepo/archive/refs/heads/$Branch.zip"
+    Write-Host "正在下载竞赛地面端：$encodedRepo / $Branch" -ForegroundColor Cyan
+    Invoke-WebRequest -UseBasicParsing -Uri $zipUrl -OutFile $zipPath
+    Expand-Archive -LiteralPath $zipPath -DestinationPath $extractRoot -Force
+    $source = Get-ChildItem -LiteralPath $extractRoot -Directory | Select-Object -First 1
+    if (-not $source -or -not (Test-Path (Join-Path $source.FullName "tools\install_ground_station.ps1"))) {
+        throw "下载包中没有找到有效的竞赛地面端项目。请检查仓库和分支。"
+    }
+    if (Test-Path -LiteralPath $Destination) {
+        Write-Host "正在更新现有项目，保留本机令牌、日志和接收数据..." -ForegroundColor Cyan
+    } else {
+        New-Item -ItemType Directory -Path $Destination -Force | Out-Null
+    }
+    Get-ChildItem -LiteralPath $source.FullName -Force | Where-Object {
+        $_.Name -notin @("tools\local_tokens.ps1", "tools\local_tokens.env", ".git")
+    } | ForEach-Object {
+        Copy-Item -LiteralPath $_.FullName -Destination $Destination -Recurse -Force
+    }
+    Ensure-TokenConfig $Destination
+
+    $media = Join-Path $Destination "third_party\mediamtx\mediamtx.exe"
+    if (-not (Test-Path -LiteralPath $media)) {
+        throw "缺少 third_party\mediamtx\mediamtx.exe。请确认发布包包含 MediaMTX。"
+    }
+    if (-not $SkipInstall) {
+        $python = Ensure-Python
+        $installer = Join-Path $Destination "tools\install_ground_station.ps1"
+        & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $installer -PythonCommand $python
+        if ($LASTEXITCODE -ne 0) { throw "地面端 Python 依赖安装失败。" }
+    }
+    Write-Host "地面端部署完成：$Destination" -ForegroundColor Green
+    Write-Host "启动：在该目录执行 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\start_ground.ps1" -ForegroundColor Green
+}
+finally {
+    if (Test-Path -LiteralPath $tempRoot) { Remove-Item -LiteralPath $tempRoot -Recurse -Force }
+}

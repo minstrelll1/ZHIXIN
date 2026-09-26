@@ -1,0 +1,53 @@
+<launch>
+  <arg name="uav_id" />
+  <arg name="local_ros_uav_id" default="$(arg uav_id)" />
+  <arg name="ground_host" />
+  <arg name="auth_token" default="$(optenv AUTH_TOKEN)" />
+  <arg name="task_port" default="56100" />
+  <arg name="image_port" default="56010" />
+  <arg name="max_distance_from_home_m" default="10.0" />
+  <arg name="scan_position_tolerance_m" default="0.25" />
+  <arg name="scan_altitude_tolerance_m" default="0.20" />
+  <arg name="scan_hard_position_tolerance_m" default="0.50" />
+  <arg name="scan_hard_altitude_tolerance_m" default="0.30" />
+  <arg name="scan_drift_grace_seconds" default="3.0" />
+  <arg name="image_topic" default="/uav$(arg local_ros_uav_id)/gimbal/image_original" />
+  <arg name="enable_stamp_adapter" default="false" />
+  <arg name="stamp_mode" default="preserve_or_receive" />
+  <node if="$(arg enable_stamp_adapter)" pkg="su17_image_transfer" type="image_stamp_adapter.py" name="competition_image_stamp_adapter" output="screen">
+    <param name="uav_id" value="$(arg local_ros_uav_id)" />
+    <param name="mode" value="$(arg stamp_mode)" />
+  </node>
+  <arg name="enable_motion" default="false" />
+  <arg name="enable_offline_recovery" default="true" />
+  <arg name="reconcile_after_minutes" default="19.0" />
+  <arg name="start_image_mission_on_node_start" default="false" />
+
+  <include file="$(find su17_competition_executor)/launch/onboard_task_executor.launch">
+    <arg name="uav_id" value="$(arg uav_id)" />
+    <arg name="local_ros_uav_id" value="$(arg local_ros_uav_id)" />
+    <arg name="transport" value="tcp" />
+    <arg name="ground_host" value="$(arg ground_host)" />
+    <arg name="ground_port" value="$(arg task_port)" />
+    <arg name="max_distance_from_home_m" value="$(arg max_distance_from_home_m)" />
+    <arg name="auth_token" value="$(arg auth_token)" />
+    <arg name="enable_motion" value="$(arg enable_motion)" />
+    <arg name="scan_position_tolerance_m" value="$(arg scan_position_tolerance_m)" />
+    <arg name="scan_altitude_tolerance_m" value="$(arg scan_altitude_tolerance_m)" />
+    <arg name="scan_hard_position_tolerance_m" value="$(arg scan_hard_position_tolerance_m)" />
+    <arg name="scan_hard_altitude_tolerance_m" value="$(arg scan_hard_altitude_tolerance_m)" />
+    <arg name="scan_drift_grace_seconds" value="$(arg scan_drift_grace_seconds)" />
+  </include>
+
+  <include file="$(find su17_image_transfer)/launch/onboard_image_sender.launch">
+    <arg name="uav_id" value="$(arg uav_id)" />
+    <arg name="local_ros_uav_id" value="$(arg local_ros_uav_id)" />
+    <arg name="ground_host" value="$(arg ground_host)" />
+    <arg name="ground_port" value="$(arg image_port)" />
+    <arg name="image_topic" value="$(arg image_topic)" />
+    <arg name="auth_token" value="$(arg auth_token)" />
+    <arg name="enable_offline_recovery" value="$(arg enable_offline_recovery)" />
+    <arg name="reconcile_after_minutes" value="$(arg reconcile_after_minutes)" />
+    <arg name="start_on_node_start" value="$(arg start_image_mission_on_node_start)" />
+  </include>
+</launch>

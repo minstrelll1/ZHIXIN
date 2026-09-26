@@ -1,0 +1,116 @@
+六机六地面端快速部署与启动（已迁移到可移植一键部署）
+
+一、固定对应关系
+
+UAV1：机载 192.168.1.202；地面 192.168.1.121；对等网 192.168.2.202
+UAV2：机载 192.168.1.207；地面 192.168.1.122；对等网 192.168.2.207
+UAV3：机载 192.168.1.212；地面 192.168.1.123；对等网 192.168.2.212
+UAV4：机载 192.168.1.217；地面 192.168.1.124；对等网 192.168.2.217
+UAV5：机载 192.168.1.222；地面 192.168.1.125；对等网 192.168.2.222
+UAV6：机载 192.168.1.227；地面 192.168.1.126；对等网 192.168.2.227
+
+AuthToken 和 PeerToken 不写入部署包或 GitHub。请在每台地面电脑本地配置 tools\local_tokens.ps1，令牌从安全渠道获取。
+
+二、地面端部署（六台 Windows 电脑分别执行）
+
+1. 在任意已更新的项目电脑生成部署包：
+
+cd <当前项目目录>
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\tools\package_ground_station.ps1" -OutputPath ".\competition_development_ground.zip"
+
+2. 将 competition_development_ground.zip 复制到六台地面电脑。
+
+3. 在每台地面电脑解压到：
+
+<任意部署目录>\competition_development
+
+4. 将安全保存的 tools\local_tokens.ps1 复制到每台地面电脑的：
+
+<任意部署目录>\competition_development\tools\local_tokens.ps1
+
+5. 在每台地面电脑安装地面端依赖：
+
+cd <任意部署目录>\competition_development
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\tools\install_ground_station.ps1"
+
+6. 首次从 Windows 地面电脑登录 UAV1 前，先配置 SSH 公钥（只需一次）：
+
+$SshDir = Join-Path $env:USERPROFILE ".ssh"
+$KeyPath = Join-Path $SshDir "id_ed25519"
+New-Item -ItemType Directory -Force -Path $SshDir | Out-Null
+if (-not (Test-Path "$KeyPath.pub")) { ssh-keygen -t ed25519 -f $KeyPath -N "" -C "competition-ground" }
+Get-Content "$KeyPath.pub" | ssh amov@192.168.1.202 "umask 077; mkdir -p ~/.ssh; cat >> ~/.ssh/authorized_keys; chmod 700 ~/.ssh; chmod 600 ~/.ssh/authorized_keys"
+ssh -o BatchMode=yes -o PreferredAuthentications=publickey -o PasswordAuthentication=no amov@192.168.1.202 "printf SSH_KEY_OK"
+
+按提示输入一次 UAV1 的 amov 密码；输出 SSH_KEY_OK 后完成。UAV2～6 将 192.168.1.202 替换为 .207、.212、.217、.222、.227。只复制 id_ed25519.pub，禁止复制私钥 id_ed25519。
+
+三、机载端部署（六架无人机分别执行）
+
+在 Windows 项目电脑执行以下六条命令：
+
+cd <当前项目目录>
+
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\tools\deploy_onboard_stack.ps1" -UavAddress "192.168.1.202" -Model p600 -SyncConfig
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\tools\deploy_onboard_stack.ps1" -UavAddress "192.168.1.207" -Model p600 -SyncConfig
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\tools\deploy_onboard_stack.ps1" -UavAddress "192.168.1.212" -Model p600 -SyncConfig
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\tools\deploy_onboard_stack.ps1" -UavAddress "192.168.1.217" -Model p600 -SyncConfig
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\tools\deploy_onboard_stack.ps1" -UavAddress "192.168.1.222" -Model p600 -SyncConfig
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\tools\deploy_onboard_stack.ps1" -UavAddress "192.168.1.227" -Model p600 -SyncConfig
+
+四、地面端启动（六台 Windows 电脑分别执行）
+
+1. 在每台地面电脑打开 PowerShell：
+
+cd F:\Projects\ZhiXin\competition_development
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\tools\start_ground.ps1"
+
+2. 在本机浏览器打开：
+
+http://127.0.0.1:8000/
+
+3. 按本机网卡选择地面终端：
+
+192.168.1.121 选择地面终端 1
+192.168.1.122 选择地面终端 2
+192.168.1.123 选择地面终端 3
+192.168.1.124 选择地面终端 4
+192.168.1.125 选择地面终端 5
+192.168.1.126 选择地面终端 6
+
+4. 只在一台地面电脑勾选“任务发布端”；其余五台不勾选。
+
+五、机载端启动（六架无人机分别执行）
+
+1. 启动 P600 厂商 MAVROS/Prometheus 程序：
+
+source /opt/ros/noetic/setup.bash
+source ~/p600_experiment/devel/setup.bash
+roslaunch p600_experiment P600_outdoor_onboard.launch uav_id:=N
+
+将 N 替换为本机 UAV 编号 1、2、3、4、5 或 6。
+
+2. 新开终端启动竞赛机载程序：
+
+cd ~/competition_development
+bash ./tools/start_onboard_stack.sh --model p600 --expect-uav-id N --direct
+
+将 N 替换为本机 UAV 编号。
+
+3. 实际允许竞赛程序控制飞行时使用：
+
+cd ~/competition_development
+bash ./tools/start_onboard_stack.sh --model p600 --expect-uav-id N --direct --enable-motion
+
+4. 检查本机状态话题：
+
+rostopic list | grep "/uavN/prometheus/state"
+rostopic hz /uavN/gimbal/image_original
+rostopic hz /uavN/competition/image_stamped
+
+六、关闭顺序
+
+1. 先在网页停止任务并执行返航。
+2. 确认无人机降落并锁定。
+3. 在机载竞赛程序终端按 Ctrl+C。
+4. 在厂商 MAVROS/Prometheus 终端按 Ctrl+C。
+5. 在地面端后端终端按 Ctrl+C。

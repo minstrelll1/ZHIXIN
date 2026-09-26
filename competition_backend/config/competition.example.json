@@ -1,0 +1,98 @@
+{
+  "uav_ids": [1, 2, 3, 4, 5, 6],
+  "takeoff_altitudes_m": {
+    "1": 1.0,
+    "2": 1.3,
+    "3": 1.6,
+    "4": 1.9,
+    "5": 2.2,
+    "6": 2.5
+  },
+  "safety": {
+    "production_config_confirmed": false,
+    "require_armed_for_takeoff": true,
+    "required_control_state": 2,
+    "preflight_battery_min": 0.6,
+    "return_battery_threshold": 0.3,
+    "telemetry_max_age_seconds": 2.0,
+    "altitude_tolerance_m": 0.15,
+    "vertical_speed_tolerance_mps": 0.15,
+    "takeoff_timeout_seconds": 60.0,
+    "confirmation_ttl_seconds": 15.0
+  },
+  "subjects": {
+    "subject1": {
+      "duration_seconds": 1140,
+      "search_area": {
+        "origin_x_m": 0.0,
+        "origin_y_m": 0.0,
+        "origin_corner": "bottom_right",
+        "vertical_axis": "positive_x_up",
+        "horizontal_axis": "positive_y_left",
+        "width_m": 3.0,
+        "height_m": 3.0,
+        "lane_spacing_m": 0.5,
+        "sector_by_uav": {"1": 1, "2": 5, "3": 3, "4": 4, "5": 2, "6": 6}
+      },
+      "takeoff_altitudes_m_by_profile": {
+        "lab": {"1": 0.5, "2": 1.5, "3": 0.5, "4": 1.0, "5": 1.5, "6": 1.0},
+        "lab10": {"1": 0.5, "2": 1.5, "3": 0.5, "4": 1.0, "5": 1.5, "6": 1.0},
+        "lab5": {"1": 4.5, "2": 5.0, "3": 5.5, "4": 4.5, "5": 5.0, "6": 5.5},
+        "competition": {"1": 40.0, "2": 50.0, "3": 40.0, "4": 45.0, "5": 50.0, "6": 45.0}
+      },
+      "tasks_by_uav": {
+        "1": {"type": "search_sector", "sector": 1},
+        "2": {"type": "search_sector", "sector": 2},
+        "3": {"type": "search_sector", "sector": 3},
+        "4": {"type": "search_sector", "sector": 4},
+        "5": {"type": "search_sector", "sector": 5},
+        "6": {"type": "search_sector", "sector": 6}
+      }
+    },
+    "subject2": {
+      "duration_seconds": 1140,
+      "search_area": {
+        "origin_x_m": 0.0,
+        "origin_y_m": 0.0,
+        "origin_corner": "bottom_right",
+        "vertical_axis": "positive_x_up",
+        "horizontal_axis": "positive_y_left",
+        "width_m": 3.0,
+        "height_m": 3.0,
+        "lane_spacing_m": 0.5,
+        "sector_by_uav": {"1": 1, "2": 5, "3": 3, "4": 4, "5": 2, "6": 6}
+      },
+      "takeoff_altitudes_m_by_profile": {
+        "lab": {"1": 0.5, "2": 1.5, "3": 0.5, "4": 1.0, "5": 1.5, "6": 1.0},
+        "lab10": {"1": 0.5, "2": 1.5, "3": 0.5, "4": 1.0, "5": 1.5, "6": 1.0},
+        "lab5": {"1": 4.5, "2": 5.0, "3": 5.5, "4": 4.5, "5": 5.0, "6": 5.5},
+        "competition": {"1": 40.0, "2": 50.0, "3": 40.0, "4": 45.0, "5": 50.0, "6": 45.0}
+      },
+      "tasks_by_uav": {
+        "1": {"type": "search_and_drop", "role": "search"},
+        "2": {"type": "search_and_drop", "role": "search"},
+        "3": {"type": "search_and_drop", "role": "static_target"},
+        "4": {"type": "search_and_drop", "role": "static_target"},
+        "5": {"type": "search_and_drop", "role": "moving_target"},
+        "6": {"type": "search_and_drop", "role": "moving_target"}
+      }
+    },
+    "subject3": {
+      "duration_seconds": 1140,
+      "tasks_by_uav": {
+        "1": {"type": "forest_delivery", "route": 1},
+        "2": {"type": "forest_delivery", "route": 2},
+        "3": {"type": "forest_delivery", "route": 3},
+        "4": {"type": "forest_delivery", "route": 4},
+        "5": {"type": "forest_delivery", "route": 5},
+        "6": {"type": "forest_delivery", "route": 6}
+      },
+      "takeoff_altitudes_m_by_profile": {
+        "lab": {"1": 0.5, "2": 1.5, "3": 0.5, "4": 1.0, "5": 1.5, "6": 1.0},
+        "lab10": {"1": 0.5, "2": 1.5, "3": 0.5, "4": 1.0, "5": 1.5, "6": 1.0},
+        "lab5": {"1": 4.5, "2": 5.0, "3": 5.5, "4": 4.5, "5": 5.0, "6": 5.5},
+        "competition": {"1": 40.0, "2": 50.0, "3": 40.0, "4": 45.0, "5": 50.0, "6": 45.0}
+      }
+    }
+  }
+}

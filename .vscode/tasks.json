@@ -1,0 +1,50 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "ROS: Build workspace",
+      "type": "shell",
+      "command": "source /opt/ros/noetic/setup.bash && if [ -f ../su17_experiment/devel/setup.bash ]; then source ../su17_experiment/devel/setup.bash; fi && if [ ! -e src/CMakeLists.txt ]; then catkin_init_workspace src; fi && catkin_make -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_EXPORT_COMPILE_COMMANDS=ON",
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "shell": {
+          "executable": "/bin/bash",
+          "args": ["-lc"]
+        }
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": ["$gcc"]
+    },
+    {
+      "label": "ROS: Build competition package",
+      "type": "shell",
+      "command": "source /opt/ros/noetic/setup.bash && if [ -f ../su17_experiment/devel/setup.bash ]; then source ../su17_experiment/devel/setup.bash; fi && if [ ! -e src/CMakeLists.txt ]; then catkin_init_workspace src; fi && catkin_make --only-pkg-with-deps su17_mission_planning -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=ON",
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "shell": {
+          "executable": "/bin/bash",
+          "args": ["-lc"]
+        }
+      },
+      "group": "build",
+      "problemMatcher": ["$gcc"]
+    },
+    {
+      "label": "ROS: Run mission planner",
+      "type": "shell",
+      "command": "source /opt/ros/noetic/setup.bash && source devel/setup.bash && roslaunch su17_mission_planning mission_planner.launch",
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "shell": {
+          "executable": "/bin/bash",
+          "args": ["-lc"]
+        }
+      },
+      "isBackground": true,
+      "problemMatcher": []
+    }
+  ]
+}

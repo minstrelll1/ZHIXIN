@@ -1,0 +1,56 @@
+<launch>
+  <arg name="uav_id" default="1" />
+  <!-- 飞控编号与本机 ROS 命名空间保持一致。 -->
+  <arg name="local_ros_uav_id" default="$(arg uav_id)" />
+  <arg name="transport" default="tcp" />
+  <arg name="ground_host" default="" />
+  <arg name="ground_port" default="56100" />
+  <arg name="auth_token" default="" />
+  <arg name="enable_motion" default="false" />
+  <arg name="search_speed_mps" default="0.30" />
+  <arg name="return_speed_mps" default="0.30" />
+  <!-- 扫描时放宽瞬时漂移；超过硬限制并持续一段时间仍会中止扫描。 -->
+  <arg name="scan_position_tolerance_m" default="0.25" />
+  <arg name="scan_altitude_tolerance_m" default="0.20" />
+  <arg name="scan_hard_position_tolerance_m" default="0.50" />
+  <arg name="scan_hard_altitude_tolerance_m" default="0.30" />
+  <arg name="scan_drift_grace_seconds" default="3.0" />
+  <arg name="max_distance_from_home_m" default="10.0" />
+  <arg name="log_full_task" default="true" />
+  <arg name="external_mission_topic" default="" />
+  <arg name="external_status_topic" default="" />
+  <arg name="external_path_topic" default="" />
+  <arg name="external_landing_topic" default="" />
+  <arg name="external_return_topic" default="" />
+  <arg name="restart_all_command" default="" />
+
+  <node pkg="su17_competition_executor"
+        type="onboard_task_executor.py"
+        name="su17_competition_executor"
+        respawn="true" respawn_delay="1.0"
+        output="screen">
+    <param name="uav_id" value="$(arg uav_id)" />
+    <param name="local_ros_uav_id" value="$(arg local_ros_uav_id)" />
+    <param name="transport" value="$(arg transport)" />
+    <param name="ground_host" value="$(arg ground_host)" />
+    <param name="ground_port" value="$(arg ground_port)" />
+    <param name="auth_token" value="$(arg auth_token)" />
+    <param name="enable_motion" value="$(arg enable_motion)" />
+    <param name="search_speed_mps" value="$(arg search_speed_mps)" />
+    <param name="return_speed_mps" value="$(arg return_speed_mps)" />
+    <param name="scan_position_tolerance_m" value="$(arg scan_position_tolerance_m)" />
+    <param name="scan_altitude_tolerance_m" value="$(arg scan_altitude_tolerance_m)" />
+    <param name="scan_hard_position_tolerance_m" value="$(arg scan_hard_position_tolerance_m)" />
+    <param name="scan_hard_altitude_tolerance_m" value="$(arg scan_hard_altitude_tolerance_m)" />
+    <param name="scan_drift_grace_seconds" value="$(arg scan_drift_grace_seconds)" />
+    <param name="max_distance_from_home_m" value="$(arg max_distance_from_home_m)" />
+    <param name="log_full_task" value="$(arg log_full_task)" />
+    <param name="external_mission_topic" value="$(arg external_mission_topic)" />
+    <param name="external_status_topic" value="$(arg external_status_topic)" />
+    <param name="external_path_topic" value="$(arg external_path_topic)" />
+    <param name="external_landing_topic" value="$(arg external_landing_topic)" />
+    <param name="external_return_topic" value="$(arg external_return_topic)" />
+    <param name="restart_all_command" value="$(arg restart_all_command)" />
+    <param name="cache_path" value="$(env HOME)/competition_development/mission_cache/uav$(arg uav_id)/assigned_task.json" />
+  </node>
+</launch>

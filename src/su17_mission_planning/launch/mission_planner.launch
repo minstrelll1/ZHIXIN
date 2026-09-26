@@ -1,0 +1,13 @@
+<launch>
+  <arg name="uav_id" default="1"/>
+  <arg name="namespace" default="uav$(arg uav_id)/competition"/>
+
+  <group ns="$(arg namespace)">
+    <node pkg="su17_mission_planning"
+          type="mission_planner_node"
+          name="mission_planner"
+          output="screen">
+      <rosparam command="load" file="$(find su17_mission_planning)/config/planner.yaml"/>
+    </node>
+  </group>
+</launch>

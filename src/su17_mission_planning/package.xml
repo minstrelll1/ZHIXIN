@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>su17_mission_planning</name>
+  <version>0.1.0</version>
+  <description>Competition mission and route planning package for the SU17 UAV platform.</description>
+
+  <maintainer email="team@todo.invalid">SU17 Competition Team</maintainer>
+  <license>Proprietary</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <depend>geometry_msgs</depend>
+  <depend>nav_msgs</depend>
+  <depend>roscpp</depend>
+  <depend>std_msgs</depend>
+
+  <export/>
+</package>

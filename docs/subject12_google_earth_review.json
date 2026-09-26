@@ -1,0 +1,13 @@
+{
+  "provider": "Google Earth web",
+  "checked_at": "2026-09-16",
+  "view_url": "https://earth.google.com/web/@33.865,113.709,0a,2500d,35y,0h,0t,0r",
+  "latest_visible_imagery_date": "2021-11-08",
+  "date_scope": "当前场地视图时间轴的最新可选影像；不保证所有拼接瓦片具有同一日期",
+  "landcover_replaced": false,
+  "local_image_exported": false,
+  "status": "已目视查看林地和池塘；未取得有地理定位信息的影像导出和对应矢量边界",
+  "blocker": "当前内置浏览器不支持 Google Earth 页面内容导出；不能将屏幕上的未配准判读结果当作可靠免侦察边界",
+  "required_inputs": "保存的 Google Earth 北向上影像及 WGS84 配准范围，或从该影像标绘导出的林地、水体 KML/GeoJSON",
+  "date_documentation": "https://support.google.com/earth/answer/6327779?hl=zh-Hans"
+}

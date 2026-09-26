@@ -1,0 +1,50 @@
+uav_id: 1
+# 默认接口：持续缓存相机原帧，算法仅发送时间戳、目标框及元数据。
+input_mode: completed_target_array
+detection_topic: /uav1/image_transfer/target_detection
+completed_target_topic: /target_stcheduler/complemend_targets
+frame_cache_sec: 0.5
+camera_fps: 30.0
+# ROS 原始图像接收缓冲区，默认 64 MiB；实际相机帧率由相机源决定。
+image_buffer_bytes: 67108864
+
+# 以下双话题参数仅供 paired_topics 兼容模式使用，不再添加坐标文字。
+target_image_topic: /uav1/image_transfer/target_image
+target_coordinate_topic: /uav1/image_transfer/target_coordinate
+sync_queue_size: 20
+sync_slop_sec: 0.5
+
+# 现有厂商相机 ROS 源编号仍可为 1，与编队编号分开配置。
+image_topic: /uav1/gimbal/image_original
+compressed_input: false
+
+# Windows地面端在无人机网络中的IPv4地址。
+ground_host: 192.168.1.123
+ground_port: 56010
+
+jpeg_quality: 80
+max_frame_age_sec: 2.0
+queue_size: 10
+connect_timeout_sec: 3.0
+ack_timeout_sec: 5.0
+max_retries: 3
+retry_delay_sec: 1.0
+# 实时发送失败后暂停联网尝试，期间仍继续将所有抓拍写入机载硬盘。
+live_retry_interval_sec: 5.0
+
+# 首次联调可留空；部署时发送端和接收端应设置相同的随机字符串。
+auth_token: ""
+
+# 科目一离线保护：先写入机载硬盘，再尝试TCP发送。
+enable_offline_recovery: true
+cache_root: /home/amov/competition_development/image_cache
+
+# 从图片任务建立时计时；竞赛启动默认等待机载一键起飞触发 mission_control。
+reconcile_after_minutes: 19.0
+# 如果第19分钟网络仍不可用，每30秒继续尝试一次。
+reconcile_retry_sec: 30.0
+
+# 留空时等待 mission_control 的 start 指令；设为 true 才在节点启动时自动生成。
+mission_id: ""
+start_on_node_start: false
+

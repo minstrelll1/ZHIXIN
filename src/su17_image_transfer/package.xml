@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>su17_image_transfer</name>
+  <version>0.3.0</version>
+  <description>按原始时间戳匹配相机缓存、绘制目标框并可靠回传图片和算法元数据。</description>
+
+  <maintainer email="amov@todo.todo">Competition Development Team</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <build_depend>message_generation</build_depend>
+  <exec_depend>message_runtime</exec_depend>
+
+  <depend>cv_bridge</depend>
+  <depend>message_filters</depend>
+  <depend>rospy</depend>
+  <depend>sensor_msgs</depend>
+  <depend>std_msgs</depend>
+  <depend>std_srvs</depend>
+
+  <export/>
+</package>

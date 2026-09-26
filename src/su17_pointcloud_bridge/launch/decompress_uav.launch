@@ -1,0 +1,10 @@
+<launch>
+  <arg name="uav_id" default="1" />
+  <arg name="input_topic" default="/uav$(arg uav_id)/octomap_point_cloud_centers/reduce_the_frequency/compressed" />
+  <arg name="output_topic" default="/uav$(arg uav_id)/octomap_point_cloud_centers/reduce_the_frequency" />
+  <node pkg="su17_pointcloud_bridge" type="pointcloud_octree_decompressor"
+        name="pointcloud_octree_decompressor_uav$(arg uav_id)" output="screen">
+    <param name="input_topic" value="$(arg input_topic)" />
+    <param name="output_topic" value="$(arg output_topic)" />
+  </node>
+</launch>
