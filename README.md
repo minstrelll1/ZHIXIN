@@ -1,65 +1,95 @@
-双机型统一入口与部署说明：[P600 / SU17 部署指南](docs/dual_platform_deployment.md)。新版启动与配置以此指南为准。
+# 竞赛系统最新部署与启动
 
-# Competition Development
+## 一、部署
 
-## 科目三点云（Windows GroundStation）
+### 1. 地面端首次部署
 
-当前部署为 Windows 地面端、Ubuntu 机载端，ROS `/uav1` 映射网页 UAV3。
-启动与排查见 [Windows 地面点云接收说明](docs/groundstation_pointcloud_windows.md)。
+在目标 Windows 电脑希望保存项目的父目录执行：
 
-## 当前新增模块
-
-- `src/su17_image_transfer`：按ROS指令抓取SU17当前相机帧，并通过独立TCP通道发送到Windows地面端。具体启动与联调步骤见该模块的`README.md`。
-
-“智信—2026”无人智能挑战赛独立算法开发工作区。
-
-本目录与无人机源码分离：
-
-```text
-F:\Projects\ZhiXin\
-├─ su17_experiment\          # 无人机复制出的源码，仅作参考和部署目标
-└─ competition_development\  # 本工作区，开发任务与航线规划算法
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& ([scriptblock]::Create((Invoke-RestMethod 'https://raw.githubusercontent.com/minstrelll1/ZHIXIN/codex/portable-ground-deployment/tools/bootstrap_ground.ps1'))) -Destination (Join-Path (Get-Location) 'competition_development')"
 ```
 
-## 打开工程
+首次部署会安装 Python 依赖，检查并使用仓库内的 MediaMTX，并提示在本机填写 AuthToken、PeerToken。
 
-在安装 ROS Noetic 的 Ubuntu 20.04 开发机或 VS Code Remote SSH 会话中打开：
+### 2. 地面端仅更新代码或配置
 
-```text
-competition_development.code-workspace
+在项目父目录执行，不重新安装 Python、MediaMTX 或令牌：
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File ".\competition_development\tools\bootstrap_ground.ps1" `
+  -Destination ".\competition_development" `
+  -SkipInstall
 ```
 
-该工作区会同时显示：
+### 3. 机载端部署
 
-- `competition_development`：可修改的竞赛算法工程；
-- `su17_reference`：同级 `su17_experiment` 原始源码，用于查询接口。
+在地面端项目父目录执行对应无人机命令：
 
-团队新增代码统一放在本目录的 `src` 中，不直接修改 `../su17_experiment`。
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File ".\competition_development\tools\deploy_onboard_stack.ps1" `
+  -UavAddress "192.168.1.202" `
+  -Model p600 `
+  -SyncConfig
+```
 
-## 首次构建
+P600 机载地址：
 
-通过 VS Code 执行 `ROS: Build competition package`，或在 Ubuntu 终端执行：
+|无人机|机载地址|地面图传网卡地址|地面互联地址|
+|---|---|---|---|
+|UAV1|192.168.1.202|192.168.1.230|192.168.2.202|
+|UAV2|192.168.1.207|192.168.1.230|192.168.2.207|
+|UAV3|192.168.1.212|192.168.1.230|192.168.2.212|
+|UAV4|192.168.1.217|192.168.1.230|192.168.2.217|
+|UAV5|192.168.1.222|192.168.1.230|192.168.2.222|
+|UAV6|192.168.1.227|192.168.1.230|192.168.2.227|
+
+各独立图传网络的地面网卡设为 `192.168.1.230/24`；地面互联网卡保持表中地址。
+
+其他 P600 只替换 `-UavAddress`。SU17 机载地址为 `192.168.1.88`，地面图传网卡同样为 `192.168.1.230`，并将 `-Model p600` 改为 `-Model su17`。部署脚本不修改厂商工作区。
+
+## 二、启动
+
+### 1. 地面端
+
+```powershell
+cd .\competition_development
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\start_ground.ps1 -ConfirmLiveConfig
+```
+
+浏览器打开：
+
+```text
+http://127.0.0.1:8000/
+```
+
+进入网页后选择本机地面终端编号和任务发布角色。
+
+### 2. 机载竞赛程序
+
+确认允许竞赛程序控制飞行后启动：
 
 ```bash
-cd competition_development
-source /opt/ros/noetic/setup.bash
-catkin_init_workspace src
-catkin_make --only-pkg-with-deps su17_mission_planning
-source devel/setup.bash
-roslaunch su17_mission_planning mission_planner.launch
+cd ~/competition_development
+bash ./tools/start_onboard_stack.sh --model p600 --expect-uav-id 1 --direct --enable-motion
 ```
 
-如果同级 `su17_experiment/devel/setup.bash` 存在，VS Code 构建任务会先加载它，使竞赛包能够逐步复用原工程已经编译的 ROS 消息与库。
+SU17 将 `--model p600` 改为 `--model su17`。以下机载命令以 UAV1 为例，其他无人机将 `--expect-uav-id 1` 和 `uav_id:=1` 中的编号替换为本机编号 1～6。
 
-## 当前算法包
+### 3. 外部程序 B（聂天常）
 
-`src/su17_mission_planning` 是任务与航线规划的起始包，目前带有一个直线插值基线节点，仅用于验证编译、参数和话题接口，不是最终比赛算法。
+```bash
+source ~/recon_ws/devel/setup.bash
+roslaunch px4_north_camera p600_gx40_position_pid_reconnaissance.launch \
+  uav_id:=1 \
+  flight_mode:=outdoor_small_range
+```
 
-默认接口位于 `/uav1/competition`：
+### 4. 目标检测程序（边疆）
 
-- 输入 `current_pose`：`geometry_msgs/PoseStamped`
-- 输入 `goal`：`geometry_msgs/PoseStamped`
-- 输出 `planned_path`：`nav_msgs/Path`
-- 输出 `status`：`std_msgs/String`
-
-竞赛背景及现有 SU17 代码地图见 `docs/competition_context.md`。
+```bash
+source ~/SpireCV_bj/src/spirecv-ros/devel/setup.bash
+roslaunch spirecv_ros uav_yolo26_botsort_geolocation.launch uav_id:=1
+```
