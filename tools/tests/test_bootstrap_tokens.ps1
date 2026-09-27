@@ -5,9 +5,11 @@ $tokens = $null
 $errors = $null
 $ast = [Management.Automation.Language.Parser]::ParseFile($source, [ref]$tokens, [ref]$errors)
 if ($errors.Count) { throw "部署脚本语法检查失败。" }
+$functionDefinitions = @()
 foreach ($name in @("Test-Token", "Write-OnboardTokenConfig", "Ensure-TokenConfig")) {
     $definition = $ast.Find({ param($node) $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq $name }, $true)
     if (-not $definition) { throw "未找到待测函数。" }
+    $functionDefinitions += $definition.Extent.Text
     . ([scriptblock]::Create($definition.Extent.Text))
 }
 $recordRoot = Join-Path ([IO.Path]::GetTempPath()) ("zhixin-token-test-" + [Guid]::NewGuid().ToString("N"))
@@ -40,7 +42,21 @@ try {
     $failed = $false
     try { Write-OnboardTokenConfig $recordRoot "" "" } catch { $failed = $true }
     if (-not $failed) { throw "空令牌未被拒绝。" }
-    Write-Host "首次部署、更新补齐、特殊字符、Bash 编码和空令牌检查通过。"
+    # 下载实现通过嵌套 ScriptBlock 运行时，输入值不能写到外层 script 作用域。
+    $promptRoot = Join-Path $recordRoot "prompt-case"
+    New-Item -ItemType Directory -Path (Join-Path $promptRoot "tools") -Force | Out-Null
+    $promptScript = 'param([string]$Root, [string]$AuthToken="", [string]$PeerToken="", [switch]$ForceTokenConfig)' + "`n" + ($functionDefinitions -join "`n") + @'
+
+function Get-PlainSecureValue([string]$Prompt) {
+    if ($Prompt -like '*AuthToken*') { return 'prompt-fixture-auth' }
+    return 'prompt-fixture-peer'
+}
+Ensure-TokenConfig $Root
+'@
+    & ([scriptblock]::Create($promptScript)) -Root $promptRoot
+    . (Join-Path $promptRoot "tools\local_tokens.ps1")
+    if ($env:AUTH_TOKEN -ne 'prompt-fixture-auth' -or $env:PEER_TOKEN -ne 'prompt-fixture-peer' -or -not (Test-Path (Join-Path $promptRoot "tools\local_tokens.env"))) { throw "首次交互输入的令牌未传入部署配置。" }
+    Write-Host "首次交互输入、更新补齐、特殊字符、Bash 编码和空令牌检查通过。"
 }
 finally {
     $env:AUTH_TOKEN = $previousAuth

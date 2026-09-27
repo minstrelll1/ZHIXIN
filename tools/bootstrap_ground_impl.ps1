@@ -86,18 +86,20 @@ function Ensure-TokenConfig([string]$Root) {
         Write-Host "已保留本机令牌，并同步生成机载令牌配置。" -ForegroundColor Green
         return
     }
-    if (-not (Test-Token $AuthToken)) { $script:AuthToken = Get-PlainSecureValue "请输入 AuthToken（不会显示）" }
-    if (-not (Test-Token $PeerToken)) { $script:PeerToken = Get-PlainSecureValue "请输入 PeerToken（不会显示）" }
-    if (-not (Test-Token $AuthToken) -or -not (Test-Token $PeerToken)) {
+    $localAuthToken = $AuthToken
+    $localPeerToken = $PeerToken
+    if (-not (Test-Token $localAuthToken)) { $localAuthToken = Get-PlainSecureValue "请输入 AuthToken（不会显示）" }
+    if (-not (Test-Token $localPeerToken)) { $localPeerToken = Get-PlainSecureValue "请输入 PeerToken（不会显示）" }
+    if (-not (Test-Token $localAuthToken) -or -not (Test-Token $localPeerToken)) {
         throw "AuthToken 和 PeerToken 不能为空。"
     }
     $lines = @(
         "# 本机认证配置；不要提交到版本库。",
-        ('$env:AUTH_TOKEN = ' + "'" + $AuthToken.Replace("'", "''") + "'"),
-        ('$env:PEER_TOKEN = ' + "'" + $PeerToken.Replace("'", "''") + "'")
+        ('$env:AUTH_TOKEN = ' + "'" + $localAuthToken.Replace("'", "''") + "'"),
+        ('$env:PEER_TOKEN = ' + "'" + $localPeerToken.Replace("'", "''") + "'")
     )
     Set-Content -LiteralPath $tokenFile -Value $lines -Encoding UTF8
-    Write-OnboardTokenConfig $Root $AuthToken $PeerToken
+    Write-OnboardTokenConfig $Root $localAuthToken $localPeerToken
     Write-Host "已写入本机令牌配置（令牌未输出，且不会上传 GitHub）。" -ForegroundColor Green
 }
 
