@@ -43,6 +43,14 @@
 )
 
 $ErrorActionPreference = "Stop"
+
+# 中文控制台与 Python 子进程统一使用 UTF-8。
+$utf8Encoding = New-Object System.Text.UTF8Encoding($false)
+[Console]::OutputEncoding = $utf8Encoding
+[Console]::InputEncoding = $utf8Encoding
+$OutputEncoding = $utf8Encoding
+$env:PYTHONIOENCODING = "utf-8"
+$env:PYTHONUTF8 = "1"
 $ProjectRoot = Split-Path $PSScriptRoot -Parent
 $BackendRoot = Join-Path $ProjectRoot "competition_backend"
 $PythonExe = Join-Path (Join-Path $BackendRoot ".venv") "Scripts\python.exe"
@@ -166,7 +174,6 @@ $env:COMPETITION_POINTCLOUD_CAPTURE_LOCAL_IP = $PointCloudCaptureLocalIp
 $env:COMPETITION_POINTCLOUD_CAPTURE_REMOTE_IP = $PointCloudCaptureRemoteIp
 $env:COMPETITION_POINTCLOUD_CAPTURE_REMOTE_PORT = [string]$PointCloudCaptureRemotePort
 $env:COMPETITION_POINTCLOUD_CAPTURE_UAV_ID = [string]$PointCloudCaptureUavId
-$env:PYTHONUTF8 = "1"
 $env:COMPETITION_TRAFFIC_INTERVAL = [string]$TrafficInterval
 $env:COMPETITION_UAV_TRAFFIC_HOSTS = $UavTrafficHosts
 $env:COMPETITION_TRAFFIC_REPORT_TOKEN = $TrafficReportToken

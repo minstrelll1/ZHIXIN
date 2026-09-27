@@ -3,6 +3,14 @@
 )
 
 $ErrorActionPreference = "Stop"
+
+# 中文控制台与 Python 子进程统一使用 UTF-8。
+$utf8Encoding = New-Object System.Text.UTF8Encoding($false)
+[Console]::OutputEncoding = $utf8Encoding
+[Console]::InputEncoding = $utf8Encoding
+$OutputEncoding = $utf8Encoding
+$env:PYTHONIOENCODING = "utf-8"
+$env:PYTHONUTF8 = "1"
 $ProjectRoot = Split-Path $PSScriptRoot -Parent
 $BackendRoot = Join-Path $ProjectRoot "competition_backend"
 $VenvPython = Join-Path (Join-Path $BackendRoot ".venv") "Scripts\python.exe"
@@ -13,6 +21,14 @@ if (-not (Get-Command $PythonCommand -ErrorAction SilentlyContinue)) {
 }
 if (-not (Test-Path -LiteralPath $MediaMtx)) {
     throw "缺少相对路径 third_party\mediamtx\mediamtx.exe。请先获取完整地面端部署包。"
+}
+
+# 依赖含 numpy<2；地面程序使用 asyncio.to_thread，支持 Python 3.9～3.12。
+& $PythonCommand -c "import sys; raise SystemExit(0 if (3,9) <= sys.version_info[:2] < (3,13) else 1)"
+if ($LASTEXITCODE -ne 0) { throw "地面端需要 Python 3.9～3.12，请使用一键部署命令选择或安装 Python 3.11。" }
+if (Test-Path -LiteralPath $VenvPython) {
+    & $VenvPython -c "import sys; raise SystemExit(0 if (3,9) <= sys.version_info[:2] < (3,13) else 1)"
+    if ($LASTEXITCODE -ne 0) { throw "现有虚拟环境版本不兼容。请移除 competition_backend\.venv 后重新运行一键部署命令。" }
 }
 
 Push-Location $BackendRoot

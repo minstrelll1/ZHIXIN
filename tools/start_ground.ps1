@@ -7,12 +7,19 @@
     [switch]$CheckOnly
 )
 $ErrorActionPreference = "Stop"
+
+# 中文控制台与 Python 子进程统一使用 UTF-8。
+$utf8Encoding = New-Object System.Text.UTF8Encoding($false)
+[Console]::OutputEncoding = $utf8Encoding
+[Console]::InputEncoding = $utf8Encoding
+$OutputEncoding = $utf8Encoding
+$env:PYTHONIOENCODING = "utf-8"
+$env:PYTHONUTF8 = "1"
 $ProjectRoot = Split-Path $PSScriptRoot -Parent
 if (-not $FleetConfig) { $FleetConfig = Join-Path $ProjectRoot "config\fleet.json" }
 $FleetConfig = (Resolve-Path -LiteralPath $FleetConfig).Path
 $PythonExe = Join-Path $ProjectRoot "competition_backend\.venv\Scripts\python.exe"
 if (-not (Test-Path -LiteralPath $PythonExe)) { throw "请先运行 tools\install_ground_station.ps1 安装地面环境。" }
-$env:PYTHONUTF8 = "1"
 $env:PYTHONPATH = "$ProjectRoot;$ProjectRoot\competition_backend"
 & $PythonExe -c "import sys; from competition_shared.fleet import FleetStore; FleetStore(sys.argv[1]); print('机队配置检查通过，终端编号将在网页中选择。')" $FleetConfig
 if ($LASTEXITCODE -ne 0) { throw "机队配置检查失败。" }

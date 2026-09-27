@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "su17-competition-backend"
 version = "0.2.0"
 description = "Six-UAV competition mission orchestration backend"
-requires-python = ">=3.8"
+requires-python = ">=3.9,<3.13"
 dependencies = [
   "fastapi>=0.110,<0.116",
   "uvicorn[standard]>=0.27,<0.31",

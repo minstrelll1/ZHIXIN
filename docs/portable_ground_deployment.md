@@ -10,7 +10,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& ([scriptblock]::Cr
 
 `bootstrap_ground.ps1` 会下载代码和仓库内的 MediaMTX，使用项目根目录计算所有本地路径，并安装 `competition_backend` 的 Python 依赖。目标目录可以在任意盘符，不能要求 `F:\Projects\ZhiXin` 这样的固定路径。已有目录再次执行时只更新代码，保留令牌、日志、飞行记录和接收图片。
 
-没有 Python 3.8 以上版本时，脚本会尝试用 `winget` 安装 Python 3.11；如果电脑没有 `winget`，先安装 Python 3.11 或更高版本再执行。
+地面端支持 Python 3.9～3.12。没有兼容版本时，脚本会尝试用 `winget` 安装 Python 3.11；如果电脑没有 `winget`，先安装 Python 3.11 再执行。
 
 ## 令牌
 

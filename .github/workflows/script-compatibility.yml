@@ -1,0 +1,30 @@
+name: 部署脚本兼容性
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  windows-powershell:
+    name: Windows PowerShell 5 编码与部署入口
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 检查文件编码与部署入口
+        shell: powershell
+        run: |
+          & .\tools\tests\test_powershell_encoding.ps1
+          & .\tools\tests\test_bootstrap_entry.ps1
+          & .\tools\tests\test_bootstrap_tokens.ps1
+          & .\tools\tests\test_bootstrap_python.ps1
+  onboard-bash:
+    name: Ubuntu 机载启动脚本
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 检查机载脚本语法
+        shell: bash
+        run: |
+          bash -n tools/build_onboard.sh
+          bash -n tools/start_onboard_stack.sh

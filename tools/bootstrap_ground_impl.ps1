@@ -21,6 +21,14 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+# 中文控制台与 Python 子进程统一使用 UTF-8。
+$utf8Encoding = New-Object System.Text.UTF8Encoding($false)
+[Console]::OutputEncoding = $utf8Encoding
+[Console]::InputEncoding = $utf8Encoding
+$OutputEncoding = $utf8Encoding
+$env:PYTHONIOENCODING = "utf-8"
+$env:PYTHONUTF8 = "1"
+
 function Get-PlainSecureValue([string]$Prompt) {
     $secure = Read-Host -Prompt $Prompt -AsSecureString
     $ptr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
@@ -32,16 +40,41 @@ function Test-Token([string]$Value) {
     return (-not [string]::IsNullOrWhiteSpace($Value))
 }
 
+function Resolve-CompatiblePython([string]$Command, [string[]]$Arguments = @()) {
+    # 返回实际解释器路径，避免 py.exe 后续丢失 -3 版本选择参数。
+    try {
+        $output = @(& $Command @Arguments -c "import json,sys; print(json.dumps(sys.executable)); raise SystemExit(0 if (3,9) <= sys.version_info[:2] < (3,13) else 1)" 2>$null)
+        if ($LASTEXITCODE -ne 0) { return $null }
+        $interpreter = ($output -join "`n") | ConvertFrom-Json
+        if ($interpreter -and (Test-Path -LiteralPath $interpreter -PathType Leaf)) { return [string]$interpreter }
+    } catch {
+        # 忽略不可用的商店别名、旧版本和未安装的启动器选项，继续寻找。
+    }
+    return $null
+}
+
 function Get-PythonCommand {
     $python = Get-Command python -ErrorAction SilentlyContinue
     if ($python) {
-        & $python.Source -c "import sys; raise SystemExit(0 if sys.version_info >= (3,8) else 1)" 2>$null
-        if ($LASTEXITCODE -eq 0) { return $python.Source }
+        $interpreter = Resolve-CompatiblePython $python.Source
+        if ($interpreter) { return $interpreter }
     }
     $py = Get-Command py -ErrorAction SilentlyContinue
     if ($py) {
-        & $py.Source -3 -c "import sys; raise SystemExit(0 if sys.version_info >= (3,8) else 1)" 2>$null
-        if ($LASTEXITCODE -eq 0) { return $py.Source }
+        foreach ($version in @("-3.11", "-3.12", "-3.10", "-3.9", "-3")) {
+            $interpreter = Resolve-CompatiblePython $py.Source @($version)
+            if ($interpreter) { return $interpreter }
+        }
+    }
+    # winget 安装后当前进程的 PATH 未刷新，直接查找用户范围的解释器。
+    if ($env:LOCALAPPDATA) {
+        foreach ($version in @("311", "312", "310", "39")) {
+            $candidate = Join-Path $env:LOCALAPPDATA "Programs\Python\Python$version\python.exe"
+            if (Test-Path -LiteralPath $candidate -PathType Leaf) {
+                $interpreter = Resolve-CompatiblePython $candidate
+                if ($interpreter) { return $interpreter }
+            }
+        }
     }
     return $null
 }
@@ -52,13 +85,13 @@ function Ensure-Python {
 
     $winget = Get-Command winget -ErrorAction SilentlyContinue
     if (-not $winget) {
-        throw "未找到 Python 3.8+，且本机没有 winget。请先安装 Python 3.11+，再重新执行本命令。"
+        throw "未找到兼容的 Python 3.9～3.12，且本机没有 winget。请先安装 Python 3.11，再重新执行本命令。"
     }
-    Write-Host "未找到 Python，正在尝试用 winget 安装 Python 3.11（用户范围）..." -ForegroundColor Yellow
+    Write-Host "未找到兼容的 Python，正在尝试用 winget 安装 Python 3.11（用户范围）..." -ForegroundColor Yellow
     & $winget.Source install --id Python.Python.3.11 --exact --scope user --accept-source-agreements --accept-package-agreements
-    if ($LASTEXITCODE -ne 0) { throw "Python 安装失败，请手动安装 Python 3.11+ 后重试。" }
+    if ($LASTEXITCODE -ne 0) { throw "Python 安装失败，请手动安装 Python 3.11 后重试。" }
     $python = Get-PythonCommand
-    if (-not $python) { throw "Python 已安装但当前 PowerShell 尚未刷新 PATH。请关闭并重新打开 PowerShell 后重试。" }
+    if (-not $python) { throw "未找到已安装的 Python 3.11 解释器，请检查 Python 安装结果后重试。" }
     return $python
 }
 
