@@ -1,52 +1,13 @@
-SU17 两台地面端部署与使用
-========================
+地面终端部署与使用
 
-一、部署方法
-------------
+一、部署
+按 docs/latest_deployment_activation.md 执行部署或仅更新命令。
+各独立图传网卡：192.168.1.230/24。
+地面互联：终端1～6分别为192.168.2.202、.207、.212、.217、.222、.227。
+机载、地面使用同一份 config/fleet.json。
 
-1. 解压部署包并进入项目根目录（该目录包含 competition_backend、tools、src）。
-2. 安装 Python 3，并勾选 Add Python to PATH。
-3. 在项目根目录执行：
-
-   powershell.exe -NoProfile -ExecutionPolicy Bypass `
-     -File ".\tools\install_ground_station.ps1"
-
-4. 两台电脑允许 TCP 端口 8000、56100、56010 通过防火墙。
-5. 首次更新 UAV3 机载代码，在项目根目录执行：
-
-   powershell.exe -NoProfile -ExecutionPolicy Bypass `
-     -File ".\tools\deploy_onboard_stack.ps1" `
-     -UavAddress "机载计算机IP"
-
-二、使用方法
-------------
-
-地面端1：
-
-   powershell.exe -NoProfile -ExecutionPolicy Bypass `
-     -File ".\tools\start_ground_node.ps1" `
-     -LocalUavId 1 `
-     -AuthToken "相同AuthToken" `
-     -PeerToken "相同PeerToken"
-
-地面端3：
-
-   powershell.exe -NoProfile -ExecutionPolicy Bypass `
-     -File ".\tools\start_ground_node.ps1" `
-     -LocalUavId 3 `
-     -AuthToken "相同AuthToken" `
-     -PeerToken "相同PeerToken"
-
-UAV3 机载端（任务和图片一起启动）：
-
-   cd ~/competition_development
-   bash ./tools/start_onboard_stack.sh \
-     3 \
-     192.168.1.123 \
-     "相同AuthToken"
-
-网页地址：
-
-   http://127.0.0.1:8000/
-
-当前只有 UAV3 时，UAV1 显示未连接是正常的；任意一台地面端都可对 UAV3 规划、分派和控制。
+二、启动
+在 competition_development 目录执行：
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\start_ground.ps1 -ConfirmLiveConfig
+打开 http://127.0.0.1:8000/，选择对应终端编号和任务发布角色。
+机载竞赛程序启动命令见 docs/latest_deployment_activation.md。

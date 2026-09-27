@@ -3,7 +3,7 @@ SU17 竞赛系统启动指令（当前单机 UAV1 测试）
 
 固定地址
 --------
-地面 Windows IP：192.168.1.123
+地面 Windows IP：192.168.1.230
 UAV1 机载计算机 IP：192.168.1.88
 地面网页端口：8000
 无人机 TCP 控制与遥测端口：56100
@@ -86,11 +86,11 @@ source devel/setup.bash
 
 注意：下面 auth_token:= 后面的值必须替换为 Windows 地面端使用的同一个 AuthToken。
 
-roslaunch su17_competition_executor onboard_task_executor.launch uav_id:=1 transport:=tcp ground_host:=192.168.1.123 ground_port:=56100 auth_token:=在这里填写共享AuthToken enable_motion:=true log_full_task:=true
+roslaunch su17_competition_executor onboard_task_executor.launch uav_id:=1 transport:=tcp ground_host:=192.168.1.230 ground_port:=56100 auth_token:=在这里填写共享AuthToken enable_motion:=true log_full_task:=true
 
 使用上面的示例令牌时，完整命令为：
 
-roslaunch su17_competition_executor onboard_task_executor.launch uav_id:=1 transport:=tcp ground_host:=192.168.1.123 ground_port:=56100 auth_token:=03ecaa4b1990419c9f27483206ae0f49 enable_motion:=true log_full_task:=true
+roslaunch su17_competition_executor onboard_task_executor.launch uav_id:=1 transport:=tcp ground_host:=192.168.1.230 ground_port:=56100 auth_token:=03ecaa4b1990419c9f27483206ae0f49 enable_motion:=true log_full_task:=true
 
 保持这个 Ubuntu 终端运行，不要关闭。
 

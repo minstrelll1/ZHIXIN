@@ -1,18 +1,10 @@
-SU17 两地面端简化启动
-=====================
+地面端统一启动
 
-地面端1（192.168.1.121，一条命令）：
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\tools\start_ground_node.ps1" -LocalUavId 1 -AuthToken "相同AuthToken" -PeerToken "相同PeerToken"
+各独立图传网卡：192.168.1.230/24。
+终端1地面互联：192.168.2.202；终端3地面互联：192.168.2.212。
 
-地面端3（192.168.1.123，一条命令）：
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\tools\start_ground_node.ps1" -LocalUavId 3 -AuthToken "相同AuthToken" -PeerToken "相同PeerToken"
+在每台电脑的 competition_development 目录执行：
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\start_ground.ps1 -ConfirmLiveConfig
+打开 http://127.0.0.1:8000/，选择对应终端编号，只指定一台任务发布端。
 
-UAV3 机载端（任务执行器和图片发送器一起启动，一条命令）：
-bash /home/amov/competition_development/tools/start_onboard_stack.sh --model su17 --expect-uav-id 3 --direct
-
-当前只有 UAV3 时，地面端1没有直连 UAV1 是正常状态。地面端1仍应通过地面端3看到 UAV3，并可对 UAV3 进行规划、任务分派和起飞控制。
-
-检查地面端 Peer 同步：
-Invoke-RestMethod http://127.0.0.1:8000/health | ConvertTo-Json -Depth 8
-
-peer_sync.3.ok=true 表示地面端1正在持续接收 UAV3 遥测。
+机载启动按 docs/latest_deployment_activation.md 执行。

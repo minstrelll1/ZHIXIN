@@ -99,7 +99,7 @@ rosmsg show su17_image_transfer/TargetDetection
 
 ```bash
 roslaunch su17_image_transfer onboard_image_sender.launch \
-  uav_id:=3 local_ros_uav_id:=1 ground_host:=192.168.1.123 \
+  uav_id:=3 local_ros_uav_id:=1 ground_host:=192.168.1.230 \
   auth_token:="$AUTH_TOKEN"
 ```
 

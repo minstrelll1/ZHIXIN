@@ -4,7 +4,7 @@
 
 | 设备或编号 | 用途 |
 | --- | --- |
-| Windows `192.168.1.123` | PrometheusGroundStation 和竞赛网页后端 |
+| Windows `192.168.1.230` | PrometheusGroundStation 和竞赛网页后端 |
 | Ubuntu `192.168.1.88:9090` | 机载 ROSBridge |
 | `/uav1/octomap_point_cloud_centers/reduce_the_frequency/compressed` | 抓包确认的机载点云话题 |
 | 网页 UAV3 | 本机对应的竞赛编号，与 ROS 命名空间分开设置 |
@@ -40,7 +40,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File "F:\Projects\ZhiXin\comp
 完整竞赛启动仍可使用 `start_competition_backend_tcp.ps1`，增加以下参数以启用同一接收模块：
 
 ```powershell
--LocalUavId 3 -PointCloudSource groundstation_shared -PointCloudRelayUavIds "3" -PointCloudTopics "3=/uav1/octomap_point_cloud_centers/reduce_the_frequency/compressed" -PointCloudCaptureLocalIp "192.168.1.123" -PointCloudCaptureRemoteIp "192.168.1.88" -PointCloudCaptureUavId 3
+-LocalUavId 3 -PointCloudSource groundstation_shared -PointCloudRelayUavIds "3" -PointCloudTopics "3=/uav1/octomap_point_cloud_centers/reduce_the_frequency/compressed" -PointCloudCaptureLocalIp "192.168.1.230" -PointCloudCaptureRemoteIp "192.168.1.88" -PointCloudCaptureUavId 3
 ```
 
 保留此 Windows 后端终端。浏览器打开 <http://127.0.0.1:8000/>，选择科目三，点击 UAV3 卡片。

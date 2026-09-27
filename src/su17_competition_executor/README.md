@@ -37,7 +37,7 @@
 
 ```bash
 roslaunch su17_competition_executor onboard_task_executor.launch \
-  uav_id:=1 local_ros_uav_id:=1 transport:=tcp ground_host:=192.168.1.123 ground_port:=56100 \
+  uav_id:=1 local_ros_uav_id:=1 transport:=tcp ground_host:=192.168.1.230 ground_port:=56100 \
   enable_motion:=false
 ```
 
@@ -55,7 +55,7 @@ cat /home/amov/competition_development/mission_cache/uav1/assigned_task.json
 
 ```bash
 roslaunch su17_competition_executor onboard_task_executor.launch \
-  uav_id:=1 local_ros_uav_id:=1 transport:=tcp ground_host:=192.168.1.123 ground_port:=56100 \
+  uav_id:=1 local_ros_uav_id:=1 transport:=tcp ground_host:=192.168.1.230 ground_port:=56100 \
   enable_motion:=true max_distance_from_home_m:=10.0
 ```
 

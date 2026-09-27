@@ -174,7 +174,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass `
   -File ".\tools\start_competition_backend_tcp.ps1"
 ```
 
-后端监听网页端口 `8000` 和六机 TCP 端口 `56100`。每架机主动连接 `fleet.json` 中对应的 `ground_host`；六套地面机地网卡默认是 `192.168.1.121`～`192.168.1.126`。同一连接上传遥测和任务状态、接收任务与控制命令，图片仍使用独立的 `56010` 端口。
+后端监听网页端口 `8000` 和六机 TCP 端口 `56100`。每架机主动连接 `fleet.json` 中对应的 `ground_host`；六套地面机地网卡默认是 `192.168.1.230`。同一连接上传遥测和任务状态、接收任务与控制命令，图片仍使用独立的 `56010` 端口。
 
 搜索规划始终生成 UAV1～UAV6 的完整结果；`COMPETITION_ACTIVE_UAV_IDS` / `-ActiveUavIds`
 只限制本次实际连接、任务分派、预检和控制范围。比如 `-ActiveUavIds "1"` 时页面仍展示六机规划，

@@ -2,7 +2,7 @@
   <arg name="uav_id" default="1"/>
   <!-- 飞控编号与本机 ROS 命名空间保持一致。 -->
   <arg name="local_ros_uav_id" default="$(arg uav_id)"/>
-  <arg name="ground_host" default=""/>
+  <arg name="ground_host" default="192.168.1.230"/>
   <arg name="ground_port" default="56010"/>
   <arg name="image_topic" default="/uav$(arg local_ros_uav_id)/gimbal/image_original"/>
   <arg name="input_mode" default="completed_target_array"/>

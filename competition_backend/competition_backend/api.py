@@ -806,7 +806,7 @@ def create_app(environment=None) -> FastAPI:
                     item.update(device_id="", onboard_host="", ground_host="", video_rtsp_source="")
             candidate = validate_fleet(raw_candidate)
             # 切换机型时自动清理旧地址：SU17 机载地址固定为 192.168.1.88，
-            # P600 恢复到其固定六机地址；SU17 的实际地面网卡仍由发布端填写。
+            # P600 恢复到其固定六机地址；两种机型的图传网卡均默认为 192.168.1.230。
             for item in list(candidate["vehicles"]):
                 previous = previous_by_terminal.get(int(item["ground_terminal_id"]))
                 if previous and previous.get("model") != item.get("model"):

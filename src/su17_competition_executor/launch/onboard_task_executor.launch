@@ -3,7 +3,7 @@
   <!-- 飞控编号与本机 ROS 命名空间保持一致。 -->
   <arg name="local_ros_uav_id" default="$(arg uav_id)" />
   <arg name="transport" default="tcp" />
-  <arg name="ground_host" default="" />
+  <arg name="ground_host" default="192.168.1.230" />
   <arg name="ground_port" default="56100" />
   <arg name="auth_token" default="" />
   <arg name="enable_motion" default="false" />

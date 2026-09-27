@@ -36,7 +36,7 @@ def packet(sequence, data, target_port=7557, source="192.168.1.88", flags=0x18):
     ip = bytearray(20)
     ip[0], ip[9] = 0x45, 6
     struct.pack_into("!H", ip, 2, 40 + len(data))
-    ip[12:16], ip[16:20] = socket.inet_aton(source), socket.inet_aton("192.168.1.123")
+    ip[12:16], ip[16:20] = socket.inet_aton(source), socket.inet_aton("192.168.1.230")
     tcp = bytearray(20)
     struct.pack_into("!HHI", tcp, 0, 9090, target_port, sequence)
     tcp[12], tcp[13] = 0x50, flags
@@ -123,7 +123,7 @@ class StreamTest(unittest.TestCase):
         self.assertEqual(parser.resets, 1)
 
     def test_independent_connections_and_remote_filter(self):
-        parser = GroundStationStream("192.168.1.123", "192.168.1.88")
+        parser = GroundStationStream("192.168.1.230", "192.168.1.88")
         a, b = ws({"a": 1}), ws({"b": 2})
         self.assertEqual(parser.feed(packet(10, a[:5])), [])
         self.assertEqual(parser.feed(packet(10, b, target_port=7558)), [{"b": 2}])
@@ -150,7 +150,7 @@ class StreamTest(unittest.TestCase):
                     list(pcapng_ipv4(path))
 
     def test_capture_permission_error_is_visible(self):
-        capture = PassivePointCloudCapture("192.168.1.123", "192.168.1.88", 9090, 3, TOPIC, lambda *args: None)
+        capture = PassivePointCloudCapture("192.168.1.230", "192.168.1.88", 9090, 3, TOPIC, lambda *args: None)
         with patch("competition_backend.groundstation_capture.os.name", "nt"), \
              patch("competition_backend.groundstation_capture.socket.socket", side_effect=PermissionError("10013")):
             capture._capture()

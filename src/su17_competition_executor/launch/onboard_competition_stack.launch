@@ -1,7 +1,7 @@
 <launch>
   <arg name="uav_id" />
   <arg name="local_ros_uav_id" default="$(arg uav_id)" />
-  <arg name="ground_host" />
+  <arg name="ground_host" default="192.168.1.230" />
   <arg name="auth_token" default="$(optenv AUTH_TOKEN)" />
   <arg name="task_port" default="56100" />
   <arg name="image_port" default="56010" />

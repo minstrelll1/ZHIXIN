@@ -45,7 +45,7 @@ class OnboardTaskExecutor:
             raise ValueError("启动参数与已经核验的飞控编号不一致")
         self.enable_motion = bool(rospy.get_param("~enable_motion", False))
         self.transport = str(rospy.get_param("~transport", "tcp")).strip().lower()
-        self.ground_host = str(rospy.get_param("~ground_host", ""))
+        self.ground_host = str(rospy.get_param("~ground_host", "192.168.1.230"))
         self.ground_port = int(rospy.get_param("~ground_port", 56100))
         self.auth_token = str(rospy.get_param("~auth_token", ""))
         self.telemetry_rate = float(rospy.get_param("~telemetry_rate_hz", 5.0))

@@ -1,5 +1,5 @@
-param(
-    [ValidateSet(0, 1, 3)][int]$LocalUavId = 0,
+﻿param(
+    [ValidateRange(0, 6)][int]$LocalUavId = 0,
     [string]$AuthToken = $env:SU17_AUTH_TOKEN,
     [string]$PeerToken = $env:SU17_PEER_TOKEN,
     [string]$UavSshHost = "",
@@ -16,63 +16,29 @@ param(
     [double]$TrafficInterval = 1.0,
     [string]$UavTrafficHosts = "",
     [string]$TrafficReportToken = "",
-    [string]$PointCloudIngestToken = ""
+    [string]$PointCloudIngestToken = "",
+    [string]$FleetConfig = "",
+    [switch]$ConfirmLiveConfig,
+    [switch]$CheckOnly
 )
 
+
 $ErrorActionPreference = "Stop"
-$ProjectRoot = Split-Path $PSScriptRoot -Parent
-
-if ($LocalUavId -eq 0) {
-    $LocalAddresses = @(Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue |
-        Where-Object { $_.IPAddress -in @("192.168.2.121", "192.168.2.122", "192.168.2.123", "192.168.2.124", "192.168.2.125", "192.168.2.126") } |
-        Select-Object -ExpandProperty IPAddress)
-    $Detected = $LocalAddresses | Select-Object -First 1
-    if ($Detected) { $LocalUavId = [int]$Detected.Split('.')[-1] - 120 }
-    else { throw "Cannot detect this ground node. Use -LocalUavId 1 or -LocalUavId 3." }
+if (-not $AuthToken) { $AuthToken = $env:AUTH_TOKEN }
+if (-not $PeerToken) { $PeerToken = $env:PEER_TOKEN }
+if ($LocalUavId -ne 0) {
+    Write-Host "旧启动入口已接入统一流程：请在网页中选择地面终端 $LocalUavId。" -ForegroundColor Cyan
 }
-
-if (-not $AuthToken) { throw "AuthToken is empty. Set SU17_AUTH_TOKEN or pass -AuthToken." }
-if (-not $PeerToken) { throw "PeerToken is empty. Set SU17_PEER_TOKEN or pass -PeerToken." }
-if (-not $PointCloudIngestToken) { $PointCloudIngestToken = $AuthToken }
-
-$Peers = "1=http://192.168.2.121:8000;2=http://192.168.2.122:8000;3=http://192.168.2.123:8000;4=http://192.168.2.124:8000;5=http://192.168.2.125:8000;6=http://192.168.2.126:8000"
-$GroundNodeId = "ground-uav$LocalUavId"
-$VideoSources = "$LocalUavId=http://127.0.0.1:$VideoWebRtcPort/uav$LocalUavId/"
-if (-not $UavSshHost -and $LocalUavId -eq 3) { $UavSshHost = "192.168.1.88" }
-$RecordingSshHosts = $(if ($UavSshHost) { "$LocalUavId=$UavSshHost" } else { "" })
-if (-not $UavTrafficHosts -and $UavSshHost -match '^\d{1,3}(\.\d{1,3}){3}$') {
-    $UavTrafficHosts = "$LocalUavId=$UavSshHost"
+$legacyOverrides = @($PSBoundParameters.Keys | Where-Object {
+    $_ -notin @("LocalUavId", "AuthToken", "PeerToken", "FleetConfig", "ConfirmLiveConfig", "CheckOnly")
+})
+if ($legacyOverrides.Count -gt 0) {
+    Write-Host "通信、视频和点云参数统一读取 config/fleet.json；旧独立覆盖参数不再生效，请由任务发布端在机队配置页修改。" -ForegroundColor Yellow
 }
-
-$Installer = Join-Path $PSScriptRoot "install_ground_station.ps1"
-$PythonExe = Join-Path (Join-Path (Join-Path $ProjectRoot "competition_backend") ".venv") "Scripts\python.exe"
-if (-not (Test-Path -LiteralPath $PythonExe)) {
-    Write-Host "Installing ground-station Python environment..." -ForegroundColor Yellow
-    & $Installer
-}
-
-$Launcher = Join-Path $PSScriptRoot "start_competition_backend_tcp.ps1"
-& $Launcher `
-    -LocalUavId $LocalUavId `
-    -GroundNodeId $GroundNodeId `
-    -GroundPeers $Peers `
-    -AuthToken $AuthToken `
-    -PeerToken $PeerToken `
-    -ImageAuthToken $AuthToken `
-    -VideoSources $VideoSources `
-    -VideoRtspSource $VideoRtspSource `
-    -VideoWebRtcPort $VideoWebRtcPort `
-    -PointCloudSource $PointCloudSource `
-    -PointCloudRosbridgeHosts $PointCloudRosbridgeHosts `
-    -PointCloudTopics $PointCloudTopics `
-    -PointCloudRosbridgePort $PointCloudRosbridgePort `
-    -PointCloudRelayHost $PointCloudRelayHost `
-    -PointCloudRelayPort $PointCloudRelayPort `
-    -PointCloudRelayUavIds $PointCloudRelayUavIds `
-    -PointCloudRelayTopicTemplate $PointCloudRelayTopicTemplate `
-    -TrafficInterval $TrafficInterval `
-    -UavTrafficHosts $UavTrafficHosts `
-    -TrafficReportToken $TrafficReportToken `
-    -PointCloudIngestToken $PointCloudIngestToken `
-    -RecordingSshHosts $RecordingSshHosts `
-    -ConfirmLiveConfig
+$arguments = @{}
+if ($FleetConfig) { $arguments.FleetConfig = $FleetConfig }
+if ($AuthToken) { $arguments.AuthToken = $AuthToken }
+if ($PeerToken) { $arguments.PeerToken = $PeerToken }
+if ($ConfirmLiveConfig) { $arguments.ConfirmLiveConfig = $true }
+if ($CheckOnly) { $arguments.CheckOnly = $true }
+& (Join-Path $PSScriptRoot "start_ground.ps1") @arguments

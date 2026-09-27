@@ -5,6 +5,7 @@ from pathlib import Path
 import socket
 import tempfile
 import unittest
+import xml.etree.ElementTree as ET
 from unittest.mock import patch
 from fastapi.testclient import TestClient
 from competition_backend.api import create_app
@@ -23,13 +24,51 @@ class FleetConfigurationTest(unittest.TestCase):
             config = apply_fixed_binding(config, terminal_id, 'p600')
         self.assertEqual(
             [v['ground_host'] for v in config['vehicles']],
-            ['192.168.1.%d' % value for value in range(121, 127)],
+            ['192.168.1.230'] * 6,
         )
         self.assertEqual(
             [v['peer_host'] for v in config['vehicles']],
             ['192.168.2.202', '192.168.2.207', '192.168.2.212',
              '192.168.2.217', '192.168.2.222', '192.168.2.227'],
         )
+
+    def test_shared_radio_ip_keeps_routes_and_peer_addresses_distinct(self):
+        config = default_fleet()
+        for uid in range(1, 7):
+            config = apply_fixed_binding(config, uid, 'p600')
+        for uid in range(1, 7):
+            local, env = ground_environment(config, uid)
+            self.assertEqual(local['ground_host'], '192.168.1.230')
+            self.assertEqual(env['COMPETITION_POINTCLOUD_CAPTURE_LOCAL_IP'], '192.168.1.230')
+            self.assertEqual(env['COMPETITION_POINTCLOUD_CAPTURE_REMOTE_IP'], local['onboard_host'])
+            self.assertEqual(env['COMPETITION_UAV_SSH_HOSTS'], f"{uid}={local['onboard_host']}")
+            self.assertEqual(env['COMPETITION_GROUND_PEERS'], ';'.join(
+                f"{v['uav_id']}=http://{v['peer_host']}:8000"
+                for v in config['vehicles'] if v['uav_id'] != uid))
+            self.assertNotIn('192.168.1.230', env['COMPETITION_GROUND_PEERS'])
+        shipped = validate_fleet(json.loads((Path(__file__).resolve().parents[2] / 'config/fleet.json').read_text(encoding='utf-8-sig')))
+        self.assertEqual([(v['onboard_host'],v['ground_host'],v['peer_host']) for v in shipped['vehicles']],
+                         [(v['onboard_host'],v['ground_host'],v['peer_host']) for v in config['vehicles']])
+
+    def test_su17_switch_uses_shared_radio_ip_and_keeps_peer(self):
+        config = apply_fixed_binding(default_fleet(), 3, 'p600')
+        config = apply_fixed_binding(config, 3, 'su17')
+        v = config['vehicles'][2]
+        self.assertEqual(v['onboard_host'], '192.168.1.88')
+        self.assertEqual(v['ground_host'], '192.168.1.230')
+        self.assertEqual(v['peer_host'], '192.168.2.212')
+        v['ground_host'] = '192.168.1.123'
+        with self.assertRaisesRegex(ValueError, '192.168.1.230'):
+            validate_fleet(config)
+
+    def test_standalone_launch_network_defaults_match_deployed_fleet(self):
+        root = Path(__file__).resolve().parents[2]
+        for relative in ('src/su17_competition_executor/launch/onboard_competition_stack.launch',
+                         'src/su17_competition_executor/launch/onboard_task_executor.launch',
+                         'src/su17_image_transfer/launch/onboard_image_sender.launch'):
+            with self.subTest(launch=relative):
+                launch = ET.parse(root / relative).getroot()
+                self.assertEqual(launch.find("arg[@name='ground_host']").get('default'), '192.168.1.230')
 
     def test_draft_does_not_guess_addresses_and_namespaces_follow_identity(self):
         config=validate_fleet(default_fleet())
@@ -56,7 +95,7 @@ class FleetConfigurationTest(unittest.TestCase):
             with self.assertRaises(ValueError):store.save(default_fleet(),old)
 
     def test_independent_network_and_peer_addresses(self):
-        config=default_fleet();one=config['vehicles'][0];one.update(onboard_host='192.168.1.88',ground_host='192.168.1.121',peer_host='10.20.0.1')
+        config=default_fleet();one=config['vehicles'][0];one.update(onboard_host='192.168.1.88',ground_host='192.168.1.230',peer_host='10.20.0.1')
         config['vehicles'][1]['peer_host']='10.20.0.2'
         local,env=ground_environment(validate_fleet(config),1)
         self.assertEqual(env['COMPETITION_GROUND_PEERS'],'2=http://10.20.0.2:8000')
@@ -82,7 +121,7 @@ class FleetConfigurationTest(unittest.TestCase):
                 saved = FleetStore(path).read()['vehicles'][1]
                 self.assertEqual(saved['model'],'su17')
                 self.assertEqual(saved['onboard_host'],'192.168.1.88')
-                self.assertEqual(saved['ground_host'],'')
+                self.assertEqual(saved['ground_host'],'192.168.1.230')
 
 
 class MixedFleetTcpTest(unittest.TestCase):

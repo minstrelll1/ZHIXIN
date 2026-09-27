@@ -20,15 +20,10 @@ P600_ONBOARD_HOSTS = {
     1: "192.168.1.202", 2: "192.168.1.207", 3: "192.168.1.212",
     4: "192.168.1.217", 5: "192.168.1.222", 6: "192.168.1.227",
 }
-# SU17 目前只有一台可用机载电脑；地面端机地网卡使用现场的
-# 192.168.1.121～192.168.1.126 之一，因此只自动固定机载地址，地面地址由
-# 任务发布端在机队配置页按实际接线选择。
+# SU17 目前只有一台可用机载电脑；各独立机地链路的地面图传网卡地址相同。
 SU17_ONBOARD_HOST = "192.168.1.88"
-# 机地直连网卡默认使用 192.168.1.121～192.168.1.126。
-GROUND_LINK_HOSTS = {
-    1: "192.168.1.121", 2: "192.168.1.122", 3: "192.168.1.123",
-    4: "192.168.1.124", 5: "192.168.1.125", 6: "192.168.1.126",
-}
+# 六套独立图传网络均使用 192.168.1.230，终端编号在网页中选择。
+GROUND_LINK_HOSTS = {uid: "192.168.1.230" for uid in range(1, 7)}
 SU17_GROUND_HOSTS = set(GROUND_LINK_HOSTS.values())
 # 地面端之间同步仍使用 192.168.2.* 网段；它与机地直连网卡分开。
 GROUND_PEER_HOSTS = {
@@ -65,15 +60,14 @@ def apply_fixed_binding(config, terminal_id, model):
     target = matches[0]
     changed_model = target["model"] != model
     if changed_model:
-        # 新机型的物理设备身份不能沿用旧绑定；SU17 网络未确认，不猜测。
+        # 新机型的物理设备身份不能沿用旧绑定。
         target.update(device_id="", onboard_host="", ground_host="", video_rtsp_source="")
     target["model"] = model
     target["peer_host"] = target["peer_host"] or GROUND_PEER_HOSTS[terminal_id]
+    target["ground_host"] = target["ground_host"] or GROUND_LINK_HOSTS[terminal_id]
     if model == "p600":
         onboard_host = target["onboard_host"] or P600_ONBOARD_HOSTS[target["uav_id"]]
         target["onboard_host"] = onboard_host
-        # 六套 P600 的机地直连网卡默认使用 192.168.1.121～.126。
-        target["ground_host"] = target["ground_host"] or GROUND_LINK_HOSTS[terminal_id]
         target["video_rtsp_source"] = target["video_rtsp_source"] or "rtsp://%s:8554/live" % onboard_host
     elif model == "su17":
         target["onboard_host"] = target["onboard_host"] or SU17_ONBOARD_HOST
@@ -124,7 +118,7 @@ def validate_fleet(raw):
             if v["onboard_host"] and v["onboard_host"] != SU17_ONBOARD_HOST:
                 raise ValueError("SU17 机载 IP 必须为 192.168.1.88")
             if v["ground_host"] and v["ground_host"] not in SU17_GROUND_HOSTS:
-                raise ValueError("SU17 地面机地网卡 IP 必须为 192.168.1.121～192.168.1.126")
+                raise ValueError("SU17 地面机地网卡 IP 必须为 192.168.1.230")
         for name in ("web_port", "task_port", "image_port", "rosbridge_port", "video_webrtc_port"):
             v[name] = _integer(v[name], name, 1, 65535)
         if len({v[n] for n in ("web_port", "task_port", "image_port", "video_webrtc_port")}) != 4:

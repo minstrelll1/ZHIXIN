@@ -18,7 +18,7 @@ from competition_backend.pcl_octree import decode_xyz
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--pcap", required=True, type=Path, help="pktmon 导出的 pcapng 文件")
-    parser.add_argument("--local-ip", default="192.168.1.123", help="Windows 地面网卡地址")
+    parser.add_argument("--local-ip", default="192.168.1.230", help="Windows 地面网卡地址")
     parser.add_argument("--remote-ip", default="192.168.1.88", help="机载电脑地址")
     parser.add_argument("--remote-port", default=9090, type=int)
     parser.add_argument("--uav-id", type=int, default=3, choices=range(1, 7))

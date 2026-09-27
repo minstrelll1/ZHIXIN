@@ -51,7 +51,7 @@ class OnboardImageSender:
         )
         self.input_mode = str(rospy.get_param("~input_mode", "completed_target_array")).strip()
         self.compressed_input = bool(rospy.get_param("~compressed_input", False))
-        self.ground_host = rospy.get_param("~ground_host", "192.168.1.123")
+        self.ground_host = rospy.get_param("~ground_host", "192.168.1.230")
         self.ground_port = int(rospy.get_param("~ground_port", 56010))
         self.jpeg_quality = int(rospy.get_param("~jpeg_quality", 80))
         self.max_frame_age = float(rospy.get_param("~max_frame_age_sec", 2.0))

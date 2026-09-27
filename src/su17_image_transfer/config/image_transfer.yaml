@@ -19,7 +19,7 @@ image_topic: /uav1/gimbal/image_original
 compressed_input: false
 
 # Windows地面端在无人机网络中的IPv4地址。
-ground_host: 192.168.1.123
+ground_host: 192.168.1.230
 ground_port: 56010
 
 jpeg_quality: 80
