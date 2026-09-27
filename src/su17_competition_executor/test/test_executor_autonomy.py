@@ -1,12 +1,13 @@
 import importlib.util
 import json
+import struct
 import sys
 import tempfile
 import threading
 import types
 import unittest
 from pathlib import Path
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from su17_competition_executor.task_protocol import assignment_checksum
@@ -17,10 +18,10 @@ rospy.loginfo = Mock()
 rospy.logerr = Mock()
 rospy.logwarn = Mock()
 sys.modules.setdefault("rospy", rospy)
-for name in ("prometheus_msgs", "std_msgs"):
+for name in ("prometheus_msgs", "std_msgs", "sensor_msgs"):
     sys.modules.setdefault(name, types.ModuleType(name))
     module = types.ModuleType(name + ".msg")
-    for cls in ("UAVCommand", "UAVControlState", "UAVState", "String", "Float64MultiArray", "Int32", "Bool"):
+    for cls in ("UAVCommand", "UAVControlState", "UAVState", "String", "Float64MultiArray", "Int32", "Bool", "NavSatFix"):
         setattr(module, cls, type(cls, (), {}))
     sys.modules.setdefault(name + ".msg", module)
 spec = importlib.util.spec_from_file_location("executor", Path(__file__).resolve().parents[1] / "scripts" / "onboard_task_executor.py")
@@ -41,6 +42,8 @@ class AutonomyTest(unittest.TestCase):
         node._home = (0., 0., 0., 0.)
         node._gps_home = (30.0, 103.0, 500.0)
         node._state = None
+        node._gps_fix = None
+        node._gps_fix_received = None
         node._ground_origin_z = None
         node._ground_origin_source = ""
         node._progress = {"phase": "executing", "next_waypoint": 1}
@@ -406,6 +409,143 @@ class AutonomyTest(unittest.TestCase):
         state=types.SimpleNamespace(odom_valid=True,gps_status=6,location_source=10,latitude=33,longitude=113,altitude=80)
         with self.assertRaisesRegex(ValueError,'GPS/RTK'):
             module.OnboardTaskExecutor._valid_gps(state)
+
+
+class PreciseGpsTelemetryTest(unittest.TestCase):
+    @staticmethod
+    def fix(**values):
+        fields = {
+            "latitude": 33.37994425249266,
+            "longitude": 113.52849160864327,
+            "altitude": 44.09814762078591,
+            "status": types.SimpleNamespace(status=0),
+            # 卫星时间与本机时间可能不同；新鲜度只使用本机接收时间。
+            "header": types.SimpleNamespace(stamp=-1000000),
+        }
+        fields.update(values)
+        return types.SimpleNamespace(**fields)
+
+    def test_gps_payload_retains_float64_precision_through_json(self):
+        fix = self.fix()
+        payload = module.OnboardTaskExecutor._gps_position_payload(fix, 100.0, 100.25)
+        wire = json.loads(json.dumps(payload, allow_nan=False))
+        self.assertEqual(wire, {
+            "latitude": fix.latitude,
+            "longitude": fix.longitude,
+            "altitude": fix.altitude,
+            "source": "mavros_global",
+            "age_seconds": 0.25,
+        })
+        for coordinate in ("latitude", "longitude"):
+            quantized = struct.unpack("f", struct.pack("f", getattr(fix, coordinate)))[0]
+            self.assertNotEqual(wire[coordinate], quantized)
+
+    def test_gps_payload_freshness_includes_two_seconds_boundary(self):
+        fix = self.fix()
+        for now in (100.0, 101.5, 102.0):
+            with self.subTest(now=now):
+                self.assertIsNotNone(module.OnboardTaskExecutor._gps_position_payload(fix, 100.0, now))
+        for now in (99.9, 102.000001, float("nan"), float("inf")):
+            with self.subTest(now=now):
+                self.assertIsNone(module.OnboardTaskExecutor._gps_position_payload(fix, 100.0, now))
+        self.assertIsNone(module.OnboardTaskExecutor._gps_position_payload(None, 100.0, 100.0))
+        self.assertIsNone(module.OnboardTaskExecutor._gps_position_payload(fix, None, 100.0))
+        self.assertIsNotNone(module.OnboardTaskExecutor._gps_position_payload(fix, 0.0, 0.5))
+
+    def test_gps_payload_rejects_no_fix_and_invalid_coordinates(self):
+        invalid = (
+            {"status": types.SimpleNamespace(status=-1)},
+            {"latitude": float("nan")}, {"latitude": float("inf")},
+            {"longitude": float("nan")}, {"longitude": float("-inf")},
+            {"latitude": -90.000001}, {"latitude": 90.000001},
+            {"longitude": -180.000001}, {"longitude": 180.000001},
+            {"latitude": None}, {"longitude": "invalid"}, {"status": None},
+        )
+        for fields in invalid:
+            with self.subTest(fields=fields):
+                self.assertIsNone(module.OnboardTaskExecutor._gps_position_payload(self.fix(**fields), 100.0, 100.1))
+        for latitude, longitude in ((0.0, 0.0), (-90.0, -180.0), (90.0, 180.0)):
+            for status in (0, 1, 2):
+                with self.subTest(latitude=latitude, longitude=longitude, status=status):
+                    self.assertIsNotNone(module.OnboardTaskExecutor._gps_position_payload(
+                        self.fix(latitude=latitude, longitude=longitude, status=types.SimpleNamespace(status=status)), 100.0, 100.1))
+
+    def test_gps_payload_converts_invalid_altitude_to_null(self):
+        for altitude in (None, float("nan"), float("inf"), float("-inf"), "invalid"):
+            with self.subTest(altitude=altitude):
+                payload = module.OnboardTaskExecutor._gps_position_payload(self.fix(altitude=altitude), 100.0, 100.1)
+                self.assertIsNone(payload["altitude"])
+                json.dumps(payload, allow_nan=False)
+        fix = self.fix()
+        del fix.altitude
+        self.assertIsNone(module.OnboardTaskExecutor._gps_position_payload(fix, 100.0, 100.1)["altitude"])
+
+    def test_fix_callback_only_updates_map_cache_with_monotonic_time(self):
+        node = AutonomyTest().executor(tempfile.gettempdir())
+        previous = (node._state, node._home, node._gps_home, node._assignment.copy())
+        fix = self.fix()
+        with patch.object(module.time, "monotonic", return_value=123.5):
+            node._gps_fix_callback(fix)
+        self.assertIs(node._gps_fix, fix)
+        self.assertEqual(node._gps_fix_received, 123.5)
+        self.assertEqual((node._state, node._home, node._gps_home, node._assignment), previous)
+        invalid = self.fix(status=types.SimpleNamespace(status=-1))
+        with patch.object(module.time, "monotonic", return_value=124.0):
+            node._gps_fix_callback(invalid)
+        self.assertIsNone(node._gps_position_payload(node._gps_fix, node._gps_fix_received, 124.1))
+
+    def test_subscription_uses_local_ros_id_and_is_read_only(self):
+        parameters = {"~uav_id": 3, "~local_ros_uav_id": 7, "~cache_path": "unused.json", "~transport": "ros"}
+        subscribe = Mock()
+        publish = Mock()
+        with patch.multiple(rospy, create=True,
+                            get_param=Mock(side_effect=lambda key, default=None: parameters.get(key, default)),
+                            Subscriber=subscribe, Publisher=publish, Timer=Mock(), Duration=Mock(),
+                            Time=types.SimpleNamespace(now=lambda: types.SimpleNamespace(to_sec=lambda: 123.0))), \
+             patch.dict(module.os.environ, {"COMPETITION_ONBOARD_IDENTITY": "{}", "COMPETITION_ONBOARD_VEHICLE": "{}"}), \
+             patch.object(module.Path, "read_text", return_value="test-boot"), \
+             patch.object(module.OnboardTaskExecutor, "_restore_progress"), \
+             patch.object(module.OnboardTaskExecutor, "_publish_status"):
+            node = module.OnboardTaskExecutor()
+        gps_calls = [call for call in subscribe.call_args_list if "mavros/global_position/global" in call.args[0]]
+        self.assertEqual(len(gps_calls), 1)
+        self.assertEqual(gps_calls[0].args, ("/uav7/mavros/global_position/global", module.NavSatFix, node._gps_fix_callback))
+        self.assertEqual(gps_calls[0].kwargs, {"queue_size": 1})
+        self.assertFalse(any("mavros/global_position/global" in call.args[0] for call in publish.call_args_list))
+
+    def test_tcp_telemetry_adds_precise_gps_and_preserves_uavstate_fields(self):
+        node = AutonomyTest().executor(tempfile.gettempdir())
+        state = types.SimpleNamespace(connected=True, armed=False, odom_valid=True,
+                                      battery_percetage=0.9, position=[1.0, 2.0, 3.0], velocity=[0.0, 0.0, 0.0],
+                                      latitude=33.37994384765625, longitude=113.52848815917969, altitude=44.0, rel_alt=0.5)
+        control = types.SimpleNamespace(failsafe=False, control_state=1)
+        node._snapshot = lambda: (state, control)
+        node.tcp_link = Mock()
+        node._identity_error = ""
+        node._state_received = node._control_received = 100.0
+        node.enable_motion = False
+        node.max_speed = 2.0
+        node.flight_speed_limit = None
+        node.scan_pub = Mock()
+        node.scan_pub.get_num_connections.return_value = 0
+        node.vehicle_config = {}
+        node._image_health_received = 0.0
+        node._image_health = {}
+        node._assignment = None
+        node._assignment_acked = False
+        node._gps_fix = self.fix()
+        node._gps_fix_received = 100.0
+        for now, has_gps in ((100.5, True), (102.000001, False)):
+            with self.subTest(now=now), patch.object(module.time, "monotonic", return_value=now):
+                node._tcp_telemetry_timer(None)
+                telemetry = node.tcp_link.update_telemetry.call_args.args[0]
+                for field in ("latitude", "longitude", "altitude", "rel_alt"):
+                    self.assertEqual(telemetry[field], getattr(state, field))
+                self.assertEqual(telemetry["gps_position"] is not None, has_gps)
+                if has_gps:
+                    self.assertEqual(telemetry["gps_position"]["latitude"], node._gps_fix.latitude)
+                    self.assertEqual(telemetry["gps_position"]["longitude"], node._gps_fix.longitude)
+                    self.assertEqual(telemetry["gps_position"]["source"], "mavros_global")
 
 
 if __name__ == "__main__":

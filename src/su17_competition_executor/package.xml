@@ -8,6 +8,7 @@
   <buildtool_depend>catkin</buildtool_depend>
   <depend>rospy</depend>
   <depend>std_msgs</depend>
+  <depend>sensor_msgs</depend>
   <depend>prometheus_msgs</depend>
   <exec_depend>mavros_msgs</exec_depend>
 </package>

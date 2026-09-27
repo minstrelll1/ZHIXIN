@@ -56,6 +56,8 @@ class Telemetry:
     longitude: Optional[float] = None
     altitude: Optional[float] = None
     rel_alt: Optional[float] = None
+    gps_position: Optional[Dict[str, Any]] = None
+    gps_telemetry_age_seconds: Optional[float] = None
     identity: Dict[str, Any] = field(default_factory=dict)
     capabilities: Dict[str, Any] = field(default_factory=dict)
     mission_altitude_m: Optional[float] = None

@@ -70,6 +70,7 @@ class TcpFleetAdapter(FleetAdapter):
         self._lock = threading.RLock()
         self._clients: Dict[int, _ClientConnection] = {}
         self._telemetry: Dict[int, Telemetry] = {}
+        self._gps_telemetry_received: Dict[int, float] = {}
         self._latest_assignments: Dict[int, Dict[str, Any]] = {}
 
     @property
@@ -87,7 +88,16 @@ class TcpFleetAdapter(FleetAdapter):
         """Return a copy suitable for publishing to another ground computer."""
         with self._lock:
             telemetry = self._telemetry.get(int(uav_id))
-            return replace(telemetry) if telemetry is not None else None
+            return self._display_snapshot_locked(telemetry) if telemetry is not None else None
+
+    def _display_snapshot_locked(self, telemetry: Telemetry) -> Telemetry:
+        # 地图定位年龄只由实际遥测更新，通信心跳不刷新定位。
+        received = self._gps_telemetry_received.get(telemetry.uav_id)
+        age = max(0.0, time.monotonic() - received) if received is not None else None
+        gps = dict(telemetry.gps_position) if telemetry.gps_position is not None else None
+        if gps is not None:
+            gps["age_seconds"] += age or 0.0
+        return replace(telemetry, gps_position=gps, gps_telemetry_age_seconds=age)
 
     def forward_command(
         self, uav_id: int, command_type: str, payload: Dict[str, Any]
@@ -265,6 +275,7 @@ class TcpFleetAdapter(FleetAdapter):
             telemetry = self._get_telemetry_locked(uav_id)
             telemetry.received_at = time.time()
             if message_type == "telemetry":
+                self._gps_telemetry_received[uav_id] = time.monotonic()
                 telemetry.connected = bool(message.get("connected", False))
                 telemetry.armed = bool(message.get("armed", False))
                 telemetry.odom_valid = bool(message.get("odom_valid", False))
@@ -290,6 +301,23 @@ class TcpFleetAdapter(FleetAdapter):
                     else:
                         value = float(raw_value)
                         setattr(telemetry, field_name, value if math.isfinite(value) else None)
+                # 高精度 GPS 只供任务地图显示，不覆盖原始遥测和飞行高度。
+                telemetry.gps_position = None
+                gps = message.get("gps_position")
+                if isinstance(gps, dict):
+                    try:
+                        lat, lon, age = (float(gps[key]) for key in ("latitude", "longitude", "age_seconds"))
+                        if (all(math.isfinite(v) for v in (lat, lon, age))
+                                and abs(lat) <= 90 and abs(lon) <= 180 and 0 <= age <= 2):
+                            altitude = gps.get("altitude")
+                            altitude = float(altitude) if altitude is not None else None
+                            telemetry.gps_position = {
+                                "latitude": lat, "longitude": lon, "age_seconds": age,
+                                "source": str(gps.get("source", "mavros_global")),
+                                "altitude": altitude if altitude is None or math.isfinite(altitude) else None,
+                            }
+                    except (KeyError, TypeError, ValueError):
+                        pass
                 mission_altitude = message.get("mission_altitude_m")
                 if mission_altitude is not None and not math.isfinite(float(mission_altitude)):
                     raise ValueError("任务相对高度无效")
@@ -324,7 +352,7 @@ class TcpFleetAdapter(FleetAdapter):
                 pass
             else:
                 raise ValueError("unsupported onboard TCP message")
-            snapshot = replace(telemetry)
+            snapshot = self._display_snapshot_locked(telemetry)
         self.emit_telemetry(snapshot)
 
     def _send_command(self, uav_id: int, command_type: str, payload: Dict[str, Any]) -> None:

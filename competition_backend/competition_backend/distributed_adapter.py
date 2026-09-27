@@ -289,6 +289,7 @@ class DistributedFleetAdapter(FleetAdapter):
                 if not base_url:
                     continue
                 try:
+                    request_started = time.monotonic()
                     result = self._request_json(
                         "{}/api/v1/peer/telemetry/{}".format(base_url, uav_id)
                     )
@@ -308,7 +309,16 @@ class DistributedFleetAdapter(FleetAdapter):
                         if self.identity_validator and telemetry.connected:
                             self.identity_validator({"uav_id": uav_id, **telemetry.identity})
                         received_at = time.time()
-                        telemetry = replace(telemetry, received_at=received_at)
+                        # 相对定位年龄跨终端传递；完整请求耗时作为保守上界。
+                        transfer_age = max(0.0, time.monotonic() - request_started)
+                        gps = dict(telemetry.gps_position) if telemetry.gps_position is not None else None
+                        if gps is not None:
+                            gps["age_seconds"] += transfer_age
+                        position_age = telemetry.gps_telemetry_age_seconds
+                        if position_age is not None:
+                            position_age += transfer_age
+                        telemetry = replace(telemetry, received_at=received_at, gps_position=gps,
+                                            gps_telemetry_age_seconds=position_age)
                         with self._telemetry_lock:
                             self._peer_telemetry[uav_id] = telemetry
                             self._peer_sync_status[uav_id] = {

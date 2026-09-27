@@ -12,6 +12,7 @@ from typing import Any, Dict, Optional, Tuple
 
 import rospy
 from prometheus_msgs.msg import UAVCommand, UAVControlState, UAVState
+from sensor_msgs.msg import NavSatFix
 from std_msgs.msg import String, Float64MultiArray, Int32, Bool
 
 # 源码部署时也可找到统一配置/坐标工具；无需改动厂商包。
@@ -110,6 +111,9 @@ class OnboardTaskExecutor:
 
         self._lock = threading.RLock()
         self._state: Optional[UAVState] = None
+        # 仅供地图绘制的 float64 GPS；不参与任务锚点和飞行控制。
+        self._gps_fix: Optional[NavSatFix] = None
+        self._gps_fix_received: Optional[float] = None
         self._control: Optional[UAVControlState] = None
         self._assignment: Optional[Dict[str, Any]] = None
         self._assignment_acked = False
@@ -174,6 +178,12 @@ class OnboardTaskExecutor:
             local_prefix + "/prometheus/state",
             UAVState,
             self._state_callback,
+            queue_size=1,
+        )
+        rospy.Subscriber(
+            local_prefix + "/mavros/global_position/global",
+            NavSatFix,
+            self._gps_fix_callback,
             queue_size=1,
         )
         rospy.Subscriber(
@@ -300,6 +310,47 @@ class OnboardTaskExecutor:
                 self._ground_origin_source = "未解锁地面遥测"
             self._state = message
             self._state_received = time.monotonic()
+
+    def _gps_fix_callback(self, message: NavSatFix) -> None:
+        # 使用本机接收时间，避免 ROS/GPS 时间不同步影响地图的新鲜度判定。
+        with self._lock:
+            self._gps_fix = message
+            self._gps_fix_received = time.monotonic()
+
+    @staticmethod
+    def _gps_position_payload(
+        message: Optional[NavSatFix],
+        received_monotonic: Optional[float],
+        now_monotonic: float,
+    ) -> Optional[Dict[str, Any]]:
+        """生成地图专用的高精度 GPS 数据；无效或过期定位返回空值。"""
+        if message is None or received_monotonic is None:
+            return None
+        try:
+            age_seconds = float(now_monotonic) - float(received_monotonic)
+            status = float(message.status.status)
+            latitude = float(message.latitude)
+            longitude = float(message.longitude)
+        except (AttributeError, TypeError, ValueError, OverflowError):
+            return None
+        if (not math.isfinite(age_seconds) or not 0.0 <= age_seconds <= 2.0
+                or not math.isfinite(status) or status < 0.0
+                or not math.isfinite(latitude) or not -90.0 <= latitude <= 90.0
+                or not math.isfinite(longitude) or not -180.0 <= longitude <= 180.0):
+            return None
+        try:
+            altitude = float(message.altitude)
+        except (AttributeError, TypeError, ValueError, OverflowError):
+            altitude = None
+        if altitude is not None and not math.isfinite(altitude):
+            altitude = None
+        return {
+            "latitude": latitude,
+            "longitude": longitude,
+            "source": "mavros_global",
+            "age_seconds": age_seconds,
+            "altitude": altitude,
+        }
 
     def _control_callback(self, message: UAVControlState) -> None:
         if getattr(self, "identity", {}) and int(message.uav_id) != self.uav_id:
@@ -457,6 +508,9 @@ class OnboardTaskExecutor:
             except (AttributeError, TypeError, ValueError):
                 return None
             return value if math.isfinite(value) else None
+        with self._lock:
+            gps_fix, gps_fix_received = self._gps_fix, self._gps_fix_received
+        gps_position = self._gps_position_payload(gps_fix, gps_fix_received, time.monotonic())
         self.tcp_link.update_telemetry(
             {
                 "type": "telemetry",
@@ -485,6 +539,7 @@ class OnboardTaskExecutor:
                 "latitude": gps_value("latitude"),
                 "longitude": gps_value("longitude"),
                 "altitude": gps_value("altitude"),
+                "gps_position": gps_position,
                 "rel_alt": gps_value("rel_alt"),
                 "task_assignment_acked": self._assignment_acked,
                 "task_assignment_mission_id": self._assignment["mission_id"] if self._assignment else "",

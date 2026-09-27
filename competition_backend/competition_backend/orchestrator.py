@@ -785,6 +785,8 @@ class CompetitionOrchestrator:
                     "longitude": item.longitude,
                     "altitude": item.altitude,
                     "rel_alt": item.rel_alt,
+                    "gps_position": dict(item.gps_position) if item.gps_position is not None else None,
+                    "gps_telemetry_age_seconds": item.gps_telemetry_age_seconds,
                     "task_assignment_acked": item.task_assignment_acked,
                     "task_assignment_mission_id": item.task_assignment_mission_id,
                     "task_assignment_checksum": item.task_assignment_checksum,
