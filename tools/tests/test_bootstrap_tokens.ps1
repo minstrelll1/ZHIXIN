@@ -1,6 +1,6 @@
 ﻿$ErrorActionPreference = "Stop"
 $ProjectRoot = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
-$source = Join-Path $ProjectRoot "tools\bootstrap_ground.ps1"
+$source = Join-Path $ProjectRoot "tools\bootstrap_ground_impl.ps1"
 $tokens = $null
 $errors = $null
 $ast = [Management.Automation.Language.Parser]::ParseFile($source, [ref]$tokens, [ref]$errors)
