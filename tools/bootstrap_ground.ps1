@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     从 GitHub 获取竞赛地面端，并在当前电脑完成相对路径部署。
 
@@ -62,10 +62,28 @@ function Ensure-Python {
     return $python
 }
 
+function Write-OnboardTokenConfig([string]$Root, [string]$LocalAuthToken, [string]$LocalPeerToken) {
+    if (-not (Test-Token $LocalAuthToken) -or -not (Test-Token $LocalPeerToken)) {
+        throw "本机令牌配置无效，请重新配置 AuthToken 和 PeerToken。"
+    }
+    $authEncoded = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($LocalAuthToken))
+    $peerEncoded = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($LocalPeerToken))
+    $lines = @(
+        "# 本机机载认证配置；不要提交到版本库。",
+        ('export AUTH_TOKEN="$(printf ''%s'' ''{0}'' | base64 --decode)"' -f $authEncoded),
+        ('export PEER_TOKEN="$(printf ''%s'' ''{0}'' | base64 --decode)"' -f $peerEncoded)
+    )
+    # Bash 环境文件使用无 BOM 的 UTF-8 和 LF，避免 Windows 换行进入令牌。
+    [IO.File]::WriteAllText((Join-Path $Root "tools\local_tokens.env"),
+        (($lines -join "`n") + "`n"), [Text.UTF8Encoding]::new($false))
+}
+
 function Ensure-TokenConfig([string]$Root) {
     $tokenFile = Join-Path $Root "tools\local_tokens.ps1"
     if ((Test-Path -LiteralPath $tokenFile) -and (-not $ForceTokenConfig)) {
-        Write-Host "已保留本机令牌配置：$tokenFile" -ForegroundColor Green
+        . $tokenFile
+        Write-OnboardTokenConfig $Root $env:AUTH_TOKEN $env:PEER_TOKEN
+        Write-Host "已保留本机令牌，并同步生成机载令牌配置。" -ForegroundColor Green
         return
     }
     if (-not (Test-Token $AuthToken)) { $script:AuthToken = Get-PlainSecureValue "请输入 AuthToken（不会显示）" }
@@ -75,10 +93,11 @@ function Ensure-TokenConfig([string]$Root) {
     }
     $lines = @(
         "# 本机认证配置；不要提交到版本库。",
-        ('$env:AUTH_TOKEN = "' + $AuthToken + '"'),
-        ('$env:PEER_TOKEN = "' + $PeerToken + '"')
+        ('$env:AUTH_TOKEN = ' + "'" + $AuthToken.Replace("'", "''") + "'"),
+        ('$env:PEER_TOKEN = ' + "'" + $PeerToken.Replace("'", "''") + "'")
     )
     Set-Content -LiteralPath $tokenFile -Value $lines -Encoding UTF8
+    Write-OnboardTokenConfig $Root $AuthToken $PeerToken
     Write-Host "已写入本机令牌配置（令牌未输出，且不会上传 GitHub）。" -ForegroundColor Green
 }
 
