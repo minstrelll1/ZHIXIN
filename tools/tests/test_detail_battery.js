@@ -1,0 +1,15 @@
+const assert=require('assert/strict');
+const fs=require('fs');
+const path=require('path');
+const vm=require('vm');
+const html=fs.readFileSync(path.resolve(__dirname,'../../competition_backend/competition_backend/web/index.html'),'utf8');
+const start=html.indexOf('function 电量显示('),end=html.indexOf('function 实时数值(',start);
+assert.ok(start>=0&&end>start);
+const context={};vm.createContext(context);vm.runInContext(html.slice(start,end),context);
+const show=context.电量显示,valid={connected:true,received_at:100,battery_percentage:.34};
+assert.equal(show(valid,100.5),'34%');
+assert.equal(show({...valid,battery_percentage:0},100),'0%');
+for(const invalid of [{...valid,connected:false},{...valid,battery_percentage:null},{...valid,battery_percentage:1.01},{...valid,received_at:95}])assert.equal(show(invalid,100),'—');
+assert.ok(html.includes('<span>当前电量</span><strong>${电量显示(telemetry,当前状态.server_time)}</strong>'));
+assert.ok(html.includes('const battery=电量显示(t,snapshot.server_time);'));
+process.stdout.write('任务详情电量显示与无效遥测处理检查通过。\n');

@@ -59,6 +59,52 @@ PACKAGE_ROOT = Path(__file__).resolve().parent.parent
 FRONTEND_PATH = Path(__file__).resolve().parent / "web" / "index.html"
 
 
+def _fresh_onboard_gps_reference(item, now, max_age_seconds, uav_id, require_validity=True):
+    """Choose the same fresh WGS84 fix that the live map uses."""
+    if not item.get("connected"):
+        return None
+    try:
+        delay = now - float(item["received_at"])
+        position_age = float(item.get("gps_telemetry_age_seconds") or 0)
+        gps_status = int(item.get("gps_status")) if require_validity else 3
+        location_source = int(item.get("location_source")) if require_validity else 5
+    except (KeyError, TypeError, ValueError, OverflowError):
+        return None
+    if (not math.isfinite(delay) or not math.isfinite(position_age)
+            or delay < 0 or position_age < 0 or position_age + delay > max_age_seconds
+            or gps_status < 3 or location_source not in (4, 5)):
+        return None
+
+    def coordinates(value):
+        if not isinstance(value, dict):
+            return None
+        try:
+            latitude = float(value["latitude"])
+            longitude = float(value["longitude"])
+        except (KeyError, TypeError, ValueError, OverflowError):
+            return None
+        if (not all(math.isfinite(v) for v in (latitude, longitude))
+                or abs(latitude) > 90 or abs(longitude) > 180):
+            return None
+        return latitude, longitude
+
+    precise = item.get("gps_position")
+    if isinstance(precise, dict):
+        try:
+            fix_age = float(precise["age_seconds"])
+        except (KeyError, TypeError, ValueError, OverflowError):
+            fix_age = math.inf
+        fix = coordinates(precise)
+        if fix and math.isfinite(fix_age) and 0 <= fix_age and fix_age + delay <= max_age_seconds:
+            return {"latitude": fix[0], "longitude": fix[1],
+                    "source": "mavros_global"}
+    coarse = coordinates(item)
+    if coarse:
+        return {"latitude": coarse[0], "longitude": coarse[1],
+                "source": "prometheus_gps_low_precision"}
+    return None
+
+
 def _parse_video_sources(raw: str) -> Dict[str, str]:
     """Parse ``UAV_ID=http(s)://...`` entries separated by semicolons."""
     sources: Dict[str, str] = {}
@@ -250,30 +296,12 @@ def create_app(environment=None) -> FastAPI:
         references: Dict[str, Dict[str, Any]] = {}
         for uav_id in candidate_ids:
             item = telemetry.get(str(uav_id)) or {}
-            if not item.get("connected"):
-                continue
-            received_at = item.get("received_at")
-            try:
-                if received_at is None or now - float(received_at) > config.safety.telemetry_max_age_seconds:
-                    continue
-            except (TypeError, ValueError):
-                continue
-            try:
-                latitude = float(item.get("latitude"))
-                longitude = float(item.get("longitude"))
-            except (TypeError, ValueError):
-                continue
-            if (
-                not all(math.isfinite(value) for value in (latitude, longitude))
-                or abs(latitude) > 90.0
-                or abs(longitude) > 180.0
-            ):
-                continue
-            references[str(uav_id)] = {
-                "latitude": latitude,
-                "longitude": longitude,
-                "source": "onboard_uav{}".format(uav_id),
-            }
+            reference = _fresh_onboard_gps_reference(
+                item, now, config.safety.telemetry_max_age_seconds, uav_id,
+                require_validity=live_mode,
+            )
+            if reference:
+                references[str(uav_id)] = reference
         return references
 
     def onboard_gps_reference() -> Optional[Dict[str, Any]]:

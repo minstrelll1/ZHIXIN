@@ -21,15 +21,21 @@ def area_preset():
     return json.loads(Path(__file__).with_name('competition_area.json').read_text(encoding='utf-8'))
 
 
-def local_projection(points):
-    """WGS84 中纬度局部投影，X 向北、Y 向西。"""
-    lat0 = sum(p[0] for p in points) / len(points)
-    lon0 = sum(p[1] for p in points) / len(points)
-    phi = math.radians(lat0)
+def _meters_per_degree(latitude):
+    """Return WGS84 north/west metres per degree at the actual GPS latitude."""
+    phi = math.radians(latitude)
     e2, a = 6.6943799901413165e-3, 6378137.0
     w = math.sqrt(1 - e2 * math.sin(phi) ** 2)
     north = math.pi / 180 * a * (1 - e2) / w ** 3
     west = math.pi / 180 * a / w * math.cos(phi)
+    return north, west
+
+
+def local_projection(points):
+    """WGS84 中纬度局部投影，X 向北、Y 向西。"""
+    lat0 = sum(p[0] for p in points) / len(points)
+    lon0 = sum(p[1] for p in points) / len(points)
+    north, west = _meters_per_degree(lat0)
     return ([(north * (lat-lat0), -west * (lon-lon0)) for lat, lon in points],
             {'latitude':lat0, 'longitude':lon0, 'north_m_per_degree':north,
              'west_m_per_degree':west, 'method':'WGS84_local_midlatitude'})
@@ -500,19 +506,15 @@ def adapt_competition_plan(plan, coordinate_mode="gps", flight_profile="competit
         first_origin = next(iter(normalized_gps_origins.values()))
         gps_latitude = first_origin["latitude"]
         gps_longitude = first_origin["longitude"]
-        projection = source_area.get("coverage", {}).get("projection", {})
-        gps_north_m_per_degree = float(projection.get("north_m_per_degree", 111111.0))
-        gps_west_m_per_degree = float(projection.get("west_m_per_degree", 111111.0))
+        gps_north_m_per_degree, gps_west_m_per_degree = _meters_per_degree(gps_latitude)
 
     def local_to_gps(point, origin=None):
         origin = origin or {"latitude": gps_latitude, "longitude": gps_longitude}
         latitude = float(origin["latitude"])
         longitude = float(origin["longitude"])
-        west_m_per_degree = gps_west_m_per_degree or (
-            111111.0 * max(1e-6, abs(math.cos(math.radians(latitude))))
-        )
+        north_m_per_degree, west_m_per_degree = _meters_per_degree(latitude)
         return [
-            round(latitude + float(point[0]) / gps_north_m_per_degree, 10),
+            round(latitude + float(point[0]) / north_m_per_degree, 10),
             round(longitude - float(point[1]) / west_m_per_degree, 10),
         ]
 
@@ -592,6 +594,14 @@ def adapt_competition_plan(plan, coordinate_mode="gps", flight_profile="competit
         max_time = max(max_time, task["mission_time_s"])
 
     coverage = area.get("coverage", {})
+    if mode == "gps" and scaled_profile:
+        coverage["projection"] = {
+            "latitude": gps_latitude,
+            "longitude": gps_longitude,
+            "north_m_per_degree": gps_north_m_per_degree,
+            "west_m_per_degree": gps_west_m_per_degree,
+            "method": "WGS84_local_midlatitude",
+        }
     coverage.update(
         reconnaissance_radius_m=radius,
         speed_mps=speed,
