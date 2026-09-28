@@ -10,7 +10,7 @@
     -(lon-source.projection.longitude)*source.projection.west_m_per_degree];
   const original = source.points.map(p=>project(p[1],p[0]));
   const extent = bounds(original);
-  const state = {status:'idle',image:null};
+  const state = {status:'idle',image:null,revision:0,attempt:0,serial:0,retryTimer:null,loadTimer:null};
   function displayArea(area){
     // 旧正式比赛 GPS 任务：航线已归零，边界仍在原投影坐标。
     // 只修正显示副本；不修改任务、GPS 基准或发送给机载端的数据。
@@ -40,13 +40,31 @@
     if(original.some((p,i)=>Math.hypot(local(p)[0]-points[i][0],local(p)[1]-points[i][1])>tolerance))return null;
     return {local,geo:(lon,lat)=>local(project(lon,lat)),scaleX:sx,scaleY:sy};
   }
+  function clearTimer(key){if(state[key]!==null){root.clearTimeout?.(state[key]);state[key]=null;}}
   function ensureImage(){
-    if(state.status!=='idle'||typeof root.Image!=='function')return;
-    state.status='loading';
-    const image=new root.Image();state.image=image;
-    image.onload=()=>{state.status='ready';api.onChange?.();};
-    image.onerror=()=>{state.status='error';api.onChange?.();};
-    image.src='/map-assets/competition_esri_20170724.jpg';
+    if(['ready','loading'].includes(state.status)||typeof root.Image!=='function')return;
+    clearTimer('retryTimer');
+    state.status='loading';state.attempt++;state.revision++;
+    const serial=++state.serial,image=new root.Image();state.image=image;
+    const failed=()=>{
+      if(serial!==state.serial||state.status!=='loading')return;
+      clearTimer('loadTimer');state.status='error';state.revision++;
+      // 同一次加载最多自动恢复三次，避免持续高频请求；再次规划可重新触发恢复。
+      if(state.attempt<4&&root.setTimeout)state.retryTimer=root.setTimeout(()=>{state.retryTimer=null;ensureImage();},[1500,5000,15000][state.attempt-1]);
+      api.onChange?.();
+    };
+    image.onload=()=>{
+      if(serial!==state.serial||state.status!=='loading')return;
+      if(!(image.naturalWidth>0&&image.naturalHeight>0)){failed();return;}
+      clearTimer('loadTimer');state.status='ready';state.revision++;api.onChange?.();
+    };
+    image.onerror=failed;
+    if(root.setTimeout)state.loadTimer=root.setTimeout(failed,8000);
+    image.src='/map-assets/competition_esri_20170724.jpg'+(serial>1?'?retry='+serial:'');
+  }
+  function prepare(){
+    if(state.status==='error'){clearTimer('retryTimer');state.status='idle';state.attempt=0;}
+    ensureImage();
   }
   function caption(area){
     if(!mapping(area))return 'Esri 示意底图：当前区域形状不匹配';
@@ -57,7 +75,7 @@
   }
   function draw(ctx,area,px,py,clip){
     const transform=mapping(area);if(!transform)return false;
-    ensureImage();if(state.status!=='ready')return false;
+    if(state.status==='idle')ensureImage();if(state.status!=='ready')return false;
     const image=state.image,iw=image.naturalWidth,ih=image.naturalHeight;
     const [[south,west],[north,east]]=source.image_bounds;
     const top=mercator(north),bottom=mercator(south);
@@ -83,8 +101,9 @@
     const scale=Math.min(dw/sw,dh/sh),width=sw*scale,height=sh*scale;
     return {x:(dw-width)/2,y:(dh-height)/2,width,height};
   }
-  const api={source,mapping,draw,caption,layerPoint,fitRect,displayArea,displayPosition,onChange:null,
-    retry(){if(state.status==='error')state.status='idle';}};
+  const api={source,mapping,draw,caption,layerPoint,fitRect,displayArea,displayPosition,prepare,onChange:null,
+    get revision(){return state.revision;},
+    retry:prepare};
   if(typeof module!=='undefined'&&module.exports)module.exports=api;
   root.CompetitionTerrain=api;
 })(typeof window!=='undefined'?window:globalThis);
