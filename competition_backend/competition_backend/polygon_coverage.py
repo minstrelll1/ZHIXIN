@@ -323,7 +323,7 @@ def _compute(radius,speed,hover,max_aspect,forest_edge,terrain_enabled,digest,ua
 
 def source_digest():
     root=Path(__file__).parent
-    return hashlib.sha256(b''.join((root/name).read_bytes() for name in
+    return hashlib.sha256(b''.join((root/name).read_bytes().replace(b'\r\n', b'\n') for name in
                          ('polygon_coverage.py','competition_area.json','competition_landcover.json'))).hexdigest()
 
 

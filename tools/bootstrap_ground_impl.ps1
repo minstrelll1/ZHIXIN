@@ -136,6 +136,29 @@ function Ensure-TokenConfig([string]$Root) {
     Write-Host "已写入本机令牌配置（令牌未输出，且不会上传 GitHub）。" -ForegroundColor Green
 }
 
+# 已有部署的代码更新只拉取变化文件，不能回退到整仓库 ZIP。
+if ($SkipInstall) {
+    $updateRoot = [IO.Path]::GetFullPath($Destination)
+    $updatePath = Join-Path $updateRoot "tools\update_ground.ps1"
+    if (Test-Path -LiteralPath $updatePath) {
+        $updateText = [IO.File]::ReadAllText($updatePath, [Text.Encoding]::UTF8)
+    } else {
+        $updateRepo = $Repository -replace "^https?://github.com/", "" -replace "/$", ""
+        if ($updateRepo -notmatch '^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$' -or $Branch -match '\.\.' -or $Branch.Contains('\')) { throw "仓库或分支名称无效。" }
+        [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
+        $response = Invoke-WebRequest -UseBasicParsing -TimeoutSec 60 -Uri "https://raw.githubusercontent.com/$updateRepo/$Branch/tools/update_ground.ps1"
+        $buffer = [IO.MemoryStream]::new()
+        try {
+            $response.RawContentStream.Position = 0
+            $response.RawContentStream.CopyTo($buffer)
+            $updateText = [Text.Encoding]::UTF8.GetString($buffer.ToArray())
+        } finally { $buffer.Dispose(); $response.RawContentStream.Dispose() }
+    }
+    & ([scriptblock]::Create($updateText.TrimStart([char]0xFEFF))) -Repository $Repository -Branch $Branch -Destination $updateRoot
+    if ($ForceTokenConfig) { Ensure-TokenConfig $updateRoot }
+    return
+}
+
 $Destination = [IO.Path]::GetFullPath($Destination)
 $parent = Split-Path $Destination -Parent
 if (-not (Test-Path -LiteralPath $parent)) { New-Item -ItemType Directory -Path $parent -Force | Out-Null }

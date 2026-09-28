@@ -8,7 +8,7 @@
 powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& ([scriptblock]::Create((Invoke-RestMethod 'https://raw.githubusercontent.com/minstrelll1/ZHIXIN/codex/portable-ground-deployment/tools/bootstrap_ground.ps1'))) -Destination (Join-Path (Get-Location) 'competition_development')"
 ```
 
-`bootstrap_ground.ps1` 会下载代码和仓库内的 MediaMTX，使用项目根目录计算所有本地路径，并安装 `competition_backend` 的 Python 依赖。目标目录可以在任意盘符，不能要求 `F:\Projects\ZhiXin` 这样的固定路径。已有目录再次执行时只更新代码，保留令牌、日志、飞行记录和接收图片。
+`bootstrap_ground.ps1` 会下载代码和仓库内的 MediaMTX，使用项目根目录计算所有本地路径，并安装 `competition_backend` 的 Python 依赖。目标目录可以在任意盘符，不能要求 `F:\Projects\ZhiXin` 这样的固定路径。已有目录仅更新代码时使用 README 中的 `-SkipInstall` 命令：按文件校验后只下载变化内容，保留令牌、机队配置、日志、飞行记录、接收图片和现有第三方软件。旧版电脑需先执行一次在线增量更新入口。
 
 地面端支持 Python 3.9～3.12。没有兼容版本时，脚本会尝试用 `winget` 安装 Python 3.11；如果电脑没有 `winget`，先安装 Python 3.11 再执行。
 

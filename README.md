@@ -12,9 +12,9 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& ([scriptblock]::Cr
 
 首次部署会安装 Python 依赖，检查并使用仓库内的 MediaMTX，并提示在本机填写 AuthToken、PeerToken。
 
-### 2. 地面端仅更新代码或配置
+### 2. 地面端仅更新代码
 
-在项目父目录执行，不重新安装 Python、MediaMTX 或令牌：
+先关闭地面后端，在项目父目录执行。仅下载变化的文件，不重新安装 Python、MediaMTX；保留本机令牌、机队配置和数据：
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass `
@@ -22,6 +22,14 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass `
   -Destination ".\competition_development" `
   -SkipInstall
 ```
+
+旧版电脑首次启用增量更新时，改用以下命令一次；之后继续使用上面的本地命令：
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& ([scriptblock]::Create((Invoke-RestMethod 'https://raw.githubusercontent.com/minstrelll1/ZHIXIN/codex/portable-ground-deployment/tools/bootstrap_ground.ps1'))) -Destination (Join-Path (Get-Location) 'competition_development') -SkipInstall"
+```
+
+更新失败详情自动保存在 `competition_development\ground_logs\update_*.log`。下载并校验全部成功后才替换文件。完成后重新启动地面后端并刷新网页。
 
 ### 3. 机载端部署
 
