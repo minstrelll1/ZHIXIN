@@ -55,7 +55,7 @@ class CompetitionDispatchTest(unittest.TestCase):
             # 真机 GPS 分派需先收到任务发布端的有效经纬度。
             apps[1].state.orchestrator.update_telemetry(Telemetry(
                 uav_id=1, received_at=apps[1].state.orchestrator.clock(), connected=True,
-                latitude=30.78528, longitude=103.86102, altitude=44.098,
+                latitude=30.78528, longitude=103.86102, altitude=44.098, gps_status=3, location_source=4,
             ))
             with patch.object(polygon_coverage, '_compute', side_effect=AssertionError('不得临场重算')):
                 response = clients[1].post('/api/v1/plan', json={'subject': 'subject1', 'planning_mode': 'competition'})

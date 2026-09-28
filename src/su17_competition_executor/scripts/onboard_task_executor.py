@@ -11,7 +11,8 @@ from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
 import rospy
-from prometheus_msgs.msg import UAVCommand, UAVControlState, UAVState
+from prometheus_msgs.msg import UAVCommand, UAVControlState, UAVState, UAVSetup
+from mavros_msgs.msg import RCIn
 from sensor_msgs.msg import NavSatFix
 from std_msgs.msg import String, Float64MultiArray, Int32, Bool
 
@@ -130,6 +131,12 @@ class OnboardTaskExecutor:
         self._resume_pending = False
         self._state_received = 0.0
         self._control_received = 0.0
+        self._rc_received = 0.0
+        self._rc_mode_switch = None
+        self._manual_override = False
+        self._automatic_control = False
+        self._command_control_seen = False
+        self._startup_initial_control = None
         self._boot_id = Path("/proc/sys/kernel/random/boot_id").read_text().strip()
         self._restore_progress()
 
@@ -138,6 +145,10 @@ class OnboardTaskExecutor:
         self.command_pub = rospy.Publisher(
             local_prefix + "/prometheus/command", UAVCommand, queue_size=10
         )
+        self.setup_pub = rospy.Publisher(
+            local_prefix + "/prometheus/setup", UAVSetup, queue_size=1
+        )
+        rospy.Subscriber(local_prefix + "/mavros/rc/in", RCIn, self._rc_callback, queue_size=1)
         self.status_pub = rospy.Publisher(
             fleet_prefix + "/competition/task_status", String, queue_size=10, latch=True
         )
@@ -308,8 +319,15 @@ class OnboardTaskExecutor:
                     and math.isfinite(float(message.position[2]))):
                 self._ground_origin_z = float(message.position[2])
                 self._ground_origin_source = "未解锁地面遥测"
+            previous = self._state
             self._state = message
             self._state_received = time.monotonic()
+        if (getattr(self, "_automatic_control", False) and previous is not None
+                and previous.armed and not message.armed):
+            if self._progress.get("phase") in ("landing", "landed", "external_return_requested"):
+                self._automatic_control = False
+            else:
+                self._release_automatic_control("检测到上锁，停止自动控制；不会再次解锁")
 
     def _gps_fix_callback(self, message: NavSatFix) -> None:
         # 使用本机接收时间，避免 ROS/GPS 时间不同步影响地图的新鲜度判定。
@@ -360,6 +378,148 @@ class OnboardTaskExecutor:
         with self._lock:
             self._control = message
             self._control_received = time.monotonic()
+        if getattr(self, "_automatic_control", False):
+            mode = int(message.control_state)
+            if mode == UAVControlState.COMMAND_CONTROL:
+                self._command_control_seen = True
+            elif (getattr(self, "_command_control_seen", False)
+                  or mode != getattr(self, "_startup_initial_control", mode)):
+                # 正常降落由厂商控制器进入 LAND_CONTROL，不应被记录为遥控器接管。
+                if self._progress.get("phase") not in ("landing", "landed", "external_return_requested"):
+                    self._release_automatic_control("控制模式已退出自动控制，停止任务输出并交还遥控器")
+
+    def _rc_callback(self, message: RCIn) -> None:
+        if len(message.channels) < 8:
+            return
+        self._rc_received = time.monotonic()
+        # 两种厂商 rc_input.h 均以通道 6 控制模式。只检测拨杆变动，
+        # 不发送/模拟 RC，也不改变其飞控接管逻辑。
+        value = int(message.channels[5])
+        mode = 0 if value <= 1250 else 2 if value >= 1750 else 1
+        previous = getattr(self, "_rc_mode_switch", None)
+        self._rc_mode_switch = mode
+        if previous is not None and previous != mode and getattr(self, "_automatic_control", False):
+            self._release_automatic_control("检测到遥控器模式拨杆变动，停止自动控制，不自动抢回控制权")
+
+    def _release_automatic_control(self, reason: str) -> None:
+        with self._lock:
+            self._manual_override = True
+            self._automatic_control = False
+            self._abort_motion.set()
+            self._pending_execute = None
+            self._resume_pending = False
+        self._checkpoint("manual_override")
+        self._publish_status("manual_override", error=reason)
+        rospy.logwarn("%s", reason)
+
+    def _takeoff_precheck(self) -> Tuple[bool, str]:
+        if not self.enable_motion:
+            return False, "机载程序未启用飞行控制"
+        if getattr(self, "_identity_error", ""):
+            return False, self._identity_error
+        if getattr(self, "_manual_override", False):
+            return False, "遥控器已接管；落地后重新分派并确认起飞才可启动新任务"
+        state, control = self._snapshot()
+        if state is None or control is None:
+            return False, "等待飞控状态和控制器状态"
+        if time.monotonic() - min(self._state_received, self._control_received) > 2.0:
+            return False, "飞控或控制器遥测超时"
+        if not state.connected or not state.odom_valid or control.failsafe:
+            return False, "飞控未连接、定位无效或已触发保护"
+        if control.control_state not in (UAVControlState.INIT, UAVControlState.RC_POS_CONTROL, UAVControlState.COMMAND_CONTROL):
+            return False, "当前处于降落或未知控制状态，不能自动起飞"
+        if control.pos_controller != UAVControlState.PX4_ORIGIN:
+            return False, "自动起飞仅支持 PX4_ORIGIN 控制器"
+        if str(state.mode) in ("AUTO.LAND", "AUTO.RTL"):
+            return False, "飞控正在降落或返航，不能自动起飞"
+        if not all(math.isfinite(float(v)) for v in list(state.position)+list(state.velocity)+list(state.attitude)):
+            return False, "位置、速度或姿态包含无效数值"
+        if time.monotonic() - getattr(self, "_rc_received", 0.0) > 1.5:
+            return False, "未收到新鲜遥控器信号，请保持遥控器开启并连接"
+        if self.setup_pub.get_num_connections() < 1 or self.command_pub.get_num_connections() < 1:
+            return False, "厂商控制器尚未订阅 setup/command 话题"
+        return True, "可自动解锁并进入指令控制"
+
+    def _publish_setup(self, command: int) -> None:
+        with self._lock:
+            if getattr(self, "_manual_override", False) or self._abort_motion.is_set():
+                return
+            message = UAVSetup()
+            message.header.stamp = rospy.Time.now()
+            message.cmd = command
+            if command == UAVSetup.ARMING:
+                message.arming = True
+            else:
+                message.control_state = "COMMAND_CONTROL"
+            self.setup_pub.publish(message)
+
+    def _publish_takeoff_position(self, target) -> None:
+        if getattr(self, "_manual_override", False) or self._abort_motion.is_set():
+            return
+        command = UAVCommand()
+        command.header.stamp = rospy.Time.now()
+        command.header.frame_id = "ENU"
+        command.Agent_CMD = UAVCommand.Move
+        command.Control_Level = UAVCommand.DEFAULT_CONTROL
+        command.Move_mode = UAVCommand.XYZ_POS
+        command.position_ref = list(target[:3])
+        command.yaw_ref = target[3]
+        command.Yaw_Rate_Mode = False
+        command.Command_ID = self._next_command_id()
+        self.command_pub.publish(command)
+
+    def _ensure_command_control(self, target) -> Tuple[bool, str]:
+        ready, reason = self._takeoff_precheck()
+        if not ready:
+            return False, reason
+        state, control = self._snapshot()
+        self._startup_initial_control = int(control.control_state)
+        self._command_control_seen = control.control_state == UAVControlState.COMMAND_CONTROL
+        self._automatic_control = True
+        self._checkpoint("preparing_takeoff")
+        arm_sent = mode_sent = False
+        stage_started = time.monotonic()
+        while not rospy.is_shutdown():
+            if self._abort_motion.is_set():
+                return False, "自动起飞已取消，未重新请求解锁或切换模式"
+            ready, reason = self._takeoff_precheck()
+            if not ready:
+                return False, reason
+            state, control = self._snapshot()
+            if not state.armed:
+                if mode_sent or self._command_control_seen:
+                    return False, "进入自动控制期间飞控已上锁，停止起飞"
+                if not arm_sent:
+                    self._checkpoint("arming")
+                    self._publish_status("arming", message="正在请求飞控解锁，等待遥测确认")
+                    rospy.loginfo("正在请求 UAV%d 解锁", self.uav_id)
+                    self._publish_setup(UAVSetup.ARMING)
+                    arm_sent = True
+                if time.monotonic() - stage_started > 10.0:
+                    return False, "解锁超时或被飞控拒绝，请查看飞控提示；未切换指令控制"
+            else:
+                # 在切换前后持续发送本次高度，不使用 Init_Pos_Hover 默认高度。
+                self._publish_takeoff_position(target)
+                if control.control_state == UAVControlState.COMMAND_CONTROL:
+                    self._command_control_seen = True
+                    if str(state.mode) == "OFFBOARD":
+                        return True, "解锁、指令控制和 OFFBOARD 已由遥测确认"
+                elif self._command_control_seen:
+                    return False, "控制权已经切出，停止自动起飞"
+                if not mode_sent:
+                    self._checkpoint("entering_command_control")
+                    self._publish_status("entering_command_control", message="正在进入 COMMAND_CONTROL，等待 OFFBOARD 确认")
+                    rospy.loginfo("UAV%d 解锁已确认，正在请求 COMMAND_CONTROL", self.uav_id)
+                    if control.control_state != UAVControlState.COMMAND_CONTROL:
+                        self._publish_setup(UAVSetup.SET_CONTROL_MODE)
+                        self._publish_takeoff_position(target)
+                    mode_sent = True
+                    stage_started = time.monotonic()
+                if time.monotonic() - stage_started > 10.0:
+                    return False, "COMMAND_CONTROL/OFFBOARD 切换超时，停止启动任务"
+            # 使用墙钟等待，ROS 仿真时间暂停时仍能超时或接受接管。
+            self._abort_motion.wait(1.0 / self.command_rate)
+        return False, "ROS 已退出"
 
     def _checkpoint(self, phase: str, **values: Any) -> None:
         with self._lock:
@@ -398,6 +558,7 @@ class OnboardTaskExecutor:
             self._assignment = assignment
             self._assignment_acked = True
             self._progress = progress
+            self._manual_override = progress.get("phase") == "manual_override"
             self._home = tuple(progress["home"]) if progress.get("home") else None
             self._gps_home = tuple(progress["gps_home"]) if progress.get("gps_home") else None
             origin = progress.get("ground_origin_z")
@@ -439,6 +600,9 @@ class OnboardTaskExecutor:
             if self._motion_thread is not None and self._motion_thread.is_alive():
                 return
             self._resume_pending = False
+            self._automatic_control = True
+            self._command_control_seen = True
+            self._startup_initial_control = UAVControlState.COMMAND_CONTROL
             payload = dict(self._progress.get("execution", {}))
             target = self._resume_flight
             self._motion_thread = threading.Thread(
@@ -511,6 +675,7 @@ class OnboardTaskExecutor:
         with self._lock:
             gps_fix, gps_fix_received = self._gps_fix, self._gps_fix_received
         gps_position = self._gps_position_payload(gps_fix, gps_fix_received, time.monotonic())
+        auto_ready, auto_reason = self._takeoff_precheck()
         self.tcp_link.update_telemetry(
             {
                 "type": "telemetry",
@@ -518,6 +683,8 @@ class OnboardTaskExecutor:
                 "timestamp_unix": time.time(),
                 "connected": bool(state.connected) and not self._identity_error and time.monotonic() - min(self._state_received, self._control_received) < 2.0,
                 "capabilities": {"motion_enabled": self.enable_motion, "max_speed_mps": self.max_speed,
+                    "auto_takeoff_supported": True, "auto_takeoff_ready": auto_ready,
+                    "auto_takeoff_reason": auto_reason,
                     "flight_speed_limit_mps": self.flight_speed_limit,
                     "scan_available": self.scan_pub.get_num_connections() > 0 or self.vehicle_config.get("scan_mode") == "timed_hover",
                     "state_received": True, "control_received": True,
@@ -638,6 +805,11 @@ class OnboardTaskExecutor:
             return
 
         with self._lock:
+            state = self._state
+            if state is not None and not state.armed:
+                self._manual_override = False
+                self._automatic_control = False
+                self._command_control_seen = False
             self._assignment = assignment
             self._assignment_acked = True
             self._home = None
@@ -674,6 +846,9 @@ class OnboardTaskExecutor:
             )
 
     def _accept_motion_command(self, name: str, payload: Dict[str, Any], target: Any) -> None:
+        if getattr(self, "_manual_override", False):
+            self._publish_status("command_rejected", command=name, error="遥控器已接管，拒绝自动重新获取控制权")
+            return
         if not self.enable_motion:
             self._publish_status("motion_disabled", command=name)
             rospy.logwarn("已忽略 %s：飞行控制未启用", name)
@@ -709,6 +884,9 @@ class OnboardTaskExecutor:
             if active_thread is not None:
                 self._publish_status("command_rejected", command=name, error="executor is busy")
                 return
+        if name == "execute_task":
+            self._publish_status("command_rejected", command=name, error="任务由起飞成功后自动接续，不接受额外执行或重复执行指令")
+            return
         self._abort_motion.clear()
         thread = threading.Thread(
             target=self._motion_entry, args=(name, target, payload), name=name
@@ -741,10 +919,10 @@ class OnboardTaskExecutor:
             rospy.logerr("%s 执行异常终止：%s", name, error)
             self._publish_status("task_failed", command=name, error=str(error))
         if not succeeded and not self._abort_motion.is_set():
-            self._checkpoint("paused")
+            self._checkpoint("takeoff_failed" if name == "takeoff" else "paused")
         pending = None
         with self._lock:
-            if name == "takeoff" and succeeded:
+            if name == "takeoff" and succeeded and not self._abort_motion.is_set():
                 # Continue locally even when the ground link has disappeared.
                 pending = self._pending_execute or dict(payload)
                 self._pending_execute = None
@@ -761,7 +939,8 @@ class OnboardTaskExecutor:
                     self._checkpoint("external_waiting", execution=dict(pending))
                     self._publish_status("external_mission_published", controller_mode="external")
                 except Exception as error:
-                    self._checkpoint("paused")
+                    if not self._abort_motion.is_set():
+                        self._checkpoint("paused")
                     self._publish_status("task_failed", error=str(error))
                 with self._lock:
                     if self._motion_thread is threading.current_thread():
@@ -783,6 +962,9 @@ class OnboardTaskExecutor:
                     self._motion_thread = None
 
     def _start_return(self, payload: Dict[str, Any]) -> None:
+        if getattr(self, "_manual_override", False):
+            self._publish_status("return_failed", error="遥控器已接管，不再启动自动返航")
+            return
         if not self.enable_motion:
             self._publish_status("motion_disabled", command="return_home")
             return
@@ -814,6 +996,8 @@ class OnboardTaskExecutor:
         thread.start()
 
     def _ready(self) -> Tuple[bool, str]:
+        if getattr(self, "_manual_override", False):
+            return False, "遥控器已接管，自动控制已停止"
         if getattr(self, "_identity_error", ""):
             return False, self._identity_error
         state, control = self._snapshot()
@@ -840,6 +1024,8 @@ class OnboardTaskExecutor:
         return self._command_id
 
     def _publish_velocity(self, vx: float, vy: float, target_z: float, yaw: float) -> None:
+        if getattr(self, "_manual_override", False):
+            return
         command = UAVCommand()
         command.header.stamp = rospy.Time.now()
         command.header.frame_id = "ENU"
@@ -855,6 +1041,8 @@ class OnboardTaskExecutor:
         self.command_pub.publish(command)
 
     def _hover(self) -> None:
+        if getattr(self, "_manual_override", False):
+            return
         command = UAVCommand()
         command.header.stamp = rospy.Time.now()
         command.header.frame_id = "ENU"
@@ -864,6 +1052,8 @@ class OnboardTaskExecutor:
         self.command_pub.publish(command)
 
     def _land(self) -> None:
+        if getattr(self, "_manual_override", False):
+            return
         command = UAVCommand()
         command.header.stamp = rospy.Time.now()
         command.header.frame_id = "ENU"
@@ -975,7 +1165,7 @@ class OnboardTaskExecutor:
             return origin, source
 
     def _run_takeoff(self, payload: Dict[str, Any]) -> bool:
-        ready, reason = self._ready()
+        ready, reason = self._takeoff_precheck()
         if not ready:
             self._publish_status("takeoff_failed", error=reason)
             return False
@@ -991,6 +1181,10 @@ class OnboardTaskExecutor:
                 self._publish_status("takeoff_failed", error=str(error))
                 return False
         target_relative_alt = float(payload["target_altitude_m"])
+        if (not math.isfinite(target_relative_alt) or target_relative_alt <= 0
+                or not math.isclose(target_relative_alt, float(self._assignment["target_altitude_m"]), abs_tol=1e-6)):
+            self._publish_status("takeoff_failed", error="起飞高度与已确认任务不一致")
+            return False
         target_z = target_relative_alt
         self._home = (
             float(state.position[0]),
@@ -1037,6 +1231,12 @@ class OnboardTaskExecutor:
             else:
                 # 实验室外部程序 B 使用相对起飞点的 ENU，不需要 GPS。
                 self._gps_home = None
+        ready, reason = self._ensure_command_control((self._home[0], self._home[1], target_z, self._home[3]))
+        if not ready:
+            self._publish_status("takeoff_failed", error=reason)
+            rospy.logerr("自动起飞失败：%s", reason)
+            self._hover()
+            return False
         self._checkpoint("taking_off", next_waypoint=0, execution=dict(payload))
         altitude_details = {
             "target_altitude_m": target_relative_alt,
@@ -1059,6 +1259,8 @@ class OnboardTaskExecutor:
 
     def _publish_external_mission(self, payload: Dict[str, Any]) -> None:
         """向程序 B 发布经纬度或 ENU 航点，高度统一相对起飞点。"""
+        if getattr(self, "_manual_override", False) or self._abort_motion.is_set():
+            raise ValueError("自动控制已取消，不向程序 B 发布任务")
         with self._lock:
             assignment = self._assignment
             gps_home = self._gps_home
@@ -1156,6 +1358,8 @@ class OnboardTaskExecutor:
         )
 
     def _publish_recon_start_mode(self, mode: int) -> None:
+        if getattr(self, "_manual_override", False) or self._abort_motion.is_set():
+            raise ValueError("自动控制已取消，不发送程序 B 启动信号")
         message = Int32()
         message.data = 1 if int(mode) == 1 else 0
         self.recon_start_mode_pub.publish(message)
@@ -1362,6 +1566,9 @@ class OnboardTaskExecutor:
                 self._scan_session = None
 
     def _run_return(self, payload: Dict[str, Any]) -> None:
+        if getattr(self, "_manual_override", False):
+            self._publish_status("return_failed", error="遥控器已接管，不再发布自动返航指令")
+            return
         with self._lock:
             assignment = self._assignment
         if assignment and assignment.get("controller_mode", "internal") == "external":

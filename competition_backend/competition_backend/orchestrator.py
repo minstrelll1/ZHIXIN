@@ -538,13 +538,16 @@ class CompetitionOrchestrator:
                         < self.config.safety.preflight_battery_min
                     ):
                         failures.append("battery is below preflight threshold")
-                    if (
-                        self.config.safety.require_armed_for_takeoff
-                        and not telemetry.armed
-                    ):
-                        failures.append("UAV is not armed")
-                    if telemetry.control_state != self.config.safety.required_control_state:
-                        failures.append("control_state is not COMMAND_CONTROL")
+                    if telemetry.capabilities.get("auto_takeoff_supported") is True:
+                        # 新机载执行器在确认起飞后自动解锁/切模式，地面预检只核验启动条件。
+                        if telemetry.capabilities.get("auto_takeoff_ready") is not True:
+                            failures.append(str(telemetry.capabilities.get("auto_takeoff_reason") or "机载自动起飞条件未就绪"))
+                    else:
+                        # 旧机载版本仍需人工解锁和切模式，不能静默跳过其要求。
+                        if self.config.safety.require_armed_for_takeoff and not telemetry.armed:
+                            failures.append("UAV is not armed")
+                        if telemetry.control_state != self.config.safety.required_control_state:
+                            failures.append("control_state is not COMMAND_CONTROL")
                     if (
                         not telemetry.task_assignment_acked
                         or self._mission is None
@@ -656,7 +659,7 @@ class CompetitionOrchestrator:
         if not self._mission:
             return
         runtime = self._mission.uavs[uav_id]
-        if runtime.phase in (UavPhase.RETURN_COMMANDED, UavPhase.LANDED):
+        if runtime.phase in (UavPhase.RETURN_COMMANDED, UavPhase.LANDED, UavPhase.ERROR):
             return
         runtime.phase = UavPhase.RETURN_COMMANDED
         runtime.return_reason = reason.value
@@ -681,6 +684,13 @@ class CompetitionOrchestrator:
                     continue
                 if (not telemetry.connected or now - telemetry.received_at > self.config.safety.telemetry_max_age_seconds
                         or runtime.phase == UavPhase.LANDED):
+                    continue
+                if (telemetry.task_assignment_mission_id == mission.mission_id
+                        and telemetry.task_phase in ("manual_override", "takeoff_failed")):
+                    if runtime.phase != UavPhase.ERROR:
+                        runtime.phase = UavPhase.ERROR
+                        runtime.last_error = "遥控器已接管" if telemetry.task_phase == "manual_override" else "自动起飞失败，请查看机载日志"
+                        self._event(telemetry.task_phase, uav_id=uav_id, reason=runtime.last_error)
                     continue
                 if (telemetry.task_assignment_mission_id == mission.mission_id
                         and telemetry.task_phase in ("returning", "landing", "landed")):
@@ -712,7 +722,11 @@ class CompetitionOrchestrator:
                         (telemetry.mission_altitude_m if telemetry.mission_altitude_m is not None else telemetry.position[2]) - runtime.target_altitude_m
                     )
                     if (
-                        altitude_error <= self.config.safety.altitude_tolerance_m
+                        telemetry.connected and telemetry.armed and telemetry.odom_valid and not telemetry.failsafe
+                        and telemetry.control_state == self.config.safety.required_control_state
+                        and now - telemetry.received_at <= self.config.safety.telemetry_max_age_seconds
+                        and telemetry.task_phase != "manual_override"
+                        and altitude_error <= self.config.safety.altitude_tolerance_m
                         and abs(telemetry.velocity[2])
                         <= self.config.safety.vertical_speed_tolerance_mps
                     ):
@@ -753,6 +767,16 @@ class CompetitionOrchestrator:
                     for runtime in mission.uavs.values()
                 ):
                     mission.phase = MissionPhase.RETURNING
+
+            if (any(runtime.phase == UavPhase.ERROR for runtime in mission.uavs.values())
+                    and all(runtime.phase in (UavPhase.ERROR, UavPhase.LANDED) for runtime in mission.uavs.values())
+                    and all((self._telemetry.get(uid) is not None
+                             and self._telemetry[uid].connected and not self._telemetry[uid].armed
+                             and now - self._telemetry[uid].received_at <= self.config.safety.telemetry_max_age_seconds)
+                            for uid in mission.uavs)):
+                mission.phase = MissionPhase.FAILED
+                self._event("mission_stopped", reason="自动起飞失败或遥控器接管后，全部无人机已上锁")
+                self.adapter.release_coordination()
 
             if mission.phase == MissionPhase.RETURNING and all(
                 runtime.phase == UavPhase.LANDED for runtime in mission.uavs.values()

@@ -148,3 +148,7 @@ roslaunch px4_north_camera p600_gx40_position_pid_reconnaissance.launch \
 source ~/SpireCV_bj/src/spirecv-ros/devel/setup.bash
 roslaunch spirecv_ros uav_yolo26_botsort_geolocation.launch uav_id:=1
 ```
+
+### 网页起飞操作
+
+规划并分派 → 确认任务回执 → 一键起飞预检 → 确认起飞。更新后的机载程序会自动解锁并进入 COMMAND_CONTROL，稳定到达任务高度后才启动程序 B 或本工程航线。遥控器保持开启，接管操作沿用厂商流程；本工程停止输出，不自动抢回控制权。本次更新需重新部署机载端，部署和启动命令不变。

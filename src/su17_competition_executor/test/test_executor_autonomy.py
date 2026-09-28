@@ -18,10 +18,10 @@ rospy.loginfo = Mock()
 rospy.logerr = Mock()
 rospy.logwarn = Mock()
 sys.modules.setdefault("rospy", rospy)
-for name in ("prometheus_msgs", "std_msgs", "sensor_msgs"):
+for name in ("prometheus_msgs", "std_msgs", "sensor_msgs", "mavros_msgs"):
     sys.modules.setdefault(name, types.ModuleType(name))
     module = types.ModuleType(name + ".msg")
-    for cls in ("UAVCommand", "UAVControlState", "UAVState", "String", "Float64MultiArray", "Int32", "Bool", "NavSatFix"):
+    for cls in ("UAVCommand", "UAVControlState", "UAVState", "UAVSetup", "RCIn", "String", "Float64MultiArray", "Int32", "Bool", "NavSatFix"):
         setattr(module, cls, type(cls, (), {}))
     sys.modules.setdefault(name + ".msg", module)
 spec = importlib.util.spec_from_file_location("executor", Path(__file__).resolve().parents[1] / "scripts" / "onboard_task_executor.py")
@@ -54,6 +54,8 @@ class AutonomyTest(unittest.TestCase):
         node.velocity_tolerance = .15
         node.search_speed = .3
         node.return_speed = .3
+        node._takeoff_precheck = Mock(return_value=(True, "ready"))
+        node._ensure_command_control = Mock(return_value=(True, "ready"))
         node._publish_status = Mock()
         node._hover = Mock()
         node._fly_to = Mock(return_value=(True, "reached"))
