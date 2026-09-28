@@ -63,12 +63,12 @@ class DistributedFleetAdapter(FleetAdapter):
         self.local_adapter.set_telemetry_sink(self.emit_telemetry)
         self._stop_event = threading.Event()
         self._poll_thread: Optional[threading.Thread] = None
+        self._peer_workers: List[threading.Thread] = []
         self._lease_lock = threading.RLock()
         self._coordinator_id = ""
         self._coordinator_seen_at = 0.0
         self._is_coordinator = False
         self._last_lease_heartbeat = 0.0
-        self._last_mission_broadcast = 0.0
         self._snapshot_provider: Optional[Callable[[], Dict[str, Any]]] = None
         self._mirrored_snapshot: Optional[Dict[str, Any]] = None
         self._peer_telemetry: Dict[int, Telemetry] = {}
@@ -104,7 +104,7 @@ class DistributedFleetAdapter(FleetAdapter):
     def stop(self) -> None:
         self._stop_event.set()
         if self._poll_thread:
-            self._poll_thread.join(timeout=2.0)
+            self._poll_thread.join(timeout=3.0)
         self.local_adapter.stop()
 
     def local_telemetry_dict(self) -> Optional[Dict[str, Any]]:
@@ -270,88 +270,143 @@ class DistributedFleetAdapter(FleetAdapter):
             data = json.dumps(payload, separators=(",", ":")).encode("utf-8")
             headers["Content-Type"] = "application/json"
         request = urllib.request.Request(url, data=data, headers=headers, method=method)
-        with urllib.request.urlopen(request, timeout=2.0) as response:
+        # 地面互联直连局域网，不继承 Windows/GitHub 的系统代理。
+        opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+        with opener.open(request, timeout=2.0) as response:
             result = json.loads(response.read().decode("utf-8"))
         if not isinstance(result, dict):
             raise RuntimeError("ground peer returned invalid JSON")
         return result
 
     def _poll_loop(self) -> None:
+        # 每台终端独立拉取遥测；配置中的离线电脑不能拖慢已在线电脑。
+        # 状态镜像/租约也使用独立线程，慢 POST 不阻塞本机看到的远端遥测。
+        workers = []
+        for uav_id in self.uav_ids:
+            base_url = self.peers.get(uav_id)
+            if uav_id == self.local_uav_id or not base_url:
+                continue
+            for target, channel in ((self._peer_telemetry_loop, "telemetry"),
+                                    (self._peer_control_loop, "state")):
+                worker = threading.Thread(target=target, args=(uav_id, base_url),
+                                          name="ground-peer-{}-{}".format(uav_id, channel), daemon=True)
+                workers.append(worker)
+        self._peer_workers = workers
+        try:
+            for worker in workers:
+                worker.start()
+            while not self._stop_event.is_set():
+                if self._is_coordinator and time.time() - self._last_lease_heartbeat >= 5.0:
+                    self.claim_peer_coordinator(self.node_id)
+                    self._last_lease_heartbeat = time.time()
+                self._stop_event.wait(self.poll_interval_sec)
+        finally:
+            self._stop_event.set()
+            deadline = time.monotonic() + 2.5
+            for worker in workers:
+                if worker.ident is not None:
+                    worker.join(timeout=max(0.0, deadline - time.monotonic()))
+
+    def _peer_telemetry_loop(self, uav_id: int, base_url: str) -> None:
         while not self._stop_event.is_set():
-            if self._is_coordinator and time.time() - self._last_lease_heartbeat >= 5.0:
-                self._heartbeat_coordination()
-            if self._is_coordinator and time.time() - self._last_mission_broadcast >= 1.0:
-                self._broadcast_mission_snapshot()
-            for uav_id in self.uav_ids:
-                if uav_id == self.local_uav_id or self._stop_event.is_set():
-                    continue
-                base_url = self.peers.get(uav_id)
-                if not base_url:
-                    continue
+            started = time.monotonic()
+            self._poll_peer_once(uav_id, base_url)
+            self._stop_event.wait(max(0.0, self.poll_interval_sec - (time.monotonic() - started)))
+
+    def _peer_control_loop(self, uav_id: int, base_url: str) -> None:
+        last_lease = last_snapshot = float("-inf")
+        while not self._stop_event.is_set():
+            if not self._is_coordinator:
+                last_lease = last_snapshot = float("-inf")
+                self._stop_event.wait(self.poll_interval_sec)
+                continue
+            now = time.monotonic()
+            if now - last_lease >= 5.0:
+                last_lease = now
                 try:
-                    request_started = time.monotonic()
-                    result = self._request_json(
-                        "{}/api/v1/peer/telemetry/{}".format(base_url, uav_id)
-                    )
-                    raw = result.get("telemetry")
-                    traffic = result.get("traffic")
-                    if isinstance(traffic, dict):
-                        with self._telemetry_lock:
-                            self._peer_traffic[uav_id] = dict(traffic)
-                    if raw:
-                        # ``received_at`` from a peer is stamped by that peer's
-                        # clock.  Normalize it at the local receive boundary so
-                        # freshness checks and the UI latency display are not
-                        # affected by clock skew between ground computers.
-                        telemetry = Telemetry(**raw)
-                        if telemetry.uav_id != uav_id:
-                            raise ValueError("地面节点上报的无人机编号不匹配")
-                        if self.identity_validator and telemetry.connected:
-                            self.identity_validator({"uav_id": uav_id, **telemetry.identity})
-                        received_at = time.time()
-                        # 相对定位年龄跨终端传递；完整请求耗时作为保守上界。
-                        transfer_age = max(0.0, time.monotonic() - request_started)
-                        gps = dict(telemetry.gps_position) if telemetry.gps_position is not None else None
-                        if gps is not None:
-                            gps["age_seconds"] += transfer_age
-                        position_age = telemetry.gps_telemetry_age_seconds
-                        if position_age is not None:
-                            position_age += transfer_age
-                        telemetry = replace(telemetry, received_at=received_at, gps_position=gps,
-                                            gps_telemetry_age_seconds=position_age)
-                        with self._telemetry_lock:
-                            self._peer_telemetry[uav_id] = telemetry
-                            self._peer_sync_status[uav_id] = {
-                                "ok": True,
-                                "last_success_at": received_at,
-                                "last_error": "",
-                            }
-                        self.emit_telemetry(telemetry)
-                    else:
-                        with self._telemetry_lock:
-                            self._peer_sync_status[uav_id] = {
-                                "ok": False,
-                                "last_success_at": self._peer_sync_status.get(
-                                    uav_id, {}
-                                ).get("last_success_at"),
-                                "last_error": "peer ground computer has no local UAV telemetry",
-                            }
-                except Exception as error:
-                    with self._telemetry_lock:
-                        previous_status = self._peer_sync_status.get(uav_id, {})
-                        self._peer_sync_status[uav_id] = {
-                            "ok": False,
-                            "last_success_at": previous_status.get("last_success_at"),
-                            "last_error": str(error) or error.__class__.__name__,
-                        }
-                        previous = self._peer_telemetry.get(uav_id)
-                    if previous is not None and previous.connected and time.time() - previous.received_at > 3.0:
-                        stale = replace(previous, connected=False, received_at=time.time())
-                        with self._telemetry_lock:
-                            self._peer_telemetry[uav_id] = stale
-                        self.emit_telemetry(stale)
-                    continue
+                    self._request_json(base_url + "/api/v1/peer/lease", method="POST",
+                                       payload={"coordinator_id": self.node_id, "action": "claim"})
+                except Exception:
+                    pass
+            if self._stop_event.is_set():
+                break
+            now = time.monotonic()
+            if self._is_coordinator and self._snapshot_provider is not None and now - last_snapshot >= 1.0:
+                last_snapshot = now
+                try:
+                    snapshot = self._snapshot_provider()
+                    if self._is_coordinator and not self._stop_event.is_set():
+                        self._request_json(base_url + "/api/v1/peer/mission", method="POST",
+                                           payload={"coordinator_id": self.node_id, "snapshot": snapshot})
+                except Exception:
+                    pass
             self._stop_event.wait(self.poll_interval_sec)
+
+    def _poll_peer_once(self, uav_id: int, base_url: str) -> None:
+        try:
+            request_started = time.monotonic()
+            result = self._request_json(
+                "{}/api/v1/peer/telemetry/{}".format(base_url, uav_id)
+            )
+            raw = result.get("telemetry")
+            traffic = result.get("traffic")
+            if isinstance(traffic, dict):
+                with self._telemetry_lock:
+                    self._peer_traffic[uav_id] = dict(traffic)
+            if raw:
+                # ``received_at`` from a peer is stamped by that peer's
+                # clock.  Normalize it at the local receive boundary so
+                # freshness checks and the UI latency display are not
+                # affected by clock skew between ground computers.
+                telemetry = Telemetry(**raw)
+                if telemetry.uav_id != uav_id:
+                    raise ValueError("地面节点上报的无人机编号不匹配")
+                if self.identity_validator and telemetry.connected:
+                    self.identity_validator({"uav_id": uav_id, **telemetry.identity})
+                received_at = time.time()
+                # 相对定位年龄跨终端传递；完整请求耗时作为保守上界。
+                transfer_age = max(0.0, time.monotonic() - request_started)
+                gps = dict(telemetry.gps_position) if telemetry.gps_position is not None else None
+                if gps is not None:
+                    gps["age_seconds"] += transfer_age
+                position_age = telemetry.gps_telemetry_age_seconds
+                if position_age is not None:
+                    position_age += transfer_age
+                telemetry = replace(telemetry, received_at=received_at, gps_position=gps,
+                                    gps_telemetry_age_seconds=position_age)
+                with self._telemetry_lock:
+                    self._peer_telemetry[uav_id] = telemetry
+                    self._peer_sync_status[uav_id] = {
+                        "ok": True,
+                        "last_success_at": received_at,
+                        "last_error": "",
+                        "request_duration_ms": round(transfer_age * 1000.0, 1),
+                    }
+                self.emit_telemetry(telemetry)
+            else:
+                with self._telemetry_lock:
+                    self._peer_sync_status[uav_id] = {
+                        "ok": False,
+                        "last_success_at": self._peer_sync_status.get(
+                            uav_id, {}
+                        ).get("last_success_at"),
+                        "last_error": "peer ground computer has no local UAV telemetry",
+                    }
+        except Exception as error:
+            with self._telemetry_lock:
+                previous_status = self._peer_sync_status.get(uav_id, {})
+                self._peer_sync_status[uav_id] = {
+                    "ok": False,
+                    "last_success_at": previous_status.get("last_success_at"),
+                    "last_error": str(error) or error.__class__.__name__,
+                }
+                previous = self._peer_telemetry.get(uav_id)
+            if previous is not None and previous.connected and time.time() - previous.received_at > 3.0:
+                stale = replace(previous, connected=False, received_at=time.time())
+                with self._telemetry_lock:
+                    self._peer_telemetry[uav_id] = stale
+                self.emit_telemetry(stale)
+            return
 
     def claim_peer_coordinator(self, coordinator_id: str) -> None:
         coordinator_id = coordinator_id.strip()
@@ -410,39 +465,6 @@ class DistributedFleetAdapter(FleetAdapter):
             raise
         self._is_coordinator = True
         self._last_lease_heartbeat = time.time()
-
-    def _heartbeat_coordination(self) -> None:
-        self.claim_peer_coordinator(self.node_id)
-        for uav_id, base_url in self.peers.items():
-            if uav_id == self.local_uav_id:
-                continue
-            try:
-                self._request_json(
-                    base_url + "/api/v1/peer/lease",
-                    method="POST",
-                    payload={"coordinator_id": self.node_id, "action": "claim"},
-                )
-            except Exception:
-                pass
-        self._last_lease_heartbeat = time.time()
-
-    def _broadcast_mission_snapshot(self) -> None:
-        provider = self._snapshot_provider
-        if provider is None:
-            return
-        snapshot = provider()
-        for uav_id, base_url in self.peers.items():
-            if uav_id == self.local_uav_id:
-                continue
-            try:
-                self._request_json(
-                    base_url + "/api/v1/peer/mission",
-                    method="POST",
-                    payload={"coordinator_id": self.node_id, "snapshot": snapshot},
-                )
-            except Exception:
-                pass
-        self._last_mission_broadcast = time.time()
 
     def release_coordination(self) -> None:
         if not self._is_coordinator:

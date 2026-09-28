@@ -92,7 +92,7 @@ class GpsDisplayTelemetryTest(unittest.TestCase):
             adapter._request_json = response
             with patch('competition_backend.distributed_adapter.time.time', return_value=1000), \
                     patch('competition_backend.distributed_adapter.time.monotonic', side_effect=[100,100.2]):
-                adapter._poll_loop()
+                adapter._poll_peer_once(1, "http://peer")
             item = adapter._peer_telemetry[1]
             self.assertEqual(item.received_at, 1000)
             self.assertAlmostEqual(item.gps_telemetry_age_seconds, 2.1)
