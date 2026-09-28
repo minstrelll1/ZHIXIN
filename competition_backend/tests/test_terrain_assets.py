@@ -16,11 +16,12 @@ class TerrainAssetsTest(unittest.TestCase):
                 response = client.get("/map-assets/" + name)
                 self.assertEqual(response.status_code, 200)
                 self.assertIn(content_type, response.headers['content-type'])
-                self.assertIn('max-age=', response.headers['cache-control'])
+                self.assertIn('no-cache' if name.endswith('.js') else 'max-age=', response.headers['cache-control'])
                 self.assertGreater(len(response.content), 1000)
             self.assertEqual(client.get('/map-assets/fleet.json').status_code, 404)
             self.assertEqual(client.get('/map-assets/index.html').status_code, 404)
             self.assertIn('/map-assets/terrain_basemap.js', client.get('/').text)
+            self.assertEqual(client.get('/').headers['cache-control'], 'no-store')
             client.close()
 
 

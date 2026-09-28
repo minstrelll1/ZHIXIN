@@ -26,6 +26,20 @@ for(const [profile,size] of [['competition',null],['lab',3],['outdoor5',5],['lab
   }
  }
 }
+// 正式比赛 GPS 任务与赛前预览不同：航线归零，旧边界/地类却仍在原投影原点。
+const runtime={...original,coordinate_mode:'gps',flight_profile:'competition',origin_x_m:0,origin_y_m:0};
+const before=JSON.stringify(runtime),display=api.displayArea(runtime),transform=api.mapping(runtime);
+assert.notEqual(display,runtime);
+original.points_m.forEach((p,i)=>{
+  const expected=[p[0]-original.origin_x_m,p[1]-original.origin_y_m];
+  const q=display.points_m[i],position=api.displayPosition(runtime,[...p,1.5]);
+  const geo=transform.geo(api.source.points[i][1],api.source.points[i][0]);
+  const layer=api.layerPoint(display,p);
+  for(let j=0;j<2;j++){close(q[j],expected[j]);close(position[j],expected[j]);close(geo[j],expected[j]);close(layer[j],expected[j]);}
+  assert.equal(position[2],1.5);
+});
+assert.equal(JSON.stringify(runtime),before,'只修正显示，不修改发送给机载端的原始任务');
+assert.equal(api.displayArea(display),display,'重复绘制不能重复平移');
 assert.equal(api.mapping({...original,points_m:[[0,0],[1,0],[1,1],[0,1]]}),null);
 assert.equal(api.mapping({...original,points_m:original.points_m.map((p,i)=>i===4?[p[0]+30,p[1]]:p)}),null);
 const draws=[];

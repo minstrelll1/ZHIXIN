@@ -11,7 +11,25 @@
   const original = source.points.map(p=>project(p[1],p[0]));
   const extent = bounds(original);
   const state = {status:'idle',image:null};
+  function displayArea(area){
+    // 旧正式比赛 GPS 任务：航线已归零，边界仍在原投影坐标。
+    // 只修正显示副本；不修改任务、GPS 基准或发送给机载端的数据。
+    if(!area||area.display_translation||area.coordinate_mode!=='gps'||area.flight_profile!=='competition')return area;
+    const points=area.points_m,projection=area.coverage?.projection;
+    if(!Array.isArray(points)||points.length!==original.length||!projection||
+       Math.abs(projection.latitude-source.projection.latitude)>1e-9||Math.abs(projection.longitude-source.projection.longitude)>1e-9)return area;
+    if(points.some(p=>!Array.isArray(p)||!Number.isFinite(p[0])||!Number.isFinite(p[1])))return area;
+    const b=bounds(points),dx=Number(area.origin_x_m)-b.minX,dy=Number(area.origin_y_m)-b.minY;
+    if(!Number.isFinite(dx)||!Number.isFinite(dy)||Math.hypot(dx,dy)<1e-6)return area;
+    if(Math.abs((b.maxX-b.minX)-area.height_m)>.01||Math.abs((b.maxY-b.minY)-area.width_m)>.01)return area;
+    return {...area,points_m:points.map(p=>[p[0]+dx,p[1]+dy]),display_translation:[dx,dy]};
+  }
+  function displayPosition(area,p){
+    const offset=displayArea(area)?.display_translation;
+    return offset&&Array.isArray(p)?[p[0]+offset[0],p[1]+offset[1],...p.slice(2)]:p;
+  }
   function mapping(area){
+    area=displayArea(area);
     const points=area?.points_m||area?.coverage?.polygon_m;
     if(!Array.isArray(points)||points.length!==original.length||points.some(p=>!Array.isArray(p)||!Number.isFinite(p[0])||!Number.isFinite(p[1])))return null;
     const target=bounds(points),sx=(target.maxX-target.minX)/(extent.maxX-extent.minX),sy=(target.maxY-target.minY)/(extent.maxY-extent.minY);
@@ -57,7 +75,7 @@
   }
   function layerPoint(area,p){
     // 旧 GPS 缩小方案保留了原场地地类米坐标；显示时须应用与影像相同的缩放。
-    if(area.coordinate_mode==='gps'&&['lab','lab10','outdoor5'].includes(area.flight_profile))return mapping(area)?.local(p)||p;
+    if(area.coordinate_mode==='gps'&&['competition','lab','lab10','outdoor5'].includes(area.flight_profile))return mapping(area)?.local(p)||p;
     return p;
   }
   function fitRect(sw,sh,dw,dh){
@@ -65,7 +83,7 @@
     const scale=Math.min(dw/sw,dh/sh),width=sw*scale,height=sh*scale;
     return {x:(dw-width)/2,y:(dh-height)/2,width,height};
   }
-  const api={source,mapping,draw,caption,layerPoint,fitRect,onChange:null,
+  const api={source,mapping,draw,caption,layerPoint,fitRect,displayArea,displayPosition,onChange:null,
     retry(){if(state.status==='error')state.status='idle';}};
   if(typeof module!=='undefined'&&module.exports)module.exports=api;
   root.CompetitionTerrain=api;

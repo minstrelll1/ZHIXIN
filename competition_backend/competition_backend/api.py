@@ -672,7 +672,7 @@ def create_app(environment=None) -> FastAPI:
 
     @app.get("/", response_class=HTMLResponse, include_in_schema=False)
     def frontend() -> HTMLResponse:
-        return HTMLResponse(FRONTEND_PATH.read_text(encoding="utf-8"))
+        return HTMLResponse(FRONTEND_PATH.read_text(encoding="utf-8"), headers={"Cache-Control": "no-store"})
 
     @app.get("/map-assets/{asset_name}", include_in_schema=False)
     def map_asset(asset_name: str):
@@ -685,7 +685,7 @@ def create_app(environment=None) -> FastAPI:
         if not path.is_file():
             raise HTTPException(status_code=404, detail="地图资源尚未部署，请更新地面端代码")
         return FileResponse(path, media_type=media[asset_name],
-                            headers={"Cache-Control": "public, max-age=3600"})
+                            headers={"Cache-Control": "no-cache" if asset_name.endswith(".js") else "public, max-age=3600"})
 
     @app.get("/fleet", response_class=HTMLResponse, include_in_schema=False)
     def fleet_page():
