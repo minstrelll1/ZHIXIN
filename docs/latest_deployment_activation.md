@@ -12,6 +12,30 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& ([scriptblock]::Cr
 
 首次部署会安装 Python 依赖，检查并使用仓库内的 MediaMTX，并提示在本机填写 AuthToken、PeerToken。
 
+#### 使用 U 盘首次部署
+
+将当前电脑项目中的以下内容复制到 U 盘，保留 `competition_development` 目录结构，再复制到目标电脑：
+
+```text
+competition_development/
+├─ competition_backend/   排除 .venv、data、__pycache__
+├─ competition_shared/
+├─ config/
+├─ src/
+├─ tools/                 包含 local_tokens.ps1、local_tokens.env
+├─ third_party/
+├─ docs/
+└─ README.md
+```
+
+不复制飞行记录、接收图片、日志、运行缓存及厂商工作区。目标电脑安装 Python 3.9～3.12（建议 3.11，并加入 PATH），在项目父目录执行：
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\competition_development\tools\install_ground_station.ps1"
+```
+
+该命令创建本机 Python 环境并安装依赖；MediaMTX 和令牌使用已复制的文件。安装依赖仍需网络，完全离线时需另备 Python 安装包和依赖包。完成后按下方“地面端”命令启动。
+
 ### 2. 地面端仅更新代码
 
 先关闭地面后端，在项目父目录执行。仅下载变化的文件，不重新安装 Python、MediaMTX；保留本机令牌、机队配置和数据：
@@ -30,6 +54,29 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& ([scriptblock]::Cr
 ```
 
 更新失败详情自动保存在 `competition_development\ground_logs\update_*.log`。下载并校验全部成功后才替换文件。完成后重新启动地面后端并刷新网页。
+
+#### 使用 U 盘更新代码
+
+先关闭目标电脑的地面后端。在项目父目录执行，`E:` 替换为实际 U 盘盘符：
+
+```powershell
+$usbSource = "E:\competition_development"
+$localProject = Join-Path (Get-Location) "competition_development"
+
+foreach ($projectPath in @($usbSource, $localProject)) {
+    if (-not (Test-Path -LiteralPath (Join-Path $projectPath "tools\start_ground.ps1") -PathType Leaf)) {
+        throw "项目目录不存在或不完整：$projectPath；请核对 U 盘盘符和当前所在目录。"
+    }
+}
+
+New-Item -ItemType Directory -Force -Path "$localProject\ground_logs" | Out-Null
+
+robocopy "$usbSource" "$localProject" /E /XJ /R:1 /W:1 /XD .git .venv __pycache__ data .runtime ground_runtime ground_logs flight_records received_images pointcloud_records position_tests onboard_source_backup .codex_backup* /XF fleet.json local_tokens.ps1 local_tokens.env mediamtx.exe auto.key auto.crt *.pyc *.bag *.log /TEE /LOG:"$localProject\ground_logs\usb_update.log"
+
+if ($LASTEXITCODE -ge 8) { throw "USB 更新失败，请查看 ground_logs\usb_update.log" }
+```
+
+跳过未变化的文件，保留本机 Python 环境、MediaMTX、令牌、机队配置和采集数据。普通代码更新无需重复安装依赖；依赖清单发生变化时再运行安装命令。完成后重新启动地面后端并刷新网页。
 
 ### 3. 机载端部署
 
