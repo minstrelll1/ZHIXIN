@@ -29,4 +29,4 @@ packages = ["competition_backend", "competition_shared"]
 competition_shared = "../competition_shared"
 
 [tool.setuptools.package-data]
-competition_backend = ["web/*.html", "*.json"]
+competition_backend = ["web/*.html", "web/*.js", "web/*.jpg", "*.json"]

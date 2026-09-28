@@ -674,6 +674,19 @@ def create_app(environment=None) -> FastAPI:
     def frontend() -> HTMLResponse:
         return HTMLResponse(FRONTEND_PATH.read_text(encoding="utf-8"))
 
+    @app.get("/map-assets/{asset_name}", include_in_schema=False)
+    def map_asset(asset_name: str):
+        # 仅提供随代码部署的底图和渲染脚本，不开放任意本机文件路径。
+        media = {"terrain_basemap.js": "application/javascript",
+                 "competition_esri_20170724.jpg": "image/jpeg"}
+        if asset_name not in media:
+            raise HTTPException(status_code=404, detail="地图资源不存在")
+        path = FRONTEND_PATH.parent / asset_name
+        if not path.is_file():
+            raise HTTPException(status_code=404, detail="地图资源尚未部署，请更新地面端代码")
+        return FileResponse(path, media_type=media[asset_name],
+                            headers={"Cache-Control": "public, max-age=3600"})
+
     @app.get("/fleet", response_class=HTMLResponse, include_in_schema=False)
     def fleet_page():
         return HTMLResponse((FRONTEND_PATH.parent / "fleet.html").read_text(encoding="utf-8"))
