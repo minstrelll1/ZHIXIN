@@ -11,7 +11,7 @@ function fixture(fetch){
   const defaults={subject:'subject1',planningAreaMode:'competition',controllerMode:'external',flightProfile:'lab',flightAltitudePlan:'around2m',coordinateMode:'xyz',scoutRadius:'1',flightSpeed:'0.2',hoverScanSeconds:'10',duration:''};
   const context={fetch,AbortController,setTimeout,clearTimeout,console,当前状态:{mission:null},当前角色:{task_publisher:true},文本:{错误:{}},
     $:id=>{if(!nodes.has(id))nodes.set(id,{value:defaults[id]??'',style:{},disabled:false});return nodes.get(id)},
-    提示:message=>notes.push(message),读取机载GPS参考组:()=>({}),数值:Number,渲染:()=>{}};
+    获取规划识别类别:()=>({category_count:3,category_ids:[1,8,12]}),提示:message=>notes.push(message),读取机载GPS参考组:()=>({}),数值:Number,渲染:()=>{}};
   vm.createContext(context);
   vm.runInContext(html.slice(requestStart,requestEnd)+'\n'+html.slice(flowStart,flowEnd),context);
   return {context,nodes,notes,run:code=>vm.runInContext(code,context)};

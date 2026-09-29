@@ -7,6 +7,7 @@ import os
 import tempfile
 from pathlib import Path
 from typing import Any, Dict, List
+from competition_shared.recognition import validate_recognition_selection
 
 
 class TaskValidationError(ValueError):
@@ -99,6 +100,12 @@ def validate_assignment(
     )
     if target_altitude <= 0.0:
         raise TaskValidationError("target_altitude_m must be positive")
+
+    if "recognition_selection" in task:
+        try:
+            validate_recognition_selection(task["recognition_selection"])
+        except ValueError as error:
+            raise TaskValidationError(str(error)) from error
 
     normalized = json.loads(json.dumps(message))
     normalized["uav_id"] = expected_uav_id

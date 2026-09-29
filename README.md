@@ -193,3 +193,8 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\stop_ground.ps1
 ### 科目一结果上报
 
 任务发布端点击“科目一成果上报”，选择已回传任务或 JSON 文件 → 生成并校验 → 下载核对 → 确认上报。参赛队名默认“北方自控智群队”。接口采用 UTF-8 JSON 文件的 form-data 上传；图片另存本地，不自动上报。详见 [科目一上报说明](docs/subject1_reporting.md)。
+
+
+### 科目一识别类别
+
+展开“科目一识别类别” → 选择类别数和目标 → 保存类别 → 规划并分派。机载话题 `/uavN/competition/recognition_categories`（`std_msgs/Int32MultiArray`，保留最后一条）。本功能需同步更新竞赛机载端，原部署命令不变。详见 [类别编号与接入说明](docs/recognition_categories.md)。

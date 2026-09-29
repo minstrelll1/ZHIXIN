@@ -21,7 +21,7 @@ sys.modules.setdefault("rospy", rospy)
 for name in ("prometheus_msgs", "std_msgs", "sensor_msgs", "mavros_msgs"):
     sys.modules.setdefault(name, types.ModuleType(name))
     module = types.ModuleType(name + ".msg")
-    for cls in ("UAVCommand", "UAVControlState", "UAVState", "UAVSetup", "RCIn", "String", "Float64MultiArray", "Int32", "Bool", "NavSatFix"):
+    for cls in ("UAVCommand", "UAVControlState", "UAVState", "UAVSetup", "RCIn", "String", "Float64MultiArray", "Int32MultiArray", "Int32", "Bool", "NavSatFix"):
         setattr(module, cls, type(cls, (), {}))
     sys.modules.setdefault(name + ".msg", module)
 spec = importlib.util.spec_from_file_location("executor", Path(__file__).resolve().parents[1] / "scripts" / "onboard_task_executor.py")

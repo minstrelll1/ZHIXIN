@@ -14,7 +14,7 @@ import rospy
 from prometheus_msgs.msg import UAVCommand, UAVControlState, UAVState, UAVSetup
 from mavros_msgs.msg import RCIn
 from sensor_msgs.msg import NavSatFix
-from std_msgs.msg import String, Float64MultiArray, Int32, Bool
+from std_msgs.msg import String, Float64MultiArray, Int32, Bool, Int32MultiArray
 
 # 源码部署时也可找到统一配置/坐标工具；无需改动厂商包。
 import sys
@@ -152,6 +152,11 @@ class OnboardTaskExecutor:
         self.status_pub = rospy.Publisher(
             fleet_prefix + "/competition/task_status", String, queue_size=10, latch=True
         )
+        self.recognition_categories_topic = fleet_prefix + "/competition/recognition_categories"
+        self.recognition_categories_pub = rospy.Publisher(
+            self.recognition_categories_topic, Int32MultiArray, queue_size=1, latch=True
+        )
+        self._restore_recognition_categories()
         self.external_mission_pub = rospy.Publisher(
             self.external_mission_topic, String, queue_size=1, latch=True
         )
@@ -774,10 +779,32 @@ class OnboardTaskExecutor:
             rospy.logerr("高级控制指令被拒绝：%s", error)
             self._publish_status("command_rejected", error=str(error))
 
+    def _restore_recognition_categories(self) -> None:
+        # ROS latch 随进程重启丢失；恢复已通过校验的本机任务类别，不触发任务重发。
+        if self._assignment and self._assignment_acked:
+            try:
+                self._publish_recognition_categories(self._assignment)
+            except TaskValidationError as error:
+                self._assignment_acked = False
+                rospy.logerr("恢复识别类别发布失败：%s", error)
+
+    def _publish_recognition_categories(self, assignment: Dict[str, Any]) -> None:
+        selection = assignment.get("task", {}).get("recognition_selection")
+        if assignment.get("subject") != "subject1" or selection is None:
+            return  # 旧任务和其他科目保持原流程，不推测类别列表。
+        message = Int32MultiArray()
+        message.data = list(selection["category_ids"])
+        try:
+            self.recognition_categories_pub.publish(message)
+        except Exception as error:
+            raise TaskValidationError("识别类别话题发布失败：%s" % error) from error
+        rospy.loginfo("已发布科目一识别类别：%s，共 %d 类，编号=%s", self.recognition_categories_topic,
+                      selection["category_count"], message.data)
+
     def _accept_assignment(self, payload: Dict[str, Any]) -> None:
         try:
             assignment = validate_assignment(payload, self.uav_id)
-            if self._assignment and assignment["assignment_checksum"] == self._assignment["assignment_checksum"]:
+            if self._assignment and self._assignment_acked and assignment["assignment_checksum"] == self._assignment["assignment_checksum"]:
                 self._publish_status("task_received")
                 return
             if self._motion_thread is not None and self._motion_thread.is_alive():
@@ -798,6 +825,7 @@ class OnboardTaskExecutor:
                     "waypoint exceeds max_distance_from_home_m safety limit"
                 )
             save_assignment_atomic(self.cache_path, assignment)
+            self._publish_recognition_categories(assignment)
         except (OSError, TaskValidationError) as error:
             self._assignment_acked = False
             rospy.logerr("任务下发被拒绝：%s", error)

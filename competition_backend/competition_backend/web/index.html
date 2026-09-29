@@ -234,7 +234,8 @@
     #sshAuthNotice{padding:8px 0;color:#b42318;font-size:13px}#sshAuthNotice button{height:30px;margin-left:10px;font-size:12px}
     #programDescription{font-size:13px;color:#64748b;padding-top:8px}
     @media(max-width:850px){.program-row{align-items:flex-start}.program-status{gap:4px 14px}.program-status button{font-size:12px}}
-  </style>
+  .recognition-toolbar{display:flex;align-items:end;gap:16px;flex-wrap:wrap;margin:14px 0}.recognition-toolbar .field{max-width:160px}.recognition-groups{display:flex;flex-wrap:wrap;gap:12px}.recognition-groups fieldset{flex:1;min-width:210px;border:1px solid var(--border,#cad5e2);border-radius:8px;padding:10px}.recognition-options{display:flex;gap:10px 18px;flex-wrap:wrap}.recognition-options label{display:inline-flex;align-items:center;gap:5px;white-space:nowrap}.recognition-options input{width:auto;margin:0}.recognition-count{align-self:center;font-weight:600}
+</style>
 </head>
 <body>
 <header>
@@ -284,6 +285,16 @@
     <div class="area-actions"><span><label><input id="terrainExclusions" type="checkbox" checked>使用地图地类免侦察范围</label> <label><input id="terrainDisplayToggle" type="checkbox" checked>显示 Esri 地形底图</label></span><button id="exportCoverage" class="secondary" disabled>导出六机方案 JSON</button></div>
     <p class="area-note">固定比赛区域 · 六机 · 林缘 5 米。参数已锁定，页面直接读取赛前保存的方案，不在比赛时重新求解。基准纬度、经度用于 GPS/XYZ 平面坐标换算；飞行高度相对起飞点，不叠加 GPS 海拔。</p>
     <p id="coverageNote" class="area-note">优化目标：最小化六机任务时间之和（各机行程÷速度＋扫描次数×扫描时间）。每个航点悬停扫描一次后再前往下一航点；当前仅规划区域内航线，实际起降点、高度和往返航段待配置。</p>
+  </details>
+  <details id="recognitionSettings" class="panel area-settings">
+    <summary>科目一识别类别 <span id="recognitionSummary"></span></summary>
+    <div class="recognition-toolbar">
+      <div class="field"><label for="recognitionCount">需要识别的类别数</label><select id="recognitionCount"><option value="">请选择</option><option value="1">1 类</option><option value="2">2 类</option><option value="3">3 类</option><option value="4">4 类</option><option value="5">5 类</option><option value="6">6 类</option><option value="7">7 类</option><option value="8">8 类</option><option value="9">9 类</option><option value="10">10 类</option><option value="11">11 类</option><option value="12">12 类</option><option value="13">13 类</option><option value="14">14 类</option><option value="15">15 类</option></select></div>
+      <span id="recognitionCounter" class="recognition-count" role="status" aria-live="polite">已选择 0 / 未设置 类</span>
+      <button id="saveRecognition" class="secondary" disabled>保存类别</button>
+    </div>
+    <div id="recognitionGroups" class="recognition-groups"></div>
+    <p id="recognitionFeedback" class="area-note" role="status">请选择类别数并勾选目标，保存后随下一次规划与分派发送。</p>
   </details>
   <section class="summary" aria-label="任务概要">
     <div class="panel summary-card"><span>当前任务状态</span><strong id="missionPhase">尚未规划</strong></div>
@@ -619,9 +630,57 @@ function 机地通信详情(traffic,uavId){const item=当前状态?.traffic?.by_
 function 渲染端口通信(uavId){const item=当前状态?.traffic?.by_uav?.[String(uavId)];$('trafficDialogTitle').textContent=`UAV${uavId} 机地全链路实时通信`;const video=item?.video_host?`；视频源 ${item.video_host}`:'';$('trafficDialogMeta').textContent=item?`统计端点：${item.host||'未配置'}${video}；总量包含云台视频、图片回传、RViz 点云、Prometheus、任务/遥测及其他通信`:'未配置机载 IP';const categories=item?.categories||[];$('trafficCategoryList').innerHTML=categories.map(category=>`<div class="traffic-category-row"><span>${转义(category.label||category.category)}</span><strong>${Mbps(category.speed_mbps)}</strong></div>`).join('');const ports=item?.ports||[];$('trafficPortList').innerHTML=ports.length?ports.map(port=>`<div class="traffic-port-row"><div class="traffic-port-main"><b>${port.protocol==='UDP'?'UDP':'TCP'} 端口 ${port.port}</b><span>${转义(port.function||'未分类通信')}</span></div><strong>${Mbps(port.speed_mbps)}</strong><small>本地 ${port.local_port} ↔ 远端 ${port.remote_port}</small></div>`).join(''):'<div class="traffic-empty">暂未发现活动端口</div>'}
 const 点云画布=$('detailPointcloudCanvas');点云画布.addEventListener('contextmenu',event=>event.preventDefault());点云画布.addEventListener('pointerdown',event=>{if(!详情显示点云())return;详情点云拖动={x:event.clientX,y:event.clientY,mode:event.button===0?'rotate':'pan'};点云画布.setPointerCapture?.(event.pointerId);event.preventDefault()});点云画布.addEventListener('pointermove',event=>{if(!详情点云拖动)return;const dx=event.clientX-详情点云拖动.x,dy=event.clientY-详情点云拖动.y;详情点云拖动.x=event.clientX;详情点云拖动.y=event.clientY;if(详情点云拖动.mode==='rotate'){点云视角.yaw+=dx*.012;点云视角.pitch=Math.max(-1.48,Math.min(1.48,点云视角.pitch+dy*.012))}else{点云视角.panX+=dx;点云视角.panY+=dy}绘制详情点云()});['pointerup','pointercancel','lostpointercapture'].forEach(type=>点云画布.addEventListener(type,()=>{详情点云拖动=null}));点云画布.addEventListener('wheel',event=>{if(!详情显示点云())return;event.preventDefault();点云视角.zoom=Math.max(.2,Math.min(6,点云视角.zoom*Math.exp(-event.deltaY*.001)));绘制详情点云()},{passive:false});$('detailPointcloudReset').onclick=()=>{点云视角={yaw:-.75,pitch:.52,zoom:1,panX:0,panY:0};绘制详情点云()};
 
+let 已保存识别类别=null,识别类别已修改=false,识别类别保存中=false,识别类别已加载=false,识别类别加载中=false,识别类别版本=0;
+const 识别类别目录=Array.from({length:15},(_,i)=>({id:i+1,name:i<7?'车辆'+(i+1):i<11?'工事'+(i-6):'人员'+(i-10)}));
+function 读取类别勾选(){return [...document.querySelectorAll('#recognitionGroups input:checked')].map(el=>Number(el.value))}
+function 更新类别计数(){
+  const count=Number($('recognitionCount').value),ids=读取类别勾选();
+  $('recognitionCounter').textContent=`已选择 ${ids.length} / ${count||'未设置'} 类`;
+  $('recognitionCount').disabled=识别类别保存中;
+  for(const el of document.querySelectorAll('#recognitionGroups input'))el.disabled=识别类别保存中||!count||(!el.checked&&ids.length>=count);
+  $('saveRecognition').disabled=识别类别保存中||!count||ids.length!==count||(!识别类别已修改&&!!已保存识别类别);
+  $('recognitionSummary').textContent=识别类别已修改?'· 未保存':已保存识别类别?`· 已保存 ${已保存识别类别.category_count} 类`:'';
+}
+function 修改类别选择(){识别类别版本++;识别类别已修改=true;$('recognitionFeedback').textContent='选择已修改，请保存后再规划与分派。';更新类别计数()}
+function 获取规划识别类别(){
+  if(!已保存识别类别||识别类别已修改||识别类别保存中)throw new Error('请先选择并保存科目一识别类别');
+  return JSON.parse(JSON.stringify(已保存识别类别));
+}
+async function 加载识别类别(){
+  if(识别类别加载中||识别类别已加载)return;
+  识别类别加载中=true;const version=识别类别版本;
+  try{const data=await 请求('/api/v1/recognition-categories');
+    识别类别已加载=true;
+    if(version===识别类别版本&&!识别类别已修改&&!识别类别保存中){
+      已保存识别类别=data.selection;
+      $('recognitionCount').value=data.selection?.category_count||'';
+      for(const el of document.querySelectorAll('#recognitionGroups input'))el.checked=!!data.selection?.category_ids.includes(Number(el.value));
+      if(data.selection)$('recognitionFeedback').textContent='已保存：'+data.selection.category_names.join('、')+'。下一次规划与分派时生效。';
+      更新类别计数();
+    }
+  }catch(error){$('recognitionFeedback').textContent='读取类别配置失败：'+error.message+'；可重新选择并保存。'}finally{识别类别加载中=false}
+}
+async function 保存识别类别(){
+  if(识别类别保存中)return;
+  const payload={category_count:Number($('recognitionCount').value),category_ids:读取类别勾选()};
+  if(!payload.category_count||payload.category_ids.length!==payload.category_count){提示('勾选数量必须与类别数相同',true);return}
+  识别类别保存中=true;更新类别计数();
+  try{已保存识别类别=(await 请求('/api/v1/recognition-categories',{method:'PUT',body:JSON.stringify(payload)})).selection;识别类别版本++;识别类别已修改=false;识别类别已加载=true;
+    $('recognitionFeedback').textContent='已保存：'+已保存识别类别.category_names.join('、')+'。下一次规划与分派时生效。';提示('识别类别已保存');
+  }catch(error){$('recognitionFeedback').textContent='保存失败：'+error.message;提示(error.message,true)}finally{识别类别保存中=false;更新类别计数()}
+}
+for(const [title,start,end] of [['车辆',1,7],['工事',8,11],['人员',12,15]]){
+  const group=document.createElement('fieldset'),legend=document.createElement('legend'),options=document.createElement('div');legend.textContent=title;options.className='recognition-options';group.append(legend,options);
+  for(const item of 识别类别目录.filter(item=>item.id>=start&&item.id<=end)){
+    const label=document.createElement('label'),input=document.createElement('input');input.type='checkbox';input.value=item.id;input.onchange=修改类别选择;label.append(input,document.createTextNode(item.name));options.append(label);
+  }$('recognitionGroups').append(group);
+}
+$('recognitionCount').onchange=修改类别选择;$('saveRecognition').onclick=保存识别类别;
+$('recognitionSettings').ontoggle=()=>{if($('recognitionSettings').open)加载识别类别()};更新类别计数();
+
 let 比赛覆盖方案=null,覆盖规划中=false,固定规划绘制键='',分派反馈任务ID='',规划结果待核对=false;
   function 真实区域模式(){return ['subject1','subject2'].includes($('subject').value)&&$('planningAreaMode').value==='competition'}
-  function 更新规划模式(){const selected=['subject1','subject2'].includes($('subject').value);$('coverageSettings').style.display=selected?'block':'none';for(const id of ['scoutRadius','flightSpeed','hoverScanSeconds','regionAspect','forestEdge','terrainExclusions','coverageUavCount'])$(id).disabled=true;$('subject').disabled=覆盖规划中;$('planButton').textContent='规划并分派';$('exportCoverage').disabled=!当前状态?.mission?.prepared_plan;更新任务按钮()}
+  function 更新规划模式(){const selected=['subject1','subject2'].includes($('subject').value);$('coverageSettings').style.display=selected?'block':'none';$('recognitionSettings').style.display=$('subject').value==='subject1'?'block':'none';for(const id of ['scoutRadius','flightSpeed','hoverScanSeconds','regionAspect','forestEdge','terrainExclusions','coverageUavCount'])$(id).disabled=true;$('subject').disabled=覆盖规划中;$('planButton').textContent='规划并分派';$('exportCoverage').disabled=!当前状态?.mission?.prepared_plan;更新任务按钮()}
 function 更新任务按钮(snapshot=当前状态){
   const role=snapshot?.operator||当前角色,mission=snapshot?.mission;
   const roleBlocked=role?.selection_required&&(!role.configured||!role.profile_matches||role.selection_pending||!!role.selection_error);
@@ -649,11 +708,14 @@ function 更新分派回执(snapshot){
 }
 async function 生成比赛覆盖(){
   if(覆盖规划中)return;
+  let recognitionSelection;
+  if($('subject').value==='subject1'){try{recognitionSelection=获取规划识别类别()}catch(error){$('recognitionSettings').open=true;提示(error.message,true);return}}
   覆盖规划中=true;分派反馈任务ID='';更新任务按钮();if(typeof 准备地形底图==='function'){底图脚本尝试=0;准备地形底图();}
   显示分派反馈('正在读取保存方案并分派任务……');
   let requestSucceeded=false;
   try{
     const payload={subject:$('subject').value,controller_mode:$('controllerMode').value,flight_profile:$('flightProfile').value,flight_altitude_plan:$('flightAltitudePlan').value};
+    if(recognitionSelection)Object.assign(payload,{recognition_selection:recognitionSelection,require_recognition_selection:true});
     if(真实区域模式()){
       Object.assign(payload,{planning_mode:'competition',coordinate_mode:$('coordinateMode').value,reconnaissance_radius_m:Number($('scoutRadius').value),speed_mps:Number($('flightSpeed').value),hover_scan_seconds:Number($('hoverScanSeconds').value)});
       if($('coordinateMode').value==='gps'){const refs=读取机载GPS参考组();const latitude=Number($('gpsLatitude').value),longitude=Number($('gpsLongitude').value);if(Object.keys(refs).length){payload.gps_origins_by_uav=refs;const first=refs[Object.keys(refs)[0]];payload.gps_origin={latitude:first.latitude,longitude:first.longitude};}else if(Number.isFinite(latitude)&&Number.isFinite(longitude)){payload.gps_origin={latitude,longitude,source:'页面预览基准点'};}}
@@ -773,7 +835,7 @@ $('sshReconnect').onclick=async()=>{const button=$('sshReconnect');button.disabl
 刷新程序状态();setInterval(刷新程序状态,1000);setInterval(加载程序打印,1000);
 
 
-选择地面终端().then(()=>{刷新();刷新采集();加载视频源();连接状态流();setInterval(刷新采集,1000);setInterval(刷新详情点云,1000)}).catch(error=>{连接异常();提示(error.message,true)});
+选择地面终端().then(()=>{加载识别类别();刷新();刷新采集();加载视频源();连接状态流();setInterval(刷新采集,1000);setInterval(刷新详情点云,1000)}).catch(error=>{连接异常();提示(error.message,true)});
 </script>
 </body>
 </html>

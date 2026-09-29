@@ -35,6 +35,8 @@ from .image_aggregation import (
     resolve_image_file,
 )
 from .subject1_reporting import reporting_router
+from .recognition_settings import RecognitionSettings
+from competition_shared.recognition import validate_recognition_selection
 from .journal import EventJournal
 from .groundstation_capture import PassivePointCloudCapture
 from .models import ReturnReason, Telemetry
@@ -280,6 +282,7 @@ def create_app(environment=None) -> FastAPI:
     data_directory = env.get(
         "COMPETITION_DATA_DIR", str(PACKAGE_ROOT / "data")
     )
+    recognition_settings = RecognitionSettings(data_directory)
     orchestrator = CompetitionOrchestrator(
         config=config,
         adapter=adapter,
@@ -1114,10 +1117,37 @@ def create_app(environment=None) -> FastAPI:
         result["flight_altitude_plan"] = flight_altitude_plan
         return result
 
+    @app.get("/api/v1/recognition-categories", tags=["科目一识别类别"])
+    def get_recognition_categories():
+        try:
+            return recognition_settings.snapshot()
+        except ValueError as error:
+            raise HTTPException(status_code=422, detail=str(error)) from error
+
+    @app.put("/api/v1/recognition-categories", tags=["科目一识别类别"])
+    def save_recognition_categories(payload: Dict[str, Any] = Body(...)):
+        _require_operator_ready()
+        try:
+            return {"selection": recognition_settings.save(payload)}
+        except (ValueError, OSError) as error:
+            raise HTTPException(status_code=422, detail=str(error)) from error
+
     @app.post("/api/v1/plan", summary="规划并分配六机任务", tags=["任务控制"])
     def plan(payload: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
         role = _require_operator_ready()
         _fleet_motion_guard()
+        recognition_selection = None
+        if payload.get("subject") == "subject1":
+            try:
+                recognition_selection = payload.get("recognition_selection")
+                if recognition_selection is None:
+                    recognition_selection = recognition_settings.read()
+                if recognition_selection is not None:
+                    recognition_selection = validate_recognition_selection(recognition_selection)
+                elif payload.get("require_recognition_selection"):
+                    raise ValueError("请先选择并保存科目一识别类别")
+            except ValueError as error:
+                raise HTTPException(status_code=422, detail=str(error)) from error
         prepared = None
         requested_profile = str(
             payload.get("flight_profile", "competition" if payload.get("planning_mode") == "competition" else "lab")
@@ -1183,6 +1213,7 @@ def create_app(environment=None) -> FastAPI:
                 payload.get("gps_origin"),
                 payload.get("landing_area"),
                 prepared,
+                recognition_selection,
             )
         except Exception:
             if isinstance(adapter, DistributedFleetAdapter):

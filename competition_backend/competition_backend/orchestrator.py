@@ -8,6 +8,7 @@ import math
 import copy
 from typing import Any, Callable, Dict, List, Optional
 
+from competition_shared.recognition import validate_recognition_selection
 from .adapter import FleetAdapter
 from .assignment_protocol import assignment_checksum
 from .journal import EventJournal
@@ -126,6 +127,7 @@ class CompetitionOrchestrator:
         gps_origin: Optional[Dict[str, Any]] = None,
         landing_area: Optional[Dict[str, Any]] = None,
         prepared_plan: Optional[Dict[str, Any]] = None,
+        recognition_selection: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         with self._lock:
             if self._mission and self._mission.phase not in (
@@ -375,6 +377,15 @@ class CompetitionOrchestrator:
                         area["gps_origin"] = normalized_gps_origin
                 elif coordinate_mode != "xyz":
                     raise MissionError("外部任务坐标系必须为 gps 或 xyz")
+
+            if subject == "subject1" and recognition_selection is not None:
+                try:
+                    recognition_selection = validate_recognition_selection(recognition_selection)
+                except ValueError as error:
+                    raise MissionError(str(error)) from error
+                task_source = copy.deepcopy(task_source)
+                for task in task_source.values():
+                    task["recognition_selection"] = copy.deepcopy(recognition_selection)
 
             now = self.clock()
             mission_id = "%s-%s" % (subject, uuid.uuid4().hex[:10])
