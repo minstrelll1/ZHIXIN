@@ -328,7 +328,7 @@
   <div class="dialog-body"><h2>选择本地地面终端</h2><div class="operator-grid"><div class="field"><label for="operatorTerminal">地面终端编号</label><select id="operatorTerminal"><option value="">请选择终端编号</option><option value="1">地面终端 1 / UAV1</option><option value="2">地面终端 2 / UAV2</option><option value="3">地面终端 3 / UAV3</option><option value="4">地面终端 4 / UAV4</option><option value="5">地面终端 5 / UAV5</option><option value="6">地面终端 6 / UAV6</option></select></div><div class="field"><label for="operatorModel">固定机型</label><select id="operatorModel" disabled><option value="p600">P600</option><option value="su17">SU17</option></select></div><label class="operator-role"><input id="operatorPublisher" type="checkbox"><span><b>本机是任务发布端</b></span></label></div><div id="operatorMessage" class="area-note"></div><div class="dialog-actions"><button id="operatorEnter" class="primary">进入任务界面</button></div></div>
 </dialog>
 
-<dialog id="programDialog"><div class="dialog-body"><div class="traffic-dialog-head"><h2 id="programTitle">程序打印</h2><button id="closeProgramLog" class="detail-close">关闭</button></div><div id="programDescription"></div><button type="button" id="programLogMore" class="secondary">继续加载后续打印</button><pre id="programLog" tabindex="0"></pre></div></dialog>
+<dialog id="programDialog"><div class="dialog-body"><div class="traffic-dialog-head"><h2 id="programTitle">程序打印</h2><div><button id="stopProgram" class="danger">停止程序</button> <button id="closeProgramLog" class="detail-close">关闭窗口</button></div></div><div id="programDescription"></div><button type="button" id="programLogMore" class="secondary">继续加载后续打印</button><pre id="programLog" tabindex="0"></pre></div></dialog>
 <dialog id="takeoffDialog">
   <div class="dialog-body"><h2>确认启用无人机一键起飞</h2><p>本次启用的无人机已通过预检。确认后将自动解锁、进入 COMMAND_CONTROL 并升至各自任务高度；稳定到达后，外部模式向程序 B 发布任务，本工程模式开始执行航线。飞行中可按原遥控器流程接管，本工程不会自动抢回控制权。</p><div id="takeoffSummary"></div><div class="dialog-actions"><button id="cancelTakeoff" class="secondary">取消</button><button id="confirmTakeoff" class="primary">确认起飞</button></div></div>
 </dialog>
@@ -496,6 +496,7 @@ function 有效点云(frame){return Array.isArray(frame?.points)?frame.points.fi
 function 绘制详情点云(){const canvas=$('detailPointcloudCanvas'),rect=canvas.getBoundingClientRect(),ratio=window.devicePixelRatio||1;if(rect.width<1||rect.height<1)return;canvas.width=Math.max(1,Math.round(rect.width*ratio));canvas.height=Math.max(1,Math.round(rect.height*ratio));const ctx=canvas.getContext('2d');ctx.setTransform(ratio,0,0,ratio,0,0);ctx.fillStyle='#07111f';ctx.fillRect(0,0,rect.width,rect.height);const points=有效点云(详情点云帧);if(!points.length){ctx.fillStyle='#b9cae2';ctx.font='14px Microsoft YaHei UI';ctx.textAlign='center';ctx.fillText('尚未收到有效点云',rect.width/2,rect.height/2);return}let minX=Infinity,minY=Infinity,minZ=Infinity,maxX=-Infinity,maxY=-Infinity,maxZ=-Infinity;for(const [x,y,z] of points){minX=Math.min(minX,x);maxX=Math.max(maxX,x);minY=Math.min(minY,y);maxY=Math.max(maxY,y);minZ=Math.min(minZ,z);maxZ=Math.max(maxZ,z)}const cx=(minX+maxX)/2,cy=(minY+maxY)/2,cz=(minZ+maxZ)/2,size=Math.max(maxX-minX,maxY-minY,maxZ-minZ,.5),scale=Math.min(rect.width,rect.height)*.38/size*点云视角.zoom,ca=Math.cos(点云视角.yaw),sa=Math.sin(点云视角.yaw),cb=Math.cos(点云视角.pitch),sb=Math.sin(点云视角.pitch),project=p=>{const x=p[0]-cx,y=p[1]-cy,z=p[2]-cz,rx=ca*x-sa*y,ry=sa*x+ca*y,sy=cb*ry-sb*z;return[rect.width/2+点云视角.panX+rx*scale,rect.height/2+点云视角.panY-sy*scale]};const axis=Math.max(size*.32,.25),axes=[[[cx,cy,cz],[cx+axis,cy,cz],'#fb7185','X'],[[cx,cy,cz],[cx,cy+axis,cz],'#60a5fa','Y'],[[cx,cy,cz],[cx,cy,cz+axis],'#4ade80','Z']];ctx.lineWidth=2;ctx.font='12px Microsoft YaHei UI';ctx.textAlign='left';for(const [from,to,color,label] of axes){const a=project(from),b=project(to);ctx.strokeStyle=color;ctx.fillStyle=color;ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);ctx.stroke();ctx.fillText(label,b[0]+4,b[1]-4)}const dz=Math.max(maxZ-minZ,1e-6);ctx.globalAlpha=.85;for(const point of points){const [x,y]=project(point),hue=220-220*(point[2]-minZ)/dz;ctx.fillStyle=`hsl(${hue.toFixed(0)} 90% 63%)`;ctx.fillRect(x,y,2,2)}ctx.globalAlpha=1;ctx.fillStyle='#dbeafe';ctx.font='12px Microsoft YaHei UI';ctx.fillText(`X ${minX.toFixed(2)}～${maxX.toFixed(2)}m  Y ${minY.toFixed(2)}～${maxY.toFixed(2)}m  Z ${minZ.toFixed(2)}～${maxZ.toFixed(2)}m`,12,22);ctx.fillStyle='#93c5fd';ctx.fillText(`${points.length} 点 · 旋转／平移／缩放`,12,42)}
 function 清空详情点云(){点云帧序号++;点云加载中=false;详情点云帧=null;详情点云拖动=null;$('detailPointcloudMeta').textContent='正在读取点云接收状态。'}
 async function 刷新详情点云(){
+  if(地面正在退出)return;
   if(!详情无人机ID||!$('uavDetailDialog').open||!详情显示点云()||点云加载中)return;
   const requestId=++点云帧序号,id=详情无人机ID;点云加载中=true;
   try{
@@ -546,7 +547,7 @@ function 配置同步文本(snapshot,id){const sync=snapshot.fleet?.synchronizat
 function GPS状态文本(snapshot,id){if($('coordinateMode').value!=='gps')return 'GPS：未启用';const item=snapshot.telemetry?.[String(id)],age=item?.received_at?Number(snapshot.server_time)-Number(item.received_at):Infinity,valid=item?.connected&&age<=2&&Number.isFinite(Number(item.latitude))&&Number.isFinite(Number(item.longitude));return valid?'GPS：已获取':'GPS：等待有效定位'}
 function 更新六机同步状态(snapshot){const cards=[...document.querySelectorAll('#fleet [data-uav-id]')];if(cards.length&&cards.every(card=>card.querySelector('.sync-status')))return;cards.forEach(card=>{card.querySelector('.sync-status')?.remove();const id=Number(card.dataset.uavId),line=document.createElement('div');line.className='sync-status';line.textContent=`${配置同步文本(snapshot,id)} · ${GPS状态文本(snapshot,id)}`;card.appendChild(line)})}
 const 六机状态观察器=new MutationObserver(()=>{if(当前状态)更新六机同步状态(当前状态)});六机状态观察器.observe($('fleet'),{childList:true});
-function 渲染(snapshot){当前状态=snapshot;当前角色=snapshot.operator||当前角色;更新任务按钮(snapshot);更新分派回执(snapshot);更新GPS参考();if(snapshot.local_uav_id&&snapshot.local_uav_id!==本机无人机ID)加载视频源();if(端口查看无人机ID&&$('trafficDialog').open)渲染端口通信(端口查看无人机ID);更新实际轨迹(snapshot);const mission=snapshot.mission;$('exportCoverage').disabled=!mission?.prepared_plan;const telemetry=snapshot.telemetry||{},active=snapshot.active_uav_ids||[1,2,3,4,5,6],planningOnly=snapshot.dispatch_status?.mode==='planning_only',publisher=当前角色?.task_publisher!==false;const roleText=publisher?'任务发布端，可向六台终端分派':'普通终端，只能向本机配对无人机分派';const nodeText=planningOnly?'当前没有可用无人机：仅展示规划，不下发任务。':snapshot.local_uav_id?`本机 ${snapshot.ground_node_id||''} 直连 UAV${snapshot.local_uav_id}；${roleText}。`:`启用无人机：${active.map(id=>'UAV'+id).join('、')}。`;$('modeBanner').textContent=snapshot.live_mode?`当前为真机模式：${nodeText} 所有操作可能下发真实命令。`:'当前为模拟模式：界面操作只记录模拟指令，不会控制真实无人机。';$('modeBanner').className='mode-banner'+(snapshot.live_mode?' live':'');$('simTools').className='sim-tools'+(snapshot.live_mode?'':' show');
+function 渲染(snapshot){if(地面正在退出)return;当前状态=snapshot;当前角色=snapshot.operator||当前角色;更新任务按钮(snapshot);更新分派回执(snapshot);更新GPS参考();if(snapshot.local_uav_id&&snapshot.local_uav_id!==本机无人机ID)加载视频源();if(端口查看无人机ID&&$('trafficDialog').open)渲染端口通信(端口查看无人机ID);更新实际轨迹(snapshot);const mission=snapshot.mission;$('exportCoverage').disabled=!mission?.prepared_plan;const telemetry=snapshot.telemetry||{},active=snapshot.active_uav_ids||[1,2,3,4,5,6],planningOnly=snapshot.dispatch_status?.mode==='planning_only',publisher=当前角色?.task_publisher!==false;const roleText=publisher?'任务发布端，可向六台终端分派':'普通终端，只能向本机配对无人机分派';const nodeText=planningOnly?'当前没有可用无人机：仅展示规划，不下发任务。':snapshot.local_uav_id?`本机 ${snapshot.ground_node_id||''} 直连 UAV${snapshot.local_uav_id}；${roleText}。`:`启用无人机：${active.map(id=>'UAV'+id).join('、')}。`;$('modeBanner').textContent=snapshot.live_mode?`当前为真机模式：${nodeText} 所有操作可能下发真实命令。`:'当前为模拟模式：界面操作只记录模拟指令，不会控制真实无人机。';$('modeBanner').className='mode-banner'+(snapshot.live_mode?' live':'');$('simTools').className='sim-tools'+(snapshot.live_mode?'':' show');
   const recordable=snapshot.recordable_uav_ids||active,recordingSelect=$('recordingUav'),selected=Number(recordingSelect.value)||recordable[0];recordingSelect.innerHTML=recordable.map(id=>`<option value="${id}">UAV${id}${snapshot.local_uav_id===id?' · 本机直连':''}</option>`).join('');recordingSelect.value=recordable.includes(selected)?String(selected):String(recordable[0]);
   绘制规划(mission);
   $('missionPhase').textContent=mission?(文本.阶段[mission.phase]||mission.phase):'尚未规划';$('missionSubject').textContent=mission?(文本.科目[mission.subject]||mission.subject):'—';$('missionId').textContent=mission?mission.mission_id:'—';$('remainingTime').textContent=mission&&mission.deadline_at?时间(mission.deadline_at-snapshot.server_time):'—';const uavs=mission?mission.uavs:{};const returned=Object.values(uavs).filter(item=>['return_commanded','landed'].includes(item.phase)).length;$('returnedCount').textContent=`${returned} / ${active.length}`;
@@ -555,9 +556,9 @@ function 渲染(snapshot){当前状态=snapshot;当前角色=snapshot.operator||
 }
 function 渲染预检(report){const failures=report&&report.failures?report.failures:{};const rows=[];if(report&&report.battery_threshold_enforced===false)rows.push('<li class="ok">实验室模式：已跳过起飞电量阈值检查；飞行中低电量自动返航仍启用</li>');Object.entries(failures).forEach(([id,items])=>{if(id==='system'){items.forEach(item=>rows.push(`<li class="bad">系统：${转义(文本.预检[item]||item)}</li>`));return}if(!items.length)rows.push(`<li class="ok">无人机 ${id}：检查通过</li>`);else items.forEach(item=>rows.push(`<li class="bad">无人机 ${id}：${转义(文本.预检[item]||item)}</li>`))});$('checkList').innerHTML=rows.join('')||'<li class="empty">没有预检结果</li>'}
 async function 刷新(){try{渲染(await 请求('/api/v1/status'));连接正常()}catch(error){连接异常();提示(error.message,true)}}
-async function 刷新采集(){try{渲染采集(await 请求('/api/v1/recording/status'))}catch(error){提示(error.message,true)}}
+async function 刷新采集(){if(地面正在退出)return;try{渲染采集(await 请求('/api/v1/recording/status'))}catch(error){提示(error.message,true)}}
 function 连接正常(){$('connectionDot').className='dot online';$('connectionText').textContent='后端连接正常'}function 连接异常(){$('connectionDot').className='dot';$('connectionText').textContent='后端连接中断'}
-function 连接状态流(){if(连接)连接.close();const protocol=location.protocol==='https:'?'wss:':'ws:';连接=new WebSocket(`${protocol}//${location.host}/ws/status`);连接.onopen=连接正常;连接.onmessage=event=>渲染(JSON.parse(event.data));连接.onerror=连接异常;连接.onclose=()=>{连接异常();setTimeout(连接状态流,1800)}}
+function 连接状态流(){if(地面正在退出)return;if(连接)连接.close();const protocol=location.protocol==='https:'?'wss:':'ws:';连接=new WebSocket(`${protocol}//${location.host}/ws/status`);连接.onopen=连接正常;连接.onmessage=event=>渲染(JSON.parse(event.data));连接.onerror=连接异常;连接.onclose=()=>{if(地面正在退出)return;连接异常();setTimeout(连接状态流,1800)}}
   $('planButton').onclick=()=>生成比赛覆盖();
 $('prepareButton').onclick=async()=>{try{const result=await 请求('/api/v1/takeoff/prepare',{method:'POST',body:'{}'});渲染预检(result.preflight);if(!result.ready){提示('起飞预检未通过，请处理红色检查项',true);return}确认令牌=result.confirmation_token;const uavs=当前状态.mission.uavs;$('takeoffSummary').innerHTML='<ul>'+Object.values(uavs).map(item=>`<li>无人机 ${item.uav_id}：目标高度 ${Number(item.target_altitude_m).toFixed(2)} 米</li>`).join('')+'</ul>';$('takeoffDialog').showModal()}catch(error){提示(error.message,true)}};
 $('cancelTakeoff').onclick=()=>{$('takeoffDialog').close();确认令牌=null};$('confirmTakeoff').onclick=async()=>{try{if(!确认令牌)throw new Error('确认令牌不存在，请重新执行起飞预检');$('confirmTakeoff').disabled=true;渲染(await 请求('/api/v1/takeoff/confirm',{method:'POST',body:JSON.stringify({token:确认令牌})}));$('takeoffDialog').close();确认令牌=null;提示('启用无人机的起飞命令已下发')}catch(error){提示(error.message,true)}finally{$('confirmTakeoff').disabled=false}};
@@ -669,21 +670,21 @@ $('terrainDisplayToggle').onchange=event=>设置地形显示(event.target.checke
 $('detailTerrainToggle').onchange=event=>设置地形显示(event.target.checked);
 更新规划模式();
 $('terminalSettings').onclick=()=>选择地面终端(true).then(刷新).catch(error=>提示(error.message,true));
-let 程序状态={},日志程序=null,日志偏移=0,日志请求中=false,日志代次=0,程序刷新中=false;
+let 程序状态={},日志程序=null,日志偏移=0,日志请求中=false,日志代次=0,程序刷新中=false,地面正在退出=false,停止程序中=false;
 async function 刷新程序状态(){
-  if(程序刷新中)return;程序刷新中=true;
-  try{const result=await 请求('/api/v1/programs',{timeoutMs:4000});程序状态=result.programs||{};
+  if(程序刷新中||地面正在退出)return;程序刷新中=true;
+  try{const result=await 请求('/api/v1/programs',{timeoutMs:4000});if(地面正在退出)return;程序状态=result.programs||{};
     const auth=result.authorization||{},failed=Object.entries(程序状态).some(([key,state])=>key!=='ground'&&state.state==='error');
     $('sshAuthNotice').hidden=!(['waiting','error'].includes(auth.state)||failed);
     $('sshAuthText').textContent=['waiting','error'].includes(auth.state)?auth.detail:'机载程序连接或启动异常，可查看程序日志。';
     $('sshReconnect').disabled=auth.state==='waiting';
     document.querySelectorAll('[data-program]').forEach(button=>{const state=程序状态[button.dataset.program]||{};button.classList.toggle('running',state.state==='running');button.title=state.detail||'尚未启动'});
-    if(日志程序)$('programDescription').textContent=程序状态[日志程序]?.detail||'';
+    if(日志程序&&!停止程序中)$('programDescription').textContent=程序状态[日志程序]?.detail||'';
   }catch(error){document.querySelectorAll('[data-program]').forEach(button=>{button.classList.remove('running');button.title='程序状态读取失败：'+error.message})}
   finally{程序刷新中=false}
 }
 async function 加载程序打印(){
-  if(!日志程序||日志请求中)return;
+  if(!日志程序||日志请求中||地面正在退出)return;
   const generation=日志代次,key=日志程序;日志请求中=true;
   const box=$('programLog'),follow=box.scrollHeight-box.scrollTop-box.clientHeight<40;
   try{const result=await 请求(`/api/v1/programs/${key}/logs?offset=${日志偏移}`,{timeoutMs:4000});
@@ -692,7 +693,7 @@ async function 加载程序打印(){
     if(result.text)box.appendChild(document.createTextNode(result.text.replace(/\x1b\[[0-9;]*m/g,'')));
     日志偏移=result.offset;$('programLogMore').hidden=日志偏移>=result.size;
     if(follow)box.scrollTop=box.scrollHeight;
-  }catch(error){if(generation===日志代次)$('programDescription').textContent=error.message}
+  }catch(error){if(generation===日志代次&&!停止程序中&&!地面正在退出)$('programDescription').textContent=error.message}
   finally{日志请求中=false}
 }
 document.querySelectorAll('[data-program]').forEach(button=>button.onclick=()=>{
@@ -700,6 +701,25 @@ document.querySelectorAll('[data-program]').forEach(button=>button.onclick=()=>{
   $('programTitle').textContent=button.textContent.trim();$('programDescription').textContent=程序状态[日志程序]?.detail||'正在读取';
   $('programDialog').showModal();加载程序打印();
 });
+$('stopProgram').onclick=async()=>{
+  const key=日志程序;if(!key||停止程序中)return;
+  const name=$('programTitle').textContent;
+  if(!confirm(`确认停止${name}及其子进程？${key==='ground'?'地面网页将离线，机载程序不会一起停止。':'对应程序正在执行的工作将被中断。'}`))return;
+  停止程序中=true;$('stopProgram').disabled=true;
+  $('programDescription').textContent='正在停止并核验进程退出……';
+  try{
+    const result=await 请求(`/api/v1/programs/${key}/stop`,{method:'POST',body:'{}',timeoutMs:45000});
+    if(key==='ground'){
+      地面正在退出=true;if(连接)连接.close();document.querySelectorAll('[data-program]').forEach(button=>button.classList.remove('running'));
+      $('programDescription').textContent=result.detail;$('programLog').appendChild(document.createTextNode('\n'+result.detail+'\n'));
+      $('planButton').disabled=true;$('prepareButton').disabled=true;$('returnButton').disabled=true;
+    }else{
+      await 刷新程序状态();if(日志程序===key)$('programDescription').textContent=result.detail;
+      提示(result.detail);
+    }
+  }catch(error){if(日志程序===key)$('programDescription').textContent=error.message;提示(error.message,true)}
+  finally{停止程序中=false;$('stopProgram').disabled=地面正在退出}
+};
 $('closeProgramLog').onclick=()=>$('programDialog').close();
 $('programDialog').addEventListener('close',()=>{日志程序=null;日志代次++});
 $('programLogMore').onclick=加载程序打印;

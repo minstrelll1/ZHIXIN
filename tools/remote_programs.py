@@ -112,7 +112,7 @@ def status(directory, offset):
     unhealthy = any(value == 'process has died' for value in node_states.values()) or 'RLException:' in text
     if 'Traceback (most recent call last)' in text and not node_states:
         unhealthy = True
-    unhealthy = unhealthy and not meta.get('borrowed')
+    unhealthy = unhealthy and not meta.get('borrowed') and not meta.get('stopped_by_operator')
     state = 'error' if unhealthy else ('running' if live else ('stopped' if meta else 'idle'))
     detail = '进程运行中' if live else '程序尚未启动或已停止'
     if unhealthy:
@@ -149,18 +149,19 @@ def ros_health(uid):
             with xmlrpc.client.ServerProxy(master_uri, transport=Transport()) as master:
                 code, _, address = master.lookupNode(caller, name)
                 if code != 1:
-                    return name, False
+                    return name, 0
             with xmlrpc.client.ServerProxy(address, transport=Transport()) as node:
                 code, _, pid = node.getPid(caller)
-                return name, code == 1 and int(pid) > 0
+                return name, int(pid) if code == 1 else 0
         except Exception:
-            return name, False
+            return name, 0
     names = [name for group in expected.values() for name in group]
     with ThreadPoolExecutor(max_workers=8) as pool:
         available = dict(pool.map(ping, names))
     return {key: {'ready': all(available[name] for name in group),
                   'present': [name for name in group if available[name]],
-                  'missing': [name for name in group if not available[name]]} for key, group in expected.items()}
+                  'missing': [name for name in group if not available[name]],
+                  'pids': {name: available[name] for name in group if available[name]}} for key, group in expected.items()}
 
 
 def apply_health(info, health, meta):
@@ -177,6 +178,95 @@ def apply_health(info, health, meta):
     return info
 
 
+def process_table():
+    table = {}
+    for directory in Path('/proc').glob('[0-9]*'):
+        try:
+            pid = int(directory.name)
+            stat = (directory / 'stat').read_text().rsplit(')', 1)[1].split()
+            args = (directory / 'cmdline').read_bytes().decode(errors='replace').split('\0')
+            if stat[0] == 'Z':
+                continue
+            table[pid] = dict(pid=pid, stamp=stat[19], parent=int(stat[1]), args=args)
+        except (OSError, ValueError, IndexError):
+            continue
+    return table
+
+
+def protected_process(item):
+    # ROS master/rosout 为共享基础设施，不属于某一个业务程序。
+    return any(Path(arg).name in ('rosmaster', 'roscore', 'rosout') for arg in item.get('args', []) if arg)
+
+
+def collect_tree(table, roots):
+    targets = {pid: table[pid] for pid, identity in roots.items()
+               if pid in table and table[pid]['stamp'] == identity['stamp'] and not protected_process(table[pid])}
+    while True:
+        added = {pid: item for pid, item in table.items() if item['parent'] in targets
+                 and pid not in targets and not protected_process(item)}
+        if not added:
+            return targets
+        targets.update(added)
+
+
+def stop_program(directory, key, uid):
+    import signal
+    roots = {}
+    meta = read_json(directory / 'process.json')
+    for item in (meta, read_json(directory / 'worker.json'), existing(key, uid)):
+        if alive(item):
+            roots[item['pid']] = item
+    table = process_table()
+    # 手工启动或启动指令被修改时，可由已验证的本机 ROS 节点找到进程。
+    health = ros_health(uid)[key]
+    for name, pid in health.get('pids', {}).items():
+        item = table.get(pid)
+        if item and any(name.rsplit('/', 1)[-1] in arg for arg in item['args']):
+            roots[pid] = item
+            # 程序 B 的日志包装器也要退出；不纳入未知 roslaunch 或交互 shell。
+            parent = table.get(item['parent'])
+            if parent and any(Path(arg).name == 'ros_log_capture.py' for arg in parent['args']):
+                roots[parent['pid']] = parent
+    targets = collect_tree(table, roots)
+    if any(protected_process(item) and item['parent'] in targets for item in table.values()):
+        raise RuntimeError('该启动进程同时管理共享 ROS 主节点，无法单独结束；未执行停止，请在原启动终端处理')
+    if os.getpid() in targets:
+        raise RuntimeError('拒绝将管理连接自身作为停止目标')
+    with (directory / 'console.log').open('ab') as log:
+        log.write(('\n请求停止%s；已识别进程：%s\n' % (NAMES[key], ','.join(map(str, targets)) or '无')).encode())
+    # 先让 roslaunch 接收 SIGINT 完成节点退出；残留节点再 TERM/KILL。
+    for sig, seconds in ((signal.SIGINT, 4), (signal.SIGTERM, 2), (signal.SIGKILL, 1)):
+        table = process_table()
+        targets.update(collect_tree(table, targets))
+        pending = {pid: item for pid, item in targets.items() if alive(item)}
+        for pid, item in pending.items():
+            if not alive(item):
+                continue
+            try:
+                os.kill(pid, sig)
+            except ProcessLookupError:
+                pass
+        deadline = time.monotonic() + seconds
+        while time.monotonic() < deadline:
+            targets.update(collect_tree(process_table(), targets))
+            if not any(alive(item) for item in targets.values()):
+                break
+            time.sleep(.1)
+        if not any(alive(item) for item in targets.values()):
+            break
+    remaining = [pid for pid, item in targets.items() if alive(item)]
+    nodes = ros_health(uid)[key]
+    verified = not remaining and not nodes['present']
+    detail = '程序及已识别子进程已退出' if verified else '仍有进程或 ROS 节点未退出：%s %s' % (remaining, nodes['present'])
+    if verified:
+        write_json(directory / 'process.json', {'stopped_by_operator': True, 'stopped_at': time.time()})
+        write_json(directory / 'worker.json', {})
+    with (directory / 'console.log').open('ab') as log:
+        log.write((detail + '\n').encode())
+    return dict(state='stopped' if verified else 'error', detail=detail, stop_verified=verified,
+                remaining_pids=remaining, nodes=nodes)
+
+
 def rpc(payload):
     import fcntl
     uid, model = int(payload['uav_id']), payload['model']
@@ -188,6 +278,12 @@ def rpc(payload):
     runtime = root / 'ground_runtime' / ('programs_uav%d' % uid)
     runtime.mkdir(parents=True, exist_ok=True)
     result = {}
+    action = payload.get('action', 'status')
+    selected = payload.get('program')
+    if action not in ('start', 'status', 'stop') or (selected is not None and selected not in NAMES):
+        raise ValueError('程序操作无效')
+    if action == 'stop' and selected not in NAMES:
+        raise ValueError('停止时必须指定一个程序')
     health = ros_health(uid)
     for key in NAMES:
         directory = runtime / key
@@ -195,16 +291,19 @@ def rpc(payload):
         try:
             with (directory / 'launch.lock').open('a') as lock:
                 fcntl.flock(lock, fcntl.LOCK_EX)
+                if action == 'stop' and key == selected:
+                    result[key] = stop_program(directory, key, uid)
+                    continue
                 meta = read_json(directory / 'process.json')
                 pending = read_json(directory / 'worker.json')
                 found = existing(key, uid) if not alive(meta) else {}
-                if payload.get('action') == 'start' and health[key]['ready'] and not meta:
+                if action == 'start' and (selected is None or selected == key) and health[key]['ready'] and not meta:
                     write_json(directory / 'process.json', {'borrowed': True, 'node_only': True})
                     with (directory / 'console.log').open('ab') as log:
                         log.write(('复用已经就绪的%s ROS 节点；原终端历史输出无法追溯。\n' % NAMES[key]).encode())
                 if found and payload.get('action') != 'start':
                     write_json(directory / 'process.json', found)
-                if payload.get('action') == 'start' and not alive(meta) and not alive(pending) and not health[key]['ready']:
+                if action == 'start' and (selected is None or selected == key) and not alive(meta) and not alive(pending) and not health[key]['ready']:
                     if health[key]['present'] and not found:
                         message = '已有部分 ROS 节点运行，暂不重复启动：' + '、'.join(health[key]['present'])
                         with (directory / 'console.log').open('ab') as log:
@@ -234,7 +333,7 @@ def rpc(payload):
                 info = status(directory, payload.get('offsets', {}).get(key, 0))
                 result[key] = apply_health(info, health[key], read_json(directory / 'process.json'))
         except Exception as error:
-            result[key] = dict(state='error', detail='启动或读取失败：%s' % error)
+            result[key] = dict(state='error', detail='程序操作失败：%s' % error)
     print(json.dumps(result, ensure_ascii=False))
 
 

@@ -164,6 +164,9 @@ class GroundEntry:
         self.stop_event = asyncio.Event()
         self.selection = None
         self.error = ""
+        self.shutdown_callback = None
+        self.shutting_down = False
+        self.shutdown_lock = asyncio.Lock()
 
         @asynccontextmanager
         async def lifespan(app):
@@ -206,6 +209,48 @@ class GroundEntry:
             try:
                 return self.programs.reconnect()
             except ValueError as error:
+                raise HTTPException(status_code=409, detail=str(error)) from error
+
+        @app.post("/api/v1/programs/{key}/stop")
+        async def stop_program(key: str, request: Request):
+            from urllib.parse import urlparse
+            if request.client and request.client.host not in ('127.0.0.1', '::1', 'testclient'):
+                raise HTTPException(status_code=403, detail='只能在本机网页停止程序')
+            origin = request.headers.get('origin', '')
+            if origin and urlparse(origin).hostname not in ('127.0.0.1', 'localhost', '::1'):
+                raise HTTPException(status_code=403, detail='只允许本机网页操作')
+            if key == 'ground':
+                if not self.shutdown_callback:
+                    raise HTTPException(status_code=409, detail='当前启动方式不支持网页退出，请运行 tools/stop_ground.ps1')
+                async with self.shutdown_lock:
+                    if not self.shutting_down:
+                        if os.name == 'nt':
+                            # 独立检查进程退出，即使后端清理卡住也能处理已核验的残留。
+                            cleanup = subprocess.Popen(['powershell.exe', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File',
+                                              str(ROOT / 'tools/stop_ground.ps1'), '-BackendPid', str(os.getpid()),
+                                              '-WebPort', self.env.get('COMPETITION_PORT', '8000'), '-SkipRequest', '-Quiet'],
+                                             cwd=str(ROOT), creationflags=subprocess.CREATE_NO_WINDOW,
+                                             stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+                            # 等独立助手记录进程树后才退出，避免助手启动较慢时漏掉孤儿子进程。
+                            try:
+                                ready = await asyncio.wait_for(asyncio.to_thread(cleanup.stdout.readline), timeout=10)
+                            except asyncio.TimeoutError as error:
+                                raise HTTPException(status_code=503, detail='退出核验助手尚未就绪，请运行 stop_ground.cmd 查看结果') from error
+                            finally:
+                                if cleanup.poll() is not None:
+                                    cleanup.stdout.close()
+                            if ready.strip() != b'GROUND_STOP_READY':
+                                raise HTTPException(status_code=503, detail='退出核验助手启动失败，请运行 stop_ground.cmd 查看结果')
+                            cleanup.stdout.close()
+                        self.shutting_down = True
+                        asyncio.get_running_loop().call_later(.5, self.shutdown_callback)
+                        print('正在关闭地面竞赛服务；独立清理程序将核验进程退出。', flush=True)
+                return dict(state='stopping', detail='正在停止地面服务并核验进程；结果写入 ground_logs/ground_stop.log')
+            try:
+                return await asyncio.to_thread(self.programs.stop_program, key)
+            except ValueError as error:
+                raise HTTPException(status_code=422, detail=str(error)) from error
+            except RuntimeError as error:
                 raise HTTPException(status_code=409, detail=str(error)) from error
 
         @app.get("/api/v1/programs/{key}/logs")
@@ -349,9 +394,16 @@ def run():
     for filename in ('terrain_basemap.js', 'competition_esri_20170724.jpg'):
         if not (WEB / filename).is_file():
             print("底图文件缺失，请更新地面端：" + filename, flush=True)
-    uvicorn.run(GroundEntry(), host=os.environ.get("COMPETITION_HOST", "0.0.0.0"),
-                port=int(os.environ.get("COMPETITION_PORT", "8000")),
-                log_level="warning", access_log=False)
+    entry = GroundEntry()
+    server = uvicorn.Server(uvicorn.Config(entry, host=os.environ.get("COMPETITION_HOST", "0.0.0.0"),
+                                         port=int(os.environ.get("COMPETITION_PORT", "8000")),
+                                         log_level="warning", access_log=False, timeout_graceful_shutdown=8))
+    def shutdown():
+        entry.programs.stop()
+        entry.stop_event.set()
+        server.should_exit = True
+    entry.shutdown_callback = shutdown
+    server.run()
 
 
 if __name__ == "__main__":

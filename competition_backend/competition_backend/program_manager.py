@@ -48,6 +48,8 @@ class ProgramManager:
         self.lock = threading.RLock()
         self.stop_event = threading.Event()
         self.restart_request = threading.Event()
+        self.request_lock = threading.RLock()
+        self.operator_stopped = set()
         self.thread = None
         self.local = None
         self.auth = dict(state='idle', detail='')
@@ -79,21 +81,43 @@ class ProgramManager:
         with self._path(key).open('a', encoding='utf-8') as stream:
             stream.write(redact(text, self.secrets))
 
-    def _request(self, action, offsets):
+    def _request(self, action, offsets, program=None):
         source = (self.root / 'tools' / 'remote_programs.py').read_text(encoding='utf-8-sig')
-        payload = dict(action=action, uav_id=self.local['uav_id'], model=self.local['model'], offsets=offsets)
+        payload = dict(action=action, uav_id=self.local['uav_id'], model=self.local['model'], offsets=offsets, program=program)
         code = 'PROGRAM_SOURCE = ' + repr(source) + '\n' + source + '\nrpc(' + repr(payload) + ')\n'
         user = self.env.get('COMPETITION_SSH_USER', 'amov')
         # accept-new 只接受初次连接，不覆盖已改变的主机密钥。
         command = ['ssh', '-T', '-o', 'BatchMode=yes', '-o', 'StrictHostKeyChecking=accept-new',
                    '-o', 'ConnectTimeout=4', '-o', 'ServerAliveInterval=4', '-o', 'ServerAliveCountMax=1',
                    '%s@%s' % (user, self.local['onboard_host']), 'python3 -']
-        result = subprocess.run(command, input=code.encode(), capture_output=True, timeout=16,
+        result = subprocess.run(command, input=code.encode(), capture_output=True, timeout=25 if action == 'stop' else 16,
                                 creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
         if result.returncode:
             detail = (result.stderr or result.stdout).decode('utf-8', errors='replace').strip()
             raise RuntimeError('SSH 连接或机载程序管理失败：' + detail)
         return json.loads(result.stdout.decode('utf-8'))
+
+    def stop_program(self, key):
+        if key not in NAMES or key == 'ground':
+            raise ValueError('机载程序名称无效')
+        if not self.local:
+            raise ValueError('请先选择本地地面终端')
+        with self.lock:
+            self.operator_stopped.add(key)
+            self.states[key] = dict(state='stopping', detail='正在结束程序及其子进程')
+        try:
+            with self.request_lock:
+                result = self._request('stop', {}, program=key)[key]
+                with self.lock:
+                    self.states[key] = dict(result, checked_at=time.time())
+            self._append(key, '\n' + result.get('detail', '') + '\n')
+            if not result.get('stop_verified'):
+                raise RuntimeError(result.get('detail', '尚未确认进程全部退出'))
+            return result
+        except Exception as error:
+            with self.lock:
+                self.states[key] = dict(state='error', detail='停止未确认：' + str(error), stop_verified=False)
+            raise RuntimeError('停止未确认：' + str(error)) from error
 
     def _authorize(self):
         if os.name != 'nt':
@@ -147,25 +171,32 @@ class ProgramManager:
                 self.restart_request.clear()
                 action, authorization_attempted = 'start', False
             try:
-                result = self._request(action, offsets)
-                action, failed_once = 'status', False
-                for key in offsets:
-                    info = result[key]
-                    raw = base64.b64decode(info.pop('log', ''))
-                    if info.get('offset', offsets[key]) < offsets[key]:
-                        decoders[key].reset()
-                        self._append(key, '\n机载日志重新开始。\n')
-                    self._append(key, decoders[key].decode(raw))
-                    if info.get('state') == 'error' and not raw:
+                with self.request_lock:
+                    if action == 'start' and self.operator_stopped:
+                        result = self._request('status', offsets)
+                        for key in NAMES:
+                            if key != 'ground' and key not in self.operator_stopped:
+                                result[key] = self._request('start', offsets, program=key)[key]
+                    else:
+                        result = self._request(action, offsets)
+                    action, failed_once = 'status', False
+                    for key in offsets:
+                        info = result[key]
+                        raw = base64.b64decode(info.pop('log', ''))
+                        if info.get('offset', offsets[key]) < offsets[key]:
+                            decoders[key].reset()
+                            self._append(key, '\n机载日志重新开始。\n')
+                        self._append(key, decoders[key].decode(raw))
+                        if info.get('state') == 'error' and not raw:
+                            with self.lock:
+                                previous = self.states[key].get('detail')
+                            if previous != info.get('detail'):
+                                self._append(key, '\n' + info.get('detail', '程序异常') + '\n')
+                        offsets[key] = info.get('offset', offsets[key])
                         with self.lock:
-                            previous = self.states[key].get('detail')
-                        if previous != info.get('detail'):
-                            self._append(key, '\n' + info.get('detail', '程序异常') + '\n')
-                    offsets[key] = info.get('offset', offsets[key])
-                    with self.lock:
-                        self.states[key] = {**info, 'checked_at': time.time()}
-                cursor_path.parent.mkdir(parents=True, exist_ok=True)
-                cursor_path.write_text(json.dumps({'host': self.local.get('onboard_host'), 'offsets': offsets}), encoding='utf-8')
+                            self.states[key] = {**info, 'checked_at': time.time()}
+                    cursor_path.parent.mkdir(parents=True, exist_ok=True)
+                    cursor_path.write_text(json.dumps({'host': self.local.get('onboard_host'), 'offsets': offsets}), encoding='utf-8')
             except Exception as error:
                 if action == 'start' and not authorization_attempted and re.search(r'Permission denied.*(?:publickey|password)', str(error)):
                     authorization_attempted = True

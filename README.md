@@ -175,3 +175,16 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\setup_onboard_ss
 目标检测使用 `~/SpireCV_bj/src/spirecv-ros/devel/setup.bash`；程序 B 使用 `~/recon_ws/devel/setup.bash`，启动参数为 `flight_mode:=outdoor_small_range`。这两个工作空间需已在无人机上安装。
 
 启动管理脚本由地面端通过 SSH 自动传送。此次新增程序 B 的 `/uavN/target_scheduler/completed_targets` 话题兼容，需要按上面的机载更新命令同步竞赛机载代码；不修改目标检测、程序 B 或厂商工作空间。U 盘复制时同时复制根目录的 `智信竞赛.exe`。原有命令行启动方式仍可使用。
+
+
+### 停止程序
+
+- 关闭地面端：点击“竞赛程序地面端”→“停止程序”；或双击项目目录的 `stop_ground.cmd`，等待显示退出核验结果。关闭浏览器只关闭页面。
+- 关闭机载端、目标检测或程序 B：点击对应程序名称→“停止程序”。停止并核验该程序及子进程；失败会明确提示，手动停止后不会自动重新拉起，可按原启动指令人工启动。
+- 关闭地面端不会同时关闭机载程序。地面退出记录：`ground_logs/ground_stop.log`。
+
+命令行关闭地面端（项目目录执行）：
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\stop_ground.ps1
+```
