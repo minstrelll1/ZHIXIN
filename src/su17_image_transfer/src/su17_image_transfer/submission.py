@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import datetime
+import hashlib
 import json
 import math
 import os
@@ -48,10 +49,9 @@ def _position(metadata):
         return None
     longitude = _number(metadata.get("longitude_deg", metadata.get("target_longitude")))
     latitude = _number(metadata.get("latitude_deg", metadata.get("target_latitude")))
-    altitude = _number(metadata.get("altitude_gps_m", metadata.get("target_altitude")))
     if longitude is None or latitude is None or not -180 <= longitude <= 180 or not -90 <= latitude <= 90:
         return None
-    return [longitude, latitude] if altitude is None else [longitude, latitude, altitude]
+    return [longitude, latitude]  # 赛事模板使用二维经纬度，高度保留在原始反馈中。
 
 
 def _local_position(metadata):
@@ -80,7 +80,9 @@ def _all_metadata(output_root):
         if path.name == "subject1_submission.json":
             continue
         try:
-            yield path, json.loads(path.read_text(encoding="utf-8"))
+            data = json.loads(path.read_text(encoding="utf-8"))
+            if isinstance(data, dict):
+                yield path, data
         except (OSError, ValueError):
             continue
 
@@ -102,7 +104,7 @@ def update_subject1_submission(output_root, mission_id, team_name=None):
         position = _position(metadata)
         local_position = _local_position(metadata)
         image_source = source_json.with_suffix(".jpg")
-        image_name = "%s_%s.jpg" % (target_id, source_json.stem)
+        image_name = "%s_%s.jpg" % (hashlib.sha256(target_id.encode("utf-8")).hexdigest()[:16], source_json.stem)
         image_path = None
         if image_source.is_file():
             image_path = image_dir / image_name
@@ -123,7 +125,7 @@ def update_subject1_submission(output_root, mission_id, team_name=None):
     for target_id, item in sorted(records.items()):
         metadata = item["first"]
         moving = bool(metadata.get("is_moving", False))
-        points = item["points"]
+        points = sorted(item["points"], key=lambda point: point["timestamp"])
         properties = {
             "targetCategory": "移动" if moving else "固定",
             "targetType": str(metadata.get("target_type") or metadata.get("category") or "其他"),
@@ -131,6 +133,8 @@ def update_subject1_submission(output_root, mission_id, team_name=None):
             "imagePath": item["image"],
             "confidence": _number(metadata.get("confidence", metadata.get("score"))),
         }
+        # 可选字段没有值时省略，不向赛事接口发送 null。
+        properties = {key: value for key, value in properties.items() if value is not None}
         if item.get("local_positions"):
             properties["localPosition"] = item["local_positions"]
         if moving:
@@ -154,7 +158,7 @@ def update_subject1_submission(output_root, mission_id, team_name=None):
 
     document = {
         "type": "FeatureCollection",
-        "name": team_name or os.environ.get("COMPETITION_TEAM_NAME", "智信"),
+        "name": team_name or os.environ.get("COMPETITION_TEAM_NAME", "北方自控智群队"),
         "description": "科目一目标结果（由机载时间戳图片回传生成）",
         "crs": {"type": "lonlat", "properties": {"lonlat": "EPSG:4326"}},
         "features": features,

@@ -196,3 +196,8 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\setup_onboard_ss
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\stop_ground.ps1
 ```
+
+
+### 科目一结果上报
+
+任务发布端点击“科目一成果上报”，选择已回传任务或 JSON 文件 → 生成并校验 → 下载核对 → 确认上报。参赛队名默认“北方自控智群队”。接口采用 UTF-8 JSON 文件的 form-data 上传；图片另存本地，不自动上报。详见 [科目一上报说明](subject1_reporting.md)。

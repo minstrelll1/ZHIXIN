@@ -10,7 +10,7 @@
     header{background:var(--navy);color:#fff;padding:20px 28px;display:flex;align-items:center;justify-content:space-between;gap:18px;box-shadow:0 5px 20px rgba(8,25,50,.2)}
     .brand h1{margin:0;font-size:24px;letter-spacing:.04em}.brand p{margin:5px 0 0;color:#b9cae2;font-size:13px}.connection{display:flex;align-items:center;gap:9px;font-size:13px}.dot{width:10px;height:10px;border-radius:50%;background:#f59e0b;box-shadow:0 0 0 4px rgba(245,158,11,.16)}.dot.online{background:#22c55e;box-shadow:0 0 0 4px rgba(34,197,94,.16)}
     main{max-width:1480px;margin:0 auto;padding:22px}.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow)}
-    .toolbar{padding:18px;display:grid;grid-template-columns:minmax(160px,1fr) minmax(150px,.8fr) auto auto auto;gap:12px;align-items:end}.field label{display:block;color:var(--muted);font-size:12px;margin-bottom:6px}.field select,.field input{width:100%;height:42px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--ink);padding:0 11px}
+    .toolbar{padding:18px;display:grid;grid-template-columns:minmax(160px,1fr) minmax(150px,.8fr) auto auto auto auto;gap:12px;align-items:end}.field label{display:block;color:var(--muted);font-size:12px;margin-bottom:6px}.field select,.field input{width:100%;height:42px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--ink);padding:0 11px}
     .area-settings{margin-top:12px;padding:15px 18px}.area-controls{display:grid;grid-template-columns:repeat(5,minmax(145px,1fr));gap:12px;align-items:end}.area-controls.compact{grid-template-columns:repeat(6,minmax(120px,1fr));gap:9px}.area-controls.compact #forestEdge{max-width:110px}.reference-controls{grid-template-columns:repeat(4,minmax(145px,1fr));margin-top:10px}.area-actions{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:10px}.area-actions label,.detail-terrain-toggle{font-size:12px;color:var(--muted);display:inline-flex;align-items:center;gap:5px;white-space:nowrap}.area-note{font-size:12px;color:var(--muted);line-height:1.55;padding-top:12px}
     button{height:42px;border:0;border-radius:9px;padding:0 17px;font-weight:600;cursor:pointer;transition:.18s}.primary{background:var(--blue);color:#fff}.primary:hover{background:var(--blue-dark)}.secondary{background:#e8efff;color:#1749a8}.danger{background:#feeceb;color:var(--red)}button:disabled{cursor:not-allowed;opacity:.45}
     .summary{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin:16px 0}.summary-card{padding:16px 18px}.summary-card span{display:block;font-size:12px;color:var(--muted);margin-bottom:7px}.summary-card strong{font-size:20px;font-weight:650}.mode-banner{padding:11px 15px;margin-bottom:16px;border-radius:10px;background:#fff7e6;border:1px solid #f7d58b;color:#854d0e;font-size:13px}.mode-banner.live{background:#fff0ef;border-color:#f4b4ae;color:#9f1d14}
@@ -228,6 +228,7 @@
     .program-status button{display:inline-flex;align-items:center;gap:7px;height:30px;padding:0;background:transparent;border:0;border-radius:0;color:#b42318;font-size:13px;font-weight:600;white-space:nowrap}
     .program-status button i{width:8px;height:8px;border-radius:50%;background:currentColor;flex:none}
     .program-status button.running{color:#15803d}
+    #subject1ReportDialog{max-width:720px}#subject1ReportDialog .field{margin:12px 0}#subject1ReportDialog .area-actions{flex-wrap:wrap}#subject1Endpoint{overflow-wrap:anywhere}
     #programDialog{width:min(1100px,96vw);max-width:1100px}
     #programLog{height:62vh;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;padding:14px;background:#0f172a;color:#e2e8f0;font:13px/1.6 Consolas,"Microsoft YaHei",monospace;margin:12px 0 0}
     #sshAuthNotice{padding:8px 0;color:#b42318;font-size:13px}#sshAuthNotice button{height:30px;margin-left:10px;font-size:12px}
@@ -253,6 +254,7 @@
     <div class="field"><label for="subject">比赛科目</label><select id="subject"><option value="subject1">科目一：环境感知与目标识别</option><option value="subject2">科目二：任务指挥与蜂群协作</option><option value="subject3">科目三：自主导航与障碍穿越</option></select></div>
     <div class="field"><label for="duration">比赛时限（秒，留空使用配置）</label><input id="duration" type="number" min="1" step="1" placeholder="使用科目默认时限"></div>
     <button id="planButton" class="secondary">规划并分派</button>
+    <button id="subject1ReportButton" class="secondary">科目一成果上报</button>
     <button id="prepareButton" class="primary" disabled>一键起飞预检</button>
     <button id="returnButton" class="danger" disabled>启用无人机全部返航</button>
   </section>
@@ -328,6 +330,16 @@
   <div class="dialog-body"><h2>选择本地地面终端</h2><div class="operator-grid"><div class="field"><label for="operatorTerminal">地面终端编号</label><select id="operatorTerminal"><option value="">请选择终端编号</option><option value="1">地面终端 1 / UAV1</option><option value="2">地面终端 2 / UAV2</option><option value="3">地面终端 3 / UAV3</option><option value="4">地面终端 4 / UAV4</option><option value="5">地面终端 5 / UAV5</option><option value="6">地面终端 6 / UAV6</option></select></div><div class="field"><label for="operatorModel">固定机型</label><select id="operatorModel" disabled><option value="p600">P600</option><option value="su17">SU17</option></select></div><label class="operator-role"><input id="operatorPublisher" type="checkbox"><span><b>本机是任务发布端</b></span></label></div><div id="operatorMessage" class="area-note"></div><div class="dialog-actions"><button id="operatorEnter" class="primary">进入任务界面</button></div></div>
 </dialog>
 
+<dialog id="subject1ReportDialog"><div class="dialog-body">
+  <div class="traffic-dialog-head"><h2>科目一成果上报</h2><button id="closeSubject1Report" class="secondary">关闭</button></div>
+  <p id="subject1Endpoint" class="area-note"></p>
+  <div class="field"><label for="subject1Team">参赛队名</label><input id="subject1Team" value="北方自控智群队"></div>
+  <div class="field"><label for="subject1Mission">已回传任务（含本机已同步到的其他无人机结果）</label><select id="subject1Mission"></select></div>
+  <div class="field"><label for="subject1File">或选择整理好的 JSON 文件（选择文件时优先使用文件）</label><input id="subject1File" type="file" accept=".json,application/json"></div>
+  <p class="area-note">本接口只提交 JSON 文件，imagePath 指向的图片不会随文件上传。请先核对目标数量及六机结果同步情况。</p>
+  <div class="area-actions"><button id="prepareSubject1Report" class="secondary">生成并校验</button><a id="downloadSubject1Report" hidden>下载待上报 JSON</a><button id="sendSubject1Report" class="primary" disabled>确认上报赛事方</button></div>
+  <pre id="subject1ReportSummary" style="white-space:pre-wrap;overflow-wrap:anywhere;max-height:40vh;overflow:auto" role="status">请生成并校验结果文件。</pre>
+</div></dialog>
 <dialog id="programDialog"><div class="dialog-body"><div class="traffic-dialog-head"><h2 id="programTitle">程序打印</h2><div><button id="stopProgram" class="danger">停止程序</button> <button id="closeProgramLog" class="detail-close">关闭窗口</button></div></div><div id="programDescription"></div><button type="button" id="programLogMore" class="secondary">继续加载后续打印</button><pre id="programLog" tabindex="0"></pre></div></dialog>
 <dialog id="takeoffDialog">
   <div class="dialog-body"><h2>确认启用无人机一键起飞</h2><p>本次启用的无人机已通过预检。确认后将自动解锁、进入 COMMAND_CONTROL 并升至各自任务高度；稳定到达后，外部模式向程序 B 发布任务，本工程模式开始执行航线。飞行中可按原遥控器流程接管，本工程不会自动抢回控制权。</p><div id="takeoffSummary"></div><div class="dialog-actions"><button id="cancelTakeoff" class="secondary">取消</button><button id="confirmTakeoff" class="primary">确认起飞</button></div></div>
@@ -664,6 +676,40 @@ async function 生成比赛覆盖(){
 }
 $('planningAreaMode').onchange=更新规划模式;
 for(const id of ['scoutRadius','flightSpeed','hoverScanSeconds','regionAspect','forestEdge','terrainExclusions'])$(id).onchange=()=>{比赛覆盖方案=null;更新规划模式()};
+let 成果草稿=null,成果操作中=false;
+function 清除成果草稿(){成果草稿=null;$('sendSubject1Report').disabled=true;$('downloadSubject1Report').hidden=true;$('subject1ReportSummary').textContent='内容已改变，请重新生成并校验。'}
+function 成果忙碌(value){成果操作中=value;for(const id of ['subject1Team','subject1Mission','subject1File','prepareSubject1Report'])$(id).disabled=value;$('sendSubject1Report').disabled=value||!成果草稿;}
+for(const id of ['subject1Team','subject1Mission','subject1File'])$(id).addEventListener('change',清除成果草稿);
+$('subject1Team').addEventListener('input',清除成果草稿);
+$('subject1Mission').addEventListener('change',()=>{$('subject1File').value=''});
+$('subject1ReportButton').onclick=async()=>{
+  $('subject1ReportDialog').showModal();if(成果操作中)return;
+  清除成果草稿();成果忙碌(true);
+  try{const data=await 请求('/api/v1/subject1/report');$('subject1Endpoint').textContent='上报接口：'+data.endpoint;
+    $('subject1Team').value=data.team_name;const select=$('subject1Mission');select.replaceChildren();
+    for(const id of data.missions){const option=document.createElement('option');option.value=id;option.textContent=id;select.appendChild(option)}
+    $('subject1ReportSummary').textContent=data.missions.length?'请选择任务或 JSON 文件，再点击生成并校验。':'本机尚无已回传的科目一目标数据，可选择整理好的 JSON 文件。';
+  }catch(error){$('subject1ReportSummary').textContent=error.message}finally{成果忙碌(false)}
+};
+$('closeSubject1Report').onclick=()=>$('subject1ReportDialog').close();
+$('prepareSubject1Report').onclick=async()=>{
+  if(成果操作中)return;清除成果草稿();成果忙碌(true);
+  try{const file=$('subject1File').files[0],payload={team_name:$('subject1Team').value.trim()};
+    if(file){if(file.size>16*1024*1024)throw Error('JSON 文件超过 16 MB');try{payload.document=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(await file.arrayBuffer()));}catch(error){throw Error('文件不是有效的 UTF-8 JSON，请检查文件编码和格式');}}else{payload.mission_id=$('subject1Mission').value;if(!payload.mission_id)throw Error('请选择结果 JSON 文件或已回传任务');}
+    成果草稿=await 请求('/api/v1/subject1/report/prepare',{method:'POST',body:JSON.stringify(payload),timeoutMs:60000});
+    $('downloadSubject1Report').href=成果草稿.download_url;$('downloadSubject1Report').hidden=false;
+    $('subject1ReportSummary').textContent=`参赛队：${成果草稿.team_name}\n目标总数：${成果草稿.target_count}（固定 ${成果草稿.fixed}，移动 ${成果草稿.moving}）\n未写入结果的目标：${成果草稿.skipped_count}\n带图片路径的目标：${成果草稿.image_count}（图片不随本接口上传）\nJSON 格式校验通过。请下载核对后点击确认上报。`;
+  }catch(error){$('subject1ReportSummary').textContent=error.message}finally{成果忙碌(false)}
+};
+$('sendSubject1Report').onclick=async()=>{
+  if(成果操作中||!成果草稿)return;
+  if(!confirm(`将以“${成果草稿.team_name}”向赛事方上报 ${成果草稿.target_count} 个目标。确认已核对本次 JSON 文件？`))return;
+  成果忙碌(true);$('subject1ReportSummary').textContent='正在上报，请等待赛事回执……';
+  try{const result=await 请求('/api/v1/subject1/report/submit',{method:'POST',body:JSON.stringify({draft_id:成果草稿.draft_id,confirmed:true}),timeoutMs:30000});
+    $('subject1ReportSummary').textContent=result.detail+'\n'+(result.response||'');成果草稿=null;
+  }catch(error){$('subject1ReportSummary').textContent='未获得明确上报结果：'+error.message+'；未自动重试，请先核实赛事方是否已收到。';成果草稿=null;}finally{成果忙碌(false)}
+};
+
 $('exportCoverage').onclick=()=>{const plan=当前状态?.mission;if(!plan?.prepared_plan)return;const url=URL.createObjectURL(new Blob([JSON.stringify(plan,null,2)],{type:'application/json'})),a=document.createElement('a');a.href=url;a.download='科目一二_六机覆盖方案.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)};
 function 设置地形显示(value){地形显示=!!value;if(地形显示){底图脚本尝试=0;准备地形底图();}$('terrainDisplayToggle').checked=地形显示;$('detailTerrainToggle').checked=地形显示;固定规划绘制键='';绘制规划(当前状态?.mission);同步详情规划图()}
 $('terrainDisplayToggle').onchange=event=>设置地形显示(event.target.checked);

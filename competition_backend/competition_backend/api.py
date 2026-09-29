@@ -34,6 +34,7 @@ from .image_aggregation import (
     local_image_manifest,
     resolve_image_file,
 )
+from .subject1_reporting import reporting_router
 from .journal import EventJournal
 from .groundstation_capture import PassivePointCloudCapture
 from .models import ReturnReason, Telemetry
@@ -652,6 +653,14 @@ def create_app(environment=None) -> FastAPI:
         if current.get("selection_pending") or not current["configured"] or not current["task_publisher"]:
             raise HTTPException(status_code=403, detail="只有任务发布端可以修改并同步机队配置")
         return current
+
+    def _require_results_publisher():
+        role = _require_operator_ready()
+        if not role["task_publisher"]:
+            raise HTTPException(status_code=403, detail="请由任务发布端统一上报科目一结果")
+        return role
+
+    app.include_router(reporting_router(image_root, _require_results_publisher))
 
     def _verify_peer_publisher(node_id: str) -> Dict[str, Any]:
         if not operator_selection_required:

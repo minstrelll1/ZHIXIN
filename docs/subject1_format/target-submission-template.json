@@ -1,0 +1,93 @@
+{
+    "type": "FeatureCollection",
+    "name": "XXX(参赛队名)",
+    "description": "用于提交科目一目标结果的 GeoJSON 格式模板",
+    "crs": {
+      "type": "lonlat",
+      "properties": {
+        "lonlat": "EPSG:4326"
+      }
+    },
+    "features": [
+      {
+        "type": "Feature",
+        "id": "target-001",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [116.407434, 39.904224]
+        },
+        "properties": {
+          "targetCategory": "固定",
+          "targetType": "车辆",
+          "targetModel": "车辆2",
+          "imagePath": "./images/target-001.jpg",
+          "confidence": 0.95,
+          "timestamp": "2026-07-23T10:00:00+08:00"
+        }
+      },
+      {
+        "type": "Feature",
+        "id": "target-002",
+        "geometry": {
+          "type": "LineString",
+          "coordinates": [
+            [116.4100, 39.9100],
+            [116.4120, 39.9120],
+            [116.4150, 39.9150],
+            [116.4180, 39.9180]
+          ]
+        },
+        "properties": {
+          "targetCategory": "移动",
+          "targetType": "车辆",
+          "targetModel": "车辆5",
+          "imagePath": "./images/target-002.jpg",
+          "confidence": 0.92,
+          "trackStartTime": "2026-07-23T10:15:03+08:00",
+          "trackEndTime": "2026-07-23T10:15:12+08:00",
+          "trackPoints": [
+            {
+              "coordinates": [116.4100, 39.9100],
+              "timestamp": "2026-07-23T10:15:03+08:00"
+            },
+            {
+              "coordinates": [116.4120, 39.9120],
+              "timestamp": "2026-07-23T10:15:06+08:00"
+            },
+            {
+              "coordinates": [116.4150, 39.9150],
+              "timestamp": "2026-07-23T10:15:09+08:00"
+            },
+            {
+              "coordinates": [116.4180, 39.9180],
+              "timestamp": "2026-07-23T10:15:12+08:00"
+            }
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "id": "target-003",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [116.4200, 39.9200]
+        },
+        "properties": {
+          "targetCategory": "固定",
+          "targetType": "人员",
+          "targetModel": "人员3",
+          "imagePath": "./images/target-003.jpg",
+          "confidence": 0.88,
+          "timestamp": "2026-07-23T10:20:00+08:00"
+        }
+      }
+    ],
+    "metadata": {
+      "version": "1.0",
+      "createdAt": "2026-07-23T10:34:00+08:00",
+      "coordinateSystem": "WGS84",
+      "coordinateOrder": "[经度 longitude, 纬度 latitude]",
+      "targetCategories": ["固定", "移动"],
+      "targetTypes": ["车辆", "人员", "工事", "其他"]
+    }
+  }
