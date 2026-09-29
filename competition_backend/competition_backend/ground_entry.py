@@ -11,7 +11,8 @@ import time
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Body, HTTPException, WebSocket, WebSocketDisconnect
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, FileResponse
+from .program_manager import ProgramManager, ConsoleTee
 from competition_shared.fleet import FleetStore, PROFILES
 from competition_shared.runtime import ground_environment
 
@@ -152,12 +153,13 @@ class GroundServices:
 
 
 class GroundEntry:
-    def __init__(self, environment=None, app_factory=None, services_factory=GroundServices):
+    def __init__(self, environment=None, app_factory=None, services_factory=GroundServices, programs_factory=ProgramManager):
         self.env = dict(os.environ if environment is None else environment)
         self.store = FleetStore(self.env.get("COMPETITION_FLEET_CONFIG", str(ROOT / "config/fleet.json")))
         self.app_factory = app_factory
         self.services_factory = services_factory
         self.active = None
+        self.programs = programs_factory(ROOT, self.env)
         self.worker = None
         self.stop_event = asyncio.Event()
         self.selection = None
@@ -167,6 +169,7 @@ class GroundEntry:
         async def lifespan(app):
             yield
             self.stop_event.set()
+            self.programs.stop()
             if self.worker:
                 await self.worker
 
@@ -175,7 +178,28 @@ class GroundEntry:
 
         @app.get("/", response_class=HTMLResponse)
         def index():
-            return HTMLResponse((WEB / "index.html").read_text(encoding="utf-8"))
+            return HTMLResponse((WEB / "index.html").read_text(encoding="utf-8"), headers={"Cache-Control": "no-store"})
+
+        @app.get("/map-assets/{name}")
+        def asset(name: str):
+            media = {"terrain_basemap.js": "application/javascript", "competition_esri_20170724.jpg": "image/jpeg"}
+            if name not in media or not (WEB / name).is_file():
+                raise HTTPException(status_code=404, detail="地图资源尚未部署，请更新地面端代码")
+            return FileResponse(WEB / name, media_type=media[name], headers={"Cache-Control": "no-cache"})
+
+        @app.get("/api/v1/programs")
+        def programs():
+            result = self.programs.snapshot()
+            if self.error:
+                result['programs']['ground'].update(state='error', detail=self.error)
+            return result
+
+        @app.get("/api/v1/programs/{key}/logs")
+        def program_logs(key: str, offset: int = 0):
+            try:
+                return self.programs.read_log(key, offset)
+            except ValueError as error:
+                raise HTTPException(status_code=404, detail=str(error)) from error
 
         @app.get("/api/v1/operator")
         def operator():
@@ -200,6 +224,7 @@ class GroundEntry:
                     raise HTTPException(status_code=409, detail="终端正在启动，请等待完成后再操作")
                 return self.operator_status()
             self.selection, self.error = selection, ""
+            self.programs.select(local)
             self.worker = asyncio.create_task(self.activate(selection))
             return self.operator_status()
 
@@ -264,7 +289,11 @@ class GroundEntry:
                 factory = self.app_factory
             runtime = await asyncio.to_thread(factory, env)
             services = self.services_factory(local, env)
-            await asyncio.to_thread(services.start)
+            try:
+                await asyncio.to_thread(services.start)
+            except Exception as error:
+                self.error = "图片或视频服务启动失败：" + str(error)
+                print(self.error + "；网页与任务服务继续启动。", flush=True)
             async with runtime.router.lifespan_context(runtime):
                 self.active = runtime
                 endpoint = next(r.endpoint for r in runtime.routes if r.path == "/api/v1/operator" and "POST" in r.methods)
@@ -281,12 +310,31 @@ class GroundEntry:
 
     async def __call__(self, scope, receive, send):
         # 状态流可跨越本机服务启动过程，避免关闭/重开网页。
-        target = self.entry if scope["type"] in ("lifespan", "websocket") or self.active is None else self.active
-        await target(scope, receive, send)
+        entry_path = scope.get("path", "").startswith(("/map-assets/", "/api/v1/programs"))
+        target = self.entry if scope["type"] in ("lifespan", "websocket") or self.active is None or entry_path else self.active
+        if target is self.active and scope.get('path') == '/api/v1/operator' and scope.get('method') == 'POST':
+            # 只有成功确认本地终端才请求启动，不响应其他终端的配置同步报文。
+            async def after_selection(message):
+                if message['type'] == 'http.response.start' and message['status'] == 200 and self.selection:
+                    local, _ = ground_environment(self.store.read(), self.selection['ground_terminal_id'])
+                    self.programs.select(local)
+                await send(message)
+            await target(scope, receive, after_selection)
+        else:
+            await target(scope, receive, send)
 
 
 def run():
     import uvicorn
+    logs = ROOT / "ground_logs" / "programs"
+    logs.mkdir(parents=True, exist_ok=True)
+    secrets = [v for k, v in os.environ.items() if 'TOKEN' in k and v]
+    sys.stdout = ConsoleTee(sys.stdout, logs / 'ground.log', secrets)
+    sys.stderr = ConsoleTee(sys.stderr, logs / 'ground.log', secrets)
+    print("地面竞赛程序正在启动；请选择本地地面终端。", flush=True)
+    for filename in ('terrain_basemap.js', 'competition_esri_20170724.jpg'):
+        if not (WEB / filename).is_file():
+            print("底图文件缺失，请更新地面端：" + filename, flush=True)
     uvicorn.run(GroundEntry(), host=os.environ.get("COMPETITION_HOST", "0.0.0.0"),
                 port=int(os.environ.get("COMPETITION_PORT", "8000")),
                 log_level="warning", access_log=False)

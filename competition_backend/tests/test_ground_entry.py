@@ -95,7 +95,7 @@ class GroundEntryTest(unittest.TestCase):
                 app.state.adapter._request_json = Mock(side_effect=RuntimeError('离线测试'))
                 return app
             wrapped = Mock(side_effect=factory)
-            entry = GroundEntry(env, app_factory=wrapped, services_factory=Mock(return_value=services))
+            entry = GroundEntry(env, app_factory=wrapped, services_factory=Mock(return_value=services), programs_factory=Mock(return_value=Mock()))
             with TestClient(entry) as client:
                 self.assertIsNone(client.get('/api/v1/operator').json()['ground_terminal_id'])
                 self.assertEqual(client.post('/api/v1/plan', json={}).status_code, 409)

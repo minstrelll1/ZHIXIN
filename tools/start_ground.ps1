@@ -72,6 +72,10 @@ Remove-Item Env:COMPETITION_GROUND_TERMINAL_ID -ErrorAction SilentlyContinue
 Write-Host "网页入口：http://127.0.0.1:$WebPort/"
 Write-Host "进入网页选择地面终端编号和任务发布角色；机型与机地 IP 按固定配置自动绑定。"
 Write-Host "关闭本终端可停止本次启动的地面服务。"
+$ProgramLogDirectory = Join-Path $ProjectRoot 'ground_logs\programs'
+New-Item -ItemType Directory -Force -Path $ProgramLogDirectory | Out-Null
+$startupText = "`n机队配置检查通过，终端编号将在网页中选择。`n网页入口：http://127.0.0.1:$WebPort/`n进入网页选择地面终端编号和任务发布角色；机型与机地 IP 按固定配置自动绑定。`n"
+[IO.File]::AppendAllText((Join-Path $ProgramLogDirectory 'ground.log'), $startupText, $utf8Encoding)
 Push-Location $ProjectRoot
 try { & $PythonExe -m competition_backend.ground_entry }
 finally { Pop-Location }
