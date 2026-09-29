@@ -123,6 +123,60 @@ def status(directory, offset):
                 log=base64.b64encode(data).decode(), offset=offset + len(data), size=size)
 
 
+def expected_nodes(uid):
+    prefix = '/uav%d/' % uid
+    return {
+        'onboard': ['/competition_image_stamp_adapter', '/su17_competition_executor', '/su17_onboard_image_sender'],
+        'detection': ['/uav_yolo26_botsort_geolocation'],
+        'flight': [prefix + name for name in ('target_geolocator', 'gimbal_tracker_gx40_vertical',
+                   'target_maneuver_gx40_position_pid', 'target_scheduler_gx40_position_pid', 'trajectory_follower')],
+    }
+
+
+def ros_health(uid):
+    import xmlrpc.client
+    from concurrent.futures import ThreadPoolExecutor
+    class Transport(xmlrpc.client.Transport):
+        def make_connection(self, host):
+            connection = super().make_connection(host)
+            connection.timeout = .6
+            return connection
+    master_uri = os.environ.get('ROS_MASTER_URI', 'http://127.0.0.1:11311')
+    caller = '/competition_program_monitor'
+    expected = expected_nodes(uid)
+    def ping(name):
+        try:
+            with xmlrpc.client.ServerProxy(master_uri, transport=Transport()) as master:
+                code, _, address = master.lookupNode(caller, name)
+                if code != 1:
+                    return name, False
+            with xmlrpc.client.ServerProxy(address, transport=Transport()) as node:
+                code, _, pid = node.getPid(caller)
+                return name, code == 1 and int(pid) > 0
+        except Exception:
+            return name, False
+    names = [name for group in expected.values() for name in group]
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        available = dict(pool.map(ping, names))
+    return {key: {'ready': all(available[name] for name in group),
+                  'present': [name for name in group if available[name]],
+                  'missing': [name for name in group if not available[name]]} for key, group in expected.items()}
+
+
+def apply_health(info, health, meta):
+    info['nodes'] = health
+    if health['ready']:
+        info.update(state='running', detail='ROS 节点已就绪（%d/%d）' % (len(health['present']), len(health['present'])))
+    elif health['present'] or info['state'] == 'running':
+        starting = time.time() - meta.get('started_at', 0) < 30
+        info.update(state='starting' if starting else 'error', detail='等待 ROS 节点：' + '、'.join(health['missing']))
+    elif info['state'] == 'error':
+        pass
+    else:
+        info['detail'] = '程序未运行；未检测到对应 ROS 节点'
+    return info
+
+
 def rpc(payload):
     import fcntl
     uid, model = int(payload['uav_id']), payload['model']
@@ -134,6 +188,7 @@ def rpc(payload):
     runtime = root / 'ground_runtime' / ('programs_uav%d' % uid)
     runtime.mkdir(parents=True, exist_ok=True)
     result = {}
+    health = ros_health(uid)
     for key in NAMES:
         directory = runtime / key
         directory.mkdir(exist_ok=True)
@@ -143,9 +198,21 @@ def rpc(payload):
                 meta = read_json(directory / 'process.json')
                 pending = read_json(directory / 'worker.json')
                 found = existing(key, uid) if not alive(meta) else {}
+                if payload.get('action') == 'start' and health[key]['ready'] and not meta:
+                    write_json(directory / 'process.json', {'borrowed': True, 'node_only': True})
+                    with (directory / 'console.log').open('ab') as log:
+                        log.write(('复用已经就绪的%s ROS 节点；原终端历史输出无法追溯。\n' % NAMES[key]).encode())
                 if found and payload.get('action') != 'start':
                     write_json(directory / 'process.json', found)
-                if payload.get('action') == 'start' and not alive(meta) and not alive(pending):
+                if payload.get('action') == 'start' and not alive(meta) and not alive(pending) and not health[key]['ready']:
+                    if health[key]['present'] and not found:
+                        message = '已有部分 ROS 节点运行，暂不重复启动：' + '、'.join(health[key]['present'])
+                        with (directory / 'console.log').open('ab') as log:
+                            log.write((message + '\n').encode())
+                        info = status(directory, payload.get('offsets', {}).get(key, 0))
+                        info.update(state='error', detail=message, nodes=health[key])
+                        result[key] = info
+                        continue
                     if found:
                         write_json(directory / 'process.json', found)
                         with (directory / 'console.log').open('ab') as log:
@@ -164,7 +231,8 @@ def rpc(payload):
                             if new != meta and new:
                                 break
                             time.sleep(.03)
-                result[key] = status(directory, payload.get('offsets', {}).get(key, 0))
+                info = status(directory, payload.get('offsets', {}).get(key, 0))
+                result[key] = apply_health(info, health[key], read_json(directory / 'process.json'))
         except Exception as error:
             result[key] = dict(state='error', detail='启动或读取失败：%s' % error)
     print(json.dumps(result, ensure_ascii=False))

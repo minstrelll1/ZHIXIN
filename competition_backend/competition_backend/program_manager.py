@@ -47,8 +47,10 @@ class ProgramManager:
         self.logs = self.root / 'ground_logs' / 'programs'
         self.lock = threading.RLock()
         self.stop_event = threading.Event()
+        self.restart_request = threading.Event()
         self.thread = None
         self.local = None
+        self.auth = dict(state='idle', detail='')
         self.states = {key: dict(state='idle', detail='尚未启动') for key in NAMES}
         self.states['ground'] = dict(state='running', detail='地面网页服务运行中')
 
@@ -57,6 +59,7 @@ class ProgramManager:
             if self.thread and self.thread.is_alive():
                 return  # 同一个入口只控制当前选中的固定配对无人机。
             self.local = dict(local)
+            self.auth = dict(state='idle', detail='')
             self.logs.mkdir(parents=True, exist_ok=True)
             for key in NAMES:
                 if key != 'ground':
@@ -92,6 +95,41 @@ class ProgramManager:
             raise RuntimeError('SSH 连接或机载程序管理失败：' + detail)
         return json.loads(result.stdout.decode('utf-8'))
 
+    def _authorize(self):
+        if os.name != 'nt':
+            raise RuntimeError('请先配置 SSH 公钥登录，再点击重新连接并启动')
+        with self.lock:
+            self.auth = dict(state='waiting', detail='请在弹出的 SSH 授权窗口输入机载 Ubuntu 密码；完成后自动继续启动。')
+            for key in NAMES:
+                if key != 'ground':
+                    self.states[key] = dict(state='auth_required', detail=self.auth['detail'])
+        # 密码只交给 Windows OpenSSH 的交互终端；不进入网页、Python 参数或日志。
+        process = subprocess.Popen(
+            ['powershell.exe', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File',
+             str(self.root / 'tools/ssh_authorize_window.ps1'), '-UavAddress', self.local['onboard_host'],
+             '-UavUser', self.env.get('COMPETITION_SSH_USER', 'amov')],
+            cwd=str(self.root), creationflags=getattr(subprocess, 'CREATE_NEW_CONSOLE', 0),
+        )
+        while process.poll() is None:
+            if self.stop_event.wait(.25):
+                return False
+        if process.returncode != 0:
+            raise RuntimeError('SSH 授权未完成或窗口已关闭，请点击重新连接并启动后重试')
+        with self.lock:
+            self.auth = dict(state='ready', detail='SSH 授权完成，正在继续启动')
+        return True
+
+    def reconnect(self):
+        if not self.local:
+            raise ValueError('请先选择本地地面终端')
+        with self.lock:
+            if self.thread and self.thread.is_alive():
+                if self.auth['state'] != 'waiting':
+                    self.restart_request.set()
+            else:
+                self.select(self.local)
+        return self.snapshot()
+
     def _watch(self):
         cursor_path = self.logs / ('uav%s_offsets.json' % self.local['uav_id'])
         saved = {}
@@ -103,8 +141,11 @@ class ProgramManager:
             pass
         offsets = {key: int(saved.get(key, 0)) if self._path(key).exists() else 0 for key in NAMES if key != 'ground'}
         decoders = {key: codecs.getincrementaldecoder('utf-8')(errors='replace') for key in offsets}
-        action, failed_once = 'start', False
+        action, failed_once, authorization_attempted = 'start', False, False
         while not self.stop_event.is_set():
+            if self.restart_request.is_set():
+                self.restart_request.clear()
+                action, authorization_attempted = 'start', False
             try:
                 result = self._request(action, offsets)
                 action, failed_once = 'status', False
@@ -126,6 +167,16 @@ class ProgramManager:
                 cursor_path.parent.mkdir(parents=True, exist_ok=True)
                 cursor_path.write_text(json.dumps({'host': self.local.get('onboard_host'), 'offsets': offsets}), encoding='utf-8')
             except Exception as error:
+                if action == 'start' and not authorization_attempted and re.search(r'Permission denied.*(?:publickey|password)', str(error)):
+                    authorization_attempted = True
+                    try:
+                        if self._authorize():
+                            continue
+                        break
+                    except Exception as auth_error:
+                        error = auth_error
+                        with self.lock:
+                            self.auth = dict(state='error', detail=str(error))
                 for key in offsets:
                     with self.lock:
                         self.states[key] = dict(state='error', detail=str(error), checked_at=time.time())
@@ -142,6 +193,7 @@ class ProgramManager:
     def snapshot(self):
         with self.lock:
             return {'uav_id': self.local['uav_id'] if self.local else None,
+                    'authorization': dict(self.auth),
                     'programs': {key: dict(name=NAMES[key], **state) for key, state in self.states.items()}}
 
     def read_log(self, key, offset=0, limit=65536):

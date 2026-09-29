@@ -197,6 +197,15 @@ class OnboardImageSender:
                 detection_topic, detection_type, self._detection_callback,
                 queue_size=queue_size,
             )
+            # 新版程序 B 在 UAV 命名空间发布；保留旧版及用户自定义话题。
+            self.completed_target_subscribers = []
+            if self.input_mode == "completed_target_array":
+                aliases = ["/uav%d/target_scheduler/completed_targets" % self.local_ros_uav_id]
+                for topic in aliases:
+                    if rospy.resolve_name(topic) != rospy.resolve_name(detection_topic):
+                        self.completed_target_subscribers.append(rospy.Subscriber(
+                            topic, CompletedTargetArray, self._detection_callback, queue_size=queue_size))
+                        rospy.loginfo("兼容新版程序 B 目标回传话题：%s", topic)
             self.detection_worker = threading.Thread(target=self._detection_worker_loop, daemon=True)
             self.detection_worker.start()
             self.frame_timer = rospy.Timer(rospy.Duration(0.05), self._frame_cache_timer)

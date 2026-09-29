@@ -10,7 +10,7 @@ import threading
 import time
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Body, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, Body, HTTPException, WebSocket, WebSocketDisconnect, Request
 from fastapi.responses import HTMLResponse, FileResponse
 from .program_manager import ProgramManager, ConsoleTee
 from competition_shared.fleet import FleetStore, PROFILES
@@ -193,6 +193,20 @@ class GroundEntry:
             if self.error:
                 result['programs']['ground'].update(state='error', detail=self.error)
             return result
+
+        @app.post("/api/v1/programs/reconnect")
+        def reconnect_programs(request: Request):
+            # 此操作会打开本机密码输入窗口，只允许本机浏览器触发。
+            from urllib.parse import urlparse
+            if request.client and request.client.host not in ('127.0.0.1', '::1', 'testclient'):
+                raise HTTPException(status_code=403, detail='请在本机网页完成 SSH 授权')
+            origin = request.headers.get('origin', '')
+            if origin and urlparse(origin).hostname not in ('127.0.0.1', 'localhost', '::1'):
+                raise HTTPException(status_code=403, detail='只允许本机网页操作')
+            try:
+                return self.programs.reconnect()
+            except ValueError as error:
+                raise HTTPException(status_code=409, detail=str(error)) from error
 
         @app.get("/api/v1/programs/{key}/logs")
         def program_logs(key: str, offset: int = 0):

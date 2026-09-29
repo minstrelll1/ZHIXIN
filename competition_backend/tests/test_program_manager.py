@@ -38,6 +38,8 @@ class ProgramsTest(unittest.TestCase):
                 self.assertEqual(states['flight']['state'], 'idle')
                 self.assertEqual(client.get('/api/v1/programs/wrong/logs').status_code, 404)
                 self.assertIsNone(manager.thread)
+                self.assertEqual(client.post('/api/v1/programs/reconnect', headers={'Origin': 'https://unrelated.example'}).status_code, 403)
+                self.assertEqual(client.post('/api/v1/programs/reconnect').status_code, 409)
                 # 选终端后依旧由入口提供资源与日志，不受运行时路由切换影响。
                 entry.active = Mock()
                 self.assertEqual(client.get('/api/v1/programs').status_code, 200)
@@ -98,6 +100,42 @@ class ProgramsTest(unittest.TestCase):
             self.assertEqual(state['detection']['state'], 'error')
             self.assertEqual(state['flight']['state'], 'running')
 
+    def test_permission_denied_authorizes_once_then_continues(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            manager = ProgramManager(tmp, {})
+            manager.local = dict(uav_id=1, model='p600', onboard_host='192.168.1.202')
+            calls = []
+            def request(action, offsets):
+                calls.append(action)
+                if len(calls) == 1:
+                    raise RuntimeError('Permission denied (publickey,password).')
+                manager.stop_event.set()
+                return {key: dict(state='running') for key in ('onboard', 'detection', 'flight')}
+            manager._request = request
+            manager._authorize = Mock(return_value=True)
+            manager._watch()
+            self.assertEqual(calls, ['start', 'start'])
+            manager._authorize.assert_called_once()
+            self.assertEqual(manager.snapshot()['programs']['flight']['state'], 'running')
+
+    def test_authorization_cancel_does_not_repeat_prompt(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            manager = ProgramManager(tmp, {})
+            manager.local = dict(uav_id=1, model='p600', onboard_host='192.168.1.202')
+            manager._request = Mock(side_effect=RuntimeError('Permission denied (publickey,password)'))
+            manager._authorize = Mock(side_effect=RuntimeError('用户关闭授权窗口'))
+            manager._watch()
+            manager._authorize.assert_called_once()
+            self.assertEqual(manager.snapshot()['authorization']['state'], 'error')
+            self.assertEqual(manager.snapshot()['programs']['ground']['state'], 'running')
+
+    def test_healthy_launcher_with_dead_nodes_is_not_green(self):
+        state = remote.apply_health(dict(state='running'), dict(ready=False, present=['a'], missing=['b']), {'started_at': 1})
+        self.assertEqual(state['state'], 'error')
+        self.assertIn('b', state['detail'])
+        state = remote.apply_health(dict(state='stopped'), dict(ready=True, present=['a'], missing=[]), {})
+        self.assertEqual(state['state'], 'running')
+
     def test_remote_command_uses_selected_uav_and_does_not_arm(self):
         self.assertIn('uav_id:=3', remote.command_for('detection', 3, 'p600'))
         self.assertIn('uav_id:=3 flight_mode:=outdoor_small_range', remote.command_for('flight', 3, 'p600'))
@@ -125,6 +163,7 @@ class ProgramsTest(unittest.TestCase):
                     patch.object(remote.Path, 'home', return_value=home), \
                     patch.object(remote, 'PROGRAM_SOURCE', '# isolated test', create=True), \
                     patch.object(remote, 'existing', return_value={}), \
+                    patch.object(remote, 'ros_health', return_value={key: dict(ready=False, present=[], missing=[]) for key in remote.NAMES}), \
                     patch.object(remote, 'stamp', return_value='live'), \
                     patch.object(remote.subprocess, 'Popen', side_effect=spawn), \
                     contextlib.redirect_stdout(io.StringIO()):

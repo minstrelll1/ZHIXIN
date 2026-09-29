@@ -230,6 +230,7 @@
     .program-status button.running{color:#15803d}
     #programDialog{width:min(1100px,96vw);max-width:1100px}
     #programLog{height:62vh;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;padding:14px;background:#0f172a;color:#e2e8f0;font:13px/1.6 Consolas,"Microsoft YaHei",monospace;margin:12px 0 0}
+    #sshAuthNotice{padding:8px 0;color:#b42318;font-size:13px}#sshAuthNotice button{height:30px;margin-left:10px;font-size:12px}
     #programDescription{font-size:13px;color:#64748b;padding-top:8px}
     @media(max-width:850px){.program-row{align-items:flex-start}.program-status{gap:4px 14px}.program-status button{font-size:12px}}
   </style>
@@ -246,6 +247,7 @@
     <button type="button" data-program="detection"><i></i>目标检测程序</button>
     <button type="button" data-program="flight"><i></i>自主飞行指令程序</button>
   </div></div>
+  <div id="sshAuthNotice" hidden><span id="sshAuthText"></span> <button id="sshReconnect" class="secondary" type="button">重新连接并启动</button></div>
   <div id="modeBanner" class="mode-banner">正在读取运行模式……</div>
   <section class="panel toolbar" aria-label="任务控制区">
     <div class="field"><label for="subject">比赛科目</label><select id="subject"><option value="subject1">科目一：环境感知与目标识别</option><option value="subject2">科目二：任务指挥与蜂群协作</option><option value="subject3">科目三：自主导航与障碍穿越</option></select></div>
@@ -391,7 +393,7 @@ async function 选择地面终端(force=false){
   const initial=await 请求('/api/v1/operator');当前角色=initial;if(!initial.selection_required&&!force)return;
   try{
     const saved=JSON.parse(sessionStorage.getItem('competition.operatorSelection')||'null');
-    if(!force&&saved&&Number.isInteger(Number(saved.ground_terminal_id))&&typeof saved.task_publisher==='boolean'){
+    if(!initial.bootstrap&&!force&&saved&&Number.isInteger(Number(saved.ground_terminal_id))&&typeof saved.task_publisher==='boolean'){
       const restored=await 请求('/api/v1/operator',{method:'POST',body:JSON.stringify({ground_terminal_id:Number(saved.ground_terminal_id),task_publisher:saved.task_publisher})});
       当前角色=restored;
       if(restored.configured||restored.selection_pending){return}
@@ -671,6 +673,10 @@ let 程序状态={},日志程序=null,日志偏移=0,日志请求中=false,日�
 async function 刷新程序状态(){
   if(程序刷新中)return;程序刷新中=true;
   try{const result=await 请求('/api/v1/programs',{timeoutMs:4000});程序状态=result.programs||{};
+    const auth=result.authorization||{},failed=Object.entries(程序状态).some(([key,state])=>key!=='ground'&&state.state==='error');
+    $('sshAuthNotice').hidden=!(['waiting','error'].includes(auth.state)||failed);
+    $('sshAuthText').textContent=['waiting','error'].includes(auth.state)?auth.detail:'机载程序连接或启动异常，可查看程序日志。';
+    $('sshReconnect').disabled=auth.state==='waiting';
     document.querySelectorAll('[data-program]').forEach(button=>{const state=程序状态[button.dataset.program]||{};button.classList.toggle('running',state.state==='running');button.title=state.detail||'尚未启动'});
     if(日志程序)$('programDescription').textContent=程序状态[日志程序]?.detail||'';
   }catch(error){document.querySelectorAll('[data-program]').forEach(button=>{button.classList.remove('running');button.title='程序状态读取失败：'+error.message})}
@@ -697,6 +703,7 @@ document.querySelectorAll('[data-program]').forEach(button=>button.onclick=()=>{
 $('closeProgramLog').onclick=()=>$('programDialog').close();
 $('programDialog').addEventListener('close',()=>{日志程序=null;日志代次++});
 $('programLogMore').onclick=加载程序打印;
+$('sshReconnect').onclick=async()=>{const button=$('sshReconnect');button.disabled=true;try{await 请求('/api/v1/programs/reconnect',{method:'POST',body:'{}',timeoutMs:4000});await 刷新程序状态()}catch(error){提示(error.message,true)}finally{button.disabled=false}};
 刷新程序状态();setInterval(刷新程序状态,1000);setInterval(加载程序打印,1000);
 
 

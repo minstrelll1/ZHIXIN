@@ -164,10 +164,12 @@ SU17 将上述命令中的 `--model p600` 改为 `--model su17`；`N` 为 1～6 
 
 ### 自动启动前的首次 SSH 配置
 
-每台地面电脑仅对其配对无人机配置一次。项目目录内执行（UAV3 示例）：
+新版在首次连接提示 `Permission denied` 时会自动弹出 SSH 授权窗口。输入一次机载 Ubuntu 密码，即可自动安装公钥并继续启动；密码不进入网页、不保存。取消后可点击网页“重新连接并启动”。每台地面电脑与每架无人机只需授权一次。
+
+也可在项目目录手动执行（UAV1 示例）：
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\setup_onboard_ssh.ps1 -UavAddress 192.168.1.212
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\setup_onboard_ssh.ps1 -UavAddress 192.168.1.202
 ```
 
 按提示输入机载 Ubuntu 密码；以后启动不用再输入。
@@ -176,8 +178,8 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\setup_onboard_ss
 
 1. 完成首次部署后，在项目目录双击 `智信竞赛.exe`；自动启动地面后端并用默认浏览器打开竞赛网页。重复双击复用已运行的后端。
 2. 选择本地地面终端编号并确认。SSH 免密码登录可用时，自动启动对应无人机的竞赛机载程序、目标检测程序和自主飞行指令程序；编号随终端切换，UAV3 使用 `uav_id:=3`。
-3. 点击“机地网络配置”右侧的程序名称查看打印内容。红色表示未启动、连接失败或异常，绿色表示进程运行中。关闭网页不停止后台或机载程序。
+3. 点击“机地网络配置”右侧的程序名称查看打印内容。红色表示未启动、连接失败或异常，绿色表示对应 ROS 节点已响应（地面端表示网页服务运行中）。关闭网页不停止后台或机载程序。
 
 目标检测使用 `~/SpireCV_bj/src/spirecv-ros/devel/setup.bash`；程序 B 使用 `~/recon_ws/devel/setup.bash`，启动参数为 `flight_mode:=outdoor_small_range`。这两个工作空间需已在无人机上安装。
 
-更新本功能需更新地面端代码；机载已部署本工程时，无需重新构建，启动管理脚本由地面端通过 SSH 自动传送。U 盘复制时同时复制根目录的 `智信竞赛.exe`。原有命令行启动方式仍可使用。
+启动管理脚本由地面端通过 SSH 自动传送。此次新增程序 B 的 `/uavN/target_scheduler/completed_targets` 话题兼容，需要按上面的机载更新命令同步竞赛机载代码；不修改目标检测、程序 B 或厂商工作空间。U 盘复制时同时复制根目录的 `智信竞赛.exe`。原有命令行启动方式仍可使用。

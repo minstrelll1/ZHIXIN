@@ -13,10 +13,14 @@ if (-not (Test-Path -LiteralPath $key)) {
     if ($LASTEXITCODE -ne 0) { throw '生成本机 SSH 密钥失败。' }
 }
 $publicFile = $key + '.pub'
-if (-not (Test-Path -LiteralPath $publicFile)) { throw '本机公钥文件缺失，请恢复 .ssh/id_ed25519.pub。' }
+if (-not (Test-Path -LiteralPath $publicFile)) {
+    $recovered = & ssh-keygen.exe -y -f $key
+    if ($LASTEXITCODE -ne 0) { throw '无法从既有私钥恢复公钥。' }
+    [IO.File]::WriteAllText($publicFile, ([string]$recovered).Trim() + "`n", (New-Object Text.UTF8Encoding($false)))
+}
 $public = [IO.File]::ReadAllText($publicFile).Trim()
 $encoded = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($public))
-$remoteCommand = 'umask 077; mkdir -p ~/.ssh; chmod 700 ~/.ssh; key=$(printf %s ' + $encoded + ' | base64 -d); touch ~/.ssh/authorized_keys; grep -qxF "$key" ~/.ssh/authorized_keys || printf "\n%s\n" "$key" >> ~/.ssh/authorized_keys; chmod 600 ~/.ssh/authorized_keys'
+$remoteCommand = 'set -e; umask 077; mkdir -p ~/.ssh; chmod 700 ~/.ssh; key=$(printf %s ' + $encoded + ' | base64 -d); touch ~/.ssh/authorized_keys; grep -qxF "$key" ~/.ssh/authorized_keys || printf "\n%s\n" "$key" >> ~/.ssh/authorized_keys; chmod 600 ~/.ssh/authorized_keys'
 Write-Host '首次配置时请输入机载 Ubuntu 登录密码。'
 $scriptEncoded = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($remoteCommand))
 & ssh -o StrictHostKeyChecking=accept-new "${UavUser}@${UavAddress}" ('printf %s ' + $scriptEncoded + ' | base64 -d | bash')
