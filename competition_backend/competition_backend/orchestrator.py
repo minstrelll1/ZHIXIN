@@ -47,7 +47,7 @@ def _altitude_profile_for(flight_profile: str, flight_altitude_plan: str) -> str
         return "lab5"
     if altitude_plan == "around45m":
         return "competition"
-    return "competition" if scene == "competition" else ("lab5" if scene == "outdoor5" else "lab")
+    return "competition" if scene in ("competition", "outdoor100", "outdoor200") else ("lab5" if scene == "outdoor5" else "lab")
 
 
 class CompetitionOrchestrator:

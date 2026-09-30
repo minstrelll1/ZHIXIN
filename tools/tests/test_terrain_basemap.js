@@ -26,6 +26,22 @@ for(const [profile,size] of [['competition',null],['lab',3],['outdoor5',5],['lab
   }
  }
 }
+// 100/200 米固定方案的地类已和区域一同缩放，GPS 显示不能再次缩放地类。
+for(const profile of ['outdoor100','outdoor200']){
+ for(const departure of ['southeast','stadium_center']){
+  const saved=JSON.parse(fs.readFileSync(path.join(root,`competition_backend/competition_backend/competition_coverage_${profile}_${departure}.json`),'utf8')).plan.search_area;
+  for(const mode of ['gps','xyz']){
+   const area={...saved,coordinate_mode:mode};
+   const transform=api.mapping(area);assert.ok(transform,`${profile}/${departure}/${mode}`);
+   api.source.points.forEach(([lat,lon],i)=>{
+    const mapped=transform.geo(lon,lat),point=area.points_m[i];
+    close(mapped[0],point[0]);close(mapped[1],point[1]);
+   });
+   const layer=area.terrain_layers_m.forest.coordinates[0][0];
+   assert.equal(api.layerPoint(area,layer),layer);
+  }
+ }
+}
 // 正式比赛 GPS 任务与赛前预览不同：航线归零，旧边界/地类却仍在原投影原点。
 const runtime={...original,coordinate_mode:'gps',flight_profile:'competition',origin_x_m:0,origin_y_m:0};
 const before=JSON.stringify(runtime),display=api.displayArea(runtime),transform=api.mapping(runtime);
@@ -78,4 +94,4 @@ for(const dims of [[800,1000,1200,600],[800,1000,300,900]]){
  assert.ok(fit.x>=0&&fit.y>=0&&fit.width<=dims[2]&&fit.height<=dims[3]);
 }
 assert.equal(api.fitRect(0,100,300,400),null);
-console.log('Esri 底图：八种场景/坐标系、25 点配准、地类缩放、投影分条、缓存/失败恢复、详情等比显示检查通过。');
+console.log('Esri 底图：旧场景与四份新增固定方案配准、地类缩放、投影分条、缓存/失败恢复、详情等比显示检查通过。');

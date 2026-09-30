@@ -1034,6 +1034,7 @@ def create_app(environment=None) -> FastAPI:
                 anchor_stadium_plan,
                 load_prepared_stadium_plan,
             )
+            from .scaled_scene_plans import load_scaled_scene_plan
             departure_point = str(payload.get("departure_point", "southeast")).strip().lower()
             if departure_point not in ("southeast", "stadium_center"):
                 raise HTTPException(status_code=422, detail="未知的出发点")
@@ -1042,7 +1043,7 @@ def create_app(environment=None) -> FastAPI:
             flight_altitude_plan = str(payload.get("flight_altitude_plan", "default")).strip().lower()
             if flight_altitude_plan not in ("default", "around1m", "around2m", "around5m", "around45m"):
                 raise HTTPException(status_code=422, detail="未知的飞行高度方案")
-            if flight_profile not in ("lab", "lab10", "outdoor5", "competition"):
+            if flight_profile not in ("lab", "lab10", "outdoor5", "outdoor100", "outdoor200", "competition"):
                 raise HTTPException(status_code=422, detail="未知的飞行场景")
             gps_origin = payload.get("gps_origin")
             gps_origins_by_uav = payload.get("gps_origins_by_uav")
@@ -1090,13 +1091,21 @@ def create_app(environment=None) -> FastAPI:
                 elif flight_profile in ("lab", "lab10", "outdoor5"):
                     gps_origin = onboard_gps_reference() or gps_origin
             scaled_lab = flight_profile in ("lab", "lab10", "outdoor5")
+            prepared_scaled = flight_profile in ("outdoor100", "outdoor200")
             default_radius = 1.0 if scaled_lab else 75.0
             default_speed = 0.2 if flight_profile in ("lab", "outdoor5") else (0.5 if flight_profile == "lab10" else 5.0)
+            if prepared_scaled and (
+                float(payload.get("reconnaissance_radius_m", default_radius)) != 75.0
+                or float(payload.get("speed_mps", default_speed)) != 5.0
+                or float(payload.get("hover_scan_seconds", 10.0)) != 10.0
+            ):
+                raise HTTPException(status_code=409, detail="100m/200m 场景仅支持已保存的半径 75m、航速 5m/s、扫描 10s 方案")
             # 实验室方案复用赛前固定的真实区域航线，再做等比例缩放；
             # 不以实验室参数触发新的比赛区域求解。
             source_radius = 75.0 if scaled_lab else payload.get("reconnaissance_radius_m", default_radius)
             source_speed = 5.0 if scaled_lab else payload.get("speed_mps", default_speed)
-            max_extent_m = 3.0 if flight_profile == "lab" else (10.0 if flight_profile == "lab10" else (5.0 if flight_profile == "outdoor5" else 3.0))
+            max_extent_m = {"lab": 3.0, "outdoor5": 5.0, "lab10": 10.0,
+                            "outdoor100": 100.0, "outdoor200": 200.0}.get(flight_profile, 3.0)
             base_plan = plan_competition_coverage(
                 source_radius,
                 source_speed,
@@ -1106,28 +1115,38 @@ def create_app(environment=None) -> FastAPI:
                 terrain_exclusions_enabled=payload.get("terrain_exclusions_enabled", True),
                 uav_count=payload.get("uav_count", 6),
             )
-            source_plan = (
-                load_prepared_stadium_plan(
+            if prepared_scaled:
+                result = load_scaled_scene_plan(
                     base_plan,
                     flight_profile=flight_profile,
-                    reconnaissance_radius_m=payload.get("reconnaissance_radius_m", default_radius),
-                    speed_mps=payload.get("speed_mps", default_speed),
+                    departure_point=departure_point,
+                    coordinate_mode=coordinate_mode,
+                    gps_origin=gps_origin,
+                    gps_origins_by_uav=gps_origins_by_uav,
                 )
-                if departure_point == "stadium_center" else base_plan
-            )
-            result = adapt_competition_plan(
-                source_plan,
-                coordinate_mode=coordinate_mode,
-                flight_profile=flight_profile,
-                max_extent_m=max_extent_m,
-                lab_radius_m=payload.get("reconnaissance_radius_m", default_radius),
-                lab_speed_mps=payload.get("speed_mps", default_speed),
-                lab_hover_seconds=payload.get("hover_scan_seconds", 10.0),
-                gps_origin=gps_origin,
-                gps_origins_by_uav=gps_origins_by_uav,
-            )
-            if departure_point == "stadium_center":
-                result = anchor_stadium_plan(result, source_plan)
+            else:
+                source_plan = (
+                    load_prepared_stadium_plan(
+                        base_plan,
+                        flight_profile=flight_profile,
+                        reconnaissance_radius_m=payload.get("reconnaissance_radius_m", default_radius),
+                        speed_mps=payload.get("speed_mps", default_speed),
+                    )
+                    if departure_point == "stadium_center" else base_plan
+                )
+                result = adapt_competition_plan(
+                    source_plan,
+                    coordinate_mode=coordinate_mode,
+                    flight_profile=flight_profile,
+                    max_extent_m=max_extent_m,
+                    lab_radius_m=payload.get("reconnaissance_radius_m", default_radius),
+                    lab_speed_mps=payload.get("speed_mps", default_speed),
+                    lab_hover_seconds=payload.get("hover_scan_seconds", 10.0),
+                    gps_origin=gps_origin,
+                    gps_origins_by_uav=gps_origins_by_uav,
+                )
+                if departure_point == "stadium_center":
+                    result = anchor_stadium_plan(result, source_plan)
         except PlanNotPreparedError as error:
             raise HTTPException(status_code=409, detail=str(error)) from error
         except (TypeError, ValueError) as error:

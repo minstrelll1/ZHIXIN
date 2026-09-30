@@ -70,7 +70,7 @@
     if(!mapping(area))return 'Esri 示意底图：当前区域形状不匹配';
     if(state.status==='error')return 'Esri 底图加载失败，请检查地面端地图资源';
     if(state.status!=='ready')return '正在加载本地 Esri 底图…';
-    const scaled=['lab','outdoor5','lab10'].includes(area.flight_profile);
+    const scaled=['lab','outdoor5','lab10','outdoor100','outdoor200'].includes(area.flight_profile);
     return `Esri 历史影像 · 2017-07-24${scaled?' · 等比例缩小示意（非测试现场）':area.coordinate_mode==='xyz'?' · 比赛场地示意（非 XYZ 实景定位）':' · WGS84 比赛场地'} | Esri / Vantor / Earthstar Geographics / GIS User Community`;
   }
   function draw(ctx,area,px,py,clip){
