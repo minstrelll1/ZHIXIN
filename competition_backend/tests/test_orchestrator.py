@@ -59,6 +59,22 @@ class OrchestratorTest(unittest.TestCase):
             self.config, self.adapter, live_mode=True, clock=self.clock
         )
 
+    def test_partial_assignment_failure_records_which_uav_was_sent(self):
+        original = self.adapter.command_assign_task
+
+        def send(uav_id, payload):
+            if uav_id == 2:
+                raise TimeoutError("机载链路超时")
+            original(uav_id, payload)
+
+        self.adapter.command_assign_task = send
+        with self.assertRaisesRegex(RuntimeError, "UAV2 任务发送失败；已发往 \\[1\\]"):
+            self.backend.plan("subject1")
+        mission = self.backend.snapshot()["mission"]
+        self.assertEqual([command["uav_id"] for command in self.adapter.snapshot()], [1])
+        self.assertEqual(mission["events"][-1]["kind"], "task_assignment_failed")
+        self.assertEqual(mission["events"][-1]["sent_uav_ids"], [1])
+
     def telemetry(self, uav_id, **overrides):
         mission = self.backend.snapshot().get("mission")
         values = {

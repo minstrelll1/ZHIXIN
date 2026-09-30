@@ -42,6 +42,7 @@ from .groundstation_capture import PassivePointCloudCapture
 from .models import ReturnReason, Telemetry
 from .pengfei_telemetry import sanitize_pengfei
 from .orchestrator import CompetitionOrchestrator, MissionError
+from .plan_jobs import PlanJobRegistry
 from .pointcloud import (
     DEFAULT_GROUNDSTATION_RELAY_TOPIC_TEMPLATE,
     DEFAULT_ONBOARD_TOPIC_TEMPLATE,
@@ -142,6 +143,7 @@ def _mission_call(function: Any, *args: Any, **kwargs: Any) -> Any:
 
 def create_app(environment=None) -> FastAPI:
     env = dict(os.environ if environment is None else environment)
+    plan_jobs = PlanJobRegistry()
     fleet_path = env.get("COMPETITION_FLEET_CONFIG") or str(PACKAGE_ROOT.parent / "config" / "fleet.json")
     fleet_store = FleetStore(fleet_path)
     fleet_config = fleet_store.read()
@@ -1255,6 +1257,29 @@ def create_app(environment=None) -> FastAPI:
             }
             result["operator"] = operator_status()
         return result
+
+    @app.post("/api/v1/plan/jobs", summary="启动规划分派作业", tags=["任务控制"])
+    def submit_plan_job(payload: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
+        # 先返回作业编号；断开的浏览器请求不会中止或重复启动后端分派。
+        # 有作业正在执行时，重复点击只返回同一个编号，不再次下发任务。
+        try:
+            return plan_jobs.submit(payload, plan)
+        except RuntimeError as error:
+            raise HTTPException(status_code=409, detail=str(error)) from error
+
+    @app.get("/api/v1/plan/jobs/current", summary="查看最近规划作业", tags=["任务状态"])
+    def current_plan_job() -> Dict[str, Any]:
+        job = plan_jobs.get()
+        if job is None:
+            raise HTTPException(status_code=404, detail="当前没有规划分派作业")
+        return job
+
+    @app.get("/api/v1/plan/jobs/{job_id}", summary="查看规划分派作业", tags=["任务状态"])
+    def get_plan_job(job_id: str) -> Dict[str, Any]:
+        job = plan_jobs.get(job_id)
+        if job is None:
+            raise HTTPException(status_code=404, detail="规划作业不存在或地面后端已重启，请核对任务状态")
+        return job
 
     @app.post("/api/v1/peer/lease", include_in_schema=False)
     def peer_lease(

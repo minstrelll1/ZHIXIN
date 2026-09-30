@@ -8,20 +8,29 @@ const requestStart=html.indexOf('async function 请求('),requestEnd=html.indexO
 const flowStart=html.indexOf('let 比赛覆盖方案='),flowEnd=html.indexOf("$('planningAreaMode').onchange",flowStart);
 function fixture(fetch){
   const nodes=new Map(),notes=[];
+  let backendFetch=fetch;
   const defaults={subject:'subject1',planningAreaMode:'competition',controllerMode:'external',flightProfile:'lab',flightAltitudePlan:'around2m',coordinateMode:'xyz',scoutRadius:'1',flightSpeed:'0.2',hoverScanSeconds:'10',duration:''};
-  const context={fetch,AbortController,setTimeout,clearTimeout,console,当前状态:{mission:null},当前角色:{task_publisher:true},文本:{错误:{}},
+  let finishedPlan=null;
+  const jobFetch=async(url,options)=>{
+    if(url==='/api/v1/plan/jobs/current')return finishedPlan?response({job_id:'job-1',request_id:'same'}):{ok:false,status:404,json:async()=>({detail:'没有作业'})};
+    if(url==='/api/v1/plan/jobs/job-1')return response({job_id:'job-1',state:'succeeded',result:finishedPlan});
+    const result=await backendFetch(url,options);
+    if(url==='/api/v1/plan/jobs'&&result.ok){finishedPlan=await result.json();return response({job_id:'job-1',state:'running'});}
+    return result;
+  };
+  const context={fetch:jobFetch,AbortController,setTimeout,clearTimeout,console,当前状态:{mission:null},当前角色:{task_publisher:true},文本:{错误:{}},
     $:id=>{if(!nodes.has(id))nodes.set(id,{value:defaults[id]??'',style:{},disabled:false});return nodes.get(id)},
     获取规划识别类别:()=>({category_count:3,category_ids:[1,8,12]}),提示:message=>notes.push(message),读取机载GPS参考组:()=>({}),数值:Number,渲染:()=>{}};
   vm.createContext(context);
   vm.runInContext(html.slice(requestStart,requestEnd)+'\n'+html.slice(flowStart,flowEnd),context);
-  return {context,nodes,notes,run:code=>vm.runInContext(code,context)};
+  return {context,nodes,notes,setFetch:next=>{backendFetch=next},run:code=>vm.runInContext(code,context)};
 }
 const response=body=>({ok:true,json:async()=>body});
 const mission=(ids=[])=>({mission:{mission_id:'new-plan',phase:'planned',uavs:Object.fromEntries(ids.map(id=>[id,{}]))},dispatch_status:{assigned_uav_ids:ids,acknowledged_uav_ids:[]}});
 (async()=>{
   // Server rejection: retry becomes available; no obsolete mission can be taken off.
   let count=0;
-  const rejected=fixture(async()=>{count++;return {ok:false,status:409,json:async()=>({detail:'固定方案需在赛前重新生成'})}});
+  const rejected=fixture(async url=>{if(url==='/api/v1/plan/jobs')count++;return {ok:false,status:409,json:async()=>({detail:'固定方案需在赛前重新生成'})}});
   await rejected.context.生成比赛覆盖();
   assert.equal(rejected.nodes.get('planButton').disabled,false);
   assert.equal(rejected.nodes.get('prepareButton').disabled,true);
@@ -29,7 +38,7 @@ const mission=(ids=[])=>({mission:{mission_id:'new-plan',phase:'planned',uavs:Ob
   assert.equal(count,1);
   rejected.context.当前状态=mission([1]);rejected.context.更新任务按钮();
   assert.equal(rejected.nodes.get('prepareButton').disabled,true);
-  rejected.context.fetch=async()=>response(mission([1]));
+  rejected.setFetch(async()=>response(mission([1])));
   await rejected.context.生成比赛覆盖();
   assert.equal(rejected.nodes.get('prepareButton').disabled,false);
   // Confirmations refer to this mission only; unrelated snapshots cannot overwrite feedback.
@@ -74,6 +83,6 @@ const mission=(ids=[])=>({mission:{mission_id:'new-plan',phase:'planned',uavs:Ob
   }
   const invalid=fixture(async()=>({ok:true,json:async()=>{throw new Error('bad json')}}));
   await invalid.context.生成比赛覆盖();assert.equal(invalid.nodes.get('planButton').disabled,false);
-  assert.match(invalid.nodes.get('dispatchFeedback').textContent,/无法解析/);
+  assert.match(invalid.nodes.get('dispatchFeedback').textContent,/bad json|无法解析/);
   process.stdout.write('规划失败、超时、显示异常、重复点击、离线预览、回执与飞行锁定检查通过。\n');
 })().catch(error=>{console.error(error);process.exitCode=1});

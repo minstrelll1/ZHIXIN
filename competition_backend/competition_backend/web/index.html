@@ -804,6 +804,33 @@ function 更新分派回执(snapshot){
   const pending=assigned.filter(id=>!acked.includes(id));
   显示分派反馈(pending.length?`规划已分派，机载确认 ${assigned.length-pending.length}/${assigned.length}；等待 ${pending.map(id=>'UAV'+id).join('、')} 回执。`:`任务分派已全部确认：${assigned.map(id=>'UAV'+id).join('、')}。起飞仍需通过预检并由操作员确认。`);
 }
+async function 提交并等待规划(payload){
+  const requestId=`${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  let job;
+  try{
+    job=await 请求('/api/v1/plan/jobs',{method:'POST',body:JSON.stringify({...payload,request_id:requestId}),timeoutMs:8000});
+  }catch(error){
+    // POST 的响应丢失时只查询同一作业，绝不重新 POST。
+    try{const current=await 请求('/api/v1/plan/jobs/current',{timeoutMs:5000});if(current.request_id===requestId)job=current;}
+    catch(_ignored){}
+    if(!job)throw error;
+  }
+  if(!job?.job_id)throw new Error('后台未返回规划作业编号，请核对任务状态');
+  const deadline=Date.now()+90000;
+  let readFailures=0;
+  while(true){
+    try{job=await 请求(`/api/v1/plan/jobs/${encodeURIComponent(job.job_id)}`,{timeoutMs:6000});readFailures=0;}
+    catch(error){
+      if(++readFailures>=3)throw new Error(`规划作业 ${job.job_id} 的状态暂时不可读；请核对后台任务，系统不会自动重发`);
+      await new Promise(resolve=>setTimeout(resolve,1000));continue;
+    }
+    if(job.state==='succeeded')return job.result;
+    if(job.state==='failed')throw new Error(job.error||'规划分派失败，请核对任务状态');
+    显示分派反馈(`后台正在规划并分派（作业 ${job.job_id.slice(0,8)}），页面持续核对进度；不会重复下发。`);
+    if(Date.now()>deadline)throw new Error(`规划作业 ${job.job_id} 仍在后台执行；请查看任务状态后决定是否重新规划，系统不会自动重发`);
+    await new Promise(resolve=>setTimeout(resolve,1000));
+  }
+}
 async function 生成比赛覆盖(){
   if(覆盖规划中)return;
   let recognitionSelection;
@@ -811,6 +838,7 @@ async function 生成比赛覆盖(){
   覆盖规划中=true;分派反馈任务ID='';更新任务按钮();if(typeof 准备地形底图==='function'){底图脚本尝试=0;准备地形底图();}
   显示分派反馈('正在读取保存方案并分派任务……');
   let requestSucceeded=false;
+  const oldMissionId=当前状态?.mission?.mission_id;
   try{
     const payload={subject:$('subject').value,controller_mode:$('controllerMode').value,flight_profile:$('flightProfile').value,flight_altitude_plan:$('flightAltitudePlan').value,departure_point:$('departurePoint').value};
     if(recognitionSelection)Object.assign(payload,{recognition_selection:recognitionSelection,require_recognition_selection:true});
@@ -819,7 +847,7 @@ async function 生成比赛覆盖(){
       if($('coordinateMode').value==='gps'){const refs=读取机载GPS参考组();const latitude=Number($('gpsLatitude').value),longitude=Number($('gpsLongitude').value);if(Object.keys(refs).length){payload.gps_origins_by_uav=refs;const first=refs[Object.keys(refs)[0]];payload.gps_origin={latitude:first.latitude,longitude:first.longitude};}else if(Number.isFinite(latitude)&&Number.isFinite(longitude)){payload.gps_origin={latitude,longitude,source:'页面预览基准点'};}}
     }
     if($('duration').value)payload.duration_seconds=数值($('duration').value,'比赛时限');
-    const result=await 请求('/api/v1/plan',{method:'POST',body:JSON.stringify(payload),timeoutMs:45000});
+    const result=await 提交并等待规划(payload);
     if(!result?.mission?.mission_id)throw new Error('后端没有返回有效任务，请核对任务状态后重试');
     requestSucceeded=true;规划结果待核对=false;当前状态=result;比赛覆盖方案=result.mission;固定规划绘制键='';分派反馈任务ID=result.mission.mission_id;
     const ids=result.dispatch_status?.assigned_uav_ids||Object.keys(result.mission.uavs||{}).map(Number);
@@ -828,7 +856,16 @@ async function 生成比赛覆盖(){
     渲染(result);
   }catch(error){
     if(!requestSucceeded)规划结果待核对=true;
-    const message=requestSucceeded?'后端已返回规划结果，但页面显示失败：'+error.message+'；请刷新网页查看，勿重复下发。':'规划或分派未完成：'+error.message;
+    let statusHint='';
+    if(!requestSucceeded){
+      try{const latest=await 请求('/api/v1/status',{timeoutMs:5000});当前状态=latest;const mission=latest.mission;
+        if(mission?.mission_id&&mission.mission_id!==oldMissionId){
+          const assigned=latest.dispatch_status?.assigned_uav_ids||[],acked=latest.dispatch_status?.acknowledged_uav_ids||[];
+          statusHint=` 后台任务 ${mission.mission_id}；机载确认 ${acked.length}/${assigned.length}。`;
+        }
+      }catch(_ignored){}
+    }
+    const message=requestSucceeded?'后端已返回规划结果，但页面显示失败：'+error.message+'；请刷新网页查看，勿重复下发。':'规划或分派未完成：'+error.message+statusHint;
     显示分派反馈(message,true);提示(message,true);
   }finally{
     覆盖规划中=false;更新任务按钮();

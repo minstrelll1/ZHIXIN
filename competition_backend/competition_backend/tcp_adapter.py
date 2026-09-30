@@ -16,6 +16,7 @@ from .pengfei_telemetry import sanitize_pengfei
 
 PROTOCOL_VERSION = 1
 MAX_MESSAGE_BYTES = 4 * 1024 * 1024
+COMMAND_SEND_TIMEOUT_SECONDS = 3.0
 
 
 class _ClientConnection:
@@ -30,8 +31,31 @@ class _ClientConnection:
         ).encode("utf-8")
         if len(encoded) > MAX_MESSAGE_BYTES:
             raise RuntimeError("TCP message exceeds the size limit")
-        with self.send_lock:
-            self.connection.sendall(encoded)
+        # 接收线程持有同一个 TCP socket，不能临时更改其超时/阻塞模式。
+        # sendall 在半开连接上可能无限等待，过去会把整个规划请求锁住。
+        if not self.send_lock.acquire(timeout=COMMAND_SEND_TIMEOUT_SECONDS):
+            self.close()
+            raise TimeoutError("机载任务发送队列超时")
+        try:
+            done = threading.Event()
+            errors = []
+
+            def write():
+                try:
+                    self.connection.sendall(encoded)
+                except OSError as error:
+                    errors.append(error)
+                finally:
+                    done.set()
+
+            threading.Thread(target=write, name="fleet-tcp-send", daemon=True).start()
+            if not done.wait(COMMAND_SEND_TIMEOUT_SECONDS):
+                self.close()
+                raise TimeoutError("机载 TCP 发送超过 3 秒，连接已关闭；请核对任务回执")
+            if errors:
+                raise errors[0]
+        finally:
+            self.send_lock.release()
 
     def close(self) -> None:
         try:

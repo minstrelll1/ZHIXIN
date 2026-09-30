@@ -26,7 +26,7 @@ class CompetitionDispatchTest(unittest.TestCase):
                 config = apply_fixed_binding(config, i, 'p600')
             clients, apps = {}, {}
             headers = {'X-Competition-Peer-Token': 'test-peer'}
-            def network(url, method='GET', payload=None):
+            def network(url, method='GET', payload=None, timeout=2.0):
                 for i, client in clients.items():
                     base = 'http://192.168.2.%d:8000' % (197 + 5 * i)
                     if url.startswith(base + '/'):

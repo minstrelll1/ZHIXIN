@@ -262,7 +262,8 @@ class DistributedFleetAdapter(FleetAdapter):
             self._mirrored_snapshot = json.loads(json.dumps(snapshot))
 
     def _request_json(
-        self, url: str, method: str = "GET", payload: Optional[Dict[str, Any]] = None
+        self, url: str, method: str = "GET", payload: Optional[Dict[str, Any]] = None,
+        timeout: float = 2.0,
     ) -> Dict[str, Any]:
         data = None
         headers = {"X-Competition-Peer-Token": self.peer_token}
@@ -272,7 +273,7 @@ class DistributedFleetAdapter(FleetAdapter):
         request = urllib.request.Request(url, data=data, headers=headers, method=method)
         # 地面互联直连局域网，不继承 Windows/GitHub 的系统代理。
         opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
-        with opener.open(request, timeout=2.0) as response:
+        with opener.open(request, timeout=timeout) as response:
             result = json.loads(response.read().decode("utf-8"))
         if not isinstance(result, dict):
             raise RuntimeError("ground peer returned invalid JSON")
@@ -539,6 +540,7 @@ class DistributedFleetAdapter(FleetAdapter):
                 "command_type": command_type,
                 "payload": payload,
             },
+            timeout=5.0,
         )
 
     def command_assign_task(self, uav_id: int, payload: Dict[str, Any]) -> None:

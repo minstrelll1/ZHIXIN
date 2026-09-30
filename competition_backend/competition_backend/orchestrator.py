@@ -423,6 +423,7 @@ class CompetitionOrchestrator:
                 telemetry.task_assignment_mission_id = ""
                 telemetry.task_assignment_checksum = ""
             self._confirmation_token = None
+            dispatched = []
             for uav_id, runtime in self._mission.uavs.items():
                 assignment_payload = {
                     "mission_id": mission_id,
@@ -453,11 +454,24 @@ class CompetitionOrchestrator:
                     {"type": "assign_task", "uav_id": uav_id, **assignment_payload}
                 )
                 assignment_payload["assignment_checksum"] = runtime.assignment_checksum
-                self.adapter.command_assign_task(
-                    uav_id,
-                    assignment_payload,
-                )
-                self._event("task_assignment_sent", uav_id=uav_id)
+                send_started = time.monotonic()
+                try:
+                    self.adapter.command_assign_task(uav_id, assignment_payload)
+                except Exception as error:
+                    self._event(
+                        "task_assignment_failed", uav_id=uav_id, mission_id=mission_id,
+                        elapsed_seconds=round(time.monotonic() - send_started, 3),
+                        sent_uav_ids=list(dispatched), error=str(error),
+                    )
+                    self._save()
+                    raise MissionError(
+                        "UAV{} 任务发送失败；已发往 {}。请核对各机回执后手动重新规划：{}".format(
+                            uav_id, dispatched or "无", error,
+                        )
+                    ) from error
+                dispatched.append(uav_id)
+                self._event("task_assignment_sent", uav_id=uav_id,
+                            elapsed_seconds=round(time.monotonic() - send_started, 3))
             self._event("mission_planned", mission_id=mission_id, subject=subject)
             if not self.active_uav_ids:
                 self._event(
