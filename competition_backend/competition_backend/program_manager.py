@@ -9,6 +9,8 @@ import subprocess
 import threading
 import time
 
+from .ssh_identity import ssh_identity_args
+
 NAMES = {'ground': '竞赛程序地面端', 'onboard': '竞赛程序机载端',
          'detection': '目标检测程序', 'flight': '自主飞行指令程序'}
 
@@ -87,7 +89,7 @@ class ProgramManager:
         code = 'PROGRAM_SOURCE = ' + repr(source) + '\n' + source + '\nrpc(' + repr(payload) + ')\n'
         user = self.env.get('COMPETITION_SSH_USER', 'amov')
         # accept-new 只接受初次连接，不覆盖已改变的主机密钥。
-        command = ['ssh', '-T', '-o', 'BatchMode=yes', '-o', 'StrictHostKeyChecking=accept-new',
+        command = ['ssh', *ssh_identity_args(), '-T', '-o', 'BatchMode=yes', '-o', 'StrictHostKeyChecking=accept-new',
                    '-o', 'ConnectTimeout=4', '-o', 'ServerAliveInterval=4', '-o', 'ServerAliveCountMax=1',
                    '%s@%s' % (user, self.local['onboard_host']), 'python3 -']
         result = subprocess.run(command, input=code.encode(), capture_output=True, timeout=25 if action == 'stop' else 16,

@@ -245,6 +245,34 @@
   .detail-pengfei-row{display:grid;grid-template-columns:minmax(94px,auto) minmax(0,1fr);gap:7px;padding:2px 0;border-top:1px solid #e7ecf3}
   .detail-pengfei-row span{color:var(--muted)}.detail-pengfei-row strong{font-weight:550;text-align:right;overflow-wrap:anywhere}
   .detail-pengfei-empty{color:var(--muted);padding:4px 2px}
+
+  /* 大屏让程序 B 数据横排放在视频下方；视频与地图维持可见，不使用数据区内滚动。 */
+  .detail-dialog{height:96vh;max-height:1080px}
+  .detail-shell{height:100%;max-height:none}
+  .detail-layout{grid-template-columns:minmax(0,1.7fr) minmax(340px,.7fr);flex:1;min-height:0;overflow:hidden;align-items:stretch}
+  .detail-left{display:grid;grid-template-rows:minmax(0,1fr) auto;gap:10px;min-height:0;min-width:0}
+  .detail-left .video-panel{min-height:0}
+  .detail-left .video-stage{min-height:0;aspect-ratio:auto;flex:1}
+  .detail-pengfei-panel{min-height:0;overflow:visible}
+  .detail-pengfei{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px 8px;padding:8px 10px;overflow:visible}
+  .detail-pengfei-head{grid-column:1/-1;margin:0 1px}
+  .detail-pengfei-group{min-width:0;margin:0;padding:6px 7px}
+  .detail-pengfei-group h4{min-height:24px}
+  .detail-pengfei-row{grid-template-columns:minmax(76px,auto) minmax(0,1fr);gap:4px;padding:2px 0}
+  .detail-right{grid-template-rows:minmax(0,1fr) auto;min-height:0}
+  .detail-map{min-height:0}
+  .detail-route-viewport{min-height:0;aspect-ratio:auto;flex:1}
+  .detail-data{max-height:none;overflow:visible;padding-bottom:8px}
+  @media(max-width:1050px){
+    .detail-layout{display:block;overflow:auto}
+    .detail-left{display:block}
+    .detail-left .video-stage{aspect-ratio:16/9;min-height:220px}
+    .detail-pengfei-panel,.detail-right{margin-top:10px}
+    .detail-pengfei{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .detail-map{height:340px}
+    .detail-data{margin-top:10px}
+  }
+  @media(max-width:650px){.detail-pengfei{grid-template-columns:1fr}.detail-map{height:290px}}
 </style>
 </head>
 <body>
@@ -355,8 +383,8 @@
   <div class="traffic-dialog-head"><h2>科目一成果上报</h2><button id="closeSubject1Report" class="secondary">关闭</button></div>
   <p id="subject1Endpoint" class="area-note"></p>
   <div class="field"><label for="subject1Team">参赛队名</label><input id="subject1Team" value="北方自控智群队"></div>
-  <div class="field"><label for="subject1Mission">已回传任务（含本机已同步到的其他无人机结果）</label><select id="subject1Mission"></select></div>
-  <div class="field"><label for="subject1File">或选择整理好的 JSON 文件（选择文件时优先使用文件）</label><input id="subject1File" type="file" accept=".json,application/json"></div>
+  <div class="field"><label for="subject1Mission">本机已收到结果的科目一任务（可能尚未齐全）</label><select id="subject1Mission"></select></div>
+  <div class="field"><label for="subject1File">或导入按赛事格式整理的科目一结果 JSON（优先使用文件）</label><input id="subject1File" type="file" accept=".json,application/json"></div>
   <p class="area-note">本接口只提交 JSON 文件，imagePath 指向的图片不会随文件上传。请先核对目标数量及六机结果同步情况。</p>
   <div class="area-actions"><button id="prepareSubject1Report" class="secondary">生成并校验</button><a id="downloadSubject1Report" hidden>下载待上报 JSON</a><button id="sendSubject1Report" class="primary" disabled>确认上报赛事方</button></div>
   <pre id="subject1ReportSummary" style="white-space:pre-wrap;overflow-wrap:anywhere;max-height:40vh;overflow:auto" role="status">请生成并校验结果文件。</pre>
@@ -369,10 +397,13 @@
   <div class="detail-shell">
     <div class="detail-head"><h2 id="detailTitle">无人机详情</h2><button id="closeUavDetail" class="detail-close" aria-label="关闭无人机详情">关闭</button></div>
     <div class="detail-layout">
-      <section class="detail-panel video-panel"><div class="detail-panel-title"><span>云台主摄实时视频</span><small id="videoState">等待视频源</small></div><div class="video-stage"><img id="detailVideoImage" alt="无人机云台主摄实时视频"><video id="detailVideoElement" autoplay muted playsinline controls></video><iframe id="detailVideoFrame" title="无人机云台主摄视频页面" allow="autoplay; fullscreen"></iframe><div id="videoPlaceholder" class="video-placeholder">尚未配置浏览器视频源。</div></div></section>
+      <div class="detail-left">
+        <section class="detail-panel video-panel"><div class="detail-panel-title"><span>云台主摄实时视频</span><small id="videoState">等待视频源</small></div><div class="video-stage"><img id="detailVideoImage" alt="无人机云台主摄实时视频"><video id="detailVideoElement" autoplay muted playsinline controls></video><iframe id="detailVideoFrame" title="无人机云台主摄视频页面" allow="autoplay; fullscreen"></iframe><div id="videoPlaceholder" class="video-placeholder">尚未配置浏览器视频源。</div></div></section>
+        <section class="detail-panel detail-pengfei-panel" aria-label="程序 B 实时业务数据"><div id="detailPengfei" class="detail-pengfei" aria-live="polite"></div></section>
+      </div>
       <div class="detail-right">
         <section id="detailMapPanel" class="detail-panel detail-map"><div class="detail-panel-title"><span id="detailMapTitle">六机规划航线、实际位置与速度矢量</span><label class="detail-terrain-toggle"><input id="detailTerrainToggle" type="checkbox" checked>Esri 底图</label><div id="detailPointcloudTools" class="detail-pointcloud-tools"><button id="detailPointcloudReset" type="button" class="secondary">重置视角</button></div><small id="detailMapHint">箭头方向为 XY 速度方向</small></div><div class="detail-route-viewport"><canvas id="detailRouteCanvas" aria-label="六机规划结果和实时速度矢量"></canvas></div><div id="detailPointcloudViewport" class="detail-pointcloud-viewport"><canvas id="detailPointcloudCanvas" aria-label="可旋转、平移和缩放的三维点云"></canvas><div id="detailPointcloudMeta" class="detail-pointcloud-meta">等待 GroundStation 点云。</div></div></section>
-        <section class="detail-panel detail-data"><div class="detail-panel-title"><span id="detailDataTitle">实时数据</span><small id="detailTelemetryAge">—</small></div><div id="detailMetrics" class="detail-metrics"></div><div id="detailPengfei" class="detail-pengfei" aria-live="polite"></div></section>
+        <section class="detail-panel detail-data"><div class="detail-panel-title"><span id="detailDataTitle">实时数据</span><small id="detailTelemetryAge">—</small></div><div id="detailMetrics" class="detail-metrics"></div></section>
       </div>
     </div>
   </div>

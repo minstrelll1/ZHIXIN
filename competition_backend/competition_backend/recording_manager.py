@@ -9,6 +9,8 @@ import time
 from pathlib import Path
 from typing import Any, Dict, Optional
 
+from .ssh_identity import ssh_identity_args
+
 
 _RUN_ID = re.compile(r"^uav([1-6])_\d{8}_\d{6}$")
 
@@ -79,6 +81,7 @@ class FlightRecordingManager:
         host = self._require_host(uav_id)
         command = [
             "ssh",
+            *ssh_identity_args(),
             "-o",
             "BatchMode=yes",
             "-o",
@@ -248,6 +251,7 @@ class FlightRecordingManager:
             )
             command = [
                 "ssh",
+                *ssh_identity_args(),
                 "-o",
                 "BatchMode=yes",
                 "-o",

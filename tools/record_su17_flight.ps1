@@ -135,6 +135,11 @@ if ($modelLower -eq "p600") {
 New-Item -ItemType Directory -Force -Path $OutputRoot | Out-Null
 
 $sshTarget = "${UavUser}@${UavAddress}"
+$competitionKey = Join-Path $env:USERPROFILE '.ssh\zhixin_competition_ed25519'
+$sshIdentityArgs = @()
+if (Test-Path -LiteralPath $competitionKey -PathType Leaf) {
+    $sshIdentityArgs = @('-i', $competitionKey, '-o', 'IdentitiesOnly=yes')
+}
 $topicArgs = $topics -join " "
 
 # --buffsize is MB. Keep it small to protect the companion computer.
@@ -160,7 +165,7 @@ function Invoke-RemoteBash {
     $scriptBytes = [System.Text.Encoding]::UTF8.GetBytes($ScriptText)
     $encodedScript = [Convert]::ToBase64String($scriptBytes)
     $remoteCommand = "printf '%s' '$encodedScript' | base64 -d | bash"
-    & ssh -o BatchMode=yes -o ConnectTimeout=5 $sshTarget $remoteCommand
+    & ssh @sshIdentityArgs -o BatchMode=yes -o ConnectTimeout=5 $sshTarget $remoteCommand
     $script:lastRemoteExitCode = $LASTEXITCODE
 }
 
@@ -185,7 +190,7 @@ function Stop-RemoteRecording {
 function Copy-RemoteRecording {
     New-Item -ItemType Directory -Force -Path $localDir | Out-Null
     Write-Host "正在将飞行记录复制到地面电脑..." -ForegroundColor Yellow
-    & scp -o BatchMode=yes -o ConnectTimeout=5 -r "${sshTarget}:${remoteDir}/." "$localDir"
+    & scp @sshIdentityArgs -o BatchMode=yes -o ConnectTimeout=5 -r "${sshTarget}:${remoteDir}/." "$localDir"
     if ($LASTEXITCODE -ne 0) {
         throw "SCP 复制失败，完整记录仍保留在机载端：$remoteDir"
     }
