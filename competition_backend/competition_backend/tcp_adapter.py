@@ -11,6 +11,7 @@ from typing import Any, Dict, Iterable, Optional, Tuple
 
 from .adapter import FleetAdapter
 from .models import Telemetry
+from .pengfei_telemetry import sanitize_pengfei
 
 
 PROTOCOL_VERSION = 1
@@ -71,6 +72,7 @@ class TcpFleetAdapter(FleetAdapter):
         self._clients: Dict[int, _ClientConnection] = {}
         self._telemetry: Dict[int, Telemetry] = {}
         self._gps_telemetry_received: Dict[int, float] = {}
+        self._pengfei_telemetry_received: Dict[int, float] = {}
         self._latest_assignments: Dict[int, Dict[str, Any]] = {}
 
     @property
@@ -94,10 +96,13 @@ class TcpFleetAdapter(FleetAdapter):
         # 地图定位年龄只由实际遥测更新，通信心跳不刷新定位。
         received = self._gps_telemetry_received.get(telemetry.uav_id)
         age = max(0.0, time.monotonic() - received) if received is not None else None
+        pengfei_received = self._pengfei_telemetry_received.get(telemetry.uav_id)
+        pengfei_age = max(0.0, time.monotonic() - pengfei_received) if pengfei_received is not None else None
         gps = dict(telemetry.gps_position) if telemetry.gps_position is not None else None
         if gps is not None:
             gps["age_seconds"] += age or 0.0
-        return replace(telemetry, gps_position=gps, gps_telemetry_age_seconds=age)
+        return replace(telemetry, gps_position=gps, gps_telemetry_age_seconds=age,
+                       pengfei=dict(telemetry.pengfei), pengfei_age_seconds=pengfei_age)
 
     def forward_command(
         self, uav_id: int, command_type: str, payload: Dict[str, Any]
@@ -324,6 +329,12 @@ class TcpFleetAdapter(FleetAdapter):
                 telemetry.mission_altitude_m = float(mission_altitude) if mission_altitude is not None else None
                 if isinstance(message.get("capabilities"), dict):
                     telemetry.capabilities = dict(message["capabilities"])
+                # 兼容旧版机载端；没有该字段时清除旧目标，避免重连后残留。
+                telemetry.pengfei = sanitize_pengfei(message.get("pengfei"))
+                if telemetry.pengfei:
+                    self._pengfei_telemetry_received[uav_id] = time.monotonic()
+                else:
+                    self._pengfei_telemetry_received.pop(uav_id, None)
                 if "task_complete" in message:
                     telemetry.task_complete = bool(message["task_complete"])
                     telemetry.task_assignment_acked = bool(message.get("task_assignment_acked"))

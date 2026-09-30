@@ -23,6 +23,7 @@ from competition_shared.navigation import resolve_waypoints
 from competition_shared.scan import ScanSession
 import uuid
 from su17_competition_executor.tcp_link import OnboardTcpLink
+from su17_competition_executor.pengfei_bridge import PengfeiReadOnlyBridge
 from su17_competition_executor.task_protocol import (
     TaskValidationError,
     load_assignment,
@@ -209,6 +210,7 @@ class OnboardTaskExecutor:
             queue_size=1,
         )
 
+        self._pengfei_bridge = PengfeiReadOnlyBridge(rospy, self.uav_id)
         self.scan_pub = rospy.Publisher(local_prefix + "/competition/scan/request", String, queue_size=1)
         rospy.Subscriber(local_prefix + "/competition/scan/status", String, self._scan_callback, queue_size=5)
         rospy.Subscriber(local_prefix + "/competition/image_health", String, self._image_health_callback, queue_size=1)
@@ -705,6 +707,7 @@ class OnboardTaskExecutor:
                 "mission_altitude_m": float(state.position[2]) - self._home[2] if self._home and self._assignment and self._uses_ground_height_reference(self._assignment) else None,
                 "velocity": [float(value) for value in state.velocity],
                 "task_phase": self._progress.get("phase", "idle"),
+                "pengfei": self._pengfei_bridge.snapshot(),
                 "gps_status": int(getattr(state, "gps_status", 0)),
                 "location_source": int(getattr(state, "location_source", -1)),
                 "gps_num": int(getattr(state, "gps_num", 0)),

@@ -65,6 +65,8 @@ class AutonomyTest(unittest.TestCase):
         node.external_path_pub = Mock()
         node.external_landing_pub = Mock()
         node.recon_start_mode_pub = Mock()
+        node._pengfei_bridge = Mock()
+        node._pengfei_bridge.snapshot.return_value = {'current_target': None, 'last_recognition': None, 'node_status': None, 'sent_at_unix': 0.0}
         node.image_mission_control_pub = Mock()
         return node
 

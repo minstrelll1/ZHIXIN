@@ -235,6 +235,16 @@
     #programDescription{font-size:13px;color:#64748b;padding-top:8px}
     @media(max-width:850px){.program-row{align-items:flex-start}.program-status{gap:4px 14px}.program-status button{font-size:12px}}
   .recognition-toolbar{display:flex;align-items:end;gap:16px;flex-wrap:wrap;margin:14px 0}.recognition-toolbar .field{max-width:160px}.recognition-groups{display:flex;flex-wrap:wrap;gap:12px}.recognition-groups fieldset{flex:1;min-width:210px;border:1px solid var(--border,#cad5e2);border-radius:8px;padding:10px}.recognition-options{display:flex;gap:10px 18px;flex-wrap:wrap}.recognition-options label{display:inline-flex;align-items:center;gap:5px;white-space:nowrap}.recognition-options input{width:auto;margin:0}.recognition-count{align-self:center;font-weight:600}
+  .detail-data{max-height:min(52vh,460px);overflow-y:auto}
+  .detail-pengfei{padding:8px;border-top:1px solid var(--line);font-size:11px}
+  .detail-pengfei-head{font-weight:650;color:#18304d;margin:2px 1px 7px}
+  .detail-pengfei-note{color:var(--muted);font-weight:400;margin-left:4px}
+  .detail-pengfei-group{background:#f7f9fc;border-radius:7px;padding:7px 8px;margin-top:6px}
+  .detail-pengfei-group h4{font-size:11px;line-height:1.35;margin:0 0 5px;display:flex;justify-content:space-between;gap:6px}
+  .detail-pengfei-group h4 small{font-size:10px;color:var(--muted);font-weight:400;text-align:right}
+  .detail-pengfei-row{display:grid;grid-template-columns:minmax(94px,auto) minmax(0,1fr);gap:7px;padding:2px 0;border-top:1px solid #e7ecf3}
+  .detail-pengfei-row span{color:var(--muted)}.detail-pengfei-row strong{font-weight:550;text-align:right;overflow-wrap:anywhere}
+  .detail-pengfei-empty{color:var(--muted);padding:4px 2px}
 </style>
 </head>
 <body>
@@ -362,7 +372,7 @@
       <section class="detail-panel video-panel"><div class="detail-panel-title"><span>云台主摄实时视频</span><small id="videoState">等待视频源</small></div><div class="video-stage"><img id="detailVideoImage" alt="无人机云台主摄实时视频"><video id="detailVideoElement" autoplay muted playsinline controls></video><iframe id="detailVideoFrame" title="无人机云台主摄视频页面" allow="autoplay; fullscreen"></iframe><div id="videoPlaceholder" class="video-placeholder">尚未配置浏览器视频源。</div></div></section>
       <div class="detail-right">
         <section id="detailMapPanel" class="detail-panel detail-map"><div class="detail-panel-title"><span id="detailMapTitle">六机规划航线、实际位置与速度矢量</span><label class="detail-terrain-toggle"><input id="detailTerrainToggle" type="checkbox" checked>Esri 底图</label><div id="detailPointcloudTools" class="detail-pointcloud-tools"><button id="detailPointcloudReset" type="button" class="secondary">重置视角</button></div><small id="detailMapHint">箭头方向为 XY 速度方向</small></div><div class="detail-route-viewport"><canvas id="detailRouteCanvas" aria-label="六机规划结果和实时速度矢量"></canvas></div><div id="detailPointcloudViewport" class="detail-pointcloud-viewport"><canvas id="detailPointcloudCanvas" aria-label="可旋转、平移和缩放的三维点云"></canvas><div id="detailPointcloudMeta" class="detail-pointcloud-meta">等待 GroundStation 点云。</div></div></section>
-        <section class="detail-panel detail-data"><div class="detail-panel-title"><span id="detailDataTitle">实时数据</span><small id="detailTelemetryAge">—</small></div><div id="detailMetrics" class="detail-metrics"></div></section>
+        <section class="detail-panel detail-data"><div class="detail-panel-title"><span id="detailDataTitle">实时数据</span><small id="detailTelemetryAge">—</small></div><div id="detailMetrics" class="detail-metrics"></div><div id="detailPengfei" class="detail-pengfei" aria-live="polite"></div></section>
       </div>
     </div>
   </div>
@@ -562,7 +572,42 @@ function 电量显示(telemetry,serverTime){
   return Number.isFinite(fraction)&&fraction>=0&&fraction<=1&&Number.isFinite(age)&&age>=0&&age<=2?`${(fraction*100).toFixed(0)}%`:'—';
 }
 function 实时数值(values,index,unit){const raw=values?.[index],value=raw===null||raw===undefined?NaN:Number(raw);return Number.isFinite(value)?`${value.toFixed(3)} ${unit}`:'—'}
-function 渲染详情(){if(!详情无人机ID||!$('uavDetailDialog').open||!当前状态)return;const id=详情无人机ID,telemetry=当前状态.telemetry?.[String(id)],mission=当前状态.mission,runtime=mission?.uavs?.[String(id)]||mission?.planned_uavs?.[String(id)],mapped=规划图遥测(mission,telemetry,当前状态.server_time),position=mapped?.position,velocity=mapped?.velocity,gpsMap=mapped?.frame==='LOCAL_NORTH_WEST',speed=Array.isArray(velocity)?Math.hypot(Number(velocity[0]),Number(velocity[1])):NaN,phase=runtime?(文本.单机[runtime.phase]||runtime.phase):(mission?(文本.阶段[mission.phase]||mission.phase):'尚未规划'),age=telemetry?Math.max(0,当前状态.server_time-telemetry.received_at):null;$('detailTitle').textContent=`无人机 ${id} · 实时任务详情`;$('detailDataTitle').textContent=`UAV${id} 实时数据`;$('detailTelemetryAge').textContent=age===null?'尚未收到遥测':`遥测延迟 ${age.toFixed(1)} 秒`;$('detailMetrics').innerHTML=`<div class="detail-metric"><span>${gpsMap?'任务位置 X（北）':'位置 X'}</span><strong>${实时数值(position,0,'m')}</strong></div><div class="detail-metric"><span>${gpsMap?'任务位置 Y（西）':'位置 Y'}</span><strong>${实时数值(position,1,'m')}</strong></div><div class="detail-metric"><span>${gpsMap?'相对起飞高度':'位置 Z／高度'}</span><strong>${实时数值(position,2,'m')}</strong></div><div class="detail-metric"><span>执行阶段</span><strong>${转义(phase)}</strong></div><div class="detail-metric"><span>当前电量</span><strong>${电量显示(telemetry,当前状态.server_time)}</strong></div><div class="detail-metric"><span>${gpsMap?'速度 VX（北）':'速度 VX'}</span><strong>${实时数值(velocity,0,'m/s')}</strong></div><div class="detail-metric"><span>${gpsMap?'速度 VY（西）':'速度 VY'}</span><strong>${实时数值(velocity,1,'m/s')}</strong></div><div class="detail-metric"><span>速度 VZ</span><strong>${实时数值(velocity,2,'m/s')}</strong></div><div class="detail-metric"><span>XY 合速度</span><strong>${Number.isFinite(speed)?speed.toFixed(3)+' m/s':'—'}</strong></div><button type="button" class="detail-metric traffic-metric" data-traffic-uav-id="${id}" aria-label="查看 UAV${id} 端口实时通信"><span>机地 TCP 速度</span><strong>${转义(机地通信详情(当前状态.traffic,id))}</strong></button>`;更新详情点云视图()}
+function 彭飞数字(value,digits=2,unit=''){
+  if(value===null||value===undefined||typeof value==='boolean'||value==='')return '—';
+  const number=Number(value);return Number.isFinite(number)?`${number.toFixed(digits)}${unit}`:'—';
+}
+function 彭飞话题新鲜度(telemetry,pengfei,block,serverTime){
+  if(!telemetry?.connected)return {ok:false,text:'机地链路中断'};
+  if(!block||typeof block!=='object')return {ok:false,text:'未收到话题'};
+  const sent=pengfei?.sent_at_unix,received=block.received_at_unix;
+  const telemetryAge=Number(serverTime)-Number(telemetry.received_at),groundAge=telemetry.pengfei_age_seconds;
+  if(typeof sent!=='number'||!Number.isFinite(sent)||sent<=0||typeof received!=='number'||!Number.isFinite(received)||received<=0||typeof groundAge!=='number'||!Number.isFinite(groundAge))return {ok:false,text:'尚无接收时间'};
+  const age=Math.max(0,sent-received)+Math.max(0,groundAge)+Math.max(0,telemetryAge);
+  if(telemetryAge>2||age>2)return {ok:false,text:`话题超时 ${age.toFixed(1)} 秒`};
+  return {ok:true,text:`最近接收 ${age.toFixed(1)} 秒前`};
+}
+function 渲染彭飞数据(telemetry,serverTime){
+  const root=$('detailPengfei'),pengfei=telemetry?.pengfei||{};
+  const row=(label,value)=>`<div class="detail-pengfei-row"><span>${转义(label)}</span><strong>${转义(value)}</strong></div>`;
+  const group=(title,note,rows)=>`<div class="detail-pengfei-group"><h4><span>${转义(title)}</span><small>${转义(note)}</small></h4>${rows.join('')}</div>`;
+  const target=pengfei.current_target,last=pengfei.last_recognition,nodes=pengfei.node_status;
+  const targetState=彭飞话题新鲜度(telemetry,pengfei,target,serverTime),lastState=彭飞话题新鲜度(telemetry,pengfei,last,serverTime),nodeState=彭飞话题新鲜度(telemetry,pengfei,nodes,serverTime);
+  const targetActive=targetState.ok&&Boolean(target?.target_id),lastActive=lastState.ok&&Boolean(last?.target_id);
+  root.innerHTML=`<div class="detail-pengfei-head">程序 B 当前业务数据 <span class="detail-pengfei-note">只读快照；重复发布不代表新识别</span></div>`+
+    group('当前跟踪目标',targetState.text,[
+      row('目标 ID',targetActive?target.target_id:'—'),row('目标类型',targetActive?(target.target_type||'—'):'—'),
+      row('估计纬度',targetActive?彭飞数字(target.latitude_deg,7,'°'):'—'),row('估计经度',targetActive?彭飞数字(target.longitude_deg,7,'°'):'—'),
+      row('估计 GPS 高度',targetActive?彭飞数字(target.altitude_gps_m,2,' m'):'—'),
+      row('北向速度',targetActive?彭飞数字(target.velocity_north_mps,2,' m/s'):'—'),row('东向速度',targetActive?彭飞数字(target.velocity_east_mps,2,' m/s'):'—')])+
+    group('同一目标上次真实识别（可能是历史记录）',lastState.text,[
+      row('识别目标 ID',lastActive?last.target_id:'—'),row('识别目标类型',lastActive?(last.target_type||'—'):'—'),
+      row('识别纬度',lastActive?彭飞数字(last.latitude_deg,7,'°'):'—'),row('识别经度',lastActive?彭飞数字(last.longitude_deg,7,'°'):'—')])+
+    group('节点状态与侦察点',nodeState.text,[
+      row('调度节点',nodeState.ok?(nodes.scheduler_state||'未知'):'—'),row('机动节点',nodeState.ok?(nodes.maneuver_state||'未知'):'—'),
+      row('云台节点',nodeState.ok?(nodes.gimbal_state||'未知'):'—'),row('循线节点',nodeState.ok?(nodes.follower_state||'未知'):'—'),
+      row('当前侦察点',nodeState.ok&&Number.isInteger(nodes.scan_point_number)&&nodes.scan_point_number>0?String(nodes.scan_point_number):'—')]);
+}
+function 渲染详情(){if(!详情无人机ID||!$('uavDetailDialog').open||!当前状态)return;const id=详情无人机ID,telemetry=当前状态.telemetry?.[String(id)],mission=当前状态.mission,runtime=mission?.uavs?.[String(id)]||mission?.planned_uavs?.[String(id)],mapped=规划图遥测(mission,telemetry,当前状态.server_time),position=mapped?.position,velocity=mapped?.velocity,gpsMap=mapped?.frame==='LOCAL_NORTH_WEST',speed=Array.isArray(velocity)?Math.hypot(Number(velocity[0]),Number(velocity[1])):NaN,phase=runtime?(文本.单机[runtime.phase]||runtime.phase):(mission?(文本.阶段[mission.phase]||mission.phase):'尚未规划'),age=telemetry?Math.max(0,当前状态.server_time-telemetry.received_at):null;$('detailTitle').textContent=`无人机 ${id} · 实时任务详情`;$('detailDataTitle').textContent=`UAV${id} 实时数据`;$('detailTelemetryAge').textContent=age===null?'尚未收到遥测':`遥测延迟 ${age.toFixed(1)} 秒`;$('detailMetrics').innerHTML=`<div class="detail-metric"><span>${gpsMap?'任务位置 X（北）':'位置 X'}</span><strong>${实时数值(position,0,'m')}</strong></div><div class="detail-metric"><span>${gpsMap?'任务位置 Y（西）':'位置 Y'}</span><strong>${实时数值(position,1,'m')}</strong></div><div class="detail-metric"><span>${gpsMap?'相对起飞高度':'位置 Z／高度'}</span><strong>${实时数值(position,2,'m')}</strong></div><div class="detail-metric"><span>执行阶段</span><strong>${转义(phase)}</strong></div><div class="detail-metric"><span>当前电量</span><strong>${电量显示(telemetry,当前状态.server_time)}</strong></div><div class="detail-metric"><span>${gpsMap?'速度 VX（北）':'速度 VX'}</span><strong>${实时数值(velocity,0,'m/s')}</strong></div><div class="detail-metric"><span>${gpsMap?'速度 VY（西）':'速度 VY'}</span><strong>${实时数值(velocity,1,'m/s')}</strong></div><div class="detail-metric"><span>速度 VZ</span><strong>${实时数值(velocity,2,'m/s')}</strong></div><div class="detail-metric"><span>XY 合速度</span><strong>${Number.isFinite(speed)?speed.toFixed(3)+' m/s':'—'}</strong></div><button type="button" class="detail-metric traffic-metric" data-traffic-uav-id="${id}" aria-label="查看 UAV${id} 端口实时通信"><span>机地 TCP 速度</span><strong>${转义(机地通信详情(当前状态.traffic,id))}</strong></button>`;渲染彭飞数据(telemetry,当前状态.server_time);更新详情点云视图()}
 function 打开无人机详情(id){清空详情点云();详情无人机ID=Number(id);当前视频地址='';$('uavDetailDialog').showModal();配置详情视频();渲染详情();requestAnimationFrame(更新详情点云视图)}
 function 关闭无人机详情(){清空详情点云();详情无人机ID=null;当前视频地址='';显示视频占位('尚未选择无人机。');$('uavDetailDialog').close()}
 function 卡片等级(t,u){if(!t||!t.connected||t.failsafe||!t.odom_valid)return 'error';if(t.battery_percentage<=.3)return 'warning';return u&&['ready','at_altitude','executing','landed'].includes(u.phase)?'ready':''}
@@ -839,5 +884,3 @@ $('sshReconnect').onclick=async()=>{const button=$('sshReconnect');button.disabl
 </script>
 </body>
 </html>
-
-

@@ -40,6 +40,7 @@ from competition_shared.recognition import validate_recognition_selection
 from .journal import EventJournal
 from .groundstation_capture import PassivePointCloudCapture
 from .models import ReturnReason, Telemetry
+from .pengfei_telemetry import sanitize_pengfei
 from .orchestrator import CompetitionOrchestrator, MissionError
 from .pointcloud import (
     DEFAULT_GROUNDSTATION_RELAY_TOPIC_TEMPLATE,
@@ -1570,6 +1571,8 @@ def create_app(environment=None) -> FastAPI:
             longitude=optional_float(payload.get("longitude")),
             altitude=optional_float(payload.get("altitude")),
             rel_alt=optional_float(payload.get("rel_alt")),
+            pengfei=sanitize_pengfei(payload.get("pengfei")),
+            pengfei_age_seconds=optional_float(payload.get("pengfei_age_seconds")),
             task_complete=bool(payload.get("task_complete", False)),
             task_assignment_acked=bool(payload.get("task_assignment_acked", True)),
             task_assignment_mission_id=str(

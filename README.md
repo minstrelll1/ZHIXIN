@@ -198,3 +198,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\stop_ground.ps1
 ### 科目一识别类别
 
 展开“科目一识别类别” → 选择类别数和目标 → 保存类别 → 规划并分派。机载话题 `/uavN/competition/recognition_categories`（`std_msgs/Int32MultiArray`，保留最后一条）。本功能需同步更新竞赛机载端，原部署命令不变。详见 [类别编号与接入说明](docs/recognition_categories.md)。
+
+### 程序 B 实时业务数据
+
+机载竞赛程序只读采集程序 B 的当前目标、上次识别、调度/机动/云台/循线状态及侦察点序号，在网页‘实时任务详情 → 实时数据’展示。需将最新程序 B 的三个消息编译到机载 ~/recon_ws 后更新竞赛机载端。详见 [程序 B 遥测接入](docs/program_b_telemetry.md)。
