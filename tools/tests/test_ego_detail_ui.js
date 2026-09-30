@@ -1,0 +1,23 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const vm = require('node:vm');
+
+const html = fs.readFileSync(path.resolve(__dirname, '../../competition_backend/competition_backend/web/index.html'), 'utf8');
+const start = html.indexOf('function EGO状态显示(');
+const end = html.indexOf('function 实时数值(', start);
+assert.ok(start >= 0 && end > start);
+const context = {};
+vm.createContext(context);
+vm.runInContext(html.slice(start, end), context);
+const sample = { connected: true, received_at: 100, ego_exec_state: 0, ego_exec_state_age_seconds: 0.1 };
+assert.match(context.EGO状态显示(sample, 100.2).text, /0 INIT · 初始化/);
+assert.equal(context.EGO状态显示({ ...sample, ego_exec_state: 5 }, 100.2).alert, true);
+assert.equal(context.EGO状态显示({ ...sample, ego_exec_state_age_seconds: 4 }, 100.2).text, '状态已过期');
+assert.equal(context.EGO状态显示({ ...sample, ego_exec_state_age_seconds: null }, 100.2).text, '状态已过期');
+assert.equal(context.EGO状态显示({ ...sample, received_at: 90 }, 100.2).text, '遥测已过期');
+assert.equal(context.EGO状态显示({ ...sample, connected: false }, 100.2).text, '机地链路中断');
+assert.equal(context.EGO状态显示({ ...sample, ego_exec_state: null }, 100.2).text, '未收到');
+assert.match(html, /EGO 状态/);
+assert.match(html, /\/uav\$\{id\}\/ego_planner\/exec_state/);
+console.log('EGO 状态映射、过期和断链显示检查通过。');

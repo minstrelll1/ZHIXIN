@@ -60,6 +60,8 @@ class Telemetry:
     gps_telemetry_age_seconds: Optional[float] = None
     pengfei: Dict[str, Any] = field(default_factory=dict)
     pengfei_age_seconds: Optional[float] = None
+    ego_exec_state: Optional[int] = None
+    ego_exec_state_age_seconds: Optional[float] = None
     identity: Dict[str, Any] = field(default_factory=dict)
     capabilities: Dict[str, Any] = field(default_factory=dict)
     mission_altitude_m: Optional[float] = None

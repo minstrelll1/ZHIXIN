@@ -375,9 +375,13 @@ class DistributedFleetAdapter(FleetAdapter):
                 pengfei_age = telemetry.pengfei_age_seconds
                 if pengfei_age is not None:
                     pengfei_age += transfer_age
+                ego_age = telemetry.ego_exec_state_age_seconds
+                if ego_age is not None:
+                    ego_age += transfer_age
                 telemetry = replace(telemetry, received_at=received_at, gps_position=gps,
                                     gps_telemetry_age_seconds=position_age,
-                                    pengfei_age_seconds=pengfei_age)
+                                    pengfei_age_seconds=pengfei_age,
+                                    ego_exec_state_age_seconds=ego_age)
                 with self._telemetry_lock:
                     self._peer_telemetry[uav_id] = telemetry
                     self._peer_sync_status[uav_id] = {

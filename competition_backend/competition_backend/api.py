@@ -1028,6 +1028,13 @@ def create_app(environment=None) -> FastAPI:
                 plan_competition_coverage,
                 PlanNotPreparedError,
             )
+            from .stadium_departure import (
+                anchor_stadium_plan,
+                load_prepared_stadium_plan,
+            )
+            departure_point = str(payload.get("departure_point", "southeast")).strip().lower()
+            if departure_point not in ("southeast", "stadium_center"):
+                raise HTTPException(status_code=422, detail="未知的出发点")
             coordinate_mode = str(payload.get("coordinate_mode", "gps")).strip().lower()
             flight_profile = str(payload.get("flight_profile", "competition")).strip().lower()
             flight_altitude_plan = str(payload.get("flight_altitude_plan", "default")).strip().lower()
@@ -1088,7 +1095,7 @@ def create_app(environment=None) -> FastAPI:
             source_radius = 75.0 if scaled_lab else payload.get("reconnaissance_radius_m", default_radius)
             source_speed = 5.0 if scaled_lab else payload.get("speed_mps", default_speed)
             max_extent_m = 3.0 if flight_profile == "lab" else (10.0 if flight_profile == "lab10" else (5.0 if flight_profile == "outdoor5" else 3.0))
-            result = plan_competition_coverage(
+            base_plan = plan_competition_coverage(
                 source_radius,
                 source_speed,
                 payload.get("hover_scan_seconds", 10.0),
@@ -1097,8 +1104,17 @@ def create_app(environment=None) -> FastAPI:
                 terrain_exclusions_enabled=payload.get("terrain_exclusions_enabled", True),
                 uav_count=payload.get("uav_count", 6),
             )
+            source_plan = (
+                load_prepared_stadium_plan(
+                    base_plan,
+                    flight_profile=flight_profile,
+                    reconnaissance_radius_m=payload.get("reconnaissance_radius_m", default_radius),
+                    speed_mps=payload.get("speed_mps", default_speed),
+                )
+                if departure_point == "stadium_center" else base_plan
+            )
             result = adapt_competition_plan(
-                result,
+                source_plan,
                 coordinate_mode=coordinate_mode,
                 flight_profile=flight_profile,
                 max_extent_m=max_extent_m,
@@ -1108,6 +1124,8 @@ def create_app(environment=None) -> FastAPI:
                 gps_origin=gps_origin,
                 gps_origins_by_uav=gps_origins_by_uav,
             )
+            if departure_point == "stadium_center":
+                result = anchor_stadium_plan(result, source_plan)
         except PlanNotPreparedError as error:
             raise HTTPException(status_code=409, detail=str(error)) from error
         except (TypeError, ValueError) as error:
@@ -1169,6 +1187,7 @@ def create_app(environment=None) -> FastAPI:
                 "forest_edge_m": payload.get("forest_edge_m", 5.0),
                 "terrain_exclusions_enabled": payload.get("terrain_exclusions_enabled", True),
                 "uav_count": payload.get("uav_count", 6),
+                "departure_point": payload.get("departure_point", "southeast"),
                 "gps_origin": payload.get("gps_origin"),
                 "gps_origins_by_uav": payload.get("gps_origins_by_uav"),
             })
@@ -1573,6 +1592,9 @@ def create_app(environment=None) -> FastAPI:
             rel_alt=optional_float(payload.get("rel_alt")),
             pengfei=sanitize_pengfei(payload.get("pengfei")),
             pengfei_age_seconds=optional_float(payload.get("pengfei_age_seconds")),
+            ego_exec_state=(int(payload["ego_exec_state"])
+                            if payload.get("ego_exec_state") is not None else None),
+            ego_exec_state_age_seconds=optional_float(payload.get("ego_exec_state_age_seconds")),
             task_complete=bool(payload.get("task_complete", False)),
             task_assignment_acked=bool(payload.get("task_assignment_acked", True)),
             task_assignment_mission_id=str(

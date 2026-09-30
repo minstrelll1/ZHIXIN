@@ -24,6 +24,7 @@ from competition_shared.scan import ScanSession
 import uuid
 from su17_competition_executor.tcp_link import OnboardTcpLink
 from su17_competition_executor.pengfei_bridge import PengfeiReadOnlyBridge
+from su17_competition_executor.ego_state_bridge import EgoStateReadOnlyBridge
 from su17_competition_executor.task_protocol import (
     TaskValidationError,
     load_assignment,
@@ -211,6 +212,7 @@ class OnboardTaskExecutor:
         )
 
         self._pengfei_bridge = PengfeiReadOnlyBridge(rospy, self.uav_id)
+        self._ego_state_bridge = EgoStateReadOnlyBridge(rospy, self.uav_id)
         self.scan_pub = rospy.Publisher(local_prefix + "/competition/scan/request", String, queue_size=1)
         rospy.Subscriber(local_prefix + "/competition/scan/status", String, self._scan_callback, queue_size=5)
         rospy.Subscriber(local_prefix + "/competition/image_health", String, self._image_health_callback, queue_size=1)
@@ -683,6 +685,8 @@ class OnboardTaskExecutor:
             gps_fix, gps_fix_received = self._gps_fix, self._gps_fix_received
         gps_position = self._gps_position_payload(gps_fix, gps_fix_received, time.monotonic())
         auto_ready, auto_reason = self._takeoff_precheck()
+        ego_bridge = getattr(self, "_ego_state_bridge", None)
+        ego_state, ego_age = ego_bridge.snapshot() if ego_bridge is not None else (None, None)
         self.tcp_link.update_telemetry(
             {
                 "type": "telemetry",
@@ -708,6 +712,8 @@ class OnboardTaskExecutor:
                 "velocity": [float(value) for value in state.velocity],
                 "task_phase": self._progress.get("phase", "idle"),
                 "pengfei": self._pengfei_bridge.snapshot(),
+                "ego_exec_state": ego_state,
+                "ego_exec_state_age_seconds": ego_age,
                 "gps_status": int(getattr(state, "gps_status", 0)),
                 "location_source": int(getattr(state, "location_source", -1)),
                 "gps_num": int(getattr(state, "gps_num", 0)),
@@ -1651,4 +1657,3 @@ if __name__ == "__main__":
         main()
     except rospy.ROSInterruptException:
         pass
-

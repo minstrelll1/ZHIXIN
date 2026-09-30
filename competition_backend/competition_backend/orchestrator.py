@@ -824,6 +824,8 @@ class CompetitionOrchestrator:
                     "gps_telemetry_age_seconds": item.gps_telemetry_age_seconds,
                     "pengfei": copy.deepcopy(item.pengfei),
                     "pengfei_age_seconds": item.pengfei_age_seconds,
+                    "ego_exec_state": item.ego_exec_state,
+                    "ego_exec_state_age_seconds": item.ego_exec_state_age_seconds,
                     "task_assignment_acked": item.task_assignment_acked,
                     "task_assignment_mission_id": item.task_assignment_mission_id,
                     "task_assignment_checksum": item.task_assignment_checksum,
