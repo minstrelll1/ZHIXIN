@@ -1,61 +1,60 @@
-const {chromium}=require('playwright'),fs=require('fs'),assert=require('node:assert/strict'),path=require('path');
-const root=process.env.COMPETITION_TEST_ROOT||path.resolve(__dirname,'../..');
-const web=path.join(root,'competition_backend/competition_backend/web');
-(async()=>{
- const browser=await chromium.launch({channel:'msedge',headless:true});
- try{
- const page=await browser.newPage({viewport:{width:1400,height:1000}}),errors=[],plans=[];
- let saved=null,saves=0,failSave=false;
- page.on('pageerror',e=>errors.push(e.message));
- await page.route('**/*',async route=>{
-   const url=new URL(route.request().url());
-   if(url.pathname==='/')return route.fulfill({body:fs.readFileSync(web+'/index.html','utf8').split('\n').filter(l=>!l.startsWith('选择地面终端().then')).join('\n'),contentType:'text/html; charset=utf-8'});
-   if(url.pathname.includes('terrain_basemap.js'))return route.fulfill({body:fs.readFileSync(web+'/terrain_basemap.js'),contentType:'application/javascript'});
-   if(url.pathname==='/api/v1/recognition-categories'){
-     if(route.request().method()==='PUT'){
-       saves++;
-       if(failSave)return route.fulfill({status:422,json:{detail:'模拟保存失败'}});
-       saved=route.request().postDataJSON();saved.category_names=saved.category_ids.map(i=>i<=7?'车辆'+i:i<=11?'工事'+(i-7):'人员'+(i-11));
-     }
-     return route.fulfill({json:{selection:saved}});
-   }
-   if(url.pathname==='/api/v1/plan'){
-     plans.push(route.request().postDataJSON());return route.fulfill({json:{mission:{mission_id:'preview',phase:'planned',uavs:{}},dispatch_status:{assigned_uav_ids:[]}}});
-   }
-   return route.fulfill({json:{}});
- });
- await page.goto('http://recognition.test/');
- assert.equal(await page.locator('#recognitionSettings').evaluate(e=>e.open),false);
- assert.equal(await page.locator('#recognitionSettings').evaluate(e=>e.previousElementSibling.id),'coverageSettings');
- await page.locator('#recognitionSettings summary').click();
- await page.waitForFunction(()=>识别类别已加载);
- assert.equal(await page.locator('#recognitionGroups input').count(),15);
- await page.locator('#recognitionCount').selectOption('3');
- for(const id of [1,8])await page.locator(`#recognitionGroups input[value="${id}"]`).check();
- assert.equal(await page.locator('#saveRecognition').isEnabled(),false);
- await page.locator('#recognitionGroups input[value="12"]').check();
- assert.match(await page.locator('#recognitionCounter').textContent(),/3 \/ 3/);
- await page.evaluate(()=>生成比赛覆盖());assert.equal(plans.length,0,'未保存不得分派');
- await page.locator('#saveRecognition').click();await page.waitForFunction(()=>!识别类别保存中&&已保存识别类别);
- assert.deepEqual(saved.category_ids,[1,8,12]);assert.equal(saves,1);assert.equal(plans.length,0,'保存不分派');
- // Test a complete plan payload without touching a real ground service.
- await page.evaluate(()=>{当前角色={task_publisher:true};渲染=()=>{};});
- await page.evaluate(()=>生成比赛覆盖());assert.equal(plans.length,1);assert.deepEqual(plans[0].recognition_selection.category_ids,[1,8,12]);
- await page.reload();assert.equal(await page.locator('#recognitionSettings').evaluate(e=>e.open),false);
- await page.locator('#recognitionSettings summary').click();await page.waitForFunction(()=>已保存识别类别?.category_count===3);
- assert.equal(await page.locator('#recognitionGroups input:checked').count(),3);
- if(process.env.RECOGNITION_SCREENSHOT)await page.locator('#recognitionSettings').screenshot({path:process.env.RECOGNITION_SCREENSHOT});
- await page.locator('#recognitionCount').selectOption('2');assert.equal(await page.locator('#saveRecognition').isEnabled(),false);
- await page.locator('#recognitionGroups input[value="12"]').uncheck();
- failSave=true;await page.locator('#saveRecognition').click();await page.waitForFunction(()=>document.getElementById('recognitionFeedback').textContent.includes('模拟保存失败'));
- await page.evaluate(()=>生成比赛覆盖());assert.equal(plans.length,1,'保存失败不得用旧配置分派');
- failSave=false;await page.locator('#recognitionCount').selectOption('15');
- for(let id=1;id<=15;id++)await page.locator(`#recognitionGroups input[value="${id}"]`).check();
- await page.locator('#saveRecognition').click();await page.waitForFunction(()=>已保存识别类别?.category_count===15&&!识别类别保存中);
- assert.deepEqual(saved.category_ids,Array.from({length:15},(_,i)=>i+1));
- await page.locator('#subject').selectOption('subject2');assert.equal(await page.locator('#recognitionSettings').isVisible(),false);
- await page.evaluate(()=>{渲染=()=>{};});await page.evaluate(()=>生成比赛覆盖());assert.equal(plans.at(-1).recognition_selection,undefined);
- assert.deepEqual(errors,[]);
- console.log('类别窗口默认折叠、15类映射、计数、保存与恢复、未保存拦截、分派字段及其他科目隔离通过。');
- }finally{await browser.close()}
-})().catch(e=>{console.error(e);process.exitCode=1});
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const path=require('node:path');
+const vm=require('node:vm');
+
+const html=fs.readFileSync(path.resolve(__dirname,'../../competition_backend/competition_backend/web/index.html'),'utf8');
+const start=html.indexOf('const 识别类别目录=');
+const end=html.indexOf('let 比赛覆盖方案=',start);
+assert.ok(start>0&&end>start);
+assert.doesNotMatch(html, /id="saveRecognition"|require_recognition_selection:true/);
+assert.match(html, /<option value="0" selected>0 类<\/option>/);
+
+function openPage(){
+ const nodes=new Map();
+ const inputs=[];
+ const makeNode=()=>({append(){},textContent:'',disabled:false});
+ const get=id=>{if(!nodes.has(id))nodes.set(id,makeNode());return nodes.get(id)};
+ get('recognitionCount').value='0';
+ const context={
+  $:get,
+  document:{
+   querySelectorAll:selector=>selector==='#recognitionGroups input:checked'?inputs.filter(item=>item.checked):inputs,
+   createElement:tag=>{
+    const item=makeNode();
+    if(tag==='input'){item.checked=false;inputs.push(item)}
+    return item;
+   },
+   createTextNode:text=>({textContent:text}),
+  },
+ };
+ vm.createContext(context);
+ vm.runInContext(html.slice(start,end),context);
+ return {context,inputs,get,run:code=>vm.runInContext(code,context)};
+}
+
+const first=openPage();
+const catalog=JSON.parse(JSON.stringify(first.run('识别类别目录')));
+assert.equal(catalog.length,19);
+assert.deepEqual(catalog.map(item=>item.id),Array.from({length:19},(_,index)=>index));
+assert.deepEqual(catalog.map(item=>item.name),
+ ['车辆1','车辆2','车辆3','车辆4','车辆5','车辆6','车辆7',
+  '工事1','工事2','工事3','工事4','人员1','人员2','人员3','人员4',
+  '运动的人员1','运动的人员2','运动的人员3','运动的人员4']);
+assert.equal(first.inputs.length,19);
+assert.equal(first.get('recognitionCounter').textContent,'已选择 0 / 0 类');
+assert.deepEqual(JSON.parse(JSON.stringify(first.run('获取规划识别类别()'))),{category_count:0,category_ids:[]});
+
+first.get('recognitionCount').value='3';first.get('recognitionCount').onchange();
+for(const id of [18,0,7]){
+ const input=first.inputs.find(item=>item.value===id);
+ input.checked=true;input.onchange();
+}
+assert.equal(first.get('recognitionCounter').textContent,'已选择 3 / 3 类');
+assert.deepEqual(JSON.parse(JSON.stringify(first.run('获取规划识别类别()'))),{category_count:3,category_ids:[0,7,18]});
+first.get('recognitionCount').value='2';first.get('recognitionCount').onchange();
+assert.deepEqual(JSON.parse(JSON.stringify(first.run('获取规划识别类别()'))),{category_count:3,category_ids:[0,7,18]},'数量不一致也不能阻断任务');
+const reopened=openPage();
+assert.equal(reopened.inputs.filter(item=>item.checked).length,0);
+assert.deepEqual(JSON.parse(JSON.stringify(reopened.run('获取规划识别类别()'))),{category_count:0,category_ids:[]});
+console.log('19 类编号、默认 0 类、无需保存、数量不匹配不阻断及重新打开重置通过。');

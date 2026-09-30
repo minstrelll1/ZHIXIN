@@ -6,7 +6,7 @@ const html=fs.readFileSync(path.resolve(__dirname,'../../competition_backend/com
 new vm.Script(html.match(/<script>([\s\S]*?)<\/script>/)[1]);
 const requestStart=html.indexOf('async function 请求('),requestEnd=html.indexOf('\nfunction ',requestStart);
 const flowStart=html.indexOf('let 比赛覆盖方案='),flowEnd=html.indexOf("$('planningAreaMode').onchange",flowStart);
-function fixture(fetch){
+function fixture(fetch,recognitionSelection={category_count:3,category_ids:[0,7,15]}){
   const nodes=new Map(),notes=[];
   let backendFetch=fetch;
   const defaults={subject:'subject1',planningAreaMode:'competition',controllerMode:'external',flightProfile:'lab',flightAltitudePlan:'around2m',coordinateMode:'xyz',scoutRadius:'1',flightSpeed:'0.2',hoverScanSeconds:'10',duration:''};
@@ -20,7 +20,7 @@ function fixture(fetch){
   };
   const context={fetch:jobFetch,AbortController,setTimeout,clearTimeout,console,当前状态:{mission:null},当前角色:{task_publisher:true},文本:{错误:{}},
     $:id=>{if(!nodes.has(id))nodes.set(id,{value:defaults[id]??'',style:{},disabled:false});return nodes.get(id)},
-    获取规划识别类别:()=>({category_count:3,category_ids:[1,8,12]}),提示:message=>notes.push(message),读取机载GPS参考组:()=>({}),数值:Number,渲染:()=>{}};
+    获取规划识别类别:()=>recognitionSelection,提示:message=>notes.push(message),读取机载GPS参考组:()=>({}),数值:Number,渲染:()=>{}};
   vm.createContext(context);
   vm.runInContext(html.slice(requestStart,requestEnd)+'\n'+html.slice(flowStart,flowEnd),context);
   return {context,nodes,notes,setFetch:next=>{backendFetch=next},run:code=>vm.runInContext(code,context)};
@@ -60,6 +60,13 @@ const mission=(ids=[])=>({mission:{mission_id:'new-plan',phase:'planned',uavs:Ob
   finish(response(mission()));await first;
   assert.equal(pending.nodes.get('planButton').disabled,false);
   assert.match(pending.nodes.get('dispatchFeedback').textContent,/未连接/);
+  let zeroBody;
+  const zero=fixture(async(_url,options)=>{zeroBody=JSON.parse(options.body);return response(mission())},{category_count:0,category_ids:[]});
+  await zero.context.生成比赛覆盖();
+  assert.equal(zeroBody.recognition_selection.category_count,0);
+  assert.deepEqual(zeroBody.recognition_selection.category_ids,[]);
+  assert.equal(zeroBody.require_recognition_selection,undefined);
+  assert.equal(zero.nodes.get('planButton').disabled,false);
   // Subject 3 shares the same recoverable request lifecycle without adding competition parameters.
   let body;
   const subject3=fixture(async(_url,options)=>{body=JSON.parse(options.body);return response(mission([1]))});

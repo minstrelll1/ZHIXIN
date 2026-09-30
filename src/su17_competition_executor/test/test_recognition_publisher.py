@@ -11,7 +11,7 @@ class RecognitionPublisherTest(unittest.TestCase):
         node=AutonomyTest().executor(directory)
         assignment=copy.deepcopy(node._assignment)
         assignment['subject']='subject1'
-        assignment['task']['recognition_selection']={'category_count':3,'category_ids':[1,8,12]}
+        assignment['task']['recognition_selection']={'category_count':3,'category_ids':[0,7,15]}
         assignment['assignment_checksum']=assignment_checksum(assignment)
         node._assignment=None
         node.max_distance_from_home=10
@@ -30,33 +30,44 @@ class RecognitionPublisherTest(unittest.TestCase):
                 node._publish_status.side_effect=lambda kind,**kw:events.append(('status',kind))
                 node._accept_assignment(msg)
                 self.assertTrue(node._assignment_acked)
-                self.assertEqual(events[:2],[('ros',[1,8,12]),('status','task_received')])
+                self.assertEqual(events[:2],[('ros',[0,7,15]),('status','task_received')])
                 node._accept_assignment(msg)
                 self.assertEqual(node.recognition_categories_pub.publish.call_count,1)
 
-    def test_rejected_active_and_failed_publish_never_ack(self):
-        for reason in ['invalid','active','publish_error']:
+    def test_active_task_and_bad_checksum_still_rejected(self):
+        for reason in ['checksum','active']:
             with self.subTest(reason=reason),tempfile.TemporaryDirectory() as directory:
                 node,msg=self.node(directory)
-                if reason=='invalid':msg['task']['recognition_selection']['category_ids']=[16]
+                if reason=='checksum':msg['task']['recognition_selection']['category_ids']=[18]
                 if reason=='active':node._motion_thread=Mock(is_alive=Mock(return_value=True))
-                if reason=='publish_error':node.recognition_categories_pub.publish.side_effect=RuntimeError('ROS disconnected')
                 node._accept_assignment(msg)
                 self.assertFalse(node._assignment_acked)
                 self.assertEqual(node._publish_status.call_args.args[0],'task_rejected')
-                if reason!='publish_error':node.recognition_categories_pub.publish.assert_not_called()
+                node.recognition_categories_pub.publish.assert_not_called()
 
-    def test_restart_restores_only_verified_local_selection(self):
+    def test_zero_categories_and_publish_error_do_not_reject_task(self):
+        for failure in [False, True]:
+            with self.subTest(failure=failure),tempfile.TemporaryDirectory() as directory:
+                node,msg=self.node(directory)
+                msg['task']['recognition_selection']={'category_count':0,'category_ids':[]}
+                msg['assignment_checksum']=assignment_checksum(msg)
+                if failure:node.recognition_categories_pub.publish.side_effect=RuntimeError('ROS disconnected')
+                node._accept_assignment(msg)
+                self.assertTrue(node._assignment_acked)
+                self.assertEqual(node._publish_status.call_args.args[0],'task_received')
+                self.assertEqual(node.recognition_categories_pub.publish.call_args.args[0].data,[])
+
+    def test_restart_resets_stale_selection_to_zero(self):
         with tempfile.TemporaryDirectory() as directory:
             node,msg=self.node(directory)
             node._assignment=msg;node._assignment_acked=True
             node._restore_recognition_categories()
-            self.assertEqual(node.recognition_categories_pub.publish.call_args.args[0].data,[1,8,12])
+            self.assertEqual(node.recognition_categories_pub.publish.call_args.args[0].data,[])
             node._assignment_acked=False
             node._restore_recognition_categories()
-            self.assertEqual(node.recognition_categories_pub.publish.call_count,1)
+            self.assertEqual(node.recognition_categories_pub.publish.call_count,2)
 
-    def test_legacy_and_other_subjects_do_not_publish(self):
+    def test_legacy_subject_one_clears_categories_other_subject_does_not_publish(self):
         for legacy in [True,False]:
             with tempfile.TemporaryDirectory() as directory:
                 node,msg=self.node(directory)
@@ -64,6 +75,7 @@ class RecognitionPublisherTest(unittest.TestCase):
                 else:msg['subject']='subject2'
                 msg['assignment_checksum']=assignment_checksum(msg);node._accept_assignment(msg)
                 self.assertTrue(node._assignment_acked)
-                node.recognition_categories_pub.publish.assert_not_called()
+                if legacy:self.assertEqual(node.recognition_categories_pub.publish.call_args.args[0].data,[])
+                else:node.recognition_categories_pub.publish.assert_not_called()
 
 if __name__=='__main__':unittest.main()

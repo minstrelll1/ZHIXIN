@@ -8,7 +8,7 @@ import math
 import copy
 from typing import Any, Callable, Dict, List, Optional
 
-from competition_shared.recognition import validate_recognition_selection
+from competition_shared.recognition import optional_recognition_selection
 from .adapter import FleetAdapter
 from .assignment_protocol import assignment_checksum
 from .journal import EventJournal
@@ -378,11 +378,8 @@ class CompetitionOrchestrator:
                 elif coordinate_mode != "xyz":
                     raise MissionError("外部任务坐标系必须为 gps 或 xyz")
 
-            if subject == "subject1" and recognition_selection is not None:
-                try:
-                    recognition_selection = validate_recognition_selection(recognition_selection)
-                except ValueError as error:
-                    raise MissionError(str(error)) from error
+            if subject == "subject1":
+                recognition_selection = optional_recognition_selection(recognition_selection)
                 task_source = copy.deepcopy(task_source)
                 for task in task_source.values():
                     task["recognition_selection"] = copy.deepcopy(recognition_selection)

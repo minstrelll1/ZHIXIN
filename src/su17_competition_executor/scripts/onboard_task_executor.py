@@ -20,6 +20,7 @@ from std_msgs.msg import String, Float64MultiArray, Int32, Bool, Int32MultiArray
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 from competition_shared.navigation import resolve_waypoints
+from competition_shared.recognition import optional_recognition_selection
 from competition_shared.scan import ScanSession
 import uuid
 from su17_competition_executor.tcp_link import OnboardTcpLink
@@ -789,24 +790,20 @@ class OnboardTaskExecutor:
             self._publish_status("command_rejected", error=str(error))
 
     def _restore_recognition_categories(self) -> None:
-        # ROS latch 随进程重启丢失；恢复已通过校验的本机任务类别，不触发任务重发。
-        if self._assignment and self._assignment_acked:
-            try:
-                self._publish_recognition_categories(self._assignment)
-            except TaskValidationError as error:
-                self._assignment_acked = False
-                rospy.logerr("恢复识别类别发布失败：%s", error)
+        # 新进程从 0 类开始，不能把上次任务的类别锁存给本次识别算法。
+        self._publish_recognition_categories({"subject": "subject1", "task": {}})
 
     def _publish_recognition_categories(self, assignment: Dict[str, Any]) -> None:
-        selection = assignment.get("task", {}).get("recognition_selection")
-        if assignment.get("subject") != "subject1" or selection is None:
-            return  # 旧任务和其他科目保持原流程，不推测类别列表。
+        if assignment.get("subject") != "subject1":
+            return
+        selection = optional_recognition_selection(assignment.get("task", {}).get("recognition_selection"))
         message = Int32MultiArray()
         message.data = list(selection["category_ids"])
         try:
             self.recognition_categories_pub.publish(message)
         except Exception as error:
-            raise TaskValidationError("识别类别话题发布失败：%s" % error) from error
+            rospy.logwarn("识别类别话题发布失败，飞行任务继续接收：%s", error)
+            return
         rospy.loginfo("已发布科目一识别类别：%s，共 %d 类，编号=%s", self.recognition_categories_topic,
                       selection["category_count"], message.data)
 

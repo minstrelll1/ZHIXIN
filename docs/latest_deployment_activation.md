@@ -205,4 +205,4 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\stop_ground.ps1
 
 ### 科目一识别类别
 
-展开“科目一识别类别” → 选择类别数和目标 → 保存类别 → 规划并分派。机载话题 `/uavN/competition/recognition_categories`（`std_msgs/Int32MultiArray`，保留最后一条）。本功能需同步更新竞赛机载端，原部署命令不变。详见 [类别编号与接入说明](recognition_categories.md)。
+展开“科目一识别类别” → 选择 0～19 类并勾选目标 → 直接规划并分派。每次打开默认 0 类，不单独保存；0 类也不阻断任务。机载话题 `/uavN/competition/recognition_categories`（`std_msgs/Int32MultiArray`，保留最后一条）。本功能需同步更新竞赛机载端，原部署命令不变。详见 [类别编号与接入说明](recognition_categories.md)。
