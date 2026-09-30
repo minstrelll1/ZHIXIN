@@ -347,6 +347,8 @@ class GroundEntry:
             else:
                 factory = self.app_factory
             runtime = await asyncio.to_thread(factory, env)
+            # 规划/起飞预检读取机载 ROS 当前生效的程序 B 场景模式。
+            runtime.state.program_manager = self.programs
             services = self.services_factory(local, env)
             try:
                 await asyncio.to_thread(services.start)

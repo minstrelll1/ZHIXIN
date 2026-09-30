@@ -654,6 +654,74 @@ def create_app(environment=None) -> FastAPI:
             raise HTTPException(status_code=409, detail="所选机型与发布端同步的机队配置不一致")
         return current
 
+    def _check_external_program_b_mode(
+        flight_profile: str, controller_mode: str, uav_ids, *, require_running: bool = False,
+    ) -> None:
+        """Only inspect program B; never stop or restart a possibly manual process."""
+        if str(controller_mode).lower() != "external":
+            return
+        small_scenes = ("lab", "lab10", "outdoor5")
+        large_scenes = ("competition", "outdoor100", "outdoor200", "dalian_nanshan")
+        expected = ("outdoor_small_range" if flight_profile in small_scenes else
+                    "outdoor" if flight_profile in large_scenes else None)
+        if expected is None:
+            return
+        manager = getattr(app.state, "program_manager", None)
+        peer_states = (adapter.peer_program_b_status()
+                       if isinstance(adapter, DistributedFleetAdapter) else {})
+        for uid in uav_ids:
+            if uid == local_uav_id and manager is not None:
+                state = manager.snapshot().get("programs", {}).get("flight")
+            else:
+                state = peer_states.get(str(uid))
+            if not isinstance(state, dict):
+                if require_running and manager is not None:
+                    raise HTTPException(status_code=409, detail=(
+                        "尚未收到 UAV{} 所在地面终端的程序 B 状态，不能执行一键起飞。".format(uid)))
+                continue  # 未启用程序管理的旧入口不阻断规划预览。
+            if (uid != local_uav_id and require_running and state.get("received_at")
+                    and time.time() - float(state["received_at"]) > 5.0):
+                raise HTTPException(status_code=409, detail=(
+                    "UAV{} 程序 B 状态已超时，不能执行一键起飞。".format(uid)))
+            status = str(state.get("state", "unknown"))
+            if status != "running":
+                if require_running:
+                    raise HTTPException(status_code=409, detail=(
+                        "UAV{} 外部程序 B 尚未正常启动，不能执行一键起飞；请检查程序窗口。".format(uid)))
+                continue
+            actual = str(state.get("flight_mode") or "unknown")
+            if actual == expected:
+                continue
+            raise HTTPException(status_code=409, detail=(
+                "UAV{} 外部程序 B 当前模式为 {}，本场景必须使用 {}。请在程序窗口停止原程序，"
+                "在机载终端用 flight_mode:={} 重新启动，再规划/起飞；系统不会自动结束人工启动的进程。"
+            ).format(uid, actual, expected, expected))
+
+    def _external_program_b_radius_warnings(flight_profile: str, controller_mode: str, uav_ids) -> list:
+        if str(controller_mode).lower() != "external":
+            return []
+        requested = 75.0 if flight_profile in ("competition", "outdoor100", "outdoor200", "dalian_nanshan") else 1.0
+        manager = getattr(app.state, "program_manager", None)
+        peer_states = (adapter.peer_program_b_status()
+                       if isinstance(adapter, DistributedFleetAdapter) else {})
+        warnings = []
+        for uid in uav_ids:
+            if uid == local_uav_id and manager is not None:
+                state = manager.snapshot().get("programs", {}).get("flight")
+            else:
+                state = peer_states.get(str(uid))
+            if not isinstance(state, dict) or state.get("state") != "running":
+                continue
+            try:
+                radius = float(state.get("reconnaissance_radius_m"))
+            except (TypeError, ValueError):
+                radius = float("nan")
+            if math.isfinite(radius) and radius < requested:
+                warnings.append(
+                    "UAV{} 程序 B 定位器当前半径 {}m，小于规划侦察半径 {}m；两者用途不同，目标覆盖效果需实地核验。".format(
+                        uid, radius, requested))
+        return warnings
+
     def _require_task_publisher() -> Dict[str, Any]:
         current = operator_status()
         if current.get("selection_pending") or not current["configured"] or not current["task_publisher"]:
@@ -1036,15 +1104,31 @@ def create_app(environment=None) -> FastAPI:
             )
             from .scaled_scene_plans import load_scaled_scene_plan
             departure_point = str(payload.get("departure_point", "southeast")).strip().lower()
-            if departure_point not in ("southeast", "stadium_center"):
-                raise HTTPException(status_code=422, detail="未知的出发点")
             coordinate_mode = str(payload.get("coordinate_mode", "gps")).strip().lower()
             flight_profile = str(payload.get("flight_profile", "competition")).strip().lower()
             flight_altitude_plan = str(payload.get("flight_altitude_plan", "default")).strip().lower()
             if flight_altitude_plan not in ("default", "around1m", "around2m", "around5m", "around45m"):
                 raise HTTPException(status_code=422, detail="未知的飞行高度方案")
-            if flight_profile not in ("lab", "lab10", "outdoor5", "outdoor100", "outdoor200", "competition"):
+            if flight_profile not in ("lab", "lab10", "outdoor5", "outdoor100", "outdoor200", "competition", "dalian_nanshan"):
                 raise HTTPException(status_code=422, detail="未知的飞行场景")
+            if flight_profile == "dalian_nanshan":
+                # 大连场地使用已核定的 WGS84 边界与固定起飞点；飞行前飞机的
+                # 实时位置只用于状态展示，不得平移赛前固定航点。
+                if coordinate_mode != "gps":
+                    raise HTTPException(status_code=422, detail="大连南山坡外场仅支持 GPS 坐标系")
+                if departure_point not in ("fixed_dalian", "southeast"):
+                    raise HTTPException(status_code=422, detail="大连南山坡外场使用固定起飞点")
+                if (float(payload.get("reconnaissance_radius_m", 75.0)) != 75.0
+                        or float(payload.get("speed_mps", 5.0)) != 5.0
+                        or float(payload.get("hover_scan_seconds", 10.0)) != 10.0):
+                    raise HTTPException(status_code=409, detail="大连南山坡外场仅支持已保存的半径 75m、航速 5m/s、扫描 10s 方案")
+                from .fixed_gps_scene import load_dalian_nanshan_plan
+                result = load_dalian_nanshan_plan(coordinate_mode="gps")
+                result["subject"] = subject
+                result["flight_altitude_plan"] = flight_altitude_plan
+                return result
+            if departure_point not in ("southeast", "stadium_center"):
+                raise HTTPException(status_code=422, detail="未知的出发点")
             gps_origin = payload.get("gps_origin")
             gps_origins_by_uav = payload.get("gps_origins_by_uav")
             if coordinate_mode == "gps":
@@ -1173,6 +1257,8 @@ def create_app(environment=None) -> FastAPI:
             payload.get("flight_profile", "competition" if payload.get("planning_mode") == "competition" else "lab")
         ).strip().lower()
         requested_altitude_plan = str(payload.get("flight_altitude_plan", "default")).strip().lower()
+        if requested_profile == "dalian_nanshan" and payload.get("planning_mode") != "competition":
+            raise HTTPException(status_code=422, detail="大连南山坡固定区域必须使用比赛区域规划模式")
         if payload.get("planning_mode") == "competition":
             if payload.get("tasks_by_uav") is not None:
                 raise HTTPException(status_code=422, detail="比赛区域任务由已保存方案生成，不能混用手工任务")
@@ -1222,6 +1308,9 @@ def create_app(environment=None) -> FastAPI:
                     detail="无法取得任务控制权限：{}".format(error),
                 ) from error
         try:
+            _check_external_program_b_mode(
+                requested_profile, payload.get("controller_mode", "internal"), orchestrator.active_uav_ids,
+            )
             result = _mission_call(
                 orchestrator.plan,
                 str(payload["subject"]),
@@ -1231,7 +1320,7 @@ def create_app(environment=None) -> FastAPI:
                 requested_profile,
                 requested_altitude_plan,
                 str(payload.get("controller_mode", "internal")),
-                payload.get("gps_origin"),
+                None if requested_profile == "dalian_nanshan" else payload.get("gps_origin"),
                 payload.get("landing_area"),
                 prepared,
                 recognition_selection,
@@ -1255,6 +1344,9 @@ def create_app(environment=None) -> FastAPI:
                 "ack_required_before_takeoff": True,
             }
             result["operator"] = operator_status()
+        result["planning_warnings"] = _external_program_b_radius_warnings(
+            requested_profile, payload.get("controller_mode", "internal"), orchestrator.active_uav_ids,
+        )
         return result
 
     @app.post("/api/v1/plan/jobs", summary="启动规划分派作业", tags=["任务控制"])
@@ -1383,10 +1475,15 @@ def create_app(environment=None) -> FastAPI:
         _require_peer_token(x_competition_peer_token)
         if not isinstance(adapter, DistributedFleetAdapter) or uav_id != local_uav_id:
             raise HTTPException(status_code=404, detail="UAV is not local to this computer")
+        manager = getattr(app.state, "program_manager", None)
+        program_b = ((manager.snapshot().get("programs", {}).get("flight") or {})
+                     if manager is not None else {})
         return {
             "uav_id": uav_id,
             "telemetry": adapter.local_telemetry_dict(),
             "traffic": traffic_monitor.status_for_uav(uav_id),
+            "program_b": {key: program_b.get(key) for key in ("state", "flight_mode", "reconnaissance_radius_m", "checked_at")}
+            if program_b else None,
         }
 
     @app.post("/api/v1/peer/command", include_in_schema=False)
@@ -1404,11 +1501,24 @@ def create_app(environment=None) -> FastAPI:
                 adapter.require_peer_coordinator(str(payload["coordinator_id"]))
                 if payload.get("command_type") != "return_home":
                     _fleet_motion_guard()
+            incoming = dict(payload.get("payload", {}))
+            if payload.get("command_type") == "assign_task":
+                _check_external_program_b_mode(
+                    str(incoming.get("flight_profile", "")),
+                    str(incoming.get("controller_mode", "")), [local_uav_id],
+                )
+            elif payload.get("command_type") == "takeoff":
+                mirrored = (adapter.mirrored_snapshot() or {}).get("mission") or {}
+                _check_external_program_b_mode(
+                    str(mirrored.get("flight_profile", "")),
+                    str(mirrored.get("controller_mode", "")), [local_uav_id],
+                    require_running=True,
+                )
             adapter.accept_peer_command(
                 str(payload["coordinator_id"]),
                 int(payload["uav_id"]),
                 str(payload["command_type"]),
-                dict(payload.get("payload", {})),
+                incoming,
             )
         except (KeyError, TypeError, ValueError) as error:
             raise HTTPException(status_code=422, detail=str(error)) from error
@@ -1444,12 +1554,24 @@ def create_app(environment=None) -> FastAPI:
     def prepare_takeoff() -> Dict[str, Any]:
         _require_operator_ready()
         _fleet_motion_guard()
+        mission = orchestrator.snapshot().get("mission") or {}
+        _check_external_program_b_mode(
+            str(mission.get("flight_profile", "")),
+            str(mission.get("controller_mode", "")),
+            orchestrator.active_uav_ids, require_running=True,
+        )
         return _mission_call(orchestrator.prepare_takeoff)
 
     @app.post("/api/v1/takeoff/confirm", summary="确认六机一键起飞", tags=["起飞控制"])
     def confirm_takeoff(payload: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
         _require_operator_ready()
         _fleet_motion_guard()
+        mission = orchestrator.snapshot().get("mission") or {}
+        _check_external_program_b_mode(
+            str(mission.get("flight_profile", "")),
+            str(mission.get("controller_mode", "")),
+            orchestrator.active_uav_ids, require_running=True,
+        )
         return _mission_call(orchestrator.confirm_takeoff, str(payload["token"]))
 
     @app.post("/api/v1/return", summary="命令六机全部返航", tags=["返航控制"])

@@ -67,6 +67,7 @@
     ensureImage();
   }
   function caption(area){
+    if(area?.flight_profile==='dalian_nanshan')return '大连南山坡外场尚无已校准卫星底图；任务边界、航点和实时 GPS 位置按固定 WGS84 坐标绘制';
     if(!mapping(area))return 'Esri 示意底图：当前区域形状不匹配';
     if(state.status==='error')return 'Esri 底图加载失败，请检查地面端地图资源';
     if(state.status!=='ready')return '正在加载本地 Esri 底图…';

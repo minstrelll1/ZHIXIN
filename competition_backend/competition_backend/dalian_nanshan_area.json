@@ -1,0 +1,15 @@
+{
+  "name": "大连南山坡外场",
+  "coordinate_system": "WGS84",
+  "coordinate_format": "decimal_degrees",
+  "source": "用户提供的坐标点.docx；经纬度基准由用户确认",
+  "boundary_lon_lat": [
+    [121.65941172956963, 39.0507946348928],
+    [121.65692744036518, 39.0584657294435],
+    [121.66494137383192, 39.05904043943278],
+    [121.6667301989922, 39.05904043943278]
+  ],
+  "departure_lon_lat": [121.661123, 39.050245],
+  "boundary_role": "reconnaissance_area_only",
+  "terrain_exclusions_available": false
+}

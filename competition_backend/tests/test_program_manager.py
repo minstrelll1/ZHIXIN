@@ -138,11 +138,38 @@ class ProgramsTest(unittest.TestCase):
 
     def test_remote_command_uses_selected_uav_and_does_not_arm(self):
         self.assertIn('uav_id:=3', remote.command_for('detection', 3, 'p600'))
-        self.assertIn('uav_id:=3 flight_mode:=outdoor_small_range', remote.command_for('flight', 3, 'p600'))
+        self.assertIn('uav_id:=3 flight_mode:=outdoor', remote.command_for('flight', 3, 'p600'))
+        self.assertNotIn('flight_mode:=outdoor_small_range', remote.command_for('flight', 3, 'p600'))
         self.assertIn('--expect-uav-id 3 --direct --enable-motion', remote.command_for('onboard', 3, 'p600'))
         for key in remote.NAMES:
             self.assertNotIn('arming', remote.command_for(key, 3, 'p600'))
             self.assertNotIn('takeoff', remote.command_for(key, 3, 'p600'))
+
+    def test_remote_ros_health_reads_effective_mode_and_recognition_radius(self):
+        class RosServer:
+            def __init__(self, endpoint):
+                self.endpoint = endpoint
+            def __enter__(self):
+                return self
+            def __exit__(self, *_):
+                return False
+            def lookupNode(self, _caller, name):
+                return (1, '', 'http://node.test')
+            def getPid(self, _caller):
+                return (1, '', 1234)
+            def getParam(self, _caller, name):
+                if name.endswith('/indoor_mode'):
+                    return (1, '', 'false')
+                if name.endswith('/outdoor_small_range_mode'):
+                    return (1, '', 'false')
+                if name.endswith('/reconnaissance_radius_m'):
+                    return (1, '', 30.0)
+                raise AssertionError(name)
+        with patch('xmlrpc.client.ServerProxy', side_effect=lambda endpoint, **_: RosServer(endpoint)):
+            health = remote.ros_health(3)
+        self.assertTrue(health['flight']['ready'])
+        self.assertEqual(health['flight']['flight_mode'], 'outdoor')
+        self.assertEqual(health['flight']['reconnaissance_radius_m'], 30.0)
 
     def test_remote_rpc_launch_is_idempotent_and_status_never_restarts(self):
         with tempfile.TemporaryDirectory() as tmp:

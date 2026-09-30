@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import copy
 import hashlib
+import itertools
 import math
 from pathlib import Path
 
@@ -49,8 +50,67 @@ def _source_departure(source, departure_point):
     return list(min(points, key=lambda p: ((p[0] - min_x) / span_x + (p[1] - min_y) / span_y)))
 
 
+def _proportional_route(task, *, region, target, boundary, depot, departure_point):
+    """Keep every source scan and its order when reducing the competition plan."""
+    def move(point):
+        return [float(point[0]) - depot[0], float(point[1]) - depot[1]]
+
+    scans = [move(point) for point in task["waypoints_m"]]
+    if not scans:
+        if target.area > 1e-5:
+            raise ValueError("等比缩小方案缺少覆盖目标区域的航点")
+        return {
+            "waypoints_m": [], "scan_waypoints_m": [], "flight_path_m": [],
+            "route_primitives": [], "route_distance_m": 0.0, "scan_count": 0,
+            "travel_time_s": 0.0, "hover_scan_time_s": 0.0,
+            "mission_time_s": 0.0, "coverage_ratio": 1.0,
+            "uncovered_area_m2": 0.0,
+        }
+
+    # The prepared stadium route already begins and ends at the common depot.
+    # The southeast source contains only the scan path, so add safe transit
+    # within the overall competition boundary without changing scan order.
+    flight = [move(point) for point in task["flight_path_m"]]
+    if departure_point == "southeast":
+        # Six-decimal scaling can put an original boundary waypoint fractions
+        # of a millimetre outside the new polygon; allow only that tolerance.
+        transit_boundary = boundary.buffer(1e-4)
+        outbound = coverage._shortest_link((0.0, 0.0), flight[0], transit_boundary)
+        inbound = coverage._shortest_link(flight[-1], (0.0, 0.0), transit_boundary)
+        flight = [list(point) for point in outbound] + flight[1:] + [list(point) for point in inbound[1:]]
+    if not all(region.buffer(1e-4).covers(coverage.Point(point)) for point in scans):
+        raise ValueError("等比缩小方案有航点落在子区域外")
+    covered = coverage.unary_union([
+        coverage.Point(point).buffer(RADIUS_M - 0.02, quad_segs=32)
+        for point in scans
+    ])
+    missed = target.difference(covered).area
+    if missed > 1e-5:
+        raise ValueError("等比缩小方案未覆盖需侦察区域")
+    distance = sum(math.dist(start, end) for start, end in itertools.pairwise(flight))
+    travel = distance / SPEED_MPS
+    hover = len(scans) * HOVER_SECONDS
+    return {
+        "waypoints_m": scans,
+        "scan_waypoints_m": copy.deepcopy(scans),
+        "flight_path_m": flight,
+        "route_primitives": [
+            {"kind": "line", "start": start, "end": end,
+             "length_m": math.dist(start, end)}
+            for start, end in itertools.pairwise(flight)
+        ],
+        "route_distance_m": distance,
+        "scan_count": len(scans),
+        "travel_time_s": travel,
+        "hover_scan_time_s": hover,
+        "mission_time_s": travel + hover,
+        "coverage_ratio": 1.0,
+        "uncovered_area_m2": missed,
+    }
+
+
 def prepare_scaled_scene_plan(base_plan, *, flight_profile, departure_point="southeast"):
-    """仅供赛前命令调用；在已保存的六个紧凑子区内重新求覆盖点。"""
+    """仅供赛前命令调用；等比缩小已保存的六区和全部侦察航点。"""
     extent = SCENES.get(flight_profile)
     if extent is None:
         raise ValueError("未知的缩小场景")
@@ -126,8 +186,9 @@ def prepare_scaled_scene_plan(base_plan, *, flight_profile, departure_point="sou
         task = wrapper["task"]
         region = shift(coverage.Polygon(task["polygon_m"]))
         target = required.intersection(region)
-        route = stadium_departure._candidate_route(
-            region, target, polygon, (0.0, 0.0), RADIUS_M, SPEED_MPS, HOVER_SECONDS,
+        route = _proportional_route(
+            task, region=region, target=target, boundary=polygon,
+            depot=depot, departure_point=departure_point,
         )
         task.update(route)
         task["polygon_m"] = [list(point) for point in list(region.exterior.coords)[:-1]]
@@ -156,7 +217,7 @@ def prepare_scaled_scene_plan(base_plan, *, flight_profile, departure_point="sou
     area["coverage"].update(
         reconnaissance_radius_m=RADIUS_M, speed_mps=SPEED_MPS,
         hover_scan_seconds=HOVER_SECONDS,
-        objective="fixed_compact_regions_minimize_scan_points_and_route_distance",
+        objective="proportional_competition_route_with_fixed_departure",
         area_m2=polygon.area, required_area_m2=required.area,
         excluded_area_m2=excluded.area, uncovered_area_m2=uncovered,
         total_mission_time_s=time_sum, maximum_completion_time_s=maximum_time,

@@ -67,6 +67,26 @@ const onAbsoluteMap = {...item,latitude:33.86+4.12/north,longitude:113.71-1.05/w
 near(convert(absolute,onAbsoluteMap,100).position[0],4.12);
 near(convert(absolute,onAbsoluteMap,100).position[1],1.05);
 
+// 大连固定 WGS84 场地以起飞点为原点，北为上、西为左，且画布包含边界外起飞点。
+const dalian = JSON.parse(fs.readFileSync(path.join(root,
+  'competition_backend/competition_backend/dalian_nanshan_prepared.json'),'utf8')).plan;
+const dalianArea = dalian.search_area;
+const dalianNorth = dalianArea.coverage.projection.north_m_per_degree;
+const dalianWest = dalianArea.coverage.projection.west_m_per_degree;
+const dalianTelemetry = {...item,
+  latitude:39.050245+100/dalianNorth,
+  longitude:121.661123-100/dalianWest};
+const dalianMapped = convert(dalian,dalianTelemetry,100);
+near(dalianMapped.position[0],100);
+near(dalianMapped.position[1],100);
+assert.ok(dalianArea.origin_x_m<=0 && dalianArea.origin_y_m<=0);
+assert.ok(dalianArea.origin_x_m+dalianArea.height_m>=100);
+assert.ok(dalianArea.origin_y_m+dalianArea.width_m>=100);
+const mapX = west => dalianArea.origin_y_m+dalianArea.width_m-west;
+const mapY = north => dalianArea.origin_x_m+dalianArea.height_m-north;
+assert.ok(mapX(100)<mapX(0));
+assert.ok(mapY(100)<mapY(0));
+
 context.更新实际轨迹({mission,telemetry:{1:item},active_uav_ids:[1],server_time:100});
 let point=context.实际轨迹.byUav[1][0];
 near(point.x,4.12); near(point.y,1.05);

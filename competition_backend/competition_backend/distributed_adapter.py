@@ -73,6 +73,7 @@ class DistributedFleetAdapter(FleetAdapter):
         self._mirrored_snapshot: Optional[Dict[str, Any]] = None
         self._peer_telemetry: Dict[int, Telemetry] = {}
         self._peer_traffic: Dict[int, Dict[str, Any]] = {}
+        self._peer_program_b: Dict[int, Dict[str, Any]] = {}
         self._peer_sync_status: Dict[int, Dict[str, Any]] = {}
         self._telemetry_lock = threading.RLock()
         self._task_publisher = False
@@ -137,6 +138,10 @@ class DistributedFleetAdapter(FleetAdapter):
                 str(uav_id): dict(status)
                 for uav_id, status in self._peer_traffic.items()
             }
+
+    def peer_program_b_status(self) -> Dict[str, Dict[str, Any]]:
+        with self._telemetry_lock:
+            return {str(uav_id): dict(status) for uav_id, status in self._peer_program_b.items()}
 
     @property
     def is_coordinator(self) -> bool:
@@ -354,6 +359,10 @@ class DistributedFleetAdapter(FleetAdapter):
             if isinstance(traffic, dict):
                 with self._telemetry_lock:
                     self._peer_traffic[uav_id] = dict(traffic)
+            program_b = result.get("program_b")
+            if isinstance(program_b, dict):
+                with self._telemetry_lock:
+                    self._peer_program_b[uav_id] = dict(program_b, received_at=time.time())
             if raw:
                 # ``received_at`` from a peer is stamped by that peer's
                 # clock.  Normalize it at the local receive boundary so

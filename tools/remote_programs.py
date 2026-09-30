@@ -17,7 +17,9 @@ def command_for(key, uid, model):
         return "exec bash ./tools/start_onboard_stack.sh --model %s --expect-uav-id %d --direct --enable-motion" % (model, uid)
     if key == "detection":
         return "source ~/SpireCV_bj/src/spirecv-ros/devel/setup.bash && exec roslaunch spirecv_ros uav_yolo26_botsort_geolocation.launch uav_id:=%d" % uid
-    return "source ~/recon_ws/devel/setup.bash && exec roslaunch px4_north_camera p600_gx40_position_pid_reconnaissance.launch uav_id:=%d flight_mode:=outdoor_small_range" % uid
+    # 网页默认是竞赛大场景。小场景须在规划前显式核对并人工切换程序 B；
+    # 不能让 6×6 米、1～10 米高、1 米/秒的小场景限制拦截正式室外航线。
+    return "source ~/recon_ws/devel/setup.bash && exec roslaunch px4_north_camera p600_gx40_position_pid_reconnaissance.launch uav_id:=%d flight_mode:=outdoor" % uid
 
 
 def stamp(pid):
@@ -158,14 +160,47 @@ def ros_health(uid):
     names = [name for group in expected.values() for name in group]
     with ThreadPoolExecutor(max_workers=8) as pool:
         available = dict(pool.map(ping, names))
-    return {key: {'ready': all(available[name] for name in group),
-                  'present': [name for name in group if available[name]],
-                  'missing': [name for name in group if not available[name]],
-                  'pids': {name: available[name] for name in group if available[name]}} for key, group in expected.items()}
+    result = {key: {'ready': all(available[name] for name in group),
+                    'present': [name for name in group if available[name]],
+                    'missing': [name for name in group if not available[name]],
+                    'pids': {name: available[name] for name in group if available[name]}} for key, group in expected.items()}
+    # 读取实际生效参数，而不是猜测启动命令：人工启动或复用已有程序时也正确。
+    result['flight']['flight_mode'] = 'unknown'
+    result['flight']['reconnaissance_radius_m'] = None
+    if result['flight']['ready']:
+        try:
+            with xmlrpc.client.ServerProxy(master_uri, transport=Transport()) as master:
+                code_indoor, _, indoor = master.getParam(caller, '/uav%d/trajectory_follower/indoor_mode' % uid)
+                code_small, _, small = master.getParam(caller, '/uav%d/trajectory_follower/outdoor_small_range_mode' % uid)
+                code_radius, _, radius = master.getParam(caller, '/uav%d/target_geolocator/reconnaissance_radius_m' % uid)
+            def as_ros_bool(value):
+                if isinstance(value, bool):
+                    return value
+                if isinstance(value, int) and value in (0, 1):
+                    return bool(value)
+                if isinstance(value, str) and value.strip().lower() in ('true', 'false'):
+                    return value.strip().lower() == 'true'
+                raise ValueError('ROS 布尔参数无效')
+            if code_indoor == 1 and code_small == 1:
+                indoor_mode, small_mode = as_ros_bool(indoor), as_ros_bool(small)
+                if not (indoor_mode and small_mode):
+                    result['flight']['flight_mode'] = ('indoor' if indoor_mode else
+                        'outdoor_small_range' if small_mode else 'outdoor')
+            if code_radius == 1:
+                value = float(radius)
+                if 0.0 < value < 10000.0:
+                    result['flight']['reconnaissance_radius_m'] = value
+        except Exception:
+            pass
+    return result
 
 
 def apply_health(info, health, meta):
     info['nodes'] = health
+    if 'flight_mode' in health:
+        info['flight_mode'] = health['flight_mode']
+    if 'reconnaissance_radius_m' in health:
+        info['reconnaissance_radius_m'] = health['reconnaissance_radius_m']
     if health['ready']:
         info.update(state='running', detail='ROS 节点已就绪（%d/%d）' % (len(health['present']), len(health['present'])))
     elif health['present'] or info['state'] == 'running':

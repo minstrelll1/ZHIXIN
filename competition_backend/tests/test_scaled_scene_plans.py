@@ -5,7 +5,7 @@ from unittest.mock import patch
 from shapely.geometry import LineString, Point, Polygon, shape
 from shapely.ops import unary_union
 
-from competition_backend import polygon_coverage
+from competition_backend import polygon_coverage, stadium_departure
 from competition_backend.scaled_scene_plans import load_scaled_scene_plan
 
 
@@ -17,6 +17,11 @@ class ScaledScenePlansTest(unittest.TestCase):
             for profile, extent in (("outdoor100", 100), ("outdoor200", 200)):
                 for departure in ("southeast", "stadium_center"):
                     with self.subTest(profile=profile, departure=departure):
+                        source = (base if departure == "southeast" else
+                                  stadium_departure.load_prepared_stadium_plan(
+                                      base, flight_profile="competition"))
+                        source_area = source["search_area"]
+                        scale = extent / max(source_area["width_m"], source_area["height_m"])
                         plan = load_scaled_scene_plan(
                             base, flight_profile=profile, departure_point=departure,
                         )
@@ -25,14 +30,29 @@ class ScaledScenePlansTest(unittest.TestCase):
                         self.assertTrue(boundary.is_valid)
                         self.assertLessEqual(max(area["width_m"], area["height_m"]), extent + 1e-5)
                         self.assertEqual(len(plan["planned_uavs"]), 6)
+                        self.assertEqual(
+                            area["coverage"]["total_scan_count"],
+                            73 if departure == "southeast" else 75,
+                        )
                         self.assertAlmostEqual(area["coverage"]["uncovered_area_m2"], 0.0, places=5)
                         self.assertEqual(area["coverage"]["reconnaissance_radius_m"], 75.0)
                         self.assertEqual(area["coverage"]["speed_mps"], 5.0)
                         self.assertEqual(area["departure_point_m"], [0.0, 0.0])
                         required = shape(area["terrain_layers_m"]["required"])
                         regions = []
-                        for wrapper in plan["planned_uavs"].values():
+                        for uav_id, wrapper in plan["planned_uavs"].items():
                             task = wrapper["task"]
+                            source_scans = source["planned_uavs"][uav_id]["task"]["waypoints_m"]
+                            self.assertEqual(task["scan_count"], len(source_scans))
+                            # The complete original order and route shape are
+                            # scaled; no waypoint is dropped by a new solver.
+                            for source_point, scaled_point in zip(source_scans, task["waypoints_m"]):
+                                for axis in (0, 1):
+                                    self.assertAlmostEqual(
+                                        scaled_point[axis] - task["waypoints_m"][0][axis],
+                                        (source_point[axis] - source_scans[0][axis]) * scale,
+                                        places=5,
+                                    )
                             self.assertTrue(math.isfinite(task["mission_time_s"]))
                             self.assertEqual(task["scan_count"], len(task["waypoints_m"]))
                             region = Polygon(task["polygon_m"])

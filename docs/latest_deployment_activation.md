@@ -180,7 +180,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\setup_onboard_ss
 2. 选择本地地面终端编号并确认。SSH 免密码登录可用时，自动启动对应无人机的竞赛机载程序、目标检测程序和自主飞行指令程序；编号随终端切换，UAV3 使用 `uav_id:=3`。
 3. 点击“机地网络配置”右侧的程序名称查看打印内容。红色表示未启动、连接失败或异常，绿色表示对应 ROS 节点已响应（地面端表示网页服务运行中）。关闭网页不停止后台或机载程序。
 
-目标检测使用 `~/SpireCV_bj/src/spirecv-ros/devel/setup.bash`；程序 B 使用 `~/recon_ws/devel/setup.bash`，启动参数为 `flight_mode:=outdoor_small_range`。这两个工作空间需已在无人机上安装。
+目标检测使用 `~/SpireCV_bj/src/spirecv-ros/devel/setup.bash`；程序 B 使用 `~/recon_ws/devel/setup.bash`。网页自动启动程序 B 时使用 `flight_mode:=outdoor`，适用于竞赛、100m×100m、200m×200m 和大连南山坡外场。3m×3m、5m×5m、10m×10m 小场景需要在规划前将程序 B 人工启动为 `flight_mode:=outdoor_small_range`；模式不匹配时网页会拒绝分派。这两个工作空间需已在无人机上安装。
 
 启动管理脚本由地面端通过 SSH 自动传送。此次新增程序 B 的 `/uavN/target_scheduler/completed_targets` 话题兼容，需要按上面的机载更新命令同步竞赛机载代码；不修改目标检测、程序 B 或厂商工作空间。U 盘复制时同时复制根目录的 `智信竞赛.exe`。原有命令行启动方式仍可使用。
 
