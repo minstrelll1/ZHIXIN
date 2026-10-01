@@ -13,6 +13,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Body, HTTPException, WebSocket, WebSocketDisconnect, Request
 from fastapi.responses import HTMLResponse, FileResponse
 from .program_manager import ProgramManager, ConsoleTee
+from .diagnostics import Diagnostics, DiagnosticMiddleware
 from competition_shared.fleet import FleetStore, PROFILES
 from competition_shared.runtime import ground_environment
 
@@ -84,12 +85,15 @@ class GroundServices:
         self.receiver = module.GroundImageReceiver("0.0.0.0", self.local["image_port"],
                                                   Path(self.env["COMPETITION_IMAGE_ROOT"]), self.env["COMPETITION_TCP_TOKEN"],
                                                   allowed_uav_ids=[self.local["uav_id"]])
+        self.receiver.audit = getattr(self, "audit", None)
         errors = []
         def receive():
             try:
                 self.receiver.serve_forever()
             except Exception as error:
                 errors.append(error)
+                if getattr(self, "audit", None):
+                    self.audit.record("图片接收服务异常", error=str(error))
         self.thread = threading.Thread(target=receive, name="ground-image-receiver", daemon=True)
         self.thread.start()
         deadline = time.monotonic() + 3
@@ -102,6 +106,8 @@ class GroundServices:
                 self.start_media()
             except Exception as error:
                 # 视频转发异常不应阻止任务、遥测和图片回传服务上线。
+                if getattr(self, "audit", None):
+                    self.audit.record("视频服务启动失败", error=str(error))
                 print("视频转发未启动：%s；其他地面服务继续运行。" % error, flush=True)
 
     def start_media(self):
@@ -155,11 +161,13 @@ class GroundServices:
 class GroundEntry:
     def __init__(self, environment=None, app_factory=None, services_factory=GroundServices, programs_factory=ProgramManager):
         self.env = dict(os.environ if environment is None else environment)
+        self.audit = Diagnostics(self.env.get("COMPETITION_DIAGNOSTICS_DIR", str(ROOT / "ground_logs" / "sessions")))
         self.store = FleetStore(self.env.get("COMPETITION_FLEET_CONFIG", str(ROOT / "config/fleet.json")))
         self.app_factory = app_factory
         self.services_factory = services_factory
         self.active = None
         self.programs = programs_factory(ROOT, self.env)
+        self.programs.audit = self.audit
         self.worker = None
         self.stop_event = asyncio.Event()
         self.selection = None
@@ -170,13 +178,19 @@ class GroundEntry:
 
         @asynccontextmanager
         async def lifespan(app):
-            yield
-            self.stop_event.set()
-            self.programs.stop()
-            if self.worker:
-                await self.worker
+            self.audit.record("地面入口启动")
+            try:
+                yield
+            finally:
+                self.audit.record("地面入口开始关闭")
+                self.stop_event.set()
+                self.programs.stop()
+                if self.worker:
+                    await self.worker
+                self.audit.close()
 
         app = FastAPI(lifespan=lifespan)
+        app.add_middleware(DiagnosticMiddleware, audit=self.audit)
         self.entry = app
 
         @app.get("/", response_class=HTMLResponse)
@@ -283,6 +297,8 @@ class GroundEntry:
                     raise HTTPException(status_code=409, detail="终端正在启动，请等待完成后再操作")
                 return self.operator_status()
             self.selection, self.error = selection, ""
+            self.audit.context.update(ground_terminal_id=uid, local_uav_id=local["uav_id"], model=local["model"])
+            self.audit.record("已选择本地终端", selection=selection)
             self.programs.select(local)
             self.worker = asyncio.create_task(self.activate(selection))
             return self.operator_status()
@@ -346,13 +362,15 @@ class GroundEntry:
                 factory = create_app
             else:
                 factory = self.app_factory
-            runtime = await asyncio.to_thread(factory, env)
+            runtime = await asyncio.to_thread(factory, env, audit=self.audit) if self.app_factory is None else await asyncio.to_thread(factory, env)
             # 规划/起飞预检读取机载 ROS 当前生效的程序 B 场景模式。
             runtime.state.program_manager = self.programs
             services = self.services_factory(local, env)
+            services.audit = self.audit
             try:
                 await asyncio.to_thread(services.start)
             except Exception as error:
+                self.audit.record("本机配套服务启动失败", error=str(error))
                 self.error = "图片或视频服务启动失败：" + str(error)
                 print(self.error + "；网页与任务服务继续启动。", flush=True)
             async with runtime.router.lifespan_context(runtime):
@@ -362,6 +380,7 @@ class GroundEntry:
                 print("本机服务已启动：地面终端 %s / UAV%s；机型和机地配对来自固定配置。" % (selection["ground_terminal_id"], local["uav_id"]), flush=True)
                 await self.stop_event.wait()
         except Exception as error:
+            self.audit.record("本机任务服务启动失败", error=str(error))
             self.error = "本机服务启动失败：" + str(error)
             print(self.error, flush=True)
         finally:

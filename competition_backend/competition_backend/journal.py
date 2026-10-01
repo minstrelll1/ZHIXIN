@@ -8,7 +8,8 @@ from typing import Any, Dict, Optional
 
 
 class EventJournal:
-    def __init__(self, directory: Optional[str]) -> None:
+    def __init__(self, directory: Optional[str], audit=None) -> None:
+        self.audit = audit
         self._lock = threading.Lock()
         self._directory = Path(directory).resolve() if directory else None
         self._last_snapshot_content: Optional[str] = None
@@ -16,6 +17,8 @@ class EventJournal:
             self._directory.mkdir(parents=True, exist_ok=True)
 
     def append(self, event: Dict[str, Any]) -> None:
+        if self.audit:
+            self.audit.record("任务事件", **event)
         if not self._directory:
             return
         line = json.dumps(event, ensure_ascii=False, separators=(",", ":"))

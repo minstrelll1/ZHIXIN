@@ -41,6 +41,8 @@ class SubmissionReportTest(unittest.TestCase):
     def test_wire_is_utf8_file_field_without_tokens_proxy_or_auto_send(self):
         with tempfile.TemporaryDirectory() as tmp,patch.object(report.urllib.request,'build_opener') as builder:
             reporter=report.Subject1Reporter(tmp)
+            from unittest.mock import Mock
+            reporter.audit = Mock()
             draft=reporter.prepare(sample())
             builder.assert_not_called()
             raw=reporter.draft(draft['draft_id']).read_bytes()
@@ -60,6 +62,9 @@ class SubmissionReportTest(unittest.TestCase):
             self.assertEqual(parts[0].get_filename(),'target-submission.json')
             self.assertEqual(parts[0].get_payload(decode=True),raw)
             self.assertEqual(receipt['state'],'http_received')
+            events = {call.args[0]: call.kwargs for call in reporter.audit.record.call_args_list}
+            self.assertEqual(events['赛事上报回执']['receipt']['draft_id'], draft['draft_id'])
+            self.assertTrue(Path(events['赛事上报回执']['receipt_file']).is_file())
             self.assertIn('已收到',receipt['response'])
             self.assertEqual(len(list(reporter.root.glob('receipt-*.json'))),1)
 

@@ -38,6 +38,7 @@ from .subject1_reporting import reporting_router
 from .recognition_settings import RecognitionSettings
 from competition_shared.recognition import optional_recognition_selection
 from .journal import EventJournal
+from .diagnostics import Diagnostics, DiagnosticMiddleware
 from .groundstation_capture import PassivePointCloudCapture
 from .models import ReturnReason, Telemetry
 from .pengfei_telemetry import sanitize_pengfei
@@ -141,9 +142,11 @@ def _mission_call(function: Any, *args: Any, **kwargs: Any) -> Any:
         raise HTTPException(status_code=422, detail=str(error)) from error
 
 
-def create_app(environment=None) -> FastAPI:
+def create_app(environment=None, audit=None) -> FastAPI:
     env = dict(os.environ if environment is None else environment)
-    plan_jobs = PlanJobRegistry()
+    owns_audit = audit is None
+    audit = audit or Diagnostics(env.get("COMPETITION_DIAGNOSTICS_DIR", str(PACKAGE_ROOT.parent / "ground_logs" / "sessions")))
+    plan_jobs = PlanJobRegistry(audit=audit)
     fleet_path = env.get("COMPETITION_FLEET_CONFIG") or str(PACKAGE_ROOT.parent / "config" / "fleet.json")
     fleet_store = FleetStore(fleet_path)
     fleet_config = fleet_store.read()
@@ -286,10 +289,13 @@ def create_app(environment=None) -> FastAPI:
         "COMPETITION_DATA_DIR", str(PACKAGE_ROOT / "data")
     )
     recognition_settings = RecognitionSettings(data_directory)
+    tcp_diagnostics = adapter.local_adapter if isinstance(adapter, DistributedFleetAdapter) else adapter
+    adapter.audit = audit
+    tcp_diagnostics.audit = audit
     orchestrator = CompetitionOrchestrator(
         config=config,
         adapter=adapter,
-        journal=EventJournal(data_directory),
+        journal=EventJournal(data_directory, audit=audit),
         live_mode=live_mode,
         active_uav_ids=active_uav_ids,
     )
@@ -577,10 +583,14 @@ def create_app(environment=None) -> FastAPI:
             },
         }
     pointcloud_collector.traffic_recorder = traffic_monitor.record_application_bytes
+    if image_collector is not None:
+        image_collector.audit = audit
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         try:
+            audit.context.update(ground_terminal_id=terminal_id, local_uav_id=local_uav_id, model=selected_model)
+            audit.record("任务后端启动", adapter=adapter_name, peers=ground_peers, fleet_revision=revision(fleet_config))
             orchestrator.start()
             if image_collector is not None:
                 image_collector.start()
@@ -594,6 +604,9 @@ def create_app(environment=None) -> FastAPI:
                 image_collector.stop()
             recording_manager.close()
             orchestrator.stop()
+            audit.record("任务后端已停止")
+            if owns_audit:
+                audit.close()
 
     app = FastAPI(
         title="智信 P600 / SU17 六机竞赛任务后端",
@@ -602,6 +615,8 @@ def create_app(environment=None) -> FastAPI:
         lifespan=lifespan,
     )
     app.state.orchestrator = orchestrator
+    app.state.audit = audit
+    app.add_middleware(DiagnosticMiddleware, audit=audit)
     app.state.adapter = adapter
     app.state.fleet_store = fleet_store
     app.state.recording_manager = recording_manager
@@ -717,7 +732,7 @@ def create_app(environment=None) -> FastAPI:
             raise HTTPException(status_code=403, detail="请由任务发布端统一上报科目一结果")
         return role
 
-    app.include_router(reporting_router(image_root, _require_results_publisher))
+    app.include_router(reporting_router(image_root, _require_results_publisher, audit=audit))
 
     def _verify_peer_publisher(node_id: str) -> Dict[str, Any]:
         if not operator_selection_required:
@@ -828,6 +843,7 @@ def create_app(environment=None) -> FastAPI:
         result["peer_roles"] = {str(key): value for key, value in peer_roles.items()}
         result["synchronization"] = synchronization
         result["restart_required"] = revision(fleet_store.read()) != revision(fleet_config)
+        audit.record("终端选择和配置同步完成", result=result)
         return result
 
     @app.post("/api/v1/operator", tags=["地面终端"])
@@ -854,6 +870,7 @@ def create_app(environment=None) -> FastAPI:
             try:
                 configure_operator(payload)
             except Exception as error:
+                audit.record("终端配置失败", error=str(getattr(error, "detail", error)), selection=payload)
                 with operator_lock:
                     operator_state.update(configured=False, task_publisher=False,
                                           selection_error=str(getattr(error, "detail", error)))

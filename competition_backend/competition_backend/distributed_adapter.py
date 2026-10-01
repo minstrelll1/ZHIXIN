@@ -395,6 +395,8 @@ class DistributedFleetAdapter(FleetAdapter):
                                     ego_exec_state_age_seconds=ego_age)
                 with self._telemetry_lock:
                     self._peer_telemetry[uav_id] = telemetry
+                    if not self._peer_sync_status.get(uav_id, {}).get("ok") and getattr(self, "audit", None):
+                        self.audit.record("地面端遥测同步接通", uav_id=uav_id, peer=base_url)
                     self._peer_sync_status[uav_id] = {
                         "ok": True,
                         "last_success_at": received_at,
@@ -414,6 +416,8 @@ class DistributedFleetAdapter(FleetAdapter):
         except Exception as error:
             with self._telemetry_lock:
                 previous_status = self._peer_sync_status.get(uav_id, {})
+                if previous_status.get("last_error") != str(error) and getattr(self, "audit", None):
+                    self.audit.record("地面端遥测同步异常", uav_id=uav_id, peer=base_url, error=str(error))
                 self._peer_sync_status[uav_id] = {
                     "ok": False,
                     "last_success_at": previous_status.get("last_success_at"),

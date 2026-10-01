@@ -96,7 +96,8 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
 
 
 class Subject1Reporter:
-    def __init__(self, image_root):
+    def __init__(self, image_root, audit=None):
+        self.audit = audit
         self.image_root = Path(image_root).resolve()
         self.root = self.image_root / 'subject1_reports'
         self.lock = threading.Lock()
@@ -138,6 +139,8 @@ class Subject1Reporter:
         temporary = self.root / (uuid.uuid4().hex + '.part')
         temporary.write_bytes(raw)
         temporary.replace(path)
+        if self.audit:
+            self.audit.record('赛事结果文件已整理', draft_id=digest, file=str(path), **summary)
         metadata = document.get('metadata')
         skipped = metadata.get('indoorTargets', []) if isinstance(metadata, dict) else []
         return dict(draft_id=digest, team_name=document['name'], filename='target-submission.json',
@@ -168,6 +171,8 @@ class Subject1Reporter:
             opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), NoRedirect())
             receipt = dict(draft_id=digest, endpoint=ENDPOINT, sent_at=datetime.now().astimezone().isoformat(),
                            http_status=None, state='unknown', detail='尚未获得赛事回执')
+            if self.audit:
+                self.audit.record('赛事上报开始', draft_id=digest, endpoint=ENDPOINT, bytes=len(raw))
             try:
                 try:
                     response = opener.open(request, timeout=20)
@@ -184,13 +189,15 @@ class Subject1Reporter:
             finally:
                 target = self.root / ('receipt-' + uuid.uuid4().hex + '.json')
                 target.write_text(json.dumps(receipt, ensure_ascii=False, indent=2), encoding='utf-8')
+                if self.audit:
+                    self.audit.record('赛事上报回执', receipt_file=str(target), receipt=receipt)
             return receipt
         finally:
             self.lock.release()
 
 
-def reporting_router(image_root, require_publisher):
-    reporter = Subject1Reporter(image_root)
+def reporting_router(image_root, require_publisher, audit=None):
+    reporter = Subject1Reporter(image_root, audit=audit)
     router = APIRouter(prefix='/api/v1/subject1/report', tags=['科目一结果上报'])
     def permitted(request):
         from urllib.parse import urlparse

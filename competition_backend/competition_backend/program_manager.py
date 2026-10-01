@@ -216,10 +216,15 @@ class ProgramManager:
                                 self._append(key, '\n' + info.get('detail', '程序异常') + '\n')
                         offsets[key] = info.get('offset', offsets[key])
                         with self.lock:
+                            if getattr(self, 'audit', None) and any(self.states[key].get(k) != info.get(k) for k in ('state', 'detail', 'pid')):
+                                self.audit.record('机载程序状态变化', program=NAMES[key], uav_id=self.local['uav_id'],
+                                                  state=info.get('state'), detail=info.get('detail'), pid=info.get('pid'))
                             self.states[key] = {**info, 'checked_at': time.time()}
                     cursor_path.parent.mkdir(parents=True, exist_ok=True)
                     cursor_path.write_text(json.dumps({'host': self.local.get('onboard_host'), 'offsets': offsets}), encoding='utf-8')
             except Exception as error:
+                if not failed_once and getattr(self, 'audit', None):
+                    self.audit.record('机载程序管理失败', uav_id=self.local['uav_id'], error=str(error))
                 if action == 'start' and not authorization_attempted and re.search(r'Permission denied.*(?:publickey|password)', str(error)):
                     authorization_attempted = True
                     try:

@@ -106,6 +106,7 @@ class CompetitionOrchestrator:
     def _event(self, kind: str, **details: Any) -> None:
         event = {"time": self.clock(), "kind": kind, **details}
         if self._mission is not None:
+            event.setdefault("mission_id", self._mission.mission_id)
             self._mission.events.append(event)
             self._mission.events = self._mission.events[-200:]
         self.journal.append(event)
@@ -461,6 +462,10 @@ class CompetitionOrchestrator:
                     {"type": "assign_task", "uav_id": uav_id, **assignment_payload}
                 )
                 assignment_payload["assignment_checksum"] = runtime.assignment_checksum
+                audit = getattr(self.journal, "audit", None)
+                if audit:
+                    audit.record("准备发送机载任务", uav_id=uav_id, mission_id=mission_id,
+                                 assignment=assignment_payload, assignment_file=audit.save_assignment(uav_id, assignment_payload))
                 send_started = time.monotonic()
                 try:
                     self.adapter.command_assign_task(uav_id, assignment_payload)
@@ -493,6 +498,15 @@ class CompetitionOrchestrator:
         if telemetry.uav_id not in self.active_uav_ids:
             return
         with self._lock:
+            previous = self._telemetry.get(telemetry.uav_id)
+            fields = ("connected", "armed", "failsafe", "odom_valid", "task_phase", "task_assignment_acked",
+                      "task_assignment_mission_id", "task_assignment_checksum", "last_error")
+            changes = {name: {"before": getattr(previous, name, None), "after": getattr(telemetry, name, None)}
+                       for name in fields if getattr(previous, name, None) != getattr(telemetry, name, None)}
+            audit = getattr(self.journal, "audit", None)
+            if changes and audit:
+                audit.record("机载遥测关键状态变化", uav_id=telemetry.uav_id, changes=changes,
+                             mission_id=self._mission.mission_id if self._mission else None)
             self._telemetry[telemetry.uav_id] = telemetry
 
     def set_active_uav_ids(self, uav_ids: List[int]) -> None:

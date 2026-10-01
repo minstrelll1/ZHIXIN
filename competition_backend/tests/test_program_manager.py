@@ -21,6 +21,12 @@ spec.loader.exec_module(remote)
 
 
 class ProgramsTest(unittest.TestCase):
+    def setUp(self):
+        # 单元测试不能读取操作员电脑上的 SSH 私钥配置。
+        identity = patch('competition_backend.program_manager.ssh_identity_args', return_value=[])
+        identity.start()
+        self.addCleanup(identity.stop)
+
     def test_assets_and_program_status_available_before_selection(self):
         with tempfile.TemporaryDirectory() as tmp:
             config = Path(tmp) / 'fleet.json'
@@ -132,13 +138,14 @@ class ProgramsTest(unittest.TestCase):
                 self.assertNotIn('commands', manager._request('status', {}))
                 self.assertNotIn('commands', manager._request('stop', {}, program='flight'))
 
-    def test_config_templates_preserve_shell_syntax_and_default_commands(self):
-        config = json.loads((ROOT / 'config/onboard_programs.json').read_text(encoding='utf-8-sig'))
+    def test_config_templates_preserve_shell_syntax(self):
+        # 使用独立输入；本机 config/onboard_programs.json 允许用户修改。
+        commands = {key: 'source ${HOME}/setup.bash && run_' + key + ' --uav {uav_id} --model {model}' for key in remote.NAMES}
         for uid in range(1, 7):
             for model in ('p600', 'su17'):
                 for key in remote.NAMES:
-                    self.assertEqual(remote.command_for(key, uid, model, config['commands']),
-                                     remote.command_for(key, uid, model))
+                    self.assertEqual(remote.command_for(key, uid, model, commands),
+                                     'source ${HOME}/setup.bash && run_%s --uav %d --model %s' % (key, uid, model))
         command = 'source ${HOME}/test/setup.bash && echo 中文 {uav_id} {model}'
         self.assertEqual(remote.command_for('flight', 3, 'p600', {'flight': command}),
                          'source ${HOME}/test/setup.bash && echo 中文 3 p600')

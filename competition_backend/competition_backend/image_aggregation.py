@@ -140,6 +140,8 @@ class PeerImageCollector:
                 raise OSError("downloaded image verification failed")
             os.replace(str(temp), str(target))
             self.downloaded_count += 1
+            if getattr(self, "audit", None):
+                self.audit.record("跨地面端结果文件已同步", uav_id=uav_id, file=relative, bytes=expected_size, sha256=expected_sha)
 
     def _loop(self) -> None:
         while not self._stop_event.is_set():
@@ -149,7 +151,11 @@ class PeerImageCollector:
                         continue
                     try:
                         self._sync_peer(uav_id, base_url)
+                        if uav_id in self.last_errors and getattr(self, "audit", None):
+                            self.audit.record("跨地面端结果同步恢复", uav_id=uav_id)
                         self.last_errors.pop(uav_id, None)
                     except Exception as error:  # retry is intentionally persistent
+                        if self.last_errors.get(uav_id) != str(error) and getattr(self, "audit", None):
+                            self.audit.record("跨地面端结果同步失败", uav_id=uav_id, error=str(error))
                         self.last_errors[uav_id] = str(error)
             self._stop_event.wait(self.interval_sec)

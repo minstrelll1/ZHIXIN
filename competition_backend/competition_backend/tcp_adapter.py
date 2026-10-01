@@ -220,6 +220,9 @@ class TcpFleetAdapter(FleetAdapter):
 
     def _client_loop(self, connection: socket.socket, address: Tuple[str, int]) -> None:
         client = _ClientConnection(connection, address)
+        audit = getattr(self, "audit", None)
+        if audit:
+            audit.record("任务链路连接", address=address)
         uav_id: Optional[int] = None
         try:
             connection.settimeout(5.0)
@@ -239,6 +242,8 @@ class TcpFleetAdapter(FleetAdapter):
                 raise ValueError("TCP authentication failed")
 
             identity = self.identity_validator(hello) if self.identity_validator else {}
+            if audit:
+                audit.record("机载身份验证通过", uav_id=uav_id, address=address, identity=identity)
             with self._lock:
                 previous = self._clients.get(uav_id)
                 prior = self._identities.get(uav_id, {})
@@ -274,15 +279,20 @@ class TcpFleetAdapter(FleetAdapter):
                         break
                     self._handle_message(uav_id, message)
         except (ValueError, TypeError, KeyError) as error:
+            if audit:
+                audit.record("任务链路校验失败", uav_id=uav_id, address=address, error=str(error))
             with self._lock:
                 self.identity_errors[str(uav_id)] = str(error)
             try:
                 client.send({"type": "hello_error", "message": str(error)})
             except OSError:
                 pass
-        except OSError:
-            pass
+        except OSError as error:
+            if audit:
+                audit.record("任务链路网络异常", uav_id=uav_id, address=address, error=str(error))
         finally:
+            if audit:
+                audit.record("任务链路断开", uav_id=uav_id, address=address)
             if uav_id is not None:
                 with self._lock:
                     if self._clients.get(uav_id) is client:
@@ -394,6 +404,14 @@ class TcpFleetAdapter(FleetAdapter):
                 if not isinstance(status, dict):
                     raise ValueError("task_status.status must be an object")
                 state = str(status.get("state", ""))
+                audit = getattr(self, "audit", None)
+                if audit:
+                    summary = {key: status.get(key) for key in ("state", "mission_id", "assignment_checksum", "task_assignment_acked", "error", "message", "detail")}
+                    previous = getattr(self, "_diagnostic_status", {})
+                    if previous.get(uav_id) != summary:
+                        audit.record("收到机载任务回执", uav_id=uav_id, status=summary)
+                        previous[uav_id] = summary
+                        self._diagnostic_status = previous
                 if state in ("completed", "done"):
                     telemetry.task_complete = True
                 if bool(status.get("task_assignment_acked")) or state in (

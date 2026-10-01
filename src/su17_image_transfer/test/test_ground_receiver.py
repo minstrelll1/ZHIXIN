@@ -8,6 +8,7 @@ import tempfile
 import threading
 import time
 import unittest
+from unittest.mock import Mock
 
 
 PACKAGE_ROOT = Path(__file__).resolve().parents[1]
@@ -33,6 +34,7 @@ class GroundReceiverTest(unittest.TestCase):
                 status_interval=0,
                 client_timeout=0.05,
             )
+            receiver.audit = Mock()
             server_thread = threading.Thread(target=receiver.serve_forever, daemon=True)
             server_thread.start()
 
@@ -58,6 +60,10 @@ class GroundReceiverTest(unittest.TestCase):
             with socket.create_connection(("127.0.0.1", port), timeout=2.0) as client:
                 client.sendall(encode_frame(metadata, jpeg))
                 self.assertTrue(receive_ack(client))
+                saved = [call.kwargs for call in receiver.audit.record.call_args_list if call.args[0] == '图片及结果已保存']
+                self.assertEqual(saved[0]['mission_id'], 'subject1-test')
+                self.assertEqual(saved[0]['request_id'], 'integration-001')
+                self.assertNotIn('auth_token', saved[0])
 
                 # A socket timeout is only a periodic wake-up. It must not close
                 # a sparse snapshot connection that has been idle.

@@ -47,6 +47,7 @@ class GroundImageReceiver:
         client_timeout: float = 15.0,
     ) -> None:
         self.bind = bind
+        self.audit = None
         self.port = port
         self.output = output.resolve()
         self.auth_token = auth_token
@@ -60,6 +61,12 @@ class GroundImageReceiver:
         self.mission_lock = threading.Lock()
         self.mission_states = {}
         self.output.mkdir(parents=True, exist_ok=True)
+
+    def _diagnostic(self, event, metadata=None, **details):
+        if self.audit:
+            metadata = metadata or {}
+            self.audit.record(event, **{key: metadata.get(key) for key in
+                              ("uav_id", "mission_id", "request_id")}, **details)
 
     def serve_forever(self) -> None:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server:
@@ -94,6 +101,7 @@ class GroundImageReceiver:
 
     def _handle_client(self, client: socket.socket, address) -> None:
         print("图片发送端已连接：%s:%d" % address, flush=True)
+        self._diagnostic("图片链路连接", address=address)
         with client:
             client.settimeout(self.client_timeout)
             while not self.stop_event.is_set():
@@ -106,6 +114,7 @@ class GroundImageReceiver:
                 except ConnectionError:
                     break
                 except (ProtocolError, OSError) as exc:
+                    self._diagnostic("图片接收协议或网络异常", address=address, error=str(exc))
                     print("接收 %s:%d 的数据失败：%s" % (*address, exc), flush=True)
                     break
 
@@ -113,6 +122,7 @@ class GroundImageReceiver:
                 try:
                     metadata["uav_id"] = self._validated_uav_id(metadata.get("uav_id"))
                 except ValueError as exc:
+                    self._diagnostic("图片帧编号校验失败", error=str(exc))
                     print("已拒绝数据帧：%s" % exc, flush=True)
                     try:
                         if message_type in ("manifest", "mission_start"):
@@ -124,6 +134,7 @@ class GroundImageReceiver:
                     continue
 
                 if self.auth_token and metadata.get("auth_token") != self.auth_token:
+                    self._diagnostic("图片认证失败", address=address)
                     print("已拒绝图片：认证令牌无效", flush=True)
                     try:
                         if message_type in ("manifest", "mission_start"):
@@ -137,6 +148,7 @@ class GroundImageReceiver:
                 if message_type == "mission_start":
                     try:
                         state = self._register_mission(metadata, reset=True)
+                        self._diagnostic("图片任务计时开始", metadata)
                         send_response(
                             client,
                             True,
@@ -151,12 +163,14 @@ class GroundImageReceiver:
                             flush=True,
                         )
                     except (OSError, ValueError) as exc:
+                        self._diagnostic("图片任务计时失败", metadata, error=str(exc))
                         send_response(client, False, {"error": str(exc)})
                     continue
 
                 if message_type == "manifest":
                     try:
                         result = self._compare_manifest(metadata)
+                        self._diagnostic("图片补传清单核对", metadata, total=result["total"], missing_count=len(result["missing"]))
                         send_response(client, True, result)
                         print(
                             "清单核对：UAV%s，任务=%s，总数=%d，缺失=%d"
@@ -169,6 +183,7 @@ class GroundImageReceiver:
                             flush=True,
                         )
                     except (OSError, ValueError) as exc:
+                        self._diagnostic("图片清单核对失败", metadata, error=str(exc))
                         send_response(client, False, {"error": str(exc)})
                     continue
 
@@ -181,6 +196,7 @@ class GroundImageReceiver:
 
                 try:
                     image_path = self._save_image(metadata, jpeg)
+                    self._diagnostic("图片及结果已保存", metadata, bytes=len(jpeg), image_path=str(image_path))
                     send_ack(client, True)
                     print(
                         "图片已保存：UAV%s，请求=%s，字节=%d，路径=%s"
@@ -193,6 +209,7 @@ class GroundImageReceiver:
                         flush=True,
                     )
                 except (OSError, ValueError) as exc:
+                    self._diagnostic("图片保存或确认失败", metadata, error=str(exc))
                     print("图片保存失败：%s" % exc, flush=True)
                     try:
                         send_ack(client, False)
@@ -200,6 +217,7 @@ class GroundImageReceiver:
                         pass
 
         print("图片发送端已断开：%s:%d" % address, flush=True)
+        self._diagnostic("图片链路断开", address=address)
 
     def _validated_uav_id(self, value) -> int:
         try:

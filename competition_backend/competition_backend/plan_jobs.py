@@ -25,7 +25,8 @@ def plan_checkpoint(stage: str) -> None:
 
 
 class PlanJobRegistry:
-    def __init__(self, max_run_seconds: float = 45.0) -> None:
+    def __init__(self, max_run_seconds: float = 45.0, audit=None) -> None:
+        self.audit = audit
         self._lock = threading.Lock()
         self._current: Optional[Dict[str, Any]] = None
         self._running: Optional[Dict[str, Any]] = None
@@ -33,12 +34,21 @@ class PlanJobRegistry:
         self._jobs: Dict[str, Dict[str, Any]] = {}
         self.max_run_seconds = max_run_seconds
 
+    def _record(self, label, job, **details):
+        if self.audit:
+            self.audit.record(label, job_id=job["job_id"], request_id=job["request_id"],
+                              state=job["state"], stage=job["stage"], **details)
+
     def _checkpoint(self, job, stage):
         with self._lock:
             if job.get("cancel_requested"):
                 raise PlanSuperseded("已改用最新人工规划请求；旧作业不再继续分派，请以新任务回执为准")
             if time.monotonic() - job["_run_started"] > self.max_run_seconds:
                 raise RuntimeError("规划分派处理超时，停在阶段：{}；已停止后续下发，请核对已收到的任务".format(job["stage"]))
+            now = time.monotonic()
+            self._record("规划阶段切换", job, next_stage=stage,
+                         stage_elapsed_ms=round((now - job.get("_stage_started", job["_run_started"])) * 1000, 1))
+            job["_stage_started"] = now
             job["stage"] = stage
 
     def submit(self, payload: Dict[str, Any], handler: Callable[[Dict[str, Any]], Dict[str, Any]]) -> Dict[str, Any]:
@@ -73,8 +83,11 @@ class PlanJobRegistry:
                     old["state"] = "superseded"
                     old["error"] = "已有更新的规划请求；此排队作业未执行、未下发"
                     old["finished_at"] = time.time()
+                    self._record("排队规划已被新请求替换", old, replacement_job_id=job["job_id"])
                 self._queued = submission
             result = self._public_locked(job)
+            self._record("收到规划请求", job, parameters=payload,
+                         waiting_for_job_id=self._running["job_id"] if self._running is not job else None)
         if launch is not None:
             self._start(*launch)
         return result
@@ -111,6 +124,9 @@ class PlanJobRegistry:
         with self._lock:
             job["state"], job["result"], job["error"] = outcome
             job["finished_at"] = time.time()
+            self._record("规划作业结束", job, error=job["error"],
+                         elapsed_seconds=round(time.monotonic() - job["_run_started"], 3),
+                         mission_id=((job["result"] or {}).get("mission") or {}).get("mission_id"))
             if self._running is job:
                 self._running = None
                 if self._queued is not None:
