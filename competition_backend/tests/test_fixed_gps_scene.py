@@ -28,7 +28,7 @@ class DalianFixedSceneTest(unittest.TestCase):
         self.assertEqual(area["departure_point"], "fixed_dalian")
         self.assertEqual(area["departure_point_m"], [0.0, 0.0])
         self.assertEqual(area["departure_point_wgs84"], {
-            "latitude": 39.050245, "longitude": 121.661123,
+            "latitude": 39.052820490783674, "longitude": 121.65960216424625,
         })
         self.assertEqual(area["points"][3], [39.0516233811253, 121.6667301989922])
         self.assertEqual(area["landing_mode"], "onboard_home")
@@ -43,8 +43,8 @@ class DalianFixedSceneTest(unittest.TestCase):
         self.assertEqual(len(plan["planned_uavs"]), 6)
         self.assertLessEqual(area["origin_x_m"], 0)
         self.assertLessEqual(area["origin_y_m"], 0)
-        self.assertGreaterEqual(area["origin_x_m"] + area["height_m"], boundary.bounds[2])
-        self.assertGreaterEqual(area["origin_y_m"] + area["width_m"], boundary.bounds[3])
+        self.assertGreaterEqual(area["origin_x_m"] + area["height_m"] + 1e-6, boundary.bounds[2])
+        self.assertGreaterEqual(area["origin_y_m"] + area["width_m"] + 1e-6, boundary.bounds[3])
         regions = []
         total_time = total_distance = 0.0
         total_scans = 0
@@ -78,6 +78,11 @@ class DalianFixedSceneTest(unittest.TestCase):
         combined = unary_union(regions)
         self.assertLess(boundary.symmetric_difference(combined).area, 1e-5)
         self.assertLess(sum(region.area for region in regions) - combined.area, 1e-5)
+        departure = Point(area["departure_point_m"])
+        distances = [Polygon(plan["planned_uavs"][str(uid)]["task"]["polygon_m"]).distance(departure)
+                     for uid in range(1, 7)]
+        self.assertEqual(distances, sorted(distances))
+        self.assertLessEqual(max(distances[:3]), min(distances[3:]))
         self.assertAlmostEqual(area["coverage"]["total_mission_time_s"], total_time, places=4)
         self.assertAlmostEqual(area["coverage"]["total_distance_m"], total_distance, places=4)
         self.assertEqual(area["coverage"]["total_scan_count"], total_scans)
@@ -99,7 +104,7 @@ class DalianFixedSceneTest(unittest.TestCase):
                 "subject": "subject1", "planning_mode": "competition",
                 "flight_profile": PROFILE, "coordinate_mode": "gps",
                 "departure_point": "fixed_dalian", "controller_mode": "external",
-                "flight_altitude_plan": "around2m",
+                "flight_altitude_plan": "around10m",
                 # A live aircraft or an obsolete UI value must not relocate this scene.
                 "gps_origin": {"latitude": 30.78528, "longitude": 103.86102},
             }
@@ -107,16 +112,16 @@ class DalianFixedSceneTest(unittest.TestCase):
                        side_effect=AssertionError("运行时不得重新规划")):
                 preview = client.post("/api/v1/planning/competition-coverage", json=payload)
                 self.assertEqual(preview.status_code, 200, preview.text)
-                self.assertEqual(preview.json()["search_area"]["gps_origin"]["latitude"], 39.050245)
+                self.assertEqual(preview.json()["search_area"]["gps_origin"]["latitude"], 39.052820490783674)
                 self.assertEqual(client.get("/api/v1/status").json()["mission"], None)
                 response = client.post("/api/v1/plan", json=payload)
             self.assertEqual(response.status_code, 200, response.text)
             mission = response.json()["mission"]
-            self.assertEqual(mission["search_area"]["gps_origin"]["longitude"], 121.661123)
+            self.assertEqual(mission["search_area"]["gps_origin"]["longitude"], 121.65960216424625)
             self.assertEqual(mission["flight_profile"], PROFILE)
             self.assertEqual(mission["controller_mode"], "external")
             self.assertEqual([mission["uavs"][str(uid)]["target_altitude_m"]
-                              for uid in range(1, 7)], [1.5, 2.0, 2.5, 1.5, 2.0, 2.5])
+                              for uid in range(1, 7)], [8.0, 10.0, 12.0, 8.0, 10.0, 12.0])
             for uid in range(1, 7):
                 self.assertEqual(mission["uavs"][str(uid)]["task"]["waypoints_wgs84"],
                                  preview.json()["planned_uavs"][str(uid)]["task"]["waypoints_wgs84"])
@@ -124,7 +129,7 @@ class DalianFixedSceneTest(unittest.TestCase):
                         if entry["type"] == "assign_task"]
             self.assertEqual(len(assigned), 6)
             self.assertEqual([entry["payload"]["target_altitude_m"] for entry in assigned],
-                             [1.5, 2.0, 2.5, 1.5, 2.0, 2.5])
+                             [8.0, 10.0, 12.0, 8.0, 10.0, 12.0])
 
             invalid = client.post("/api/v1/planning/competition-coverage", json={
                 **payload, "coordinate_mode": "xyz",

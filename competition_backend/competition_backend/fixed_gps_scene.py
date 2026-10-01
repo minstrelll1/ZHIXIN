@@ -152,7 +152,14 @@ def prepare_dalian_nanshan_plan():
         raise ValueError("大连六个子区未能完整、无重叠地覆盖边界")
 
     planned = {}
-    ordered = sorted(zip(regions, routes), key=lambda item: (-item[0].centroid.x, item[0].centroid.y))
+    # 任务编号按子区到固定出发点的距离排列，UAV1～3领取最近的三个子区。
+    depot_point = coverage.Point(depot)
+    ordered = sorted(
+        zip(regions, routes),
+        key=lambda item: (item[0].distance(depot_point),
+                          item[0].centroid.distance(depot_point),
+                          -item[0].centroid.x, item[0].centroid.y),
+    )
     for uav_id, (region, route) in enumerate(ordered, 1):
         minx, miny, maxx, maxy = region.bounds
         task = dict(

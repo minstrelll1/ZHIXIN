@@ -1107,7 +1107,7 @@ def create_app(environment=None) -> FastAPI:
             coordinate_mode = str(payload.get("coordinate_mode", "gps")).strip().lower()
             flight_profile = str(payload.get("flight_profile", "competition")).strip().lower()
             flight_altitude_plan = str(payload.get("flight_altitude_plan", "default")).strip().lower()
-            if flight_altitude_plan not in ("default", "around1m", "around2m", "around5m", "around45m"):
+            if flight_altitude_plan not in ("default", "around1m", "around2m", "around5m", "around10m", "around45m"):
                 raise HTTPException(status_code=422, detail="未知的飞行高度方案")
             if flight_profile not in ("lab", "lab10", "outdoor5", "outdoor100", "outdoor200", "competition", "dalian_nanshan"):
                 raise HTTPException(status_code=422, detail="未知的飞行场景")

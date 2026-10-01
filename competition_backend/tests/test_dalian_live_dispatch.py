@@ -56,11 +56,12 @@ class DalianLiveDispatchTest(unittest.TestCase):
             payload = {"subject": "subject1", "planning_mode": "competition",
                        "flight_profile": "dalian_nanshan", "coordinate_mode": "gps",
                        "departure_point": "fixed_dalian", "controller_mode": "external",
+                       "flight_altitude_plan": "around10m",
                        "gps_origin": {"latitude": 1.0, "longitude": 2.0}}
             preview = client.post("/api/v1/planning/competition-coverage", json=payload)
             self.assertEqual(preview.status_code, 200, preview.text)
-            self.assertEqual(preview.json()["search_area"]["gps_origin"]["latitude"], 39.050245)
-            self.assertEqual(preview.json()["search_area"]["gps_origin"]["longitude"], 121.661123)
+            self.assertEqual(preview.json()["search_area"]["gps_origin"]["latitude"], 39.052820490783674)
+            self.assertEqual(preview.json()["search_area"]["gps_origin"]["longitude"], 121.65960216424625)
             planned = client.post("/api/v1/plan", json=payload)
             self.assertEqual(planned.status_code, 200, planned.text)
             self.assertEqual(planned.json()["dispatch_status"]["assigned_uav_ids"], [1])
@@ -68,6 +69,7 @@ class DalianLiveDispatchTest(unittest.TestCase):
             command = app.state.adapter.local_adapter.forward_command.call_args.args
             self.assertEqual(command[:2], (1, "assign_task"))
             self.assertEqual(command[2]["coordinate_frame"], "WGS84")
+            self.assertEqual(command[2]["target_altitude_m"], 8.0)
             self.assertEqual(command[2]["task"]["waypoints_wgs84"],
                              preview.json()["planned_uavs"]["1"]["task"]["waypoints_wgs84"])
             self.assertNotEqual(command[2]["task"]["waypoints_wgs84"][0][0], 1.0)

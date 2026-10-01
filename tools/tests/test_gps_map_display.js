@@ -73,9 +73,10 @@ const dalian = JSON.parse(fs.readFileSync(path.join(root,
 const dalianArea = dalian.search_area;
 const dalianNorth = dalianArea.coverage.projection.north_m_per_degree;
 const dalianWest = dalianArea.coverage.projection.west_m_per_degree;
+const dalianOrigin = dalianArea.departure_point_wgs84;
 const dalianTelemetry = {...item,
-  latitude:39.050245+100/dalianNorth,
-  longitude:121.661123-100/dalianWest};
+  latitude:dalianOrigin.latitude+100/dalianNorth,
+  longitude:dalianOrigin.longitude-100/dalianWest};
 const dalianMapped = convert(dalian,dalianTelemetry,100);
 near(dalianMapped.position[0],100);
 near(dalianMapped.position[1],100);
