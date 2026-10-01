@@ -339,6 +339,25 @@ class OrchestratorTest(unittest.TestCase):
             )
         self.assertTrue(self.backend.prepare_takeoff()["ready"])
 
+    def test_external_program_b_route_speed_does_not_block_ground_preflight(self):
+        tasks = {
+            uav_id: {
+                "type": "lawnmower_search", "coordinate_frame": "ENU",
+                "waypoints_m": [[0.2, 0.2]], "speed_mps": 5.0,
+            }
+            for uav_id in self.config.uav_ids
+        }
+        self.backend.plan("subject1", tasks_by_uav=tasks, controller_mode="external")
+        for uav_id in self.config.uav_ids:
+            self.telemetry(
+                uav_id, identity={"identity_verified": True},
+                capabilities={"motion_enabled": True, "max_speed_mps": 1.0,
+                              "flight_speed_limit_mps": 1.0},
+            )
+        failures = self.backend.preflight_report()["failures"]
+        for uav_id in self.config.uav_ids:
+            self.assertNotIn("规划航速超过当前机载或飞控速度上限", failures[str(uav_id)])
+
     def test_preflight_requires_task_assignment_ack(self):
         self.backend.plan("subject1")
         for uav_id in self.config.uav_ids:

@@ -1352,7 +1352,7 @@ def create_app(environment=None) -> FastAPI:
     @app.post("/api/v1/plan/jobs", summary="启动规划分派作业", tags=["任务控制"])
     def submit_plan_job(payload: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
         # 先返回作业编号；断开的浏览器请求不会中止或重复启动后端分派。
-        # 有作业正在执行时，重复点击只返回同一个编号，不再次下发任务。
+        # 同一请求保持幂等；新的人工请求排队，并替换尚未执行的旧排队请求。
         try:
             return plan_jobs.submit(payload, plan)
         except RuntimeError as error:
@@ -1554,6 +1554,9 @@ def create_app(environment=None) -> FastAPI:
     def prepare_takeoff() -> Dict[str, Any]:
         _require_operator_ready()
         _fleet_motion_guard()
+        pending_plan = plan_jobs.get()
+        if pending_plan is not None and pending_plan["state"] in ("queued", "running"):
+            raise HTTPException(status_code=409, detail="规划分派尚未完成，请等待最新作业结果及机载回执")
         mission = orchestrator.snapshot().get("mission") or {}
         _check_external_program_b_mode(
             str(mission.get("flight_profile", "")),
@@ -1566,6 +1569,9 @@ def create_app(environment=None) -> FastAPI:
     def confirm_takeoff(payload: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
         _require_operator_ready()
         _fleet_motion_guard()
+        pending_plan = plan_jobs.get()
+        if pending_plan is not None and pending_plan["state"] in ("queued", "running"):
+            raise HTTPException(status_code=409, detail="规划分派尚未完成，不能起飞；请等待最新作业结果")
         mission = orchestrator.snapshot().get("mission") or {}
         _check_external_program_b_mode(
             str(mission.get("flight_profile", "")),

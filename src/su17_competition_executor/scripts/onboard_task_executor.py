@@ -826,7 +826,8 @@ class OnboardTaskExecutor:
                 raise TaskValidationError("当前任务正在执行，不能覆盖")
             waypoints = assignment["task"]["waypoints_m"]
             requested_speed = float(assignment["task"].get("speed_mps", self.search_speed))
-            if requested_speed > getattr(self, "max_speed", 2.0):
+            if (assignment.get("controller_mode", "internal") == "internal"
+                    and requested_speed > getattr(self, "max_speed", 2.0)):
                 raise TaskValidationError("规划航速超过本机配置上限，请先核验飞控限制并调整配置或规划航速")
             if assignment["task"]["coordinate_frame"] == "LOCAL_NORTH_WEST":
                 state, _ = self._snapshot()
@@ -1219,9 +1220,13 @@ class OnboardTaskExecutor:
         if getattr(self, "identity", {}):
             try:
                 self._refresh_flight_speed_limit()
+                # 程序 B 自行控制侦察航段；本节点只核验自己执行的起飞和返航速度。
                 requested = float(self._assignment["task"].get("speed_mps", self.search_speed))
-                if max(requested, self.return_speed) > min(self.max_speed, self.flight_speed_limit):
-                    raise ValueError("任务航速超过已读取的飞控限速，请调整规划与已核验的配置")
+                own_speed = (max(requested, self.return_speed)
+                             if self._assignment.get("controller_mode", "internal") == "internal"
+                             else max(self.search_speed, self.return_speed))
+                if own_speed > min(self.max_speed, self.flight_speed_limit):
+                    raise ValueError("本工程执行的飞行速度超过已读取的飞控限速")
             except (ValueError, rospy.ROSException, rospy.ServiceException) as error:
                 self._publish_status("takeoff_failed", error=str(error))
                 return False

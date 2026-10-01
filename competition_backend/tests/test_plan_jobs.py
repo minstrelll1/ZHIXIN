@@ -14,7 +14,7 @@ from competition_backend.tcp_adapter import _ClientConnection
 
 
 class PlanJobTest(unittest.TestCase):
-    def test_duplicate_submit_returns_same_running_job_without_repeat(self):
+    def test_new_request_waits_for_running_job_and_keeps_both_results(self):
         registry = PlanJobRegistry()
         started, release = threading.Event(), threading.Event()
         calls = []
@@ -30,13 +30,63 @@ class PlanJobTest(unittest.TestCase):
         second = registry.submit({"request_id": "click-1"}, handle)
         self.assertEqual(first["job_id"], second["job_id"])
         self.assertEqual(len(calls), 1)
-        with self.assertRaisesRegex(RuntimeError, "另一规划分派作业"):
-            registry.submit({"request_id": "click-elsewhere"}, handle)
+        queued = registry.submit({"request_id": "click-elsewhere"}, handle)
+        self.assertEqual(queued["state"], "queued")
+        self.assertEqual(registry.get()["job_id"], queued["job_id"])
+        self.assertEqual(len(calls), 1)
         release.set()
         deadline = time.monotonic() + 2
-        while registry.get(first["job_id"])["state"] == "running" and time.monotonic() < deadline:
+        while registry.get(queued["job_id"])["state"] != "succeeded" and time.monotonic() < deadline:
             time.sleep(.01)
         self.assertEqual(registry.get(first["job_id"])["result"]["mission"]["mission_id"], "m1")
+        self.assertEqual(registry.get(queued["job_id"])["state"], "succeeded")
+        self.assertEqual(len(calls), 2)
+
+    def test_only_latest_queued_request_runs(self):
+        registry = PlanJobRegistry()
+        started, release = threading.Event(), threading.Event()
+        calls = []
+
+        def handle(payload):
+            calls.append(payload["request_id"])
+            if len(calls) == 1:
+                started.set()
+                self.assertTrue(release.wait(2))
+            return {"mission": {"mission_id": payload["request_id"]}}
+
+        first = registry.submit({"request_id": "first"}, handle)
+        self.assertTrue(started.wait(1))
+        middle = registry.submit({"request_id": "middle"}, handle)
+        latest = registry.submit({"request_id": "latest"}, handle)
+        self.assertEqual(registry.get(middle["job_id"])["state"], "superseded")
+        self.assertEqual(registry.submit({"request_id": "latest"}, handle)["job_id"], latest["job_id"])
+        release.set()
+        deadline = time.monotonic() + 2
+        while registry.get(latest["job_id"])["state"] != "succeeded" and time.monotonic() < deadline:
+            time.sleep(.01)
+        self.assertEqual(calls, ["first", "latest"])
+        self.assertEqual(registry.get(first["job_id"])["state"], "succeeded")
+
+    def test_replacement_runs_after_first_plan_fails(self):
+        registry = PlanJobRegistry()
+        started, release = threading.Event(), threading.Event()
+
+        def handle(payload):
+            if payload["request_id"] == "rejected":
+                started.set()
+                self.assertTrue(release.wait(2))
+                raise ValueError("机载任务被拒绝")
+            return {"mission": {"mission_id": "replacement"}}
+
+        first = registry.submit({"request_id": "rejected"}, handle)
+        self.assertTrue(started.wait(1))
+        replacement = registry.submit({"request_id": "replacement"}, handle)
+        release.set()
+        deadline = time.monotonic() + 2
+        while registry.get(replacement["job_id"])["state"] != "succeeded" and time.monotonic() < deadline:
+            time.sleep(.01)
+        self.assertEqual(registry.get(first["job_id"])["state"], "failed")
+        self.assertEqual(registry.get(replacement["job_id"])["result"]["mission"]["mission_id"], "replacement")
 
     def test_api_returns_job_before_plan_finishes_then_exposes_result(self):
         with tempfile.TemporaryDirectory() as data, patch.dict(os.environ, {

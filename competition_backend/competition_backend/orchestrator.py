@@ -533,7 +533,7 @@ class CompetitionOrchestrator:
                     if telemetry.identity.get("identity_verified"):
                         if not telemetry.capabilities.get("motion_enabled"):
                             failures.append("机载程序未开启飞行控制，请使用 --enable-motion 启动")
-                        if self._mission is not None:
+                        if self._mission is not None and self._mission.controller_mode == "internal":
                             task = self._mission.uavs[uav_id].task
                             speed = float(task.get("speed_mps", 0))
                             limits = [telemetry.capabilities.get("max_speed_mps"), telemetry.capabilities.get("flight_speed_limit_mps")]

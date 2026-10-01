@@ -45,6 +45,28 @@ class RecognitionPublisherTest(unittest.TestCase):
                 self.assertEqual(node._publish_status.call_args.args[0],'task_rejected')
                 node.recognition_categories_pub.publish.assert_not_called()
 
+    def test_program_b_route_speed_does_not_block_assignment_or_takeoff(self):
+        for mode in ('internal', 'external'):
+            with self.subTest(mode=mode), tempfile.TemporaryDirectory() as directory:
+                node, msg = self.node(directory)
+                node.max_speed = 1.0
+                node.flight_speed_limit = 1.0
+                node.search_speed = 0.3
+                node.return_speed = 0.3
+                node.identity = {'uav_id': 3}
+                node._refresh_flight_speed_limit = Mock()
+                msg['controller_mode'] = mode
+                msg['task']['speed_mps'] = 5.0
+                msg['assignment_checksum'] = assignment_checksum(msg)
+                node._accept_assignment(msg)
+                self.assertEqual(node._assignment_acked, mode == 'external')
+                if mode == 'external':
+                    # 故意给无效起飞高度，使测试停在限速检查之后，不实际启动飞行。
+                    self.assertFalse(node._run_takeoff({'target_altitude_m': -1.0}))
+                    self.assertIn('起飞高度', node._publish_status.call_args.kwargs['error'])
+                else:
+                    self.assertIn('规划航速', node._publish_status.call_args.kwargs['error'])
+
     def test_zero_categories_and_publish_error_do_not_reject_task(self):
         for failure in [False, True]:
             with self.subTest(failure=failure),tempfile.TemporaryDirectory() as directory:
