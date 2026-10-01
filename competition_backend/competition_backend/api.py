@@ -654,17 +654,9 @@ def create_app(environment=None) -> FastAPI:
             raise HTTPException(status_code=409, detail="所选机型与发布端同步的机队配置不一致")
         return current
 
-    def _check_external_program_b_mode(
-        flight_profile: str, controller_mode: str, uav_ids, *, require_running: bool = False,
-    ) -> None:
-        """Only inspect program B; never stop or restart a possibly manual process."""
+    def _require_external_program_b_running(controller_mode: str, uav_ids) -> None:
+        """Only check program B availability at takeoff; never restrict its flight_mode."""
         if str(controller_mode).lower() != "external":
-            return
-        small_scenes = ("lab", "lab10", "outdoor5")
-        large_scenes = ("competition", "outdoor100", "outdoor200", "dalian_nanshan")
-        expected = ("outdoor_small_range" if flight_profile in small_scenes else
-                    "outdoor" if flight_profile in large_scenes else None)
-        if expected is None:
             return
         manager = getattr(app.state, "program_manager", None)
         peer_states = (adapter.peer_program_b_status()
@@ -675,27 +667,18 @@ def create_app(environment=None) -> FastAPI:
             else:
                 state = peer_states.get(str(uid))
             if not isinstance(state, dict):
-                if require_running and manager is not None:
+                if manager is not None:
                     raise HTTPException(status_code=409, detail=(
                         "尚未收到 UAV{} 所在地面终端的程序 B 状态，不能执行一键起飞。".format(uid)))
-                continue  # 未启用程序管理的旧入口不阻断规划预览。
-            if (uid != local_uav_id and require_running and state.get("received_at")
+                continue  # 未启用程序管理的旧入口不阻断起飞。
+            if (uid != local_uav_id and state.get("received_at")
                     and time.time() - float(state["received_at"]) > 5.0):
                 raise HTTPException(status_code=409, detail=(
                     "UAV{} 程序 B 状态已超时，不能执行一键起飞。".format(uid)))
             status = str(state.get("state", "unknown"))
             if status != "running":
-                if require_running:
-                    raise HTTPException(status_code=409, detail=(
-                        "UAV{} 外部程序 B 尚未正常启动，不能执行一键起飞；请检查程序窗口。".format(uid)))
-                continue
-            actual = str(state.get("flight_mode") or "unknown")
-            if actual == expected:
-                continue
-            raise HTTPException(status_code=409, detail=(
-                "UAV{} 外部程序 B 当前模式为 {}，本场景必须使用 {}。请在程序窗口停止原程序，"
-                "在机载终端用 flight_mode:={} 重新启动，再规划/起飞；系统不会自动结束人工启动的进程。"
-            ).format(uid, actual, expected, expected))
+                raise HTTPException(status_code=409, detail=(
+                    "UAV{} 外部程序 B 尚未正常启动，不能执行一键起飞；请检查程序窗口。".format(uid)))
 
     def _external_program_b_radius_warnings(flight_profile: str, controller_mode: str, uav_ids) -> list:
         if str(controller_mode).lower() != "external":
@@ -1308,9 +1291,6 @@ def create_app(environment=None) -> FastAPI:
                     detail="无法取得任务控制权限：{}".format(error),
                 ) from error
         try:
-            _check_external_program_b_mode(
-                requested_profile, payload.get("controller_mode", "internal"), orchestrator.active_uav_ids,
-            )
             result = _mission_call(
                 orchestrator.plan,
                 str(payload["subject"]),
@@ -1502,17 +1482,10 @@ def create_app(environment=None) -> FastAPI:
                 if payload.get("command_type") != "return_home":
                     _fleet_motion_guard()
             incoming = dict(payload.get("payload", {}))
-            if payload.get("command_type") == "assign_task":
-                _check_external_program_b_mode(
-                    str(incoming.get("flight_profile", "")),
-                    str(incoming.get("controller_mode", "")), [local_uav_id],
-                )
-            elif payload.get("command_type") == "takeoff":
+            if payload.get("command_type") == "takeoff":
                 mirrored = (adapter.mirrored_snapshot() or {}).get("mission") or {}
-                _check_external_program_b_mode(
-                    str(mirrored.get("flight_profile", "")),
+                _require_external_program_b_running(
                     str(mirrored.get("controller_mode", "")), [local_uav_id],
-                    require_running=True,
                 )
             adapter.accept_peer_command(
                 str(payload["coordinator_id"]),
@@ -1558,10 +1531,8 @@ def create_app(environment=None) -> FastAPI:
         if pending_plan is not None and pending_plan["state"] in ("queued", "running"):
             raise HTTPException(status_code=409, detail="规划分派尚未完成，请等待最新作业结果及机载回执")
         mission = orchestrator.snapshot().get("mission") or {}
-        _check_external_program_b_mode(
-            str(mission.get("flight_profile", "")),
-            str(mission.get("controller_mode", "")),
-            orchestrator.active_uav_ids, require_running=True,
+        _require_external_program_b_running(
+            str(mission.get("controller_mode", "")), orchestrator.active_uav_ids,
         )
         return _mission_call(orchestrator.prepare_takeoff)
 
@@ -1573,10 +1544,8 @@ def create_app(environment=None) -> FastAPI:
         if pending_plan is not None and pending_plan["state"] in ("queued", "running"):
             raise HTTPException(status_code=409, detail="规划分派尚未完成，不能起飞；请等待最新作业结果")
         mission = orchestrator.snapshot().get("mission") or {}
-        _check_external_program_b_mode(
-            str(mission.get("flight_profile", "")),
-            str(mission.get("controller_mode", "")),
-            orchestrator.active_uav_ids, require_running=True,
+        _require_external_program_b_running(
+            str(mission.get("controller_mode", "")), orchestrator.active_uav_ids,
         )
         return _mission_call(orchestrator.confirm_takeoff, str(payload["token"]))
 

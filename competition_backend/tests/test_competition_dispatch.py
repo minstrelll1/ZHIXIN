@@ -58,7 +58,7 @@ class CompetitionDispatchTest(unittest.TestCase):
                 latitude=30.78528, longitude=103.86102, altitude=44.098, gps_status=3, location_source=4,
             ))
             with patch.object(polygon_coverage, '_compute', side_effect=AssertionError('不得临场重算')):
-                response = clients[1].post('/api/v1/plan', json={'subject': 'subject1', 'planning_mode': 'competition', 'recognition_selection': {'category_count': 3, 'category_ids': [1, 8, 12]}})
+                response = clients[1].post('/api/v1/plan', json={'subject': 'subject1', 'planning_mode': 'competition', 'controller_mode': 'external', 'recognition_selection': {'category_count': 3, 'category_ids': [1, 8, 12]}})
             self.assertEqual(response.status_code, 200, response.text)
             result = response.json()
             self.assertEqual(result['dispatch_status']['assigned_uav_ids'], list(range(1, 7)))
@@ -72,7 +72,8 @@ class CompetitionDispatchTest(unittest.TestCase):
                 self.assertEqual(payload['task']['recognition_selection']['category_ids'], [1, 8, 12])
                 self.assertEqual(payload['task']['sector'], uid)
                 self.assertEqual(payload['task']['hover_scan_seconds'], 10)
-                self.assertEqual(payload['task']['speed_mps'], 5)
+                self.assertNotIn('speed_mps', payload['task'])
+                self.assertEqual(result['mission']['planned_uavs'][str(uid)]['task']['speed_mps'], 5)
                 self.assertTrue(payload['task']['waypoints_wgs84'])
                 self.assertIsNone(payload['landing_point_m'])
                 self.assertGreaterEqual(payload['target_altitude_m'], 40)

@@ -424,11 +424,16 @@ class CompetitionOrchestrator:
             self._confirmation_token = None
             dispatched = []
             for uav_id, runtime in self._mission.uavs.items():
+                task_for_onboard = copy.deepcopy(runtime.task)
+                if controller_mode == "external":
+                    # 程序 B 自行决定航速。规划速度仅用于估时；旧版机载执行器
+                    # 会把下发的 speed_mps 当作本工程限速并拒收外部任务。
+                    task_for_onboard.pop("speed_mps", None)
                 assignment_payload = {
                     "mission_id": mission_id,
                     "subject": subject,
                     "flight_profile": flight_profile,
-                    "task": runtime.task,
+                    "task": task_for_onboard,
                     "target_altitude_m": runtime.target_altitude_m,
                     "controller_mode": controller_mode,
                     "coordinate_frame": (
