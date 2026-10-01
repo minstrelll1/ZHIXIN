@@ -10,15 +10,36 @@ from typing import Any, Callable, Dict, Optional
 
 
 LOGGER = logging.getLogger(__name__)
+_CONTEXT = threading.local()
+
+
+class PlanSuperseded(Exception):
+    pass
+
+
+def plan_checkpoint(stage: str) -> None:
+    """在操作边界退出旧作业，不能用超时线程并发执行两个分派。"""
+    current = getattr(_CONTEXT, "current", None)
+    if current is not None:
+        current[0]._checkpoint(current[1], stage)
 
 
 class PlanJobRegistry:
-    def __init__(self) -> None:
+    def __init__(self, max_run_seconds: float = 45.0) -> None:
         self._lock = threading.Lock()
         self._current: Optional[Dict[str, Any]] = None
         self._running: Optional[Dict[str, Any]] = None
         self._queued: Optional[tuple] = None
         self._jobs: Dict[str, Dict[str, Any]] = {}
+        self.max_run_seconds = max_run_seconds
+
+    def _checkpoint(self, job, stage):
+        with self._lock:
+            if job.get("cancel_requested"):
+                raise PlanSuperseded("已改用最新人工规划请求；旧作业不再继续分派，请以新任务回执为准")
+            if time.monotonic() - job["_run_started"] > self.max_run_seconds:
+                raise RuntimeError("规划分派处理超时，停在阶段：{}；已停止后续下发，请核对已收到的任务".format(job["stage"]))
+            job["stage"] = stage
 
     def submit(self, payload: Dict[str, Any], handler: Callable[[Dict[str, Any]], Dict[str, Any]]) -> Dict[str, Any]:
         request_id = str(payload.get("request_id", ""))
@@ -36,6 +57,8 @@ class PlanJobRegistry:
                 "finished_at": None,
                 "result": None,
                 "error": None,
+                "stage": "等待前一作业结束" if self._running is not None else "准备规划",
+                "cancel_requested": False,
             }
             self._current = job
             self._jobs[job["job_id"]] = job
@@ -44,6 +67,7 @@ class PlanJobRegistry:
                 self._running = job
                 launch = submission
             else:
+                self._running["cancel_requested"] = True
                 if self._queued is not None:
                     old = self._queued[0]
                     old["state"] = "superseded"
@@ -63,10 +87,15 @@ class PlanJobRegistry:
 
     def _run(self, job: Dict[str, Any], payload: Dict[str, Any], handler: Callable) -> None:
         next_job = None
+        job["_run_started"] = time.monotonic()
+        _CONTEXT.current = (self, job)
         try:
+            plan_checkpoint("检查规划请求")
             result = handler(payload)
             if not isinstance(result, dict) or not (result.get("mission") or {}).get("mission_id"):
                 raise RuntimeError("后台未生成有效任务，请检查任务状态")
+        except PlanSuperseded as error:
+            outcome = ("superseded", None, str(error))
         except Exception as error:
             # FastAPI HTTPException.detail 与普通任务错误均保持为可读文本。
             detail = getattr(error, "detail", None)
@@ -77,6 +106,8 @@ class PlanJobRegistry:
             outcome = ("failed", None, str(detail if detail is not None else error))
         else:
             outcome = ("succeeded", result, None)
+        finally:
+            _CONTEXT.current = None
         with self._lock:
             job["state"], job["result"], job["error"] = outcome
             job["finished_at"] = time.time()
@@ -92,7 +123,12 @@ class PlanJobRegistry:
             self._start(*next_job)
 
     def _public_locked(self, job: Dict[str, Any]) -> Dict[str, Any]:
-        return dict(job)
+        result = {key: value for key, value in job.items() if not key.startswith('_')}
+        if job.get("started_at") is not None:
+            result["elapsed_seconds"] = round((job.get("finished_at") or time.time()) - job["started_at"], 1)
+        if job["state"] == "queued" and self._running:
+            result["waiting_for_stage"] = self._running["stage"]
+        return result
 
     def get(self, job_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
         with self._lock:

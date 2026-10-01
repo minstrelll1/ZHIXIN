@@ -11,6 +11,7 @@ from typing import Any, Callable, Dict, List, Optional
 from competition_shared.recognition import optional_recognition_selection
 from .adapter import FleetAdapter
 from .assignment_protocol import assignment_checksum
+from .plan_jobs import plan_checkpoint
 from .journal import EventJournal
 from .models import (
     BackendConfig,
@@ -402,6 +403,7 @@ class CompetitionOrchestrator:
             uavs = {
                 uav_id: planned_uavs[uav_id] for uav_id in self.active_uav_ids
             }
+            plan_checkpoint("保存本次规划")
             self._mission = MissionRuntime(
                 mission_id=mission_id,
                 subject=subject,
@@ -424,6 +426,7 @@ class CompetitionOrchestrator:
             self._confirmation_token = None
             dispatched = []
             for uav_id, runtime in self._mission.uavs.items():
+                plan_checkpoint("向 UAV{} 下发任务".format(uav_id))
                 task_for_onboard = copy.deepcopy(runtime.task)
                 if controller_mode == "external":
                     # 程序 B 自行决定航速。规划速度仅用于估时；旧版机载执行器

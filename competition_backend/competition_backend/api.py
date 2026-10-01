@@ -42,7 +42,7 @@ from .groundstation_capture import PassivePointCloudCapture
 from .models import ReturnReason, Telemetry
 from .pengfei_telemetry import sanitize_pengfei
 from .orchestrator import CompetitionOrchestrator, MissionError
-from .plan_jobs import PlanJobRegistry
+from .plan_jobs import PlanJobRegistry, plan_checkpoint
 from .pointcloud import (
     DEFAULT_GROUNDSTATION_RELAY_TOPIC_TEMPLATE,
     DEFAULT_ONBOARD_TOPIC_TEMPLATE,
@@ -1230,6 +1230,7 @@ def create_app(environment=None) -> FastAPI:
 
     @app.post("/api/v1/plan", summary="规划并分配六机任务", tags=["任务控制"])
     def plan(payload: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
+        plan_checkpoint("核对本地角色和配置")
         role = _require_operator_ready()
         _fleet_motion_guard()
         recognition_selection = None
@@ -1243,6 +1244,7 @@ def create_app(environment=None) -> FastAPI:
         if requested_profile == "dalian_nanshan" and payload.get("planning_mode") != "competition":
             raise HTTPException(status_code=422, detail="大连南山坡固定区域必须使用比赛区域规划模式")
         if payload.get("planning_mode") == "competition":
+            plan_checkpoint("读取固定规划和 GPS 基准")
             if payload.get("tasks_by_uav") is not None:
                 raise HTTPException(status_code=422, detail="比赛区域任务由已保存方案生成，不能混用手工任务")
             prepared = competition_coverage({
@@ -1267,6 +1269,7 @@ def create_app(environment=None) -> FastAPI:
             normalized_tasks = {int(key): dict(value) for key, value in tasks.items()}
         if isinstance(adapter, DistributedFleetAdapter):
             try:
+                plan_checkpoint("核对在线无人机和地面控制权限")
                 connected_uav_ids = adapter.connected_uav_ids_snapshot()
                 # Keep planning independent from physical availability.  With
                 # no fresh UAV telemetry this is a planning-only mission: the
@@ -1291,6 +1294,7 @@ def create_app(environment=None) -> FastAPI:
                     detail="无法取得任务控制权限：{}".format(error),
                 ) from error
         try:
+            plan_checkpoint("生成本次任务")
             result = _mission_call(
                 orchestrator.plan,
                 str(payload["subject"]),

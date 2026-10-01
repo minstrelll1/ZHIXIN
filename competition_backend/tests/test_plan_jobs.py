@@ -9,11 +9,53 @@ from unittest.mock import patch
 from fastapi.testclient import TestClient
 
 from competition_backend.api import create_app
-from competition_backend.plan_jobs import PlanJobRegistry
+from competition_backend.plan_jobs import PlanJobRegistry, plan_checkpoint
 from competition_backend.tcp_adapter import _ClientConnection
 
 
 class PlanJobTest(unittest.TestCase):
+    def test_new_request_cancels_remaining_old_dispatch_at_checkpoint(self):
+        registry = PlanJobRegistry()
+        started, release = threading.Event(), threading.Event()
+        sends = []
+        def handle(payload):
+            for uid in (1, 2):
+                plan_checkpoint("发送 UAV{}".format(uid))
+                sends.append((payload['request_id'], uid))
+                if payload['request_id'] == 'old' and uid == 1:
+                    started.set()
+                    self.assertTrue(release.wait(2))
+            return {"mission": {"mission_id": payload['request_id']}}
+        old = registry.submit({'request_id': 'old'}, handle)
+        self.assertTrue(started.wait(1))
+        new = registry.submit({'request_id': 'new'}, handle)
+        self.assertEqual(new['waiting_for_stage'], '发送 UAV1')
+        release.set()
+        deadline = time.monotonic() + 2
+        while registry.get(new['job_id'])['state'] in ('queued', 'running') and time.monotonic() < deadline:
+            time.sleep(.01)
+        self.assertEqual(registry.get(old['job_id'])['state'], 'superseded')
+        self.assertEqual(registry.get(new['job_id'])['state'], 'succeeded')
+        self.assertEqual(sends, [('old', 1), ('new', 1), ('new', 2)])
+
+    def test_expired_preparation_stops_before_task_send(self):
+        registry = PlanJobRegistry(max_run_seconds=.02)
+        sends = []
+        def handle(payload):
+            plan_checkpoint('读取固定方案')
+            time.sleep(.04)
+            plan_checkpoint('下发任务')
+            sends.append(payload)
+            return {'mission': {'mission_id': 'expired'}}
+        job = registry.submit({}, handle)
+        deadline = time.monotonic() + 2
+        while registry.get(job['job_id'])['state'] == 'running' and time.monotonic() < deadline:
+            time.sleep(.01)
+        result = registry.get(job['job_id'])
+        self.assertEqual(result['state'], 'failed')
+        self.assertIn('读取固定方案', result['error'])
+        self.assertEqual(sends, [])
+
     def test_new_request_waits_for_running_job_and_keeps_both_results(self):
         registry = PlanJobRegistry()
         started, release = threading.Event(), threading.Event()

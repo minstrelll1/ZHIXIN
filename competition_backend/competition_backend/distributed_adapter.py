@@ -11,6 +11,7 @@ from typing import Any, Callable, Dict, Iterable, List, Optional
 from .adapter import FleetAdapter
 from .models import Telemetry
 from .tcp_adapter import TcpFleetAdapter
+from .plan_jobs import plan_checkpoint
 def parse_ground_peers(raw: str) -> Dict[int, str]:
     """Parse ``UAV_ID=http://ground-computer:port`` entries."""
     peers: Dict[int, str] = {}
@@ -458,6 +459,7 @@ class DistributedFleetAdapter(FleetAdapter):
         acquired = []
         try:
             for uav_id in selected:
+                plan_checkpoint("取得地面终端 {} 的控制权限".format(uav_id))
                 if uav_id == self.local_uav_id:
                     continue
                 base_url = self.peers.get(uav_id)
