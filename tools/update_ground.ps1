@@ -73,7 +73,7 @@ function Test-ProtectedPath([string]$Path) {
 }
 
 function Test-PreservedFile([string]$Path, [string]$Local) {
-    return (Test-ProtectedPath $Path) -or ($Path -eq 'config/fleet.json' -and (Test-Path -LiteralPath $Local)) -or
+    return (Test-ProtectedPath $Path) -or ($Path -in @('config/fleet.json', 'config/onboard_programs.json') -and (Test-Path -LiteralPath $Local)) -or
         ($Path -match '^third_party/.*\.(exe|dll|zip|msi)$' -and (Test-Path -LiteralPath $Local))
 }
 

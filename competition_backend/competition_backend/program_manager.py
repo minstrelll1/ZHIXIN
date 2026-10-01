@@ -86,6 +86,17 @@ class ProgramManager:
     def _request(self, action, offsets, program=None):
         source = (self.root / 'tools' / 'remote_programs.py').read_text(encoding='utf-8-sig')
         payload = dict(action=action, uav_id=self.local['uav_id'], model=self.local['model'], offsets=offsets, program=program)
+        if action == 'start':
+            config_path = self.root / 'config' / 'onboard_programs.json'
+            if config_path.exists():
+                try:
+                    config = json.loads(config_path.read_text(encoding='utf-8-sig'))
+                    commands = config.get('commands') if isinstance(config, dict) else None
+                    if not isinstance(commands, dict) or set(commands) - {'onboard', 'detection', 'flight'}:
+                        raise ValueError('commands 必须为仅包含 onboard、detection、flight 的对象')
+                    payload['commands'] = commands
+                except (OSError, ValueError) as error:
+                    raise RuntimeError('读取机载启动配置 config/onboard_programs.json 失败：%s' % error) from error
         # Windows OpenSSH/远端终端的编码设置可能不同。stdin 只传 ASCII，
         # 由远端 Python 明确按 UTF-8 还原含中文的管理脚本。
         source_b64 = base64.b64encode(source.encode('utf-8')).decode('ascii')
@@ -156,6 +167,8 @@ class ProgramManager:
         if not self.local:
             raise ValueError('请先选择本地地面终端')
         with self.lock:
+            # 主动点击重新连接才恢复启动；状态轮询仍不重启人工停止的程序。
+            self.operator_stopped.clear()
             if self.thread and self.thread.is_alive():
                 if self.auth['state'] != 'waiting':
                     self.restart_request.set()

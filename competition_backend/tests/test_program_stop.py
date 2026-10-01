@@ -17,6 +17,17 @@ from test_program_manager import remote
 
 
 class ProgramStopTests(unittest.TestCase):
+    def test_explicit_reconnect_allows_stopped_program_to_start_again(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            manager = ProgramManager(tmp, {})
+            manager.local = dict(uav_id=1, model='p600')
+            manager.thread = Mock()
+            manager.thread.is_alive.return_value = True
+            manager.operator_stopped.add('flight')
+            manager.reconnect()
+            self.assertFalse(manager.operator_stopped)
+            self.assertTrue(manager.restart_request.is_set())
+
     def test_local_only_api_routes_stop_and_reports_failure(self):
         with tempfile.TemporaryDirectory() as tmp:
             config=Path(tmp)/'fleet.json'

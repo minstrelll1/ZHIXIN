@@ -119,18 +119,25 @@ class DalianLiveDispatchTest(unittest.TestCase):
             self.assertEqual(planned.status_code, 200, planned.text)
             self.assertEqual(planned.json()["dispatch_status"]["assigned_uav_ids"], [1])
 
-    def test_outdoor100_external_assignment_omits_planning_speed(self):
+    def test_all_scenes_external_assignment_ignores_mode_and_planning_speed(self):
         with tempfile.TemporaryDirectory() as data:
             app, client = self._terminal(data, 1, True)
-            planned = client.post("/api/v1/plan", json={
-                "subject": "subject2", "planning_mode": "competition",
-                "flight_profile": "outdoor100", "coordinate_mode": "xyz",
-                "controller_mode": "external",
-            })
-            self.assertEqual(planned.status_code, 200, planned.text)
-            task = app.state.adapter.local_adapter.forward_command.call_args.args[2]["task"]
-            self.assertNotIn("speed_mps", task)
-            self.assertEqual(planned.json()["mission"]["planned_uavs"]["1"]["task"]["speed_mps"], 5.0)
+            app.state.program_manager = Mock()
+            for profile in ("lab", "outdoor5", "lab10", "outdoor100", "outdoor200", "competition", "dalian_nanshan"):
+                for mode in ("outdoor", "outdoor_small_range", "indoor", "unknown"):
+                    with self.subTest(profile=profile, mode=mode):
+                        app.state.program_manager.snapshot.return_value = {"programs": {"flight": {
+                            "state": "running", "flight_mode": mode}}}
+                        planned = client.post("/api/v1/plan", json={
+                            "subject": "subject2", "planning_mode": "competition",
+                            "flight_profile": profile,
+                            "coordinate_mode": "gps" if profile == "dalian_nanshan" else "xyz",
+                            "controller_mode": "external",
+                        })
+                        self.assertEqual(planned.status_code, 200, planned.text)
+                        task = app.state.adapter.local_adapter.forward_command.call_args.args[2]["task"]
+                        self.assertNotIn("speed_mps", task)
+                        self.assertGreater(planned.json()["mission"]["planned_uavs"]["1"]["task"]["speed_mps"], 0)
 
 
 if __name__ == "__main__":

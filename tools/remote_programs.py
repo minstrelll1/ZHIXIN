@@ -12,13 +12,18 @@ import time
 NAMES = {"onboard": "竞赛程序机载端", "detection": "目标检测程序", "flight": "自主飞行指令程序"}
 
 
-def command_for(key, uid, model):
+def command_for(key, uid, model, commands=None):
+    if commands is not None and key in commands:
+        command = commands[key]
+        if not isinstance(command, str) or not command.strip() or '\x00' in command:
+            raise ValueError('%s启动指令必须为非空字符串' % NAMES[key])
+        # 仅替换约定变量，保留 Bash 的 ${HOME}、函数或其他花括号。
+        return command.replace('{uav_id}', str(uid)).replace('{model}', model)
     if key == "onboard":
         return "exec bash ./tools/start_onboard_stack.sh --model %s --expect-uav-id %d --direct --enable-motion" % (model, uid)
     if key == "detection":
         return "source ~/SpireCV_bj/src/spirecv-ros/devel/setup.bash && exec roslaunch spirecv_ros uav_yolo26_botsort_geolocation.launch uav_id:=%d" % uid
-    # 网页默认是竞赛大场景。小场景须在规划前显式核对并人工切换程序 B；
-    # 不能让 6×6 米、1～10 米高、1 米/秒的小场景限制拦截正式室外航线。
+    # 兼容未提供启动配置的旧地面端；竞赛程序不按场景强制切换程序 B 模式。
     return "source ~/recon_ws/devel/setup.bash && exec roslaunch px4_north_camera p600_gx40_position_pid_reconnaissance.launch uav_id:=%d flight_mode:=outdoor" % uid
 
 
@@ -355,7 +360,7 @@ def rpc(payload):
                         helper = directory / 'runner.py'
                         helper.write_text(PROGRAM_SOURCE, encoding='utf-8')
                         with (directory / 'console.log').open('ab') as log:
-                            process = subprocess.Popen([sys.executable, str(helper), '--worker', str(directory), command_for(key, uid, model)],
+                            process = subprocess.Popen([sys.executable, str(helper), '--worker', str(directory), command_for(key, uid, model, payload.get('commands'))],
                                                        stdin=subprocess.DEVNULL, stdout=log, stderr=log, start_new_session=True, close_fds=True)
                         write_json(directory / 'worker.json', {'pid': process.pid, 'stamp': stamp(process.pid)})
                         # 启动锁覆盖 worker 写入 child PID 的时间，防止并发确认重复启动。

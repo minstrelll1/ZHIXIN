@@ -71,7 +71,9 @@ foreach ($projectPath in @($usbSource, $localProject)) {
 
 New-Item -ItemType Directory -Force -Path "$localProject\ground_logs" | Out-Null
 
-robocopy "$usbSource" "$localProject" /E /XJ /R:1 /W:1 /XD .git .venv __pycache__ data .runtime ground_runtime ground_logs flight_records received_images pointcloud_records position_tests onboard_source_backup .codex_backup* /XF fleet.json local_tokens.ps1 local_tokens.env mediamtx.exe auto.key auto.crt *.pyc *.bag *.log /TEE /LOG:"$localProject\ground_logs\usb_update.log"
+New-Item -ItemType Directory -Force -Path "$localProject\config" | Out-Null
+if (-not (Test-Path "$localProject\config\onboard_programs.json")) { Copy-Item "$usbSource\config\onboard_programs.json" "$localProject\config\onboard_programs.json" }
+robocopy "$usbSource" "$localProject" /E /XJ /R:1 /W:1 /XD .git .venv __pycache__ data .runtime ground_runtime ground_logs flight_records received_images pointcloud_records position_tests onboard_source_backup .codex_backup* /XF fleet.json onboard_programs.json local_tokens.ps1 local_tokens.env mediamtx.exe auto.key auto.crt *.pyc *.bag *.log /TEE /LOG:"$localProject\ground_logs\usb_update.log"
 
 if ($LASTEXITCODE -ge 8) { throw "USB 更新失败，请查看 ground_logs\usb_update.log" }
 ```
@@ -180,7 +182,9 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\setup_onboard_ss
 2. 选择本地地面终端编号并确认。SSH 免密码登录可用时，自动启动对应无人机的竞赛机载程序、目标检测程序和自主飞行指令程序；编号随终端切换，UAV3 使用 `uav_id:=3`。
 3. 点击“机地网络配置”右侧的程序名称查看打印内容。红色表示未启动、连接失败或异常，绿色表示对应 ROS 节点已响应（地面端表示网页服务运行中）。关闭网页不停止后台或机载程序。
 
-目标检测使用 `~/SpireCV_bj/src/spirecv-ros/devel/setup.bash`；程序 B 使用 `~/recon_ws/devel/setup.bash`。网页自动启动程序 B 时使用 `flight_mode:=outdoor`，适用于竞赛、100m×100m、200m×200m 和大连南山坡外场。3m×3m、5m×5m、10m×10m 小场景需要在规划前将程序 B 人工启动为 `flight_mode:=outdoor_small_range`；模式不匹配时网页会拒绝分派。这两个工作空间需已在无人机上安装。
+三个机载程序的启动指令在本机 `config/onboard_programs.json` 的 `commands` 中配置：`onboard` 为竞赛机载端，`detection` 为目标检测，`flight` 为程序 B。`{uav_id}` 和 `{model}` 自动替换为所选编号和机型；指令在机载 `~/competition_development` 目录执行，所引用工作空间须已安装。
+
+每次主动启动重新读取配置。修改后，在网页停止对应程序，再点击“重新连接并启动”；已运行的其他程序复用。增量更新保留本机启动配置。全部场景的规划、分派和起飞均不匹配校验程序 B 的 `flight_mode`；外部模式的规划航速只用于估时，不下发为本工程飞行限速。一键起飞仍检查程序 B 是否正常运行。
 
 启动管理脚本由地面端通过 SSH 自动传送。此次新增程序 B 的 `/uavN/target_scheduler/completed_targets` 话题兼容，需要按上面的机载更新命令同步竞赛机载代码；不修改目标检测、程序 B 或厂商工作空间。U 盘复制时同时复制根目录的 `智信竞赛.exe`。原有命令行启动方式仍可使用。
 

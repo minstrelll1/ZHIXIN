@@ -107,6 +107,44 @@ class ProgramsTest(unittest.TestCase):
                 self.assertIn('密钥验证失败', manager.read_log(key)['text'])
             manager.stop()
 
+    def test_start_reads_latest_config_but_status_and_stop_ignore_broken_config(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / 'tools').mkdir()
+            (root / 'tools/remote_programs.py').write_text(
+                'import json\ndef rpc(payload):\n    print(json.dumps(payload))\n', encoding='utf-8')
+            (root / 'config').mkdir()
+            path = root / 'config/onboard_programs.json'
+            manager = ProgramManager(root, {})
+            manager.local = dict(uav_id=3, model='p600', onboard_host='192.168.1.212')
+            def run(_command, **kwargs):
+                output = io.StringIO()
+                with contextlib.redirect_stdout(output):
+                    exec(kwargs['input'].decode('ascii'), {'__name__': 'config_test'})
+                return SimpleNamespace(returncode=0, stdout=output.getvalue().encode(), stderr=b'')
+            with patch('competition_backend.program_manager.subprocess.run', side_effect=run):
+                for command in ('echo 第一次 {uav_id}', 'echo 第二次 {uav_id}'):
+                    path.write_text(json.dumps({'commands': {'flight': command}}, ensure_ascii=False), encoding='utf-8-sig')
+                    self.assertEqual(manager._request('start', {})['commands']['flight'], command)
+                path.write_text('{broken', encoding='utf-8')
+                with self.assertRaisesRegex(RuntimeError, 'onboard_programs.json'):
+                    manager._request('start', {})
+                self.assertNotIn('commands', manager._request('status', {}))
+                self.assertNotIn('commands', manager._request('stop', {}, program='flight'))
+
+    def test_config_templates_preserve_shell_syntax_and_default_commands(self):
+        config = json.loads((ROOT / 'config/onboard_programs.json').read_text(encoding='utf-8-sig'))
+        for uid in range(1, 7):
+            for model in ('p600', 'su17'):
+                for key in remote.NAMES:
+                    self.assertEqual(remote.command_for(key, uid, model, config['commands']),
+                                     remote.command_for(key, uid, model))
+        command = 'source ${HOME}/test/setup.bash && echo 中文 {uav_id} {model}'
+        self.assertEqual(remote.command_for('flight', 3, 'p600', {'flight': command}),
+                         'source ${HOME}/test/setup.bash && echo 中文 3 p600')
+        with self.assertRaisesRegex(ValueError, '启动指令'):
+            remote.command_for('flight', 1, 'p600', {'flight': ''})
+
     def test_one_program_failure_does_not_hide_others(self):
         with tempfile.TemporaryDirectory() as tmp:
             manager = ProgramManager(tmp, {})
@@ -207,7 +245,7 @@ class ProgramsTest(unittest.TestCase):
                 remote.write_json(directory / 'process.json', {'pid': pid, 'stamp': 'live'})
                 return SimpleNamespace(pid=pid + 1000, poll=lambda: None)
             fake_fcntl = SimpleNamespace(flock=lambda *args: None, LOCK_EX=2)
-            request = dict(action='start', uav_id=3, model='p600')
+            request = dict(action='start', uav_id=3, model='p600', commands={'flight': 'exec custom_program --uav {uav_id}'})
             with patch.dict('sys.modules', {'fcntl': fake_fcntl}), \
                     patch.object(remote.Path, 'home', return_value=home), \
                     patch.object(remote, 'PROGRAM_SOURCE', '# isolated test', create=True), \
@@ -219,6 +257,7 @@ class ProgramsTest(unittest.TestCase):
                 remote.rpc(request)
                 remote.rpc(request)
                 self.assertEqual(len(calls), 3, '重复确认不能重复启动三个程序')
+                self.assertEqual(calls[-1][-1], 'exec custom_program --uav 3')
                 target = root / 'ground_runtime/programs_uav3/detection/process.json'
                 remote.write_json(target, {'exit_code': 1})
                 remote.rpc(dict(request, action='status'))

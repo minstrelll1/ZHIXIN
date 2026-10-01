@@ -186,7 +186,18 @@ try {
     Get-ChildItem -LiteralPath $source.FullName -Force | Where-Object {
         $_.Name -notin @("tools\local_tokens.ps1", "tools\local_tokens.env", ".git")
     } | ForEach-Object {
-        Copy-Item -LiteralPath $_.FullName -Destination $Destination -Recurse -Force
+        if ($_.Name -eq 'config') {
+            $configDestination = Join-Path $Destination 'config'
+            New-Item -ItemType Directory -Path $configDestination -Force | Out-Null
+            Get-ChildItem -LiteralPath $_.FullName -Force | ForEach-Object {
+                $configTarget = Join-Path $configDestination $_.Name
+                if ($_.Name -ne 'onboard_programs.json' -or -not (Test-Path -LiteralPath $configTarget)) {
+                    Copy-Item -LiteralPath $_.FullName -Destination $configDestination -Recurse -Force
+                }
+            }
+        } else {
+            Copy-Item -LiteralPath $_.FullName -Destination $Destination -Recurse -Force
+        }
     }
     Ensure-TokenConfig $Destination
 

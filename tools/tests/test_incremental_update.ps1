@@ -65,6 +65,7 @@ try {
     Set-Local '.editorconfig' "root=true`r`n"; Set-Remote '.editorconfig' "root=true`n"
     Set-Local 'map.geojson' "{}`r`n"; Set-Remote 'map.geojson' "{}`n"
     Set-Local 'config/fleet.json' '{"local":true}'; Set-Remote 'config/fleet.json' '{"local":false}'
+    Set-Local 'config/onboard_programs.json' '{"commands":{"flight":"local-command"}}'; Set-Remote 'config/onboard_programs.json' '{"commands":{}}'
     Set-Local 'third_party/mediamtx/mediamtx.exe' 'existing-binary'; Set-Remote 'third_party/mediamtx/mediamtx.exe' 'other-binary'
     Set-Local 'tools/local_tokens.ps1' 'private-token'; Set-Remote 'tools/local_tokens.ps1' 'must-not-copy'
     Set-Local 'received_images/example.txt' 'private-image'; Set-Remote 'received_images/example.txt' 'must-not-copy'
@@ -73,6 +74,7 @@ try {
     Assert-True ($script:downloads.Count -eq 1 -and $script:downloads[0] -eq 'a.txt') '首次增量更新重复下载了未变化文件或本机配置'
     Assert-True ((Read-Local 'a.txt') -eq 'new') '变化文件未更新'
     Assert-True ((Read-Local 'config/fleet.json') -eq '{"local":true}') '本机机队配置被覆盖'
+    Assert-True ((Read-Local 'config/onboard_programs.json') -eq '{"commands":{"flight":"local-command"}}') '本机启动指令被覆盖'
     Assert-True ((Read-Local 'tools/local_tokens.ps1') -eq 'private-token') '令牌被覆盖'
     Assert-True ((Read-Local 'received_images/example.txt') -eq 'private-image') '图片被覆盖'
     Assert-True ((Read-Local 'third_party/mediamtx/mediamtx.exe') -eq 'existing-binary') '重复更新了现有第三方程序'
