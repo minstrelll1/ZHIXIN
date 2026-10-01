@@ -108,6 +108,12 @@ def validate_assignment(
     normalized["mission_id"] = mission_id
     normalized["target_altitude_m"] = target_altitude
     normalized["task"]["waypoints_m"] = waypoints
+    if task.get('transit_routes') and message.get('controller_mode') == 'external':
+        from .transit_protocol import route_messages
+        try:
+            route_messages(normalized)
+        except (ValueError, TypeError, KeyError, IndexError) as error:
+            raise TaskValidationError('进返场航线校验失败：{}'.format(error)) from error
     return normalized
 
 

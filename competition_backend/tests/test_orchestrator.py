@@ -75,6 +75,38 @@ class OrchestratorTest(unittest.TestCase):
         self.assertEqual(mission["events"][-1]["kind"], "task_assignment_failed")
         self.assertEqual(mission["events"][-1]["sent_uav_ids"], [1])
 
+    def test_selected_return_does_not_change_other_uavs(self):
+        self.launch_and_start_tasks()
+        before = self.backend.snapshot()['mission']
+        result = self.backend.request_return_selected([1, 3], mission_id=before['mission_id'])
+        returns = [c['uav_id'] for c in self.adapter.commands if c['type'] == 'return_home']
+        self.assertEqual(returns, [1, 3])
+        self.assertTrue(result['return_results']['1']['ok'])
+        self.assertEqual(result['mission']['uavs']['2'], before['uavs']['2'])
+        self.assertEqual(result['mission']['phase'], before['phase'])
+
+    def test_selected_return_continues_after_failure_and_can_retry_failed_uav(self):
+        self.launch_and_start_tasks()
+        original = self.adapter.command_return
+        def send(uid, payload):
+            if uid == 1:
+                raise TimeoutError('链路超时')
+            original(uid, payload)
+        self.adapter.command_return = send
+        result = self.backend.request_return_selected([1, 3])
+        self.assertFalse(result['return_results']['1']['ok'])
+        self.assertTrue(result['return_results']['3']['ok'])
+        self.assertNotEqual(result['mission']['uavs']['1']['phase'], 'return_commanded')
+        self.adapter.command_return = original
+        self.backend.request_return_selected([1])
+        self.assertEqual([c['uav_id'] for c in self.adapter.commands if c['type'] == 'return_home'], [3, 1])
+
+    def test_stale_return_dialog_cannot_control_new_mission(self):
+        self.launch_and_start_tasks()
+        with self.assertRaisesRegex(RuntimeError, '任务已变化'):
+            self.backend.request_return_selected([1], mission_id='old-task')
+        self.assertFalse(any(c['type'] == 'return_home' for c in self.adapter.commands))
+
     def telemetry(self, uav_id, **overrides):
         mission = self.backend.snapshot().get("mission")
         values = {

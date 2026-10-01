@@ -166,6 +166,9 @@ class CompetitionOrchestrator:
                 # 实际起降点尚未配置，各机沿用机载记录的自身返航点。
                 landing_plan = {uid: {"point_m": None, "landing_sequence": uid} for uid in self.config.uav_ids}
                 area["landing_mode"] = "onboard_home"
+                if prepared_plan.get("prepared_transit_sha256"):
+                    landing_plan = {uid: {"point_m": list(area["departure_point_m"]), "landing_sequence": uid} for uid in self.config.uav_ids}
+                    area["landing_mode"] = "selected_departure"
             elif subject in ("subject1", "subject2") and tasks_by_uav is None:
                 area = dict(template.get("search_area", {}))
                 area.update(search_area or {})
@@ -458,6 +461,14 @@ class CompetitionOrchestrator:
                         lon0 - float(py) / (111111.0 * cos_lat),
                         runtime.target_altitude_m,
                     ]
+                routes = task_for_onboard.get("transit_routes")
+                if routes:
+                    assignment_payload["landing_mode"] = "selected_departure"
+                    if routes["coordinate_frame"] == "WGS84":
+                        lon, lat = routes["departure"]
+                        assignment_payload["landing_point_wgs84"] = [lat, lon, runtime.target_altitude_m]
+                    else:
+                        assignment_payload["landing_point_m"] = list(routes["departure"])
                 runtime.assignment_checksum = assignment_checksum(
                     {"type": "assign_task", "uav_id": uav_id, **assignment_payload}
                 )
@@ -673,14 +684,30 @@ class CompetitionOrchestrator:
             return self.snapshot()
 
     def request_return_all(self, reason: ReturnReason = ReturnReason.MANUAL) -> Dict[str, Any]:
+        return self.request_return_selected(list(self.active_uav_ids), reason)
+
+    def request_return_selected(self, uav_ids, reason: ReturnReason = ReturnReason.MANUAL, mission_id=None) -> Dict[str, Any]:
         with self._lock:
             if not self._mission:
                 raise MissionError("no mission exists")
-            self._mission.phase = MissionPhase.RETURNING
-            for uav_id in self.active_uav_ids:
-                self._request_return_one(uav_id, reason)
+            if mission_id and mission_id != self._mission.mission_id:
+                raise MissionError("任务已变化，请重新选择返航无人机")
+            if (not isinstance(uav_ids, list) or not uav_ids or any(type(uid) is not int for uid in uav_ids)
+                    or len(set(uav_ids)) != len(uav_ids)
+                    or not set(uav_ids).issubset(self._mission.uavs)):
+                raise MissionError("请选择本次已分派任务的无人机，编号不能重复")
+            results = {}
+            for uav_id in uav_ids:
+                try:
+                    self._request_return_one(uav_id, reason)
+                    results[str(uav_id)] = {"ok": True, "detail": "返航请求已发送或已在返航/落地状态"}
+                except Exception as error:
+                    results[str(uav_id)] = {"ok": False, "detail": str(error)}
+                    self._event("return_send_failed", uav_id=uav_id, error=str(error))
+            if all(runtime.phase in (UavPhase.RETURN_COMMANDED, UavPhase.LANDED) for runtime in self._mission.uavs.values()):
+                self._mission.phase = MissionPhase.RETURNING
             self._save()
-            return self.snapshot()
+            return dict(self.snapshot(), return_results=results)
 
     def _request_return_one(self, uav_id: int, reason: ReturnReason) -> None:
         if not self._mission:
@@ -688,8 +715,6 @@ class CompetitionOrchestrator:
         runtime = self._mission.uavs[uav_id]
         if runtime.phase in (UavPhase.RETURN_COMMANDED, UavPhase.LANDED):
             return
-        runtime.phase = UavPhase.RETURN_COMMANDED
-        runtime.return_reason = reason.value
         self.adapter.command_return(
             uav_id,
             {
@@ -698,6 +723,8 @@ class CompetitionOrchestrator:
                 "land_after_return": True,
             },
         )
+        runtime.phase = UavPhase.RETURN_COMMANDED
+        runtime.return_reason = reason.value
         self._event("return_commanded", uav_id=uav_id, reason=reason.value)
 
     def _mark_autonomous_return(self, uav_id: int, reason: ReturnReason) -> None:

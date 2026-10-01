@@ -26,6 +26,7 @@ import uuid
 from su17_competition_executor.tcp_link import OnboardTcpLink
 from su17_competition_executor.pengfei_bridge import PengfeiReadOnlyBridge
 from su17_competition_executor.ego_state_bridge import EgoStateReadOnlyBridge
+from su17_competition_executor.transit_protocol import route_messages
 from su17_competition_executor.task_protocol import (
     TaskValidationError,
     load_assignment,
@@ -178,6 +179,10 @@ class OnboardTaskExecutor:
         self.external_return_pub = rospy.Publisher(
             self.external_return_topic, Bool, queue_size=1, latch=True
         )
+        self.external_entry_path_pub = rospy.Publisher(
+            "/ground_mission_planner/vehicle_{}/entry_path".format(self.local_ros_uav_id), String, queue_size=1, latch=True)
+        self.external_return_paths_pub = rospy.Publisher(
+            "/ground_mission_planner/vehicle_{}/return_paths".format(self.local_ros_uav_id), String, queue_size=1, latch=True)
         self.image_mission_control_pub = rospy.Publisher(
             "/uav{}/image_transfer/mission_control".format(self.uav_id),
             String,
@@ -1324,6 +1329,7 @@ class OnboardTaskExecutor:
         lat0, lon0, _ = gps_home if gps_home is not None else (0.0, 0.0, 0.0)
         target_relative_alt = float(assignment["target_altitude_m"])
         task = assignment["task"]
+        transit_messages = route_messages(assignment)
         points = []
         direct = task.get("waypoints_gps") or task.get("waypoints_wgs84")
         if frame == "WGS84":
@@ -1378,6 +1384,10 @@ class OnboardTaskExecutor:
             path_msg.data = [value for point in points for value in (
                 point["x_m"], point["y_m"], point["z_m"]
             )]
+        # 在程序 B 启动信号之前发布全部航线，带任务编号供接收方核对同一批次。
+        if transit_messages:
+            for publisher, document in zip((self.external_entry_path_pub, self.external_return_paths_pub), transit_messages):
+                publisher.publish(String(data=json.dumps(document, ensure_ascii=False, separators=(",", ":"))))
         self.external_path_pub.publish(path_msg)
         landing = assignment.get("landing_point_wgs84") if frame == "WGS84" else assignment.get("landing_point_m")
         if frame == "WGS84" and landing is None and assignment.get("landing_point_m") is not None:
@@ -1403,6 +1413,11 @@ class OnboardTaskExecutor:
             else:
                 landing_msg.data = [float(landing[0]), float(landing[1]), target_relative_alt]
             self.external_landing_pub.publish(landing_msg)
+            message["return_home"] = ({
+                "latitude": float(landing[0]), "longitude": float(landing[1]), "altitude_m": target_relative_alt,
+            } if frame == "WGS84" else {
+                "x_m": float(landing[0]), "y_m": float(landing[1]), "z_m": target_relative_alt,
+            })
         self.external_mission_pub.publish(
             String(data=json.dumps(message, ensure_ascii=False, separators=(",", ":")))
         )
@@ -1655,11 +1670,17 @@ class OnboardTaskExecutor:
             self._publish_status("return_failed", error="UAV state is missing")
             return
         target_z = max(float(state.position[2]), self._target_z(self._assignment))
+        destination = list(self._home[:2])
+        if assignment.get("landing_mode") == "selected_departure":
+            return_task = dict(assignment['task'], waypoints_m=[assignment['landing_point_m']])
+            if return_task['coordinate_frame'] == 'LOCAL_NORTH_WEST':
+                return_task['waypoints_wgs84'] = [assignment['landing_point_wgs84']]
+            destination = resolve_waypoints(return_task, self._home, self._gps_home, self.max_distance_from_home)[0]
         self._checkpoint("returning")
         self._publish_status("returning", reason=payload.get("reason", "unknown"))
         ok, reason = self._fly_to(
-            self._home[0],
-            self._home[1],
+            destination[0],
+            destination[1],
             target_z,
             self._home[3],
             self.return_speed,

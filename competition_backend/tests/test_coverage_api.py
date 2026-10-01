@@ -147,7 +147,8 @@ class CoverageApiTest(unittest.TestCase):
                         for uid in range(1, 7):
                             self.assertEqual(mission['uavs'][str(uid)]['task']['coordinate_frame'],
                                              'LOCAL_NORTH_WEST')
-                            self.assertIsNone(mission['uavs'][str(uid)]['landing_point_m'])
+                            self.assertEqual(mission['uavs'][str(uid)]['landing_point_m'],
+                                             mission['search_area']['departure_point_m'])
 
     def test_competition_shape_can_be_scaled_for_lab_xyz(self):
         with tempfile.TemporaryDirectory() as data, patch.dict(os.environ,{

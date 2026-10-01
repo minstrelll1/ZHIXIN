@@ -149,6 +149,23 @@ class OperatorRolesTest(unittest.TestCase):
         self.apps[2].state.adapter.local_adapter.forward_command.assert_called_once_with(2, 'return_home', {
             'mission_id': 'remote-mission', 'reason': 'manual', 'land_after_return': True})
 
+    def test_follower_cannot_return_other_uav_or_stale_mission(self):
+        self.select(2)
+        self.apps[2].state.adapter.accept_peer_snapshot('ground-1', {'mission': {
+            'mission_id': 'current', 'phase': 'running', 'uavs': {'1': {}, '2': {}}}})
+        client = self.clients[2]
+        response = client.post('/api/v1/return', json={'uav_ids': [1, 2]})
+        self.assertEqual(response.status_code, 403)
+        response = client.post('/api/v1/return', json={'uav_ids': [2], 'mission_id': 'old'})
+        self.assertEqual(response.status_code, 409)
+        self.apps[2].state.adapter.local_adapter.forward_command.assert_not_called()
+
+    def test_invalid_return_selection_is_rejected(self):
+        self.select(1, publisher=True)
+        for values in ([], [1,1], [7], [True], '1'):
+            with self.subTest(values=values):
+                self.assertEqual(self.clients[1].post('/api/v1/return', json={'uav_ids':values}).status_code, 422)
+
 
 if __name__ == '__main__':
     unittest.main()

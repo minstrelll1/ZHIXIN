@@ -1103,6 +1103,7 @@ def create_app(environment=None, audit=None) -> FastAPI:
                 load_prepared_stadium_plan,
             )
             from .scaled_scene_plans import load_scaled_scene_plan
+            from .transit_routes import attach_routes
             departure_point = str(payload.get("departure_point", "southeast")).strip().lower()
             coordinate_mode = str(payload.get("coordinate_mode", "gps")).strip().lower()
             flight_profile = str(payload.get("flight_profile", "competition")).strip().lower()
@@ -1126,7 +1127,7 @@ def create_app(environment=None, audit=None) -> FastAPI:
                 result = load_dalian_nanshan_plan(coordinate_mode="gps")
                 result["subject"] = subject
                 result["flight_altitude_plan"] = flight_altitude_plan
-                return result
+                return attach_routes(result)
             if departure_point not in ("southeast", "stadium_center"):
                 raise HTTPException(status_code=422, detail="未知的出发点")
             gps_origin = payload.get("gps_origin")
@@ -1231,12 +1232,15 @@ def create_app(environment=None, audit=None) -> FastAPI:
                 )
                 if departure_point == "stadium_center":
                     result = anchor_stadium_plan(result, source_plan)
+            result = attach_routes(result)
         except PlanNotPreparedError as error:
             raise HTTPException(status_code=409, detail=str(error)) from error
         except (TypeError, ValueError) as error:
             raise HTTPException(status_code=422, detail=str(error)) from error
         except ImportError as error:
             raise HTTPException(status_code=503, detail="缺少覆盖规划依赖，请在后端虚拟环境运行 pip install -r requirements.txt") from error
+        except OSError as error:
+            raise HTTPException(status_code=503, detail="固定进返场航线文件缺失，请更新地面代码和规划文件") from error
         result["subject"] = subject
         result["flight_altitude_plan"] = flight_altitude_plan
         return result
@@ -1570,7 +1574,7 @@ def create_app(environment=None, audit=None) -> FastAPI:
         )
         return _mission_call(orchestrator.confirm_takeoff, str(payload["token"]))
 
-    @app.post("/api/v1/return", summary="命令六机全部返航", tags=["返航控制"])
+    @app.post("/api/v1/return", summary="命令选定无人机返航", tags=["返航控制"])
     def return_all(payload: Dict[str, Any] = Body(default={})) -> Dict[str, Any]:
         role = _require_operator_ready()
         raw_reason = str(payload.get("reason", ReturnReason.MANUAL.value))
@@ -1578,18 +1582,27 @@ def create_app(environment=None, audit=None) -> FastAPI:
             reason = ReturnReason(raw_reason)
         except ValueError as error:
             raise HTTPException(status_code=422, detail="invalid return reason") from error
+        selected = payload.get("uav_ids")
+        if selected is not None and (not isinstance(selected, list) or not selected
+                or any(type(uid) is not int or uid not in range(1, 7) for uid in selected)
+                or len(set(selected)) != len(selected)):
+            raise HTTPException(status_code=422, detail="请选择有效且不重复的无人机编号")
         if isinstance(adapter, DistributedFleetAdapter) and not role["task_publisher"]:
+            if selected is not None and selected != [local_uav_id]:
+                raise HTTPException(status_code=403, detail="普通地面端只能要求本机配对无人机返航")
             # 从发布端镜像看到的任务不属于本地编排器；本地操作只对配对机发返航。
             mission = orchestrator.snapshot().get("mission") or {}
             if not mission or mission.get("phase") in ("completed", "failed", "idle"):
                 mission = (adapter.mirrored_snapshot() or {}).get("mission") or {}
             if str(local_uav_id) not in mission.get("uavs", {}):
                 raise HTTPException(status_code=409, detail="本机配对无人机没有已分派任务")
+            if payload.get("mission_id") and payload["mission_id"] != mission["mission_id"]:
+                raise HTTPException(status_code=409, detail="任务已变化，请重新选择返航无人机")
             _mission_call(adapter.command_return, local_uav_id, {
                 "mission_id": mission["mission_id"], "reason": reason.value, "land_after_return": True,
             })
-            return status()
-        return _mission_call(orchestrator.request_return_all, reason)
+            return dict(status(), return_results={str(local_uav_id): {"ok": True, "detail": "返航请求已发送"}})
+        return _mission_call(orchestrator.request_return_selected, selected if selected is not None else list(orchestrator.active_uav_ids), reason, payload.get("mission_id"))
 
     @app.post("/api/v1/uavs/{uav_id}/restart-executor", tags=["机载维护"])
     def restart_executor(uav_id: int) -> Dict[str, Any]:

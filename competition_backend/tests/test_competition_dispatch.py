@@ -2,7 +2,7 @@ import os
 import json
 import tempfile
 import unittest
-import importlib.util
+import sys
 from pathlib import Path
 from unittest.mock import Mock, patch
 from fastapi.testclient import TestClient
@@ -12,10 +12,8 @@ from competition_backend.models import Telemetry
 from competition_backend import polygon_coverage
 from competition_shared.fleet import default_fleet, apply_fixed_binding
 
-_protocol_path = Path(__file__).resolve().parents[2] / 'src/su17_competition_executor/src/su17_competition_executor/task_protocol.py'
-_spec = importlib.util.spec_from_file_location('dispatch_onboard_protocol', _protocol_path)
-_protocol = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(_protocol)
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'src/su17_competition_executor/src'))
+from su17_competition_executor import task_protocol as _protocol
 
 
 class CompetitionDispatchTest(unittest.TestCase):
@@ -63,7 +61,7 @@ class CompetitionDispatchTest(unittest.TestCase):
             result = response.json()
             self.assertEqual(result['dispatch_status']['assigned_uav_ids'], list(range(1, 7)))
             self.assertIsNotNone(result['mission']['prepared_plan'])
-            self.assertEqual(result['mission']['search_area']['landing_mode'], 'onboard_home')
+            self.assertEqual(result['mission']['search_area']['landing_mode'], 'selected_departure')
             for uid, app in apps.items():
                 calls = app.state.adapter.local_adapter.forward_command.call_args_list
                 self.assertEqual(len(calls), 1)
@@ -75,7 +73,8 @@ class CompetitionDispatchTest(unittest.TestCase):
                 self.assertNotIn('speed_mps', payload['task'])
                 self.assertEqual(result['mission']['planned_uavs'][str(uid)]['task']['speed_mps'], 5)
                 self.assertTrue(payload['task']['waypoints_wgs84'])
-                self.assertIsNone(payload['landing_point_m'])
+                self.assertEqual(payload['landing_point_m'], result['mission']['search_area']['departure_point_m'])
+                self.assertEqual(payload['landing_point_wgs84'][:2], list(reversed(payload['task']['transit_routes']['departure'])))
                 self.assertGreaterEqual(payload['target_altitude_m'], 40)
                 self.assertEqual(payload['mission_id'], result['mission']['mission_id'])
                 # 同时通过现有机载协议校验，避免网页端成功而机载拒收。

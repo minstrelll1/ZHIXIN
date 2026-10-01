@@ -266,6 +266,47 @@ class AutonomyTest(unittest.TestCase):
         node._checkpoint.assert_called_once_with("external_return_requested", reason="manual")
         node._fly_to.assert_not_called()
 
+    def test_new_transit_topics_publish_only_after_takeoff_success_before_start(self):
+        for reached in (False, True):
+            with tempfile.TemporaryDirectory() as directory, self.subTest(reached=reached):
+                node = self.executor(directory)
+                node._assignment.update(controller_mode='external', coordinate_frame='ENU',
+                                        landing_point_m=[2., 2.], landing_mode='selected_departure')
+                scans = node._assignment['task']['waypoints_m']
+                node._assignment['task']['transit_routes'] = dict(schema_version=1, plan_sha256='fixed',
+                    coordinate_frame='ENU', departure=[2.,2.], entry_path=[[2.,2.],scans[0]],
+                    return_paths=[dict(waypoint_index=i+1,path=[p,[2.,2.]]) for i,p in enumerate(scans)])
+                order = []
+                node.external_entry_path_pub = Mock()
+                node.external_return_paths_pub = Mock()
+                for label, pub in [('entry',node.external_entry_path_pub), ('returns',node.external_return_paths_pub),
+                                   ('path',node.external_path_pub), ('landing',node.external_landing_pub)]:
+                    pub.publish.side_effect = lambda _, label=label: order.append(label)
+                node._publish_recon_start_mode = Mock(side_effect=lambda _: order.append('start'))
+                node._checkpoint = Mock()
+                with patch.object(module, 'String', side_effect=lambda data:types.SimpleNamespace(data=data)):
+                    node._motion_entry('takeoff', lambda _: reached, {'mission_id':'test'})
+                if reached:
+                    self.assertEqual(order, ['entry','returns','path','landing','start'])
+                    entry = json.loads(node.external_entry_path_pub.publish.call_args.args[0].data)
+                    self.assertEqual(entry['path'][0], [2.,2.,.5])
+                    self.assertEqual(entry['mission_id'], 'test')
+                    self.assertEqual(node.external_landing_pub.publish.call_args.args[0].data, [2.,2.,.5])
+                    mission = json.loads(node.external_mission_pub.publish.call_args.args[0].data)
+                    self.assertEqual(mission['return_home'], {'x_m':2., 'y_m':2., 'z_m':.5})
+                else:
+                    self.assertEqual(order, [])
+
+    def test_internal_return_uses_selected_departure_instead_of_actual_home(self):
+        node = self.executor(tempfile.gettempdir())
+        node._home = (1., 1., 0., .4)
+        node.max_distance_from_home = 2000
+        node._assignment.update(landing_mode='selected_departure', landing_point_m=[2.,3.])
+        node._checkpoint = Mock()
+        module.OnboardTaskExecutor._run_return(node, {'land_after_return':True})
+        self.assertEqual(node._fly_to.call_args.args[:4], (2.,3.,.5,.4))
+        node._land.assert_called_once_with()
+
     def test_global_task_records_anchor_and_uses_relative_altitude(self):
         with tempfile.TemporaryDirectory() as directory:
             node = self.executor(directory)
