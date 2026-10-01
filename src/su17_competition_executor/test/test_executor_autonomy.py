@@ -517,6 +517,26 @@ class PreciseGpsTelemetryTest(unittest.TestCase):
         self.assertEqual(gps_calls[0].kwargs, {"queue_size": 1})
         self.assertFalse(any("mavros/global_position/global" in call.args[0] for call in publish.call_args_list))
 
+    def test_executor_stays_alive_without_mavros_limit_but_locks_takeoff(self):
+        parameters = {"~uav_id": 1, "~local_ros_uav_id": 1, "~cache_path": "unused.json", "~transport": "ros",
+                      "~enable_motion": True}
+        with patch.multiple(rospy, create=True,
+                            ROSException=RuntimeError, ServiceException=RuntimeError,
+                            get_param=Mock(side_effect=lambda key, default=None: parameters.get(key, default)),
+                            Subscriber=Mock(), Publisher=Mock(), Timer=Mock(), Duration=Mock(),
+                            Time=types.SimpleNamespace(now=lambda: types.SimpleNamespace(to_sec=lambda: 123.0))), \
+             patch.dict(module.os.environ, {"COMPETITION_ONBOARD_IDENTITY": '{"uav_id": 1}',
+                                         "COMPETITION_ONBOARD_VEHICLE": "{}"}), \
+             patch.object(module.Path, "read_text", return_value="test-boot"), \
+             patch.object(module.OnboardTaskExecutor, "_refresh_flight_speed_limit", side_effect=RuntimeError("MAVROS 不可用")), \
+             patch.object(module.OnboardTaskExecutor, "_restore_progress"), \
+             patch.object(module.OnboardTaskExecutor, "_publish_status"):
+            node = module.OnboardTaskExecutor()
+        self.assertIsNone(node.flight_speed_limit)
+        ready, reason = node._takeoff_precheck()
+        self.assertFalse(ready)
+        self.assertIn("自动起飞已锁定", reason)
+
     def test_tcp_telemetry_adds_precise_gps_and_preserves_uavstate_fields(self):
         node = AutonomyTest().executor(tempfile.gettempdir())
         state = types.SimpleNamespace(connected=True, armed=False, odom_valid=True,

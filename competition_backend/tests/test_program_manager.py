@@ -63,6 +63,28 @@ class ProgramsTest(unittest.TestCase):
             self.assertNotIn('\ufffd', full)
             self.assertEqual(full.count('中文打印'), 17000)
 
+    def test_ssh_request_uses_ascii_bootstrap_for_chinese_remote_source(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            script = Path(tmp) / 'tools' / 'remote_programs.py'
+            script.parent.mkdir()
+            script.write_text(
+                'import json\n# 远端程序含中文\n'
+                'def rpc(payload):\n'
+                '    print(json.dumps({"action": payload["action"], "program": payload["program"]}))\n',
+                encoding='utf-8',
+            )
+            manager = ProgramManager(tmp, {})
+            manager.local = dict(uav_id=1, model='p600', onboard_host='192.168.1.202')
+            def run(_command, **kwargs):
+                source = kwargs['input'].decode('ascii')
+                output = io.StringIO()
+                with contextlib.redirect_stdout(output):
+                    exec(compile(source, '<stdin>', 'exec'), {'__name__': 'remote_programs_rpc_test'})
+                return SimpleNamespace(returncode=0, stdout=output.getvalue().encode('utf-8'), stderr=b'')
+            with patch('competition_backend.program_manager.subprocess.run', side_effect=run):
+                result = manager._request('status', {'onboard': 0}, program='flight')
+            self.assertEqual(result, {'action': 'status', 'program': 'flight'})
+
     def test_select_returns_immediately_deduplicates_and_failure_isolated(self):
         with tempfile.TemporaryDirectory() as tmp:
             manager = ProgramManager(tmp, {})

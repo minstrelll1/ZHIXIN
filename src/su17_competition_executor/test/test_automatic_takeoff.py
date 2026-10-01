@@ -66,6 +66,17 @@ class AutomaticTakeoffTest(unittest.TestCase):
         self.assertTrue(all(c.args[0] == self.target for c in self.node._publish_takeoff_position.call_args_list))
         self.node.external_path_pub.publish.assert_not_called()
 
+    def test_missing_mavros_speed_limit_keeps_takeoff_locked(self):
+        self.node.identity = {'uav_id': 1}
+        self.node.local_ros_uav_id = 1
+        self.node.flight_speed_limit = None
+        ready, reason = self.node._takeoff_precheck()
+        self.assertFalse(ready)
+        self.assertIn('/uav1/mavros/param/get', reason)
+        self.node.flight_speed_limit = 2.0
+        ready, _ = self.node._takeoff_precheck()
+        self.assertTrue(ready)
+
     def test_arming_rejected_times_out_without_switching_or_repeated_arm(self):
         self.action = lambda: None
         ok, reason = self.node._ensure_command_control(self.target)

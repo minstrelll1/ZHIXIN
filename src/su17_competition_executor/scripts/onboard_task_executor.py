@@ -109,8 +109,14 @@ class OnboardTaskExecutor:
         self.search_speed = min(self.search_speed, self.max_speed)
         self.return_speed = min(self.return_speed, self.max_speed)
         self.flight_speed_limit = None
+        self._flight_speed_retry_at = 0.0
         if self.identity:
-            self._refresh_flight_speed_limit()
+            try:
+                self._refresh_flight_speed_limit()
+            except (ValueError, rospy.ROSException, rospy.ServiceException) as error:
+                # 地面端可能先于厂商 MAVROS 启动。保留任务通信节点，
+                # 但取得真实飞控限速前禁止自动起飞或恢复控制。
+                rospy.logwarn("MAVROS 限速暂不可用，竞赛执行器等待服务；自动起飞已锁定：%s", error)
         self._validate_parameters()
 
         self._lock = threading.RLock()
@@ -427,6 +433,8 @@ class OnboardTaskExecutor:
             return False, "机载程序未启用飞行控制"
         if getattr(self, "_identity_error", ""):
             return False, self._identity_error
+        if getattr(self, "identity", None) and getattr(self, "flight_speed_limit", None) is None:
+            return False, "等待 /uav%d/mavros/param/get 提供飞控限速，自动起飞已锁定" % self.local_ros_uav_id
         if getattr(self, "_manual_override", False):
             return False, "遥控器已接管；落地后重新分派并确认起飞才可启动新任务"
         state, control = self._snapshot()
@@ -595,6 +603,7 @@ class OnboardTaskExecutor:
             rospy.logerr("任务恢复被拒绝：%s", error)
 
     def _resume_tick(self, _event: Any) -> None:
+        self._maybe_refresh_flight_speed_limit()
         state, _ = self._snapshot()
         if (self._progress.get("phase") == "landing" and state is not None
                 and time.monotonic() - self._state_received < 2.0 and not state.armed):
@@ -1034,6 +1043,8 @@ class OnboardTaskExecutor:
             return False, "遥控器已接管，自动控制已停止"
         if getattr(self, "_identity_error", ""):
             return False, self._identity_error
+        if getattr(self, "identity", None) and getattr(self, "flight_speed_limit", None) is None:
+            return False, "飞控限速尚未取得，拒绝自动控制"
         state, control = self._snapshot()
         if state is None or control is None:
             return False, "waiting for UAV state"
@@ -1486,6 +1497,24 @@ class OnboardTaskExecutor:
         if not all(math.isfinite(v) for v in gps) or abs(gps[0]) > 90 or abs(gps[1]) > 180:
             raise ValueError("飞控 GPS 数据无效")
         return gps
+
+    def _maybe_refresh_flight_speed_limit(self):
+        if not getattr(self, "identity", None) or self.flight_speed_limit is not None:
+            return
+        now = time.monotonic()
+        with self._lock:
+            if now < self._flight_speed_retry_at:
+                return
+            self._flight_speed_retry_at = now + 10.0
+        threading.Thread(target=self._retry_flight_speed_limit, name="mavros_limit_retry", daemon=True).start()
+
+    def _retry_flight_speed_limit(self):
+        try:
+            self._refresh_flight_speed_limit()
+        except (ValueError, rospy.ROSException, rospy.ServiceException) as error:
+            rospy.logwarn("仍未取得 MAVROS 飞控限速，自动起飞保持锁定：%s", error)
+        else:
+            rospy.loginfo("已读取飞控限速 %.2f m/s；自动起飞仍须通过其余预检", self.flight_speed_limit)
 
     def _refresh_flight_speed_limit(self):
         from mavros_msgs.srv import ParamGet

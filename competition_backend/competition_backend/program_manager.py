@@ -86,13 +86,20 @@ class ProgramManager:
     def _request(self, action, offsets, program=None):
         source = (self.root / 'tools' / 'remote_programs.py').read_text(encoding='utf-8-sig')
         payload = dict(action=action, uav_id=self.local['uav_id'], model=self.local['model'], offsets=offsets, program=program)
-        code = 'PROGRAM_SOURCE = ' + repr(source) + '\n' + source + '\nrpc(' + repr(payload) + ')\n'
+        # Windows OpenSSH/远端终端的编码设置可能不同。stdin 只传 ASCII，
+        # 由远端 Python 明确按 UTF-8 还原含中文的管理脚本。
+        source_b64 = base64.b64encode(source.encode('utf-8')).decode('ascii')
+        payload_json = json.dumps(payload, ensure_ascii=True, separators=(',', ':'))
+        code = ("import base64, json\n"
+                f"PROGRAM_SOURCE = base64.b64decode('{source_b64}').decode('utf-8')\n"
+                "exec(compile(PROGRAM_SOURCE, 'remote_programs.py', 'exec'))\n"
+                f"rpc(json.loads({payload_json!r}))\n")
         user = self.env.get('COMPETITION_SSH_USER', 'amov')
         # accept-new 只接受初次连接，不覆盖已改变的主机密钥。
         command = ['ssh', *ssh_identity_args(), '-T', '-o', 'BatchMode=yes', '-o', 'StrictHostKeyChecking=accept-new',
                    '-o', 'ConnectTimeout=4', '-o', 'ServerAliveInterval=4', '-o', 'ServerAliveCountMax=1',
                    '%s@%s' % (user, self.local['onboard_host']), 'python3 -']
-        result = subprocess.run(command, input=code.encode(), capture_output=True, timeout=25 if action == 'stop' else 16,
+        result = subprocess.run(command, input=code.encode('ascii'), capture_output=True, timeout=25 if action == 'stop' else 16,
                                 creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
         if result.returncode:
             detail = (result.stderr or result.stdout).decode('utf-8', errors='replace').strip()
