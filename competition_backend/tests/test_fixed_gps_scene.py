@@ -30,6 +30,7 @@ class DalianFixedSceneTest(unittest.TestCase):
         self.assertEqual(area["departure_point_wgs84"], {
             "latitude": 39.050245, "longitude": 121.661123,
         })
+        self.assertEqual(area["points"][3], [39.0516233811253, 121.6667301989922])
         self.assertEqual(area["landing_mode"], "onboard_home")
         self.assertEqual(area["coverage"]["reconnaissance_radius_m"], 75.0)
         self.assertEqual(area["coverage"]["speed_mps"], 5.0)
