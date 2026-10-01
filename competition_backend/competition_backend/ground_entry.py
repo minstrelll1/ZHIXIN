@@ -297,6 +297,7 @@ class GroundEntry:
                     raise HTTPException(status_code=409, detail="终端正在启动，请等待完成后再操作")
                 return self.operator_status()
             self.selection, self.error = selection, ""
+            self.selection_entered_monotonic = time.monotonic()
             self.audit.context.update(ground_terminal_id=uid, local_uav_id=local["uav_id"], model=local["model"])
             self.audit.record("已选择本地终端", selection=selection)
             self.programs.select(local)
@@ -357,6 +358,7 @@ class GroundEntry:
                    "COMPETITION_FLEET_CONFIG": str(self.store.path),
                    "COMPETITION_ADAPTER": "distributed", "COMPETITION_ASYNC_OPERATOR_SELECTION": "1",
                    "COMPETITION_TASK_PUBLISHER": "", "COMPETITION_IMAGE_ROOT": str(ROOT / "received_images")}
+            env['COMPETITION_OPERATOR_ENTERED_MONOTONIC'] = str(getattr(self, 'selection_entered_monotonic', time.monotonic()))
             if self.app_factory is None:
                 from .api import create_app
                 factory = create_app

@@ -39,6 +39,7 @@ from .recognition_settings import RecognitionSettings
 from competition_shared.recognition import optional_recognition_selection
 from .journal import EventJournal
 from .diagnostics import Diagnostics, DiagnosticMiddleware
+from .competition_clock import CompetitionClock
 from .groundstation_capture import PassivePointCloudCapture
 from .models import ReturnReason, Telemetry
 from .pengfei_telemetry import sanitize_pengfei
@@ -284,6 +285,12 @@ def create_app(environment=None, audit=None) -> FastAPI:
     }
     if isinstance(adapter, DistributedFleetAdapter):
         adapter.set_task_publisher(default_task_publisher)
+
+    competition_clock = CompetitionClock()
+    if operator_state['configured'] and default_task_publisher:
+        competition_clock.start(terminal_id)
+    if isinstance(adapter, DistributedFleetAdapter):
+        adapter.competition_clock = competition_clock
 
     data_directory = env.get(
         "COMPETITION_DATA_DIR", str(PACKAGE_ROOT / "data")
@@ -616,6 +623,7 @@ def create_app(environment=None, audit=None) -> FastAPI:
     )
     app.state.orchestrator = orchestrator
     app.state.audit = audit
+    app.state.competition_clock = competition_clock
     app.add_middleware(DiagnosticMiddleware, audit=audit)
     app.state.adapter = adapter
     app.state.fleet_store = fleet_store
@@ -779,6 +787,7 @@ def create_app(environment=None, audit=None) -> FastAPI:
         return result
 
     def configure_operator(payload: Dict[str, Any]):
+        entered_at = float(env.get('COMPETITION_OPERATOR_ENTERED_MONOTONIC', time.monotonic()))
         try:
             selected_terminal = payload["ground_terminal_id"]
             selected_publisher = payload["task_publisher"]
@@ -823,6 +832,8 @@ def create_app(environment=None, audit=None) -> FastAPI:
             )
         if isinstance(adapter, DistributedFleetAdapter):
             adapter.set_task_publisher(selected_publisher)
+        if not selected_publisher and before.get('task_publisher'):
+            competition_clock.reset()
         synchronization = None
         if selected_publisher:
             current = fleet_store.read()
@@ -838,6 +849,8 @@ def create_app(environment=None, audit=None) -> FastAPI:
                     raise HTTPException(status_code=409, detail=str(error)) from error
             if isinstance(adapter, DistributedFleetAdapter):
                 synchronization = adapter.synchronize_fleet_config(fleet_store.read())
+            clock_state = competition_clock.start(selected_terminal, max(0., time.monotonic()-entered_at))
+            audit.record('比赛计时已开始', competition_clock=clock_state)
         result = operator_status()
         result["profiles"] = PROFILES
         result["peer_roles"] = {str(key): value for key, value in peer_roles.items()}
@@ -986,6 +999,7 @@ def create_app(environment=None, audit=None) -> FastAPI:
         result = orchestrator.snapshot()
         result["fleet"] = fleet_status()
         result["operator"] = operator_status()
+        result["competition_clock"] = competition_clock.snapshot()
         result["pointcloud"] = pointcloud_collector.status()
         result["traffic"] = traffic_monitor.status()
         result["communication"] = communication_status()
@@ -1002,6 +1016,35 @@ def create_app(environment=None, audit=None) -> FastAPI:
             result["image_aggregation"] = image_collector.status()
             result["recordable_uav_ids"] = [local_uav_id]
         return result
+
+    def _edit_competition_clock(payload, edited_by):
+        try:
+            result = competition_clock.edit(payload.get('elapsed_seconds'), edited_by,
+                                            payload.get('session_id'), payload.get('request_id'))
+        except ValueError as error:
+            raise HTTPException(status_code=409, detail=str(error)) from error
+        audit.record('比赛时间已修改', edited_by=edited_by, competition_clock=result)
+        return result
+
+    @app.put('/api/v1/competition-clock', tags=['比赛计时'])
+    def edit_competition_clock(payload: Dict[str, Any] = Body(...)):
+        role = _require_operator_ready()
+        if role['task_publisher']:
+            return _edit_competition_clock(payload, terminal_id)
+        current = competition_clock.snapshot()
+        publisher = current.get('publisher_terminal_id')
+        if not isinstance(adapter, DistributedFleetAdapter) or publisher not in adapter.peers:
+            raise HTTPException(status_code=409, detail='尚未同步任务发布端比赛时间，请稍后再修改')
+        started = time.monotonic()
+        try:
+            result = adapter._request_json(adapter.peers[publisher]+'/api/v1/peer/competition-clock',
+                method='PUT', payload={**payload, 'edited_by':terminal_id})
+        except Exception as error:
+            audit.record('比赛时间修改未确认', edited_by=terminal_id, error=str(error))
+            raise HTTPException(status_code=503, detail='未能确认发布端已接收时间修改，请恢复地面互联并核对最新时间') from error
+        competition_clock.accept(result, publisher, time.monotonic()-started)
+        audit.record('比赛时间修改已同步', edited_by=terminal_id, competition_clock=result)
+        return competition_clock.snapshot()
 
     @app.get("/api/v1/video-sources", summary="获取六机视频源配置", tags=["任务状态"])
     def get_video_sources() -> Dict[str, Any]:
@@ -1435,6 +1478,14 @@ def create_app(environment=None, audit=None) -> FastAPI:
         _require_peer_token(x_competition_peer_token)
         return operator_status()
 
+    @app.put('/api/v1/peer/competition-clock', include_in_schema=False)
+    def peer_edit_competition_clock(payload: Dict[str, Any] = Body(...),
+                                   x_competition_peer_token: str = Header(default='')):
+        _require_peer_token(x_competition_peer_token)
+        if not _require_operator_ready()['task_publisher']:
+            raise HTTPException(status_code=409, detail='本终端不是任务发布端，不能确认比赛时间修改')
+        return _edit_competition_clock(payload, payload.get('edited_by'))
+
     @app.post("/api/v1/peer/fleet-config", include_in_schema=False)
     def peer_fleet_config(
         payload: Dict[str, Any] = Body(...),
@@ -1486,6 +1537,7 @@ def create_app(environment=None, audit=None) -> FastAPI:
         return {
             "uav_id": uav_id,
             "telemetry": adapter.local_telemetry_dict(),
+            "competition_clock": competition_clock.snapshot(),
             "traffic": traffic_monitor.status_for_uav(uav_id),
             "program_b": {key: program_b.get(key) for key in ("state", "flight_mode", "reconnaissance_radius_m", "checked_at")}
             if program_b else None,

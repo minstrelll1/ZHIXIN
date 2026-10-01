@@ -274,6 +274,13 @@
     .detail-data{margin-top:10px}
   }
   @media(max-width:650px){.detail-pengfei{grid-template-columns:1fr}.detail-map{height:290px}}
+    .summary{grid-template-columns:repeat(6,minmax(0,1fr))}
+    .clock-card-head{display:flex;align-items:center;justify-content:space-between;gap:5px;margin-bottom:5px}.clock-card-head span{margin:0}
+    .clock-card-head button{height:25px;padding:0 8px;font-size:11px}.competition-clock-card strong,.detail-competition-clock strong{font-variant-numeric:tabular-nums}
+    .competition-clock-card small{display:block;margin-top:6px;color:var(--muted);font-size:10px}
+    .detail-competition-clock{margin-left:auto;margin-right:18px;font-size:13px;white-space:nowrap}
+    @media(max-width:1050px){.summary{grid-template-columns:repeat(3,minmax(0,1fr))}}
+    @media(max-width:700px){.summary{grid-template-columns:repeat(2,minmax(0,1fr))}.detail-competition-clock{font-size:11px;margin-right:8px}}
 </style>
 </head>
 <body>
@@ -334,6 +341,7 @@
     <p id="recognitionFeedback" class="area-note" role="status">默认 0 类；勾选后随本次规划与分派直接发送，无需保存。</p>
   </details>
   <section class="summary" aria-label="任务概要">
+    <div class="panel summary-card competition-clock-card"><div class="clock-card-head"><span>比赛已用时间</span><button id="editCompetitionClock" class="secondary" disabled>修改</button></div><strong id="competitionClock">—</strong><small id="competitionClockSync">等待任务发布端进入</small></div>
     <div class="panel summary-card"><span>当前任务状态</span><strong id="missionPhase">尚未规划</strong></div>
     <div class="panel summary-card"><span>当前科目</span><strong id="missionSubject">—</strong></div>
     <div class="panel summary-card"><span>任务编号</span><strong id="missionId" style="font-size:14px">—</strong></div>
@@ -374,6 +382,11 @@
   </section>
 </main>
 
+<dialog id="competitionClockDialog"><div class="dialog-body">
+  <h2>修改比赛已用时间</h2><p>设置当前已用时间，确认后继续计时并同步到各地面端。</p>
+  <div class="operator-grid"><div class="field"><label for="competitionClockMinutes">分钟</label><input id="competitionClockMinutes" type="number" min="0" max="527040" step="1"></div><div class="field"><label for="competitionClockSeconds">秒</label><input id="competitionClockSeconds" type="number" min="0" max="59" step="1"></div></div>
+  <p id="competitionClockFeedback" role="status"></p><div class="dialog-actions"><button id="cancelCompetitionClock" class="secondary">取消</button><button id="saveCompetitionClock" class="primary">同步时间</button></div>
+</div></dialog>
 <dialog id="returnDialog"><div class="dialog-body">
   <h2>选择返航无人机</h2><p id="returnModeNote"></p>
   <div id="returnChoices" class="operator-grid"></div>
@@ -400,7 +413,7 @@
 </dialog>
 <dialog id="uavDetailDialog" class="detail-dialog">
   <div class="detail-shell">
-    <div class="detail-head"><h2 id="detailTitle">无人机详情</h2><button id="closeUavDetail" class="detail-close" aria-label="关闭无人机详情">关闭</button></div>
+    <div class="detail-head"><h2 id="detailTitle">无人机详情</h2><span class="detail-competition-clock">比赛已用时间 <strong id="detailCompetitionClock">—</strong></span><button id="closeUavDetail" class="detail-close" aria-label="关闭无人机详情">关闭</button></div>
     <div class="detail-layout">
       <div class="detail-left">
         <section class="detail-panel video-panel"><div class="detail-panel-title"><span>云台主摄实时视频</span><small id="videoState">等待视频源</small></div><div class="video-stage"><img id="detailVideoImage" alt="无人机云台主摄实时视频"><video id="detailVideoElement" autoplay muted playsinline controls></video><iframe id="detailVideoFrame" title="无人机云台主摄视频页面" allow="autoplay; fullscreen"></iframe><div id="videoPlaceholder" class="video-placeholder">尚未配置浏览器视频源。</div></div></section>
@@ -457,6 +470,43 @@ async function 请求(path,options={}){
     throw error;
   }finally{if(timer!==null)clearTimeout(timer)}
 }
+
+// 比赛共享计时独立于无人机任务时限；详情页仅使用同一显示值。
+let 比赛时钟=null,比赛时钟收到时刻=0;const 比赛旧会话=new Set();
+function 当前比赛秒数(){return 比赛时钟?.running?Math.max(0,比赛时钟.elapsed_seconds+(performance.now()-比赛时钟收到时刻)/1000):0}
+function 比赛时间文字(value){const total=Math.floor(Math.max(0,value));return [Math.floor(total/3600),Math.floor(total/60)%60,total%60].map(v=>String(v).padStart(2,'0')).join(':')}
+function 更新比赛计时显示(){
+  const running=!!比赛时钟?.running,text=running?比赛时间文字(当前比赛秒数()):'—';
+  $('competitionClock').textContent=text;$('detailCompetitionClock').textContent=text;
+  const ready=当前角色?.configured&&!当前角色?.selection_pending&&!当前角色?.selection_error;
+  $('editCompetitionClock').disabled=!running||!ready;
+  const fresh=running&&比赛时钟.synchronized&&(performance.now()-比赛时钟收到时刻)<3500;
+  $('competitionClockSync').textContent=!running?'等待任务发布端进入':!fresh?'同步中断，按上次时间继续计时':`${比赛时钟.is_authority?'发布端计时':'已同步发布端'} · 地面端 ${比赛时钟.updated_by} 最新设定`;
+}
+function 渲染比赛计时(state){
+  if(!state)return;
+  if(state.session_id&&比赛旧会话.has(state.session_id))return;
+  if(state.running&&比赛时钟?.session_id===state.session_id&&state.revision<比赛时钟.revision)return;
+  const same=state.running&&比赛时钟?.session_id===state.session_id&&state.revision===比赛时钟.revision;
+  const elapsed=same?Math.max(state.elapsed_seconds,当前比赛秒数()):state.elapsed_seconds;
+  if(state.running&&比赛时钟?.session_id&&比赛时钟.session_id!==state.session_id)比赛旧会话.add(比赛时钟.session_id);
+  比赛时钟={...state,elapsed_seconds:elapsed};比赛时钟收到时刻=performance.now();更新比赛计时显示();
+}
+$('editCompetitionClock').onclick=()=>{
+  if(!比赛时钟?.running)return;
+  const total=Math.floor(当前比赛秒数());$('competitionClockMinutes').value=String(Math.floor(total/60));$('competitionClockSeconds').value=String(total%60);
+  $('competitionClockDialog').dataset.sessionId=比赛时钟.session_id;$('competitionClockFeedback').textContent='';$('competitionClockDialog').showModal();
+};
+$('cancelCompetitionClock').onclick=()=>$('competitionClockDialog').close();
+$('saveCompetitionClock').onclick=async()=>{
+  const minutes=Number($('competitionClockMinutes').value),seconds=Number($('competitionClockSeconds').value);
+  if(!Number.isInteger(minutes)||minutes<0||minutes>527040||!Number.isInteger(seconds)||seconds<0||seconds>59){$('competitionClockFeedback').textContent='请输入有效的分钟和秒（秒为 0～59）。';return}
+  $('saveCompetitionClock').disabled=true;$('competitionClockFeedback').textContent='正在同步比赛时间……';
+  try{const result=await 请求('/api/v1/competition-clock',{method:'PUT',body:JSON.stringify({elapsed_seconds:minutes*60+seconds,session_id:$('competitionClockDialog').dataset.sessionId,request_id:globalThis.crypto?.randomUUID?.()||`clock-${Date.now()}-${Math.random().toString(36).slice(2)}`}),timeoutMs:6000});渲染比赛计时(result);$('competitionClockDialog').close();提示('比赛时间已修改，其他地面端将同步最新时间')}
+  catch(error){$('competitionClockFeedback').textContent=error.message.includes('请求超时')?'时间修改请求超时，请核对最新比赛时间后再操作。':error.message}
+  finally{$('saveCompetitionClock').disabled=false}
+};
+setInterval(更新比赛计时显示,250);
 
 async function 选择地面终端(force=false){
   const initial=await 请求('/api/v1/operator');当前角色=initial;if(!initial.selection_required&&!force)return;
@@ -677,6 +727,7 @@ function 更新六机同步状态(snapshot){const cards=[...document.querySelect
 const 六机状态观察器=new MutationObserver(()=>{if(当前状态)更新六机同步状态(当前状态)});六机状态观察器.observe($('fleet'),{childList:true});
 function 渲染(snapshot){if(地面正在退出)return;当前状态=snapshot;当前角色=snapshot.operator||当前角色;更新任务按钮(snapshot);更新分派回执(snapshot);更新GPS参考();if(snapshot.local_uav_id&&snapshot.local_uav_id!==本机无人机ID)加载视频源();if(端口查看无人机ID&&$('trafficDialog').open)渲染端口通信(端口查看无人机ID);更新实际轨迹(snapshot);const mission=snapshot.mission;$('exportCoverage').disabled=!mission?.prepared_plan;const telemetry=snapshot.telemetry||{},active=snapshot.active_uav_ids||[1,2,3,4,5,6],planningOnly=snapshot.dispatch_status?.mode==='planning_only',publisher=当前角色?.task_publisher!==false;const roleText=publisher?'任务发布端，可向六台终端分派':'普通终端，只能向本机配对无人机分派';const nodeText=planningOnly?'当前没有可用无人机：仅展示规划，不下发任务。':snapshot.local_uav_id?`本机 ${snapshot.ground_node_id||''} 直连 UAV${snapshot.local_uav_id}；${roleText}。`:`启用无人机：${active.map(id=>'UAV'+id).join('、')}。`;$('modeBanner').textContent=snapshot.live_mode?`当前为真机模式：${nodeText} 所有操作可能下发真实命令。`:'当前为模拟模式：界面操作只记录模拟指令，不会控制真实无人机。';$('modeBanner').className='mode-banner'+(snapshot.live_mode?' live':'');$('simTools').className='sim-tools'+(snapshot.live_mode?'':' show');
   const recordable=snapshot.recordable_uav_ids||active,recordingSelect=$('recordingUav'),selected=Number(recordingSelect.value)||recordable[0];recordingSelect.innerHTML=recordable.map(id=>`<option value="${id}">UAV${id}${snapshot.local_uav_id===id?' · 本机直连':''}</option>`).join('');recordingSelect.value=recordable.includes(selected)?String(selected):String(recordable[0]);
+  渲染比赛计时(snapshot.competition_clock);
   绘制规划(mission);
   $('missionPhase').textContent=mission?(文本.阶段[mission.phase]||mission.phase):'尚未规划';$('missionSubject').textContent=mission?(文本.科目[mission.subject]||mission.subject):'—';$('missionId').textContent=mission?mission.mission_id:'—';$('remainingTime').textContent=mission&&mission.deadline_at?时间(mission.deadline_at-snapshot.server_time):'—';const uavs=mission?mission.uavs:{};const returned=Object.values(uavs).filter(item=>['return_commanded','landed'].includes(item.phase)).length;$('returnedCount').textContent=`${returned} / ${active.length}`;
   $('planButton').textContent=publisher?'规划并分派':'规划并分派本机';$('returnButton').textContent='返航';const roleBlocked=当前角色?.selection_required&&(!当前角色?.configured||!当前角色?.profile_matches||当前角色?.selection_pending||!!当前角色?.selection_error),pendingRestart=!!snapshot.fleet?.restart_required;更新任务按钮(snapshot);if(pendingRestart)$('modeBanner').textContent+=' 配置待重启生效，任务分派已锁定。';else if(当前角色?.selection_error)$('modeBanner').textContent+=' '+当前角色.selection_error+'；请点击终端设置重试。';else if(当前角色?.selection_pending)$('modeBanner').textContent+=' 正在后台启动本机服务、核验角色，暂不可下发任务。';else if(roleBlocked)$('modeBanner').textContent+=' 请完成终端选择并与发布端配置保持一致。';const syncFailed=Object.entries(snapshot.fleet?.synchronization?.peers||{}).filter(([,v])=>!v.ok).map(([id])=>'UAV'+id);if(publisher&&!当前角色?.selection_pending&&syncFailed.length)$('modeBanner').textContent+=' 配置同步未完成：'+syncFailed.join('、')+'，请在机队配置页重试。';

@@ -80,6 +80,7 @@ class DistributedFleetAdapter(FleetAdapter):
         self._task_publisher = False
         self._fleet_sync_status: Dict[str, Any] = {"complete": False, "in_progress": False, "peers": {}}
         self._publisher_uav_id: Optional[int] = None
+        self.competition_clock = None
 
     @property
     def bind_host(self) -> str:
@@ -355,6 +356,9 @@ class DistributedFleetAdapter(FleetAdapter):
             result = self._request_json(
                 "{}/api/v1/peer/telemetry/{}".format(base_url, uav_id)
             )
+            if self.competition_clock is not None:
+                if self.competition_clock.accept(result.get('competition_clock'), uav_id, time.monotonic()-request_started):
+                    self.remember_publisher(uav_id)
             raw = result.get("telemetry")
             traffic = result.get("traffic")
             if isinstance(traffic, dict):
