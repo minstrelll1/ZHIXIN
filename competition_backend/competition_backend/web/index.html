@@ -400,10 +400,11 @@
 <dialog id="subject1ReportDialog"><div class="dialog-body">
   <div class="traffic-dialog-head"><h2>科目一成果上报</h2><button id="closeSubject1Report" class="secondary">关闭</button></div>
   <p id="subject1Endpoint" class="area-note"></p>
+  <p id="subject1AutoStatus" class="area-note">自动上报状态读取中。</p>
   <div class="field"><label for="subject1Team">参赛队名</label><input id="subject1Team" value="北方自控智群队"></div>
   <div class="field"><label for="subject1Mission">本机已收到结果的科目一任务（可能尚未齐全）</label><select id="subject1Mission"></select></div>
   <div class="field"><label for="subject1File">或导入按赛事格式整理的科目一结果 JSON（优先使用文件）</label><input id="subject1File" type="file" accept=".json,application/json"></div>
-  <p class="area-note">本接口只提交 JSON 文件，imagePath 指向的图片不会随文件上传。请先核对目标数量及六机结果同步情况。</p>
+  <p class="area-note">本接口只提交 JSON 文件，imagePath 指向的图片不会随文件上传。自动上报只整理本场科目一任务的已回传结果；手工导入 JSON 仅供手动上报。请先核对目标数量及六机结果同步情况。</p>
   <div class="area-actions"><button id="prepareSubject1Report" class="secondary">生成并校验</button><a id="downloadSubject1Report" hidden>下载待上报 JSON</a><button id="sendSubject1Report" class="primary" disabled>确认上报赛事方</button></div>
   <pre id="subject1ReportSummary" style="white-space:pre-wrap;overflow-wrap:anywhere;max-height:40vh;overflow:auto" role="status">请生成并校验结果文件。</pre>
 </div></dialog>
@@ -951,6 +952,14 @@ async function 生成比赛覆盖(){
 $('planningAreaMode').onchange=更新规划模式;
 for(const id of ['scoutRadius','flightSpeed','hoverScanSeconds','terrainExclusions','departurePoint'])$(id).onchange=()=>{比赛覆盖方案=null;更新规划模式()};
 let 成果草稿=null,成果操作中=false;
+function 更新科目一自动上报状态(automatic){
+  if(!automatic){$('subject1AutoStatus').textContent='自动上报状态暂不可用。';return}
+  if(!automatic.enabled){$('subject1AutoStatus').textContent='自动上报仅由任务发布端执行。';return}
+  if(!automatic.mission_id){$('subject1AutoStatus').textContent='等待本次科目一任务规划；比赛用时满 24 分钟后，每隔 5 秒自动上报一次，共 5 次。';return}
+  const started=automatic.attempts_started||0,finished=automatic.attempts_finished||0;
+  $('subject1AutoStatus').textContent=started?`本次任务 ${automatic.mission_id}：自动上报已启动 ${started}/5 次，已结束 ${finished}/5 次。${automatic.last_result?.detail||''}`:`本次任务 ${automatic.mission_id}：比赛用时满 24 分钟后自动上报 5 次，每隔 5 秒一次。`;
+}
+setInterval(()=>{if($('subject1ReportDialog').open)更新科目一自动上报状态(当前状态?.subject1_auto_report)},1000);
 function 清除成果草稿(){成果草稿=null;$('sendSubject1Report').disabled=true;$('downloadSubject1Report').hidden=true;$('subject1ReportSummary').textContent='内容已改变，请重新生成并校验。'}
 function 成果忙碌(value){成果操作中=value;for(const id of ['subject1Team','subject1Mission','subject1File','prepareSubject1Report'])$(id).disabled=value;$('sendSubject1Report').disabled=value||!成果草稿;}
 for(const id of ['subject1Team','subject1Mission','subject1File'])$(id).addEventListener('change',清除成果草稿);
@@ -959,7 +968,7 @@ $('subject1Mission').addEventListener('change',()=>{$('subject1File').value=''})
 $('subject1ReportButton').onclick=async()=>{
   $('subject1ReportDialog').showModal();if(成果操作中)return;
   清除成果草稿();成果忙碌(true);
-  try{const data=await 请求('/api/v1/subject1/report');$('subject1Endpoint').textContent='上报接口：'+data.endpoint;
+  try{const data=await 请求('/api/v1/subject1/report');$('subject1Endpoint').textContent='上报接口：'+data.endpoint;更新科目一自动上报状态(data.automatic);
     $('subject1Team').value=data.team_name;const select=$('subject1Mission');select.replaceChildren();
     for(const id of data.missions){const option=document.createElement('option');option.value=id;option.textContent=id;select.appendChild(option)}
     $('subject1ReportSummary').textContent=data.missions.length?'请选择任务或 JSON 文件，再点击生成并校验。':'本机尚无已回传的科目一目标数据，可选择整理好的 JSON 文件。';

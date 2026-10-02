@@ -85,12 +85,10 @@ if ($LASTEXITCODE -ge 8) { throw "USB 更新失败，请查看 ground_logs\usb_u
 在地面端项目父目录执行对应无人机命令：
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass `
-  -File ".\competition_development\tools\deploy_onboard_stack.ps1" `
-  -UavAddress "192.168.1.202" `
-  -Model p600 `
-  -SyncConfig
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\competition_development\tools\deploy_onboard_stack.ps1" -UavAddress "192.168.1.202" -Model p600 -SyncConfig
 ```
+首次连接时，按终端提示核对主机指纹，并输入机载登录密码或本机密钥口令。
+
 
 P600 机载地址：
 

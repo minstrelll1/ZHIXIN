@@ -4,6 +4,7 @@ import io
 import json
 from pathlib import Path
 import tempfile
+import time
 import unittest
 from unittest.mock import Mock, patch
 import urllib.error
@@ -24,6 +25,11 @@ def sample():
 class SubmissionReportTest(unittest.TestCase):
     def test_official_template_and_validation(self):
         self.assertEqual(report.validate_document(sample()),dict(target_count=3,fixed=2,moving=1))
+        too_many = sample()
+        too_many['features'] = [dict(too_many['features'][0], id='extra-%02d' % index)
+                                for index in range(17)]
+        with self.assertRaisesRegex(ValueError, '最多包含 16 个目标'):
+            report.validate_document(too_many)
         mutations=[lambda d:d.update(features=[]),
                    lambda d:d['features'][0]['geometry'].update(coordinates=[39,116]),
                    lambda d:d['features'][0]['geometry'].update(coordinates=[116,39,50]),
@@ -108,6 +114,12 @@ class SubmissionReportTest(unittest.TestCase):
                 prepared=client.post('/api/v1/subject1/report/prepare',json={'document':sample()})
                 self.assertEqual(prepared.status_code,200)
                 self.assertEqual(prepared.json()['target_count'],3)
+                planned=client.post('/api/v1/plan',json={'subject':'subject1'})
+                self.assertEqual(planned.status_code,200,planned.text)
+                mission_id=planned.json()['mission']['mission_id']
+                automatic=client.get('/api/v1/subject1/report').json()['automatic']
+                self.assertEqual(automatic['mission_id'],mission_id)
+                self.assertEqual(automatic['attempts_started'],0)
             builder.assert_not_called()
 
     def test_aggregate_same_mission_2d_coordinates_and_sorted_tracks(self):
@@ -126,6 +138,53 @@ class SubmissionReportTest(unittest.TestCase):
             self.assertLess(props['trackStartTime'],props['trackEndTime'])
             self.assertNotIn('confidence',props);self.assertNotIn('imagePath',props)
             with self.assertRaises(ValueError):reporter.build('../../other',report.TEAM_NAME)
+
+    def test_auto_report_uses_current_mission_at_24_minutes_five_times(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            state = dict(running=True, is_authority=True, session_id='competition-a', elapsed_seconds=1439)
+            clock = Mock(snapshot=lambda: dict(state))
+            auto = report.AutoSubject1Reporter(tmp, clock, lambda: True)
+            auto.note_mission('subject1-old')
+            auto.note_mission('subject1-current')
+            with patch.object(report.Subject1Reporter, 'build', return_value=sample()) as build, \
+                    patch.object(report.Subject1Reporter, 'submit', return_value=dict(
+                        state='http_received', http_status=200, detail='已收到')) as submit:
+                self.assertFalse(auto.tick(now=100))
+                state['elapsed_seconds'] = 1440
+                self.assertTrue(auto.tick(now=100))
+                self.assertFalse(auto.tick(now=104.9))
+                state['elapsed_seconds'] = 1200  # 已启动的五次上报仍按真实五秒间隔完成。
+                for number in range(2, 6):
+                    self.assertTrue(auto.tick(now=100 + (number - 1) * 5))
+                self.assertFalse(auto.tick(now=130))
+                deadline = time.monotonic() + 3
+                while auto.snapshot()['attempts_finished'] != 5 and time.monotonic() < deadline:
+                    time.sleep(.01)
+                self.assertEqual(auto.snapshot()['attempts_finished'], 5)
+                self.assertEqual(submit.call_count, 5)
+                self.assertEqual([call.args[0] for call in build.call_args_list], ['subject1-current'] * 5)
+                self.assertEqual(auto.snapshot()['last_result']['state'], 'http_received')
+            state['session_id'] = 'competition-b'
+            state['elapsed_seconds'] = 1500
+            self.assertFalse(auto.tick(now=140))  # 新比赛不能沿用上一场任务。
+            self.assertIsNone(auto.snapshot()['mission_id'])
+            self.assertEqual(auto.snapshot()['attempts_started'], 0)
+
+    def test_auto_report_only_runs_on_publisher_and_reports_missing_results(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            state = dict(running=True, is_authority=True, session_id='competition-a', elapsed_seconds=1440)
+            role = [False]
+            auto = report.AutoSubject1Reporter(tmp, Mock(snapshot=lambda: dict(state)), lambda: role[0])
+            auto.note_mission('subject1-current')
+            self.assertFalse(auto.tick(now=100))
+            role[0] = True
+            auto.note_mission('subject1-current')
+            self.assertTrue(auto.tick(now=100))
+            deadline = time.monotonic() + 3
+            while auto.snapshot()['attempts_finished'] != 1 and time.monotonic() < deadline:
+                time.sleep(.01)
+            self.assertEqual(auto.snapshot()['last_result']['state'], 'failed')
+            self.assertEqual(auto.snapshot()['attempts_started'], 1)
 
 
 if __name__=='__main__':unittest.main()

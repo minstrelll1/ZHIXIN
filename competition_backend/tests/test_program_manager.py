@@ -149,6 +149,24 @@ class ProgramsTest(unittest.TestCase):
         command = 'source ${HOME}/test/setup.bash && echo 中文 {uav_id} {model}'
         self.assertEqual(remote.command_for('flight', 3, 'p600', {'flight': command}),
                          'source ${HOME}/test/setup.bash && echo 中文 3 p600')
+
+    def test_detection_config_sources_ros_and_uses_selected_drone(self):
+        commands = json.loads((ROOT / 'config/onboard_programs.json').read_text(encoding='utf-8'))['commands']
+        for uid in range(1, 7):
+            lines = remote.command_for('detection', uid, 'p600', commands).splitlines()
+            self.assertEqual(lines[0], 'source ~/SpireCV_bj/src/spirecv-ros/devel/setup.bash')
+            self.assertIn('uav_id:=%d runtime_mode:=debug debug_save_dir:=/tmp/yolo_debug' % uid, lines[1])
+            self.assertEqual(len(lines), 2)
+        legacy = 'roslaunch spirecv_ros uav_yolo26_botsort_geolocation.launch uav_id:=2 runtime_mode:=debug debug_save_dir:=/tmp/yolo_debug'
+        upgraded = remote.command_for('detection', 4, 'p600', {'detection': legacy})
+        self.assertEqual(upgraded, remote.command_for('detection', 4, 'p600', commands))
+        old_two_line = ('source ~/SpireCV_bj/src/spirecv-ros/devel/setup.bash\n'
+                        'exec roslaunch spirecv_ros uav_yolo26_botsort_geolocation.launch '
+                        'uav_id:=2 runtime_mode:=debug debug_save_dir:=/tmp/yolo_debug')
+        self.assertEqual(remote.command_for('detection', 4, 'p600', {'detection': old_two_line}), upgraded)
+        old_default = 'source ~/SpireCV_bj/src/spirecv-ros/devel/setup.bash && exec roslaunch spirecv_ros uav_yolo26_botsort_geolocation.launch uav_id:={uav_id}'
+        self.assertEqual(remote.command_for('detection', 4, 'p600', {'detection': old_default}), upgraded)
+        self.assertEqual(remote.command_for('detection', 4, 'p600', {'detection': 'echo 自定义 {uav_id}'}), 'echo 自定义 4')
         with self.assertRaisesRegex(ValueError, '启动指令'):
             remote.command_for('flight', 1, 'p600', {'flight': ''})
 

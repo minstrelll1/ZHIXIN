@@ -165,6 +165,70 @@ class TcpFleetAdapterTest(unittest.TestCase):
             )
         )
 
+    def test_assignment_send_does_not_wait_for_telemetry_callback(self):
+        client, buffer = self.connect_uav(2)
+        callback_entered = threading.Event()
+        release_callback = threading.Event()
+        send_finished = threading.Event()
+        errors = []
+
+        def sink(telemetry):
+            # 模拟遥测回调正在等待规划线程持有的任务状态锁。
+            callback_entered.set()
+            release_callback.wait(5.0)
+
+        def assign():
+            try:
+                self.adapter.command_assign_task(2, {
+                    "mission_id": "concurrent-plan",
+                    "assignment_checksum": "new-task",
+                })
+            except Exception as error:
+                errors.append(error)
+            finally:
+                send_finished.set()
+
+        self.adapter.set_telemetry_sink(sink)
+        sender = threading.Thread(target=assign, daemon=True)
+        try:
+            send_message(client, {"type": "heartbeat", "uav_id": 2})
+            self.assertTrue(callback_entered.wait(2.0))
+            sender.start()
+            self.assertTrue(
+                send_finished.wait(1.0),
+                "遥测回调持有 TCP 锁，规划下发会与任务状态锁形成死锁",
+            )
+            self.assertEqual(errors, [])
+            assignment = receive_message(client, buffer)
+            self.assertEqual(assignment["type"], "assign_task")
+            self.assertEqual(assignment["mission_id"], "concurrent-plan")
+        finally:
+            release_callback.set()
+            if sender.ident is not None:
+                sender.join(3.0)
+
+    def test_replaced_connection_cannot_update_telemetry(self):
+        self.connect_uav(1)
+        with self.adapter._lock:
+            previous = self.adapter._clients[1]
+        self.connect_uav(1)
+        received = []
+        self.adapter.set_telemetry_sink(received.append)
+
+        handled = self.adapter._handle_message(1, {
+            "type": "task_status",
+            "status": {
+                "state": "task_received",
+                "mission_id": "obsolete-task",
+                "task_assignment_acked": True,
+            },
+        }, expected_client=previous)
+
+        self.assertFalse(handled)
+        self.assertEqual(received, [])
+        with self.adapter._lock:
+            self.assertFalse(self.adapter._telemetry[1].task_assignment_acked)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -274,10 +274,8 @@ class TcpFleetAdapter(FleetAdapter):
                     break
                 if int(message.get("uav_id", -1)) != uav_id:
                     raise ValueError("message UAV ID changed after hello")
-                with self._lock:
-                    if self._clients.get(uav_id) is not client:
-                        break
-                    self._handle_message(uav_id, message)
+                if not self._handle_message(uav_id, message, expected_client=client):
+                    break
         except (ValueError, TypeError, KeyError) as error:
             if audit:
                 audit.record("任务链路校验失败", uav_id=uav_id, address=address, error=str(error))
@@ -317,9 +315,18 @@ class TcpFleetAdapter(FleetAdapter):
             self._telemetry[uav_id] = telemetry
         return telemetry
 
-    def _handle_message(self, uav_id: int, message: Dict[str, Any]) -> None:
+    def _handle_message(
+        self,
+        uav_id: int,
+        message: Dict[str, Any],
+        *,
+        expected_client: Optional[_ClientConnection] = None,
+    ) -> bool:
         message_type = message.get("type")
         with self._lock:
+            # 在同一临界区校验连接并更新快照，阻止被替换的旧连接写入状态。
+            if expected_client is not None and self._clients.get(uav_id) is not expected_client:
+                return False
             telemetry = self._get_telemetry_locked(uav_id)
             telemetry.received_at = time.time()
             if message_type == "telemetry":
@@ -431,7 +438,10 @@ class TcpFleetAdapter(FleetAdapter):
             else:
                 raise ValueError("unsupported onboard TCP message")
             snapshot = self._display_snapshot_locked(telemetry)
+        # 回调会获取任务状态锁；规划线程持有该锁并调用本适配器发送任务。
+        # 必须先释放 TCP 锁，调用方也不能在持有 TCP 锁时进入本方法。
         self.emit_telemetry(snapshot)
+        return True
 
     def _send_command(self, uav_id: int, command_type: str, payload: Dict[str, Any]) -> None:
         message = {"type": command_type, **payload, "uav_id": uav_id}

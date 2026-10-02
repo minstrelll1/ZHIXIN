@@ -2,7 +2,7 @@
   "说明": "本文件在地面端每次主动启动机载程序时读取。{uav_id} 自动替换为所选无人机编号，{model} 替换为 p600 或 su17。指令在机载 ~/competition_development 中由 Bash 执行。修改后先停止对应程序，再点击重新连接并启动；不会自动重启已有程序。",
   "commands": {
     "onboard": "exec bash ./tools/start_onboard_stack.sh --model {model} --expect-uav-id {uav_id} --direct --enable-motion",
-    "detection": "source ~/SpireCV_bj/src/spirecv-ros/devel/setup.bash && exec roslaunch spirecv_ros uav_yolo26_botsort_geolocation.launch uav_id:={uav_id}",
-    "flight": "source ~/recon_ws/devel/setup.bash && exec roslaunch px4_north_camera p600_gx40_position_pid_reconnaissance.launch uav_id:={uav_id} flight_mode:=outdoor"
+    "detection": "source ~/SpireCV_bj/src/spirecv-ros/devel/setup.bash\nexec roslaunch spirecv_ros uav_yolo26_botsort_geolocation.launch uav_id:={uav_id} runtime_mode:=debug debug_save_dir:=/tmp/yolo_debug",
+    "flight": "source ~/recon_ws/devel/setup.bash && exec roslaunch px4_north_camera p600_gx40_position_pid_reconnaissance.launch uav_id:={uav_id} flight_mode:=outdoor_small_range"
   }
 }

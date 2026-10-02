@@ -34,7 +34,7 @@ from .image_aggregation import (
     local_image_manifest,
     resolve_image_file,
 )
-from .subject1_reporting import reporting_router
+from .subject1_reporting import AutoSubject1Reporter, reporting_router
 from .recognition_settings import RecognitionSettings
 from competition_shared.recognition import optional_recognition_selection
 from .journal import EventJournal
@@ -305,13 +305,14 @@ def create_app(environment=None, audit=None) -> FastAPI:
         journal=EventJournal(data_directory, audit=audit),
         live_mode=live_mode,
         active_uav_ids=active_uav_ids,
+        competition_time_provider=competition_clock.snapshot,
     )
 
     def onboard_gps_references(required_ids=None) -> Dict[str, Dict[str, Any]]:
         """读取规划前各架已连接无人机的有效 WGS84 经纬度。"""
         snapshot = orchestrator.snapshot()
         telemetry = snapshot.get("telemetry", {})
-        candidate_ids = list(required_ids or active_uav_ids)
+        candidate_ids = list(active_uav_ids if required_ids is None else required_ids)
         now = time.time()
         references: Dict[str, Dict[str, Any]] = {}
         for uav_id in candidate_ids:
@@ -349,14 +350,19 @@ def create_app(environment=None, audit=None) -> FastAPI:
     image_root = Path(
         env.get("COMPETITION_IMAGE_ROOT", str(PACKAGE_ROOT.parent / "received_images"))
     )
+    auto_subject1_reporter = AutoSubject1Reporter(
+        image_root, competition_clock,
+        lambda: bool(operator_state["configured"] and operator_state["task_publisher"]),
+        audit=audit,
+    )
     image_collector = (
         PeerImageCollector(
             image_root,
             local_uav_id=local_uav_id,
             peers=ground_peers,
             peer_token=peer_token,
-            interval_sec=float(env.get("COMPETITION_IMAGE_SYNC_INTERVAL", "5")),
-            should_collect=lambda: adapter.is_coordinator,
+            interval_sec=float(env.get("COMPETITION_IMAGE_SYNC_INTERVAL", "1")),
+            should_collect=lambda: bool(operator_state["configured"] and operator_state["task_publisher"]),
         )
         if isinstance(adapter, DistributedFleetAdapter)
         else None
@@ -603,8 +609,10 @@ def create_app(environment=None, audit=None) -> FastAPI:
                 image_collector.start()
             pointcloud_collector.start()
             traffic_monitor.start()
+            auto_subject1_reporter.start()
             yield
         finally:
+            auto_subject1_reporter.stop()
             traffic_monitor.stop()
             pointcloud_collector.stop()
             if image_collector is not None:
@@ -624,6 +632,7 @@ def create_app(environment=None, audit=None) -> FastAPI:
     app.state.orchestrator = orchestrator
     app.state.audit = audit
     app.state.competition_clock = competition_clock
+    app.state.auto_subject1_reporter = auto_subject1_reporter
     app.add_middleware(DiagnosticMiddleware, audit=audit)
     app.state.adapter = adapter
     app.state.fleet_store = fleet_store
@@ -740,7 +749,8 @@ def create_app(environment=None, audit=None) -> FastAPI:
             raise HTTPException(status_code=403, detail="请由任务发布端统一上报科目一结果")
         return role
 
-    app.include_router(reporting_router(image_root, _require_results_publisher, audit=audit))
+    app.include_router(reporting_router(image_root, _require_results_publisher, audit=audit,
+                                        auto_reporter=auto_subject1_reporter))
 
     def _verify_peer_publisher(node_id: str) -> Dict[str, Any]:
         if not operator_selection_required:
@@ -1000,6 +1010,7 @@ def create_app(environment=None, audit=None) -> FastAPI:
         result["fleet"] = fleet_status()
         result["operator"] = operator_status()
         result["competition_clock"] = competition_clock.snapshot()
+        result["subject1_auto_report"] = auto_subject1_reporter.snapshot()
         result["pointcloud"] = pointcloud_collector.status()
         result["traffic"] = traffic_monitor.status()
         result["communication"] = communication_status()
@@ -1155,6 +1166,19 @@ def create_app(environment=None, audit=None) -> FastAPI:
                 raise HTTPException(status_code=422, detail="未知的飞行高度方案")
             if flight_profile not in ("lab", "lab10", "outdoor5", "outdoor100", "outdoor200", "competition", "dalian_nanshan"):
                 raise HTTPException(status_code=422, detail="未知的飞行场景")
+            connected_ids = (
+                adapter.connected_uav_ids_snapshot()
+                if isinstance(adapter, DistributedFleetAdapter)
+                else list(getattr(adapter, "connected_uav_ids", []))
+            ) if live_mode and coordinate_mode == "gps" else []
+            takeoff_gps_by_uav = onboard_gps_references(connected_ids) if connected_ids else {}
+            missing_gps_ids = [uid for uid in connected_ids if str(uid) not in takeoff_gps_by_uav]
+            if missing_gps_ids:
+                raise HTTPException(
+                    status_code=409,
+                    detail="GPS 规划前需取得每架已连接无人机的有效经纬度；尚缺 UAV{}".format(
+                        "、UAV".join(str(uid) for uid in missing_gps_ids)),
+                )
             if flight_profile == "dalian_nanshan":
                 # 大连场地使用已核定的 WGS84 边界与固定起飞点；飞行前飞机的
                 # 实时位置只用于状态展示，不得平移赛前固定航点。
@@ -1170,7 +1194,9 @@ def create_app(environment=None, audit=None) -> FastAPI:
                 result = load_dalian_nanshan_plan(coordinate_mode="gps")
                 result["subject"] = subject
                 result["flight_altitude_plan"] = flight_altitude_plan
-                return attach_routes(result)
+                result = attach_routes(result)
+                result["search_area"]["takeoff_gps_by_uav"] = takeoff_gps_by_uav
+                return result
             if departure_point not in ("southeast", "stadium_center"):
                 raise HTTPException(status_code=422, detail="未知的出发点")
             gps_origin = payload.get("gps_origin")
@@ -1276,6 +1302,8 @@ def create_app(environment=None, audit=None) -> FastAPI:
                 if departure_point == "stadium_center":
                     result = anchor_stadium_plan(result, source_plan)
             result = attach_routes(result)
+            if coordinate_mode == "gps":
+                result["search_area"]["takeoff_gps_by_uav"] = takeoff_gps_by_uav
         except PlanNotPreparedError as error:
             raise HTTPException(status_code=409, detail=str(error)) from error
         except (TypeError, ValueError) as error:
@@ -1297,6 +1325,17 @@ def create_app(environment=None, audit=None) -> FastAPI:
         plan_checkpoint("核对本地角色和配置")
         role = _require_operator_ready()
         _fleet_motion_guard()
+        requested_coordinate_mode = str(
+            payload.get("coordinate_mode") or (payload.get("search_area") or {}).get("coordinate_mode") or ""
+        ).strip().lower()
+        if live_mode and requested_coordinate_mode == "gps" and payload.get("planning_mode") != "competition":
+            connected = (adapter.connected_uav_ids_snapshot() if isinstance(adapter, DistributedFleetAdapter)
+                         else list(getattr(adapter, "connected_uav_ids", [])))
+            references = onboard_gps_references(connected)
+            missing = [uid for uid in connected if str(uid) not in references]
+            if missing:
+                raise HTTPException(status_code=409, detail="GPS 规划前尚缺 UAV{} 的有效经纬度".format(
+                    "、UAV".join(str(uid) for uid in missing)))
         recognition_selection = None
         if payload.get("subject") == "subject1":
             recognition_selection = optional_recognition_selection(payload.get("recognition_selection"))
@@ -1344,6 +1383,14 @@ def create_app(environment=None, audit=None) -> FastAPI:
                     if role["task_publisher"]
                     else ([local_uav_id] if local_uav_id in connected_uav_ids else [])
                 )
+                if prepared is not None and prepared["search_area"].get("coordinate_mode") == "gps" and selected_uav_ids:
+                    # GPS 原点用于固定航点，实际起降点必须在分派前再次取各机遥测。
+                    latest_takeoff_gps = onboard_gps_references(selected_uav_ids)
+                    missing = [uid for uid in selected_uav_ids if str(uid) not in latest_takeoff_gps]
+                    if missing:
+                        raise RuntimeError("缺少 UAV{} 的有效 GPS，无法分派".format(
+                            "、UAV".join(str(uid) for uid in missing)))
+                    prepared["search_area"]["takeoff_gps_by_uav"] = latest_takeoff_gps
                 if not role["task_publisher"]:
                     adapter.assert_local_control_available()
                     mirrored_mission = (adapter.mirrored_snapshot() or {}).get("mission") or {}
@@ -1377,8 +1424,9 @@ def create_app(environment=None, audit=None) -> FastAPI:
             if isinstance(adapter, DistributedFleetAdapter):
                 adapter.release_coordination()
             raise
-        if image_collector is not None:
-            image_collector.activate()
+        mission = result.get("mission") or {}
+        if role["task_publisher"] and mission.get("subject") == "subject1":
+            auto_subject1_reporter.note_mission(mission.get("mission_id"))
         if isinstance(adapter, DistributedFleetAdapter):
             assigned_uav_ids = list(orchestrator.active_uav_ids)
             result["dispatch_status"] = {

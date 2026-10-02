@@ -128,6 +128,8 @@ class OnboardTaskExecutor:
         self._control: Optional[UAVControlState] = None
         self._assignment: Optional[Dict[str, Any]] = None
         self._assignment_acked = False
+        self._competition_time_state: Optional[Dict[str, Any]] = None
+        self._competition_time_received_monotonic = 0.0
         self._home: Optional[Tuple[float, float, float, float]] = None
         self._gps_home: Optional[Tuple[float, float, float]] = None
         self._ground_origin_z: Optional[float] = None
@@ -162,6 +164,10 @@ class OnboardTaskExecutor:
         self.status_pub = rospy.Publisher(
             fleet_prefix + "/competition/task_status", String, queue_size=10, latch=True
         )
+        self.competition_time_topic = fleet_prefix + "/competition/competition_time"
+        self.competition_time_pub = rospy.Publisher(
+            self.competition_time_topic, String, queue_size=1, latch=True
+        )
         self.recognition_categories_topic = fleet_prefix + "/competition/recognition_categories"
         self.recognition_categories_pub = rospy.Publisher(
             self.recognition_categories_topic, Int32MultiArray, queue_size=1, latch=True
@@ -187,6 +193,7 @@ class OnboardTaskExecutor:
             "/uav{}/image_transfer/mission_control".format(self.uav_id),
             String,
             queue_size=1,
+            latch=True,
         )
         self.recon_start_mode_pub = rospy.Publisher(
             "/ground_mission_planner/recon_start_mode", Int32, queue_size=1, latch=True
@@ -246,6 +253,7 @@ class OnboardTaskExecutor:
 
         self._publish_status("executor_ready", enable_motion=self.enable_motion)
         self._recovery_timer = rospy.Timer(rospy.Duration(1.0), self._resume_tick)
+        self._competition_time_timer = rospy.Timer(rospy.Duration(1.0), self._publish_competition_time)
         rospy.logwarn(
             "UAV%d 竞赛执行器就绪；ROS=/uav%d，通信=%s，"
             "地面=%s:%d，飞行控制=%s",
@@ -825,6 +833,7 @@ class OnboardTaskExecutor:
         try:
             assignment = validate_assignment(payload, self.uav_id)
             if self._assignment and self._assignment_acked and assignment["assignment_checksum"] == self._assignment["assignment_checksum"]:
+                self._publish_competition_time()
                 self._publish_status("task_received")
                 return
             if self._motion_thread is not None and self._motion_thread.is_alive():
@@ -861,11 +870,19 @@ class OnboardTaskExecutor:
                 self._command_control_seen = False
             self._assignment = assignment
             self._assignment_acked = True
+            self._competition_time_state = assignment.get("competition_time") or {
+                "schema_version": 1, "mission_id": assignment["mission_id"],
+                "running": False, "synchronized": False, "elapsed_seconds": 0.0,
+                "session_id": "", "revision": 0,
+                "publisher_terminal_id": None, "updated_by": None,
+            }
+            self._competition_time_received_monotonic = time.monotonic()
             self._home = None
             self._gps_home = None
             self._resume_pending = False
             self._progress = {"phase": "assigned", "next_waypoint": 0}
             self._checkpoint("assigned", next_waypoint=0, execution={})
+        self._publish_competition_time()
         self._publish_status(
             "task_received",
             waypoint_count=len(waypoints),
@@ -885,6 +902,9 @@ class OnboardTaskExecutor:
             len(waypoints),
             self.cache_path,
         )
+        rospy.loginfo("比赛时间已发布：%s，已用 %.1f 秒",
+                      self.competition_time_topic,
+                      self._competition_time_state["elapsed_seconds"])
         rospy.loginfo(
             "完整任务 SHA-256：%s", assignment["assignment_checksum"]
         )
@@ -893,6 +913,19 @@ class OnboardTaskExecutor:
                 "完整下发任务 JSON：\n%s",
                 json.dumps(assignment, ensure_ascii=False, indent=2, sort_keys=True),
             )
+
+    def _publish_competition_time(self, _event=None) -> None:
+        """按分派时快照和机载单调时钟发布当前估计已用时间。"""
+        with self._lock:
+            state = dict(self._competition_time_state) if self._competition_time_state else None
+            received = self._competition_time_received_monotonic
+        if state is None:
+            return
+        if state["running"]:
+            state["elapsed_seconds"] = round(
+                state["elapsed_seconds"] + max(0.0, time.monotonic() - received), 3)
+        self.competition_time_pub.publish(String(data=json.dumps(
+            state, ensure_ascii=False, separators=(",", ":"))))
 
     def _accept_motion_command(self, name: str, payload: Dict[str, Any], target: Any) -> None:
         if getattr(self, "_manual_override", False):

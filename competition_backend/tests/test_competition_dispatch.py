@@ -49,19 +49,25 @@ class CompetitionDispatchTest(unittest.TestCase):
             for uid in [2, 3, 4, 5, 6, 1]:
                 r = clients[uid].post('/api/v1/operator', json={'ground_terminal_id': uid, 'model': 'p600', 'task_publisher': uid == 1})
                 self.assertEqual(r.status_code, 200, r.text)
+            self.assertTrue(apps[1].state.image_collector.should_collect())
+            for uid in range(2, 7):
+                self.assertFalse(apps[uid].state.image_collector.should_collect())
             apps[1].state.adapter.connected_uav_ids_snapshot = Mock(return_value=list(range(1, 7)))
-            # 真机 GPS 分派需先收到任务发布端的有效经纬度。
-            apps[1].state.orchestrator.update_telemetry(Telemetry(
-                uav_id=1, received_at=apps[1].state.orchestrator.clock(), connected=True,
-                latitude=30.78528, longitude=103.86102, altitude=44.098, gps_status=3, location_source=4,
-            ))
+            # 真机 GPS 分派需先收到每架已连接无人机的有效经纬度。
+            for uid in range(1, 7):
+                apps[1].state.orchestrator.update_telemetry(Telemetry(
+                    uav_id=uid, received_at=apps[1].state.orchestrator.clock(), connected=True,
+                    latitude=30.78528 + uid * 0.000001,
+                    longitude=103.86102 + uid * 0.000001,
+                    altitude=44.098, gps_status=3, location_source=4,
+                ))
             with patch.object(polygon_coverage, '_compute', side_effect=AssertionError('不得临场重算')):
                 response = clients[1].post('/api/v1/plan', json={'subject': 'subject1', 'planning_mode': 'competition', 'controller_mode': 'external', 'recognition_selection': {'category_count': 3, 'category_ids': [1, 8, 12]}})
             self.assertEqual(response.status_code, 200, response.text)
             result = response.json()
             self.assertEqual(result['dispatch_status']['assigned_uav_ids'], list(range(1, 7)))
             self.assertIsNotNone(result['mission']['prepared_plan'])
-            self.assertEqual(result['mission']['search_area']['landing_mode'], 'selected_departure')
+            self.assertEqual(result['mission']['search_area']['landing_mode'], 'onboard_home')
             for uid, app in apps.items():
                 calls = app.state.adapter.local_adapter.forward_command.call_args_list
                 self.assertEqual(len(calls), 1)
@@ -73,13 +79,22 @@ class CompetitionDispatchTest(unittest.TestCase):
                 self.assertNotIn('speed_mps', payload['task'])
                 self.assertEqual(result['mission']['planned_uavs'][str(uid)]['task']['speed_mps'], 5)
                 self.assertTrue(payload['task']['waypoints_wgs84'])
-                self.assertEqual(payload['landing_point_m'], result['mission']['search_area']['departure_point_m'])
+                self.assertIsNone(payload['landing_point_m'])
+                self.assertEqual(payload['landing_mode'], 'onboard_home')
+                self.assertAlmostEqual(payload['landing_point_wgs84'][0], 30.78528 + uid * 0.000001)
+                self.assertAlmostEqual(payload['landing_point_wgs84'][1], 103.86102 + uid * 0.000001)
                 self.assertEqual(payload['landing_point_wgs84'][:2], list(reversed(payload['task']['transit_routes']['departure'])))
                 self.assertGreaterEqual(payload['target_altitude_m'], 40)
                 self.assertEqual(payload['mission_id'], result['mission']['mission_id'])
+                self.assertEqual(payload['competition_time']['mission_id'], payload['mission_id'])
+                self.assertTrue(payload['competition_time']['running'])
+                self.assertEqual(payload['competition_time']['publisher_terminal_id'], 1)
+                self.assertEqual(payload['competition_time']['session_id'],
+                                 apps[1].state.competition_clock.snapshot()['session_id'])
                 # 同时通过现有机载协议校验，避免网页端成功而机载拒收。
                 validated = _protocol.validate_assignment({'type': 'assign_task', 'uav_id': uid, **payload}, uid)
                 self.assertEqual(validated['task']['waypoints_wgs84'], payload['task']['waypoints_wgs84'])
+                self.assertEqual(validated['competition_time'], payload['competition_time'])
 
     def test_saved_plan_external_mode_uses_wgs84_without_inventing_a_global_home(self):
         with tempfile.TemporaryDirectory() as tmp:

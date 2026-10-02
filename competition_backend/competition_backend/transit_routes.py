@@ -80,6 +80,45 @@ def shortest_routes(boundary, departure, targets):
     return result
 
 
+def rebase_gps_routes_for_takeoff(area, task, takeoff_gps):
+    """保持固定侦察点，按该机实测起飞 GPS 重接进场和逐点返航路径。"""
+    fixed = task['transit_routes']
+    if fixed.get('coordinate_frame') != 'WGS84':
+        raise ValueError('只有 GPS 航线可按实测起飞位置重接')
+    scans = task['waypoints_m']
+    gps_scans = task['waypoints_wgs84']
+    projection = area['coverage']['projection']
+    factors = [1 / projection['north_m_per_degree'], -1 / projection['west_m_per_degree']]
+    for axis in (0, 1):
+        low = min(range(len(scans)), key=lambda i: scans[i][axis])
+        high = max(range(len(scans)), key=lambda i: scans[i][axis])
+        span = scans[high][axis] - scans[low][axis]
+        if span > 1e-6:
+            factors[axis] = (gps_scans[high][axis] - gps_scans[low][axis]) / span
+    lat, lon = float(takeoff_gps['latitude']), float(takeoff_gps['longitude'])
+    home = [scans[0][0] + (lat - gps_scans[0][0]) / factors[0],
+            scans[0][1] + (lon - gps_scans[0][1]) / factors[1]]
+    def convert(point):
+        return [gps_scans[0][1] + (point[1] - scans[0][1]) * factors[1],
+                gps_scans[0][0] + (point[0] - scans[0][0]) * factors[0]]
+    key = area['flight_profile'] + '/' + area.get('departure_point', 'southeast')
+    saved_boundary = json.loads(CACHE.read_text(encoding='utf-8'))['scenes'][key]['boundary_m']
+    # 比赛 GPS 方案会整体平移地图边界的局部坐标；扫描点保留赛前坐标。
+    # 重接路径必须与扫描点使用同一局部坐标系。
+    paths = shortest_routes(saved_boundary, home, scans)
+    def convert_path(path, index, reverse=False):
+        points = [convert(point) for point in (reversed(path) if reverse else path)]
+        if reverse:
+            points[0], points[-1] = [gps_scans[index][1], gps_scans[index][0]], [lon, lat]
+        else:
+            points[0], points[-1] = [lon, lat], [gps_scans[index][1], gps_scans[index][0]]
+        return points
+    return dict(fixed, departure=[lon, lat],
+                entry_path=convert_path(paths[0], 0),
+                return_paths=[dict(waypoint_index=i + 1, path=convert_path(path, i, True))
+                              for i, path in enumerate(paths)])
+
+
 def prepare_routes(plan):
     area = plan['search_area']
     boundary = area['points_m']

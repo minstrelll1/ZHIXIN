@@ -1,4 +1,4 @@
-"""科目一：校验、冻结 UTF-8 JSON 文件，并手动提交给赛事接口。"""
+"""科目一：校验、冻结 UTF-8 JSON 文件，支持人工与赛时定时上报。"""
 from datetime import datetime
 import hashlib
 import http.client
@@ -8,6 +8,7 @@ import math
 from pathlib import Path
 import re
 import threading
+import time
 import urllib.error
 import urllib.request
 import uuid
@@ -48,6 +49,7 @@ def validate_document(document):
         require(document['crs'] == {'type': 'lonlat', 'properties': {'lonlat': 'EPSG:4326'}}, '坐标系须为 EPSG:4326')
     features = document.get('features')
     require(isinstance(features, list) and len(features) > 0, '没有有效目标结果，不能上报空文件')
+    require(len(features) <= 16, '赛事结果最多包含 16 个目标，请先核对并整理')
     seen = set()
     counts = {'fixed': 0, 'moving': 0}
     for index, feature in enumerate(features, 1):
@@ -96,6 +98,8 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
 
 
 class Subject1Reporter:
+    _draft_file_lock = threading.Lock()
+
     def __init__(self, image_root, audit=None):
         self.audit = audit
         self.image_root = Path(image_root).resolve()
@@ -123,7 +127,13 @@ class Subject1Reporter:
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
         path = module.update_subject1_submission(self.image_root, mission_id, team_name)
-        return json.loads(path.read_text(encoding='utf-8'))
+        document = json.loads(path.read_text(encoding='utf-8'))
+        if self.audit:
+            self.audit.record('科目一赛事结果已生成', mission_id=mission_id,
+                              package_file=str(path), target_count=len(document.get('features', [])),
+                              image_count=sum(bool(f.get('properties', {}).get('imagePath'))
+                                              for f in document.get('features', [])))
+        return document
 
     def prepare(self, document):
         summary = validate_document(document)
@@ -134,11 +144,19 @@ class Subject1Reporter:
         if len(raw) > MAX_BYTES:
             raise ValueError('JSON 文件超过 16 MB，请分批整理结果')
         digest = hashlib.sha256(raw).hexdigest()
-        self.root.mkdir(parents=True, exist_ok=True)
-        path = self.root / (digest + '.json')
-        temporary = self.root / (uuid.uuid4().hex + '.part')
-        temporary.write_bytes(raw)
-        temporary.replace(path)
+        with self._draft_file_lock:
+            self.root.mkdir(parents=True, exist_ok=True)
+            path = self.root / (digest + '.json')
+            if path.is_file():
+                if path.read_bytes() != raw:
+                    raise ValueError('已有同名结果文件内容不一致，请检查文件')
+            else:
+                temporary = self.root / (uuid.uuid4().hex + '.part')
+                try:
+                    temporary.write_bytes(raw)
+                    temporary.replace(path)
+                finally:
+                    temporary.unlink(missing_ok=True)
         if self.audit:
             self.audit.record('赛事结果文件已整理', draft_id=digest, file=str(path), **summary)
         metadata = document.get('metadata')
@@ -156,7 +174,7 @@ class Subject1Reporter:
             raise ValueError('结果文件不存在或已变化，请重新生成并核对')
         return path
 
-    def submit(self, digest):
+    def submit(self, digest, *, scheduled=False):
         if not self.lock.acquire(blocking=False):
             raise RuntimeError('已有结果文件正在上报，请等待回执，勿重复点击')
         try:
@@ -185,7 +203,9 @@ class Subject1Reporter:
                 receipt.update(state='http_received' if 200 <= code < 300 else 'rejected',
                                detail='接口已响应 HTTP %s，请核对下方赛事回执；是否受理以赛事回执为准' % code)
             except (OSError, urllib.error.URLError, http.client.HTTPException) as error:
-                receipt.update(detail='未取得明确回执：%s。未自动重试；请先向赛事方核实是否收到，再决定是否重报。' % error)
+                suffix = ('其余定时上报仍将按计划发送，请核对最终赛事回执。' if scheduled
+                          else '未自动重试；请先向赛事方核实是否收到，再决定是否重报。')
+                receipt.update(detail='未取得明确回执：%s。%s' % (error, suffix))
             finally:
                 target = self.root / ('receipt-' + uuid.uuid4().hex + '.json')
                 target.write_text(json.dumps(receipt, ensure_ascii=False, indent=2), encoding='utf-8')
@@ -196,7 +216,139 @@ class Subject1Reporter:
             self.lock.release()
 
 
-def reporting_router(image_root, require_publisher, audit=None):
+class AutoSubject1Reporter:
+    """只在任务发布端按当前比赛计时上报本次科目一任务。"""
+
+    TRIGGER_SECONDS = 24 * 60
+    INTERVAL_SECONDS = 5
+    ATTEMPT_COUNT = 5
+
+    def __init__(self, image_root, competition_clock, is_publisher, audit=None):
+        self.image_root = image_root
+        self.clock = competition_clock
+        self.is_publisher = is_publisher
+        self.audit = audit
+        self._lock = threading.RLock()
+        self._prepare_lock = threading.Lock()
+        self._stop = threading.Event()
+        self._thread = None
+        self._session_id = None
+        self._mission_id = None
+        self._frozen_mission_id = None
+        self._started = 0
+        self._finished = 0
+        self._next_at = None
+        self._last_result = None
+
+    def start(self):
+        if self._thread is None or not self._thread.is_alive():
+            self._stop.clear()
+            self._thread = threading.Thread(target=self._run, name='subject1-auto-report', daemon=True)
+            self._thread.start()
+
+    def stop(self):
+        self._stop.set()
+        if self._thread is not None:
+            self._thread.join(timeout=1)
+
+    def _run(self):
+        while not self._stop.wait(0.2):
+            try:
+                self.tick()
+            except Exception as error:
+                if self.audit:
+                    self.audit.record('科目一自动上报计时异常', error=str(error))
+
+    def _sync_session(self, state):
+        session = state.get('session_id') if state.get('running') and state.get('is_authority') else None
+        if session != self._session_id:
+            self._session_id = session
+            self._mission_id = None
+            self._frozen_mission_id = None
+            self._started = self._finished = 0
+            self._next_at = None
+            self._last_result = None
+
+    def note_mission(self, mission_id):
+        state = self.clock.snapshot()
+        if not (state.get('running') and state.get('is_authority') and self.is_publisher()):
+            return
+        if not isinstance(mission_id, str) or not mission_id.startswith('subject1-'):
+            return
+        with self._lock:
+            self._sync_session(state)
+            if self._started == 0:
+                self._mission_id = mission_id
+        if self.audit:
+            self.audit.record('科目一自动上报已关联本次任务', mission_id=mission_id,
+                              competition_session=state['session_id'])
+
+    def tick(self, now=None):
+        """按比赛时间触发首发，后四次按单调时钟每隔五秒启动。"""
+        state = self.clock.snapshot()
+        with self._lock:
+            self._sync_session(state)
+            if (not state.get('is_authority') or not self.is_publisher()
+                    or (self._started == 0 and state.get('elapsed_seconds', 0) < self.TRIGGER_SECONDS)
+                    or not self._mission_id or self._started >= self.ATTEMPT_COUNT
+                    or self._stop.is_set()):
+                return False
+            now = time.monotonic() if now is None else now
+            if self._next_at is not None and now < self._next_at:
+                return False
+            self._frozen_mission_id = self._frozen_mission_id or self._mission_id
+            self._started += 1
+            number = self._started
+            mission_id = self._frozen_mission_id
+            session_id = self._session_id
+            self._next_at = now + self.INTERVAL_SECONDS if number < self.ATTEMPT_COUNT else None
+        if self.audit:
+            self.audit.record('科目一自动上报尝试开始', mission_id=mission_id,
+                              competition_session=session_id, attempt=number, total=self.ATTEMPT_COUNT)
+        threading.Thread(target=self._submit_once, args=(session_id, mission_id, number),
+                         name='subject1-auto-report-%d' % number, daemon=True).start()
+        return True
+
+    def _submit_once(self, session_id, mission_id, number):
+        # 每轮重新整理最新已回传目标；各轮独立实例，20 秒请求超时不会阻塞 5 秒间隔。
+        try:
+            reporter = Subject1Reporter(self.image_root, audit=self.audit)
+            with self._prepare_lock:
+                document = reporter.build(mission_id, TEAM_NAME)
+                prepared = reporter.prepare(document)
+            current = self.clock.snapshot()
+            if (self._stop.is_set() or current.get('session_id') != session_id
+                    or not current.get('is_authority') or not self.is_publisher()):
+                raise RuntimeError('比赛会话或发布端身份已变化，本次不再发送旧任务结果')
+            receipt = reporter.submit(prepared['draft_id'], scheduled=True)
+            outcome = dict(attempt=number, mission_id=mission_id, state=receipt['state'],
+                           http_status=receipt['http_status'], detail=receipt['detail'],
+                           draft_id=prepared['draft_id'])
+        except Exception as error:
+            outcome = dict(attempt=number, mission_id=mission_id, state='failed',
+                           detail='结果整理或上报失败：%s' % error)
+        with self._lock:
+            if session_id == self._session_id:
+                self._finished += 1
+                if self._last_result is None or number >= self._last_result['attempt']:
+                    self._last_result = outcome
+        if self.audit:
+            self.audit.record('科目一自动上报尝试结束', competition_session=session_id, **outcome)
+        print('科目一自动上报第 %d/%d 次：%s' % (number, self.ATTEMPT_COUNT, outcome['detail']), flush=True)
+
+    def snapshot(self):
+        with self._lock:
+            state = self.clock.snapshot()
+            self._sync_session(state)
+            return dict(enabled=bool(state.get('is_authority') and self.is_publisher()),
+                        trigger_elapsed_seconds=self.TRIGGER_SECONDS,
+                        interval_seconds=self.INTERVAL_SECONDS, total_attempts=self.ATTEMPT_COUNT,
+                        mission_id=self._frozen_mission_id or self._mission_id,
+                        attempts_started=self._started, attempts_finished=self._finished,
+                        last_result=dict(self._last_result) if self._last_result else None)
+
+
+def reporting_router(image_root, require_publisher, audit=None, auto_reporter=None):
     reporter = Subject1Reporter(image_root, audit=audit)
     router = APIRouter(prefix='/api/v1/subject1/report', tags=['科目一结果上报'])
     def permitted(request):
@@ -210,7 +362,8 @@ def reporting_router(image_root, require_publisher, audit=None):
     @router.get('')
     def status(request: Request):
         permitted(request)
-        return dict(team_name=TEAM_NAME, endpoint=ENDPOINT, missions=reporter.missions())
+        return dict(team_name=TEAM_NAME, endpoint=ENDPOINT, missions=reporter.missions(),
+                    automatic=auto_reporter.snapshot() if auto_reporter is not None else None)
     @router.post('/prepare')
     def prepare(request: Request, payload: dict = Body(...)):
         permitted(request)
@@ -226,6 +379,8 @@ def reporting_router(image_root, require_publisher, audit=None):
             document['name'] = team_name.strip()
             return reporter.prepare(document)
         except (ValueError, OSError) as error:
+            if audit:
+                audit.record('科目一赛事结果整理失败', mission_id=payload.get('mission_id'), error=str(error))
             raise HTTPException(status_code=422, detail=str(error)) from error
     @router.get('/files/{digest}')
     def download(digest: str, request: Request):

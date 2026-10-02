@@ -8,8 +8,39 @@ import json
 import math
 import os
 from pathlib import Path
+import re
 import shutil
 import tempfile
+from contextlib import contextmanager
+
+
+_SAFE_MISSION_ID = re.compile(r"[A-Za-z0-9_.-]{1,120}\Z")
+
+
+@contextmanager
+def _submission_lock(mission_dir):
+    """跨线程及进程串行化同一任务的 JSON/图片重建。"""
+    lock_path = mission_dir / ".submission.lock"
+    with lock_path.open("a+b") as stream:
+        stream.seek(0)
+        if os.name == "nt":
+            import msvcrt
+
+            # msvcrt.locking 从当前文件位置锁定一个字节。
+            msvcrt.locking(stream.fileno(), msvcrt.LK_LOCK, 1)
+            try:
+                yield
+            finally:
+                stream.seek(0)
+                msvcrt.locking(stream.fileno(), msvcrt.LK_UNLCK, 1)
+        else:
+            import fcntl
+
+            fcntl.flock(stream.fileno(), fcntl.LOCK_EX)
+            try:
+                yield
+            finally:
+                fcntl.flock(stream.fileno(), fcntl.LOCK_UN)
 
 
 def _number(value):
@@ -75,8 +106,13 @@ def _target_model(metadata):
     return str(metadata.get("target_model") or ("类别%s" % category_id if category_id not in (None, "", -1) else metadata.get("target_type", "未知")))
 
 
-def _all_metadata(output_root):
-    for path in output_root.glob("UAV*/*/*.json"):
+def _all_metadata(output_root, mission_id):
+    # 标准任务编号直接限定扫描范围，避免每次重新遍历历史任务。
+    if _SAFE_MISSION_ID.fullmatch(str(mission_id)):
+        paths = output_root.glob("UAV*/%s/*.json" % mission_id)
+    else:
+        paths = output_root.glob("UAV*/*/*.json")
+    for path in sorted(paths):
         if path.name == "subject1_submission.json":
             continue
         try:
@@ -88,15 +124,23 @@ def _all_metadata(output_root):
 
 
 def update_subject1_submission(output_root, mission_id, team_name=None):
-    """生成指定任务的 JSON 和 images 目录，采用临时文件原子替换。"""
+    """生成指定任务的 JSON 和 images 目录，采用进程锁与临时文件原子替换。"""
     output_root = Path(output_root).resolve()
-    mission_dir = (output_root / "subject1_submissions" / str(mission_id)).resolve()
-    if output_root not in mission_dir.parents:
-        raise ValueError("unsafe submission path")
+    mission_id = str(mission_id)
+    if mission_id in (".", "..") or not _SAFE_MISSION_ID.fullmatch(mission_id):
+        raise ValueError("invalid submission mission id")
+    # 任务编号只有一个受限路径组件，无需在多线程建目录期间再次 resolve。
+    mission_dir = output_root / "subject1_submissions" / mission_id
+    mission_dir.mkdir(parents=True, exist_ok=True)
+    with _submission_lock(mission_dir):
+        return _update_subject1_submission_locked(output_root, mission_dir, mission_id, team_name)
+
+
+def _update_subject1_submission_locked(output_root, mission_dir, mission_id, team_name):
     image_dir = mission_dir / "images"
     image_dir.mkdir(parents=True, exist_ok=True)
     records = {}
-    for source_json, metadata in _all_metadata(output_root):
+    for source_json, metadata in _all_metadata(output_root, mission_id):
         if str(metadata.get("mission_id", "")) != str(mission_id):
             continue
         target_id = _target_id(metadata)
@@ -104,16 +148,43 @@ def update_subject1_submission(output_root, mission_id, team_name=None):
         position = _position(metadata)
         local_position = _local_position(metadata)
         image_source = source_json.with_suffix(".jpg")
-        image_name = "%s_%s.jpg" % (hashlib.sha256(target_id.encode("utf-8")).hexdigest()[:16], source_json.stem)
+        image_name = "%s_%s_%s.jpg" % (
+            hashlib.sha256(target_id.encode("utf-8")).hexdigest()[:16],
+            source_json.parent.parent.name, source_json.stem,
+        )
         image_path = None
         if image_source.is_file():
             image_path = image_dir / image_name
-            temp = image_path.with_suffix(".jpg.part")
-            shutil.copyfile(image_source, temp)
-            os.replace(temp, image_path)
-        item = records.setdefault(target_id, {"points": [], "first": metadata, "image": None})
-        if image_path:
-            item["image"] = "./images/" + image_name
+            source_stat = image_source.stat()
+            if (not image_path.is_file() or image_path.stat().st_size != source_stat.st_size
+                    or image_path.stat().st_mtime_ns != source_stat.st_mtime_ns):
+                fd, temporary = tempfile.mkstemp(prefix=image_name + "-", suffix=".jpg.part", dir=str(image_dir))
+                os.close(fd)
+                try:
+                    shutil.copy2(image_source, temporary)
+                    os.replace(temporary, image_path)
+                finally:
+                    if os.path.exists(temporary):
+                        os.unlink(temporary)
+        rank = (timestamp or "", str(source_json))
+        item = records.setdefault(target_id, {
+            "points": [], "latest": metadata, "latest_rank": rank,
+            "category_metadata": None, "category_rank": ("", ""),
+            "moving": False, "image": None, "image_rank": ("", ""),
+        })
+        if rank >= item["latest_rank"]:
+            item["latest"], item["latest_rank"] = metadata, rank
+        extra = metadata.get("extra") if isinstance(metadata.get("extra"), dict) else {}
+        has_category = (
+            any(metadata.get(key) not in (None, "") for key in ("target_type", "category", "target_model"))
+            or metadata.get("category_id") not in (None, "", -1)
+            or bool(extra.get("targetModel") or extra.get("target_model"))
+        )
+        if has_category and rank >= item["category_rank"]:
+            item["category_metadata"], item["category_rank"] = metadata, rank
+        item["moving"] = item["moving"] or bool(metadata.get("is_moving", False))
+        if image_path and rank >= item["image_rank"]:
+            item["image"], item["image_rank"] = "./images/" + image_name, rank
         point = {"coordinates": position, "timestamp": timestamp} if position and timestamp else None
         if point and (not item["points"] or item["points"][-1] != point):
             item["points"].append(point)
@@ -123,8 +194,8 @@ def update_subject1_submission(output_root, mission_id, team_name=None):
     features = []
     skipped_indoor = []
     for target_id, item in sorted(records.items()):
-        metadata = item["first"]
-        moving = bool(metadata.get("is_moving", False))
+        metadata = item["category_metadata"] or item["latest"]
+        moving = item["moving"]
         points = sorted(item["points"], key=lambda point: point["timestamp"])
         properties = {
             "targetCategory": "移动" if moving else "固定",
@@ -152,7 +223,8 @@ def update_subject1_submission(output_root, mission_id, team_name=None):
                 skipped_indoor.append({"id": target_id, "reason": "室内 XYZ 或无效 WGS84 坐标不能写入 EPSG:4326 几何",
                                        "localPosition": item.get("local_positions", [])})
                 continue
-            properties["timestamp"] = points[0]["timestamp"]
+            # 坐标和时间必须来自同一条真实反馈；固定目标采用最近一次有效点。
+            properties["timestamp"] = points[-1]["timestamp"]
             geometry = {"type": "Point", "coordinates": points[-1]["coordinates"]}
         features.append({"type": "Feature", "id": target_id, "geometry": geometry, "properties": properties})
 

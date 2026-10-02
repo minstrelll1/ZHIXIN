@@ -22,7 +22,7 @@ for name in ("prometheus_msgs", "std_msgs", "sensor_msgs", "mavros_msgs"):
     sys.modules.setdefault(name, types.ModuleType(name))
     module = types.ModuleType(name + ".msg")
     for cls in ("UAVCommand", "UAVControlState", "UAVState", "UAVSetup", "RCIn", "String", "Float64MultiArray", "Int32MultiArray", "Int32", "Bool", "NavSatFix"):
-        setattr(module, cls, type(cls, (), {}))
+        setattr(module, cls, type(cls, (), {"__init__": lambda self, **values: self.__dict__.update(values)}))
     sys.modules.setdefault(name + ".msg", module)
 spec = importlib.util.spec_from_file_location("executor", Path(__file__).resolve().parents[1] / "scripts" / "onboard_task_executor.py")
 module = importlib.util.module_from_spec(spec)
@@ -49,6 +49,10 @@ class AutonomyTest(unittest.TestCase):
         node._progress = {"phase": "executing", "next_waypoint": 1}
         node._assignment = {"type": "assign_task", "uav_id": 3, "mission_id": "test", "target_altitude_m": .5, "task": {"type": "lawnmower_search", "coordinate_frame": "ENU", "waypoints_m": [[0, 0], [1, 0], [1, 1]]}}
         node._assignment["assignment_checksum"] = assignment_checksum(node._assignment)
+        node._competition_time_state = None
+        node._competition_time_received_monotonic = 0.0
+        node.competition_time_pub = Mock()
+        node.competition_time_topic = "/uav3/competition/competition_time"
         node._snapshot = lambda: (types.SimpleNamespace(position=[0, 0, .5], velocity=[0, 0, 0], attitude=[0, 0, 0]), None)
         node.altitude_tolerance = .12
         node.velocity_tolerance = .15

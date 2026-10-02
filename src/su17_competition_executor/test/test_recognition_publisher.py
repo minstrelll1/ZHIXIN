@@ -1,8 +1,9 @@
 import copy
+import json
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 from test_executor_autonomy import AutonomyTest, module
 from su17_competition_executor.task_protocol import assignment_checksum
 
@@ -99,5 +100,36 @@ class RecognitionPublisherTest(unittest.TestCase):
                 self.assertTrue(node._assignment_acked)
                 if legacy:self.assertEqual(node.recognition_categories_pub.publish.call_args.args[0].data,[])
                 else:node.recognition_categories_pub.publish.assert_not_called()
+
+    def test_competition_time_follows_assignment_and_ticks_from_monotonic_clock(self):
+        with tempfile.TemporaryDirectory() as directory:
+            node, msg = self.node(directory)
+            msg['competition_time'] = {
+                'schema_version': 1, 'mission_id': msg['mission_id'],
+                'running': True, 'synchronized': True, 'elapsed_seconds': 25.0,
+                'session_id': 'session-1', 'revision': 2,
+                'publisher_terminal_id': 1, 'updated_by': 1,
+            }
+            msg['assignment_checksum'] = assignment_checksum(msg)
+            with patch.object(module.time, 'monotonic', return_value=100.0):
+                node._accept_assignment(msg)
+            self.assertTrue(node._assignment_acked)
+            first = json.loads(node.competition_time_pub.publish.call_args.args[0].data)
+            self.assertEqual(first['elapsed_seconds'], 25.0)
+            self.assertEqual(first['session_id'], 'session-1')
+            with patch.object(module.time, 'monotonic', return_value=104.25):
+                node._publish_competition_time()
+            later = json.loads(node.competition_time_pub.publish.call_args.args[0].data)
+            self.assertEqual(later['elapsed_seconds'], 29.25)
+            self.assertEqual(later['mission_id'], msg['mission_id'])
+
+    def test_malformed_competition_time_rejects_assignment(self):
+        with tempfile.TemporaryDirectory() as directory:
+            node, msg = self.node(directory)
+            msg['competition_time'] = {'running': True, 'elapsed_seconds': -1}
+            msg['assignment_checksum'] = assignment_checksum(msg)
+            node._accept_assignment(msg)
+            self.assertFalse(node._assignment_acked)
+            node.competition_time_pub.publish.assert_not_called()
 
 if __name__=='__main__':unittest.main()

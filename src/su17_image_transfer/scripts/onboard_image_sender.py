@@ -320,10 +320,15 @@ class OnboardImageSender:
         key, metadata = result
         # 固定图片任务，避免后台绘框期间切换任务导致图片被归到新任务。
         with self.mission_lock:
-            metadata["mission_id"] = self.active_mission_id
-            metadata["mission_started_at_unix_ns"] = self.mission_started_at_unix_ns
-            self.sequence += 1
-            metadata["sequence"] = self.sequence
+            mission_id = self.active_mission_id
+            if mission_id:
+                metadata["mission_id"] = mission_id
+                metadata["mission_started_at_unix_ns"] = self.mission_started_at_unix_ns
+                self.sequence += 1
+                metadata["sequence"] = self.sequence
+        if not mission_id:
+            self._reject_detection(metadata, "mission_not_started", "尚未一键起飞，图片任务未开始")
+            return
         metadata["detection_received_at_unix_ns"] = time.time_ns()
         with self.frame_lock:
             self._expire_pending_locked()
@@ -371,6 +376,10 @@ class OnboardImageSender:
 
     def _start_mission(self, requested_id):
         mission_id = safe_component(requested_id, self._new_mission_id())[:48]
+        # 起飞指令由执行器锁存，图片节点重连时会重放；同一任务不重置计时和序号。
+        with self.mission_lock:
+            if self.active_mission_id == mission_id:
+                return
         mission_dir = self._mission_cache_dir(mission_id)
         if self.cache_root not in mission_dir.parents:
             raise ValueError("任务图片缓存路径不安全")
@@ -758,6 +767,8 @@ class OnboardImageSender:
         if not self.enable_offline_recovery:
             return
         with self.mission_lock:
+            if not self.active_mission_id:
+                return
             elapsed = time.monotonic() - self.mission_started_monotonic
             final_due = (
                 self.reconcile_after_minutes >= 0
@@ -777,6 +788,8 @@ class OnboardImageSender:
     def _schedule_reconciliation(self, force, final=False):
         now = time.monotonic()
         with self.mission_lock:
+            if not self.active_mission_id:
+                return
             if self.reconcile_in_progress:
                 return
             if final and self.final_reconcile_done:

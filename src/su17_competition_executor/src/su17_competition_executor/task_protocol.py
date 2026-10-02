@@ -7,6 +7,7 @@ import os
 import tempfile
 from pathlib import Path
 from typing import Any, Dict, List
+from competition_shared.competition_time import normalize_competition_time
 
 
 class TaskValidationError(ValueError):
@@ -108,6 +109,12 @@ def validate_assignment(
     normalized["mission_id"] = mission_id
     normalized["target_altitude_m"] = target_altitude
     normalized["task"]["waypoints_m"] = waypoints
+    if "competition_time" in normalized:
+        try:
+            normalized["competition_time"] = normalize_competition_time(
+                normalized["competition_time"], mission_id)
+        except ValueError as error:
+            raise TaskValidationError("比赛计时快照无效：{}".format(error)) from error
     if task.get('transit_routes') and message.get('controller_mode') == 'external':
         from .transit_protocol import route_messages
         try:

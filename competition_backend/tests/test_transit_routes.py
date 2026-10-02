@@ -8,7 +8,7 @@ from contextlib import ExitStack
 from pathlib import Path
 
 from shapely.geometry import LineString, Point, Polygon
-from competition_backend.transit_routes import CACHE, PROFILES, attach_routes, scene_plan, shortest_routes
+from competition_backend.transit_routes import CACHE, PROFILES, attach_routes, scene_plan, shortest_routes, rebase_gps_routes_for_takeoff
 from competition_backend.api import create_app
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -42,6 +42,33 @@ class TransitTest(unittest.TestCase):
         route = shortest_routes(polygon, [.5,4], [[4.5,4]])[0]
         self.assertGreater(len(route), 2)
         self.assertTrue(Polygon(polygon).buffer(2.1e-5).covers(LineString(route)))
+
+    def test_live_gps_takeoff_rebases_routes_without_moving_scan_points(self):
+        with tempfile.TemporaryDirectory() as root:
+            app = create_app({'COMPETITION_ADAPTER':'sim', 'COMPETITION_DATA_DIR':root,
+                              'COMPETITION_DIAGNOSTICS_DIR':root})
+            try:
+                endpoint = next(r.endpoint for r in app.routes if r.path == '/api/v1/planning/competition-coverage')
+                cases = [(profile, departure) for profile in PROFILES for departure in
+                         (('fixed_dalian',) if profile == 'dalian_nanshan' else ('southeast', 'stadium_center'))]
+                for profile, departure in cases:
+                    with self.subTest(profile=profile):
+                        plan=endpoint(dict(subject='subject1',flight_profile=profile,departure_point=departure,
+                                           coordinate_mode='gps',gps_origin={'latitude':39.1,'longitude':121.6}))
+                        area=plan['search_area']
+                        task=plan['planned_uavs']['1']['task']
+                        origin=task['transit_routes']['departure']
+                        home={'latitude':origin[1]+0.000001,'longitude':origin[0]+0.000001}
+                        routed=rebase_gps_routes_for_takeoff(area,task,home)
+                        self.assertEqual(routed['departure'],[home['longitude'],home['latitude']])
+                        self.assertEqual(task['waypoints_wgs84'],plan['planned_uavs']['1']['task']['waypoints_wgs84'])
+                        checked=dict(task=dict(task,transit_routes=routed),uav_id=1,mission_id='m',
+                                     assignment_checksum='sum',coordinate_frame='WGS84',target_altitude_m=8.)
+                        entry,returns=route_messages(checked)
+                        self.assertEqual(entry['path'][0][:2],routed['departure'])
+                        self.assertTrue(all(r['path'][-1][:2]==routed['departure'] for r in returns['routes']))
+            finally:
+                app.state.audit.close()
 
     def test_every_scene_coordinate_and_altitude_publishes_consistent_routes(self):
         with tempfile.TemporaryDirectory() as root, ExitStack() as cleanup:

@@ -9,6 +9,7 @@ import copy
 from typing import Any, Callable, Dict, List, Optional
 
 from competition_shared.recognition import optional_recognition_selection
+from competition_shared.competition_time import normalize_competition_time
 from .adapter import FleetAdapter
 from .assignment_protocol import assignment_checksum
 from .plan_jobs import plan_checkpoint
@@ -62,6 +63,7 @@ class CompetitionOrchestrator:
         live_mode: bool = False,
         clock: Callable[[], float] = time.time,
         active_uav_ids: Optional[List[int]] = None,
+        competition_time_provider: Optional[Callable[[], Dict[str, Any]]] = None,
     ) -> None:
         self.config = config
         self.adapter = adapter
@@ -69,6 +71,7 @@ class CompetitionOrchestrator:
         self.live_mode = live_mode
         self.clock = clock
         self.active_uav_ids = list(active_uav_ids or config.uav_ids)
+        self.competition_time_provider = competition_time_provider
         if not self.active_uav_ids or not set(self.active_uav_ids).issubset(
             set(config.uav_ids)
         ):
@@ -169,6 +172,11 @@ class CompetitionOrchestrator:
                 if prepared_plan.get("prepared_transit_sha256"):
                     landing_plan = {uid: {"point_m": list(area["departure_point_m"]), "landing_sequence": uid} for uid in self.config.uav_ids}
                     area["landing_mode"] = "selected_departure"
+                if coordinate_mode == "gps" and area.get("takeoff_gps_by_uav"):
+                    # 实机 GPS 模式每架飞机在本次规划时锁定自己的起飞位置。
+                    # 固定出发点只决定区域内航点顺序，不再充当降落点。
+                    landing_plan = {uid: {"point_m": None, "landing_sequence": uid} for uid in self.config.uav_ids}
+                    area["landing_mode"] = "onboard_home"
             elif subject in ("subject1", "subject2") and tasks_by_uav is None:
                 area = dict(template.get("search_area", {}))
                 area.update(search_area or {})
@@ -462,19 +470,40 @@ class CompetitionOrchestrator:
                         runtime.target_altitude_m,
                     ]
                 routes = task_for_onboard.get("transit_routes")
-                if routes:
+                takeoff_gps = ((area or {}).get("takeoff_gps_by_uav") or {}).get(str(uav_id))
+                if coordinate_mode == "gps" and takeoff_gps:
+                    if routes:
+                        from .transit_routes import rebase_gps_routes_for_takeoff
+                        routes = rebase_gps_routes_for_takeoff(area, task_for_onboard, takeoff_gps)
+                        task_for_onboard["transit_routes"] = routes
+                        runtime.task["transit_routes"] = copy.deepcopy(routes)
+                    assignment_payload["task"] = task_for_onboard
+                    assignment_payload["landing_mode"] = "onboard_home"
+                    assignment_payload["landing_point_m"] = None
+                    assignment_payload["landing_point_wgs84"] = [
+                        float(takeoff_gps["latitude"]), float(takeoff_gps["longitude"]),
+                        runtime.target_altitude_m,
+                    ]
+                elif routes:
                     assignment_payload["landing_mode"] = "selected_departure"
                     if routes["coordinate_frame"] == "WGS84":
                         lon, lat = routes["departure"]
                         assignment_payload["landing_point_wgs84"] = [lat, lon, runtime.target_altitude_m]
                     else:
                         assignment_payload["landing_point_m"] = list(routes["departure"])
+                if self.competition_time_provider is not None:
+                    # 每架发送前重新读取发布端统一计时，避免前面分派耗时令后续飞机收到旧时间。
+                    assignment_payload["competition_time"] = normalize_competition_time(
+                        self.competition_time_provider(), mission_id)
                 runtime.assignment_checksum = assignment_checksum(
                     {"type": "assign_task", "uav_id": uav_id, **assignment_payload}
                 )
                 assignment_payload["assignment_checksum"] = runtime.assignment_checksum
                 audit = getattr(self.journal, "audit", None)
                 if audit:
+                    if "competition_time" in assignment_payload:
+                        audit.record("比赛时间随任务下发", uav_id=uav_id, mission_id=mission_id,
+                                     competition_time=assignment_payload["competition_time"])
                     audit.record("准备发送机载任务", uav_id=uav_id, mission_id=mission_id,
                                  assignment=assignment_payload, assignment_file=audit.save_assignment(uav_id, assignment_payload))
                 send_started = time.monotonic()

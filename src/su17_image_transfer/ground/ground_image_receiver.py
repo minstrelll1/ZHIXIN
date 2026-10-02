@@ -8,6 +8,7 @@ from pathlib import Path
 import re
 import socket
 import sys
+import tempfile
 import threading
 import time
 from typing import Dict
@@ -31,7 +32,7 @@ SAFE_COMPONENT = re.compile(r"[^A-Za-z0-9_.-]+")
 
 
 def safe_component(value: object, fallback: str) -> str:
-    cleaned = SAFE_COMPONENT.sub("_", str(value)).strip("._")
+    cleaned = SAFE_COMPONENT.sub("_", "" if value is None else str(value)).strip("._")
     return (cleaned or fallback)[:120]
 
 
@@ -60,13 +61,104 @@ class GroundImageReceiver:
         self.client_timeout = client_timeout
         self.mission_lock = threading.Lock()
         self.mission_states = {}
+        self._submission_condition = threading.Condition()
+        self._submission_pending = {}
+        self._submission_thread = None
         self.output.mkdir(parents=True, exist_ok=True)
 
     def _diagnostic(self, event, metadata=None, **details):
         if self.audit:
             metadata = metadata or {}
-            self.audit.record(event, **{key: metadata.get(key) for key in
-                              ("uav_id", "mission_id", "request_id")}, **details)
+            try:
+                self.audit.record(event, **{key: metadata.get(key) for key in
+                                  ("uav_id", "mission_id", "request_id")}, **details)
+            except Exception as exc:
+                # 日志故障不能使已安全落盘的图片变成发送端 NACK。
+                print("图片审计日志写入失败：%s" % exc, flush=True)
+
+    def _queue_subject1_submission(self, metadata: Dict) -> None:
+        """图片落盘后异步合并同一任务，避免全量整理阻塞发送端 ACK。"""
+        mission_id = str(metadata.get("mission_id", ""))
+        if not mission_id.startswith("subject1"):
+            return
+        with self._submission_condition:
+            entry = self._submission_pending.setdefault(
+                mission_id,
+                {"due": time.monotonic() + 0.3, "count": 0, "uav_ids": set(), "attempt": 0},
+            )
+            entry["count"] += 1
+            entry["uav_ids"].add(metadata["uav_id"])
+            if entry["attempt"]:
+                # 新回传给该任务一次新的整理机会，不沿用上次故障的重试额度。
+                entry["attempt"] = 0
+                entry["due"] = min(entry["due"], time.monotonic() + 0.3)
+            if self._submission_thread is None or not self._submission_thread.is_alive():
+                self._submission_thread = threading.Thread(
+                    target=self._submission_worker,
+                    name="subject1-submission-builder",
+                    daemon=True,
+                )
+                self._submission_thread.start()
+            self._submission_condition.notify()
+
+    def _submission_worker(self) -> None:
+        while True:
+            with self._submission_condition:
+                while not self._submission_pending and not self.stop_event.is_set():
+                    self._submission_condition.wait()
+                if not self._submission_pending:
+                    return
+                mission_id, entry = min(
+                    self._submission_pending.items(), key=lambda item: item[1]["due"]
+                )
+                wait = entry["due"] - time.monotonic()
+                if wait > 0 and not self.stop_event.is_set():
+                    self._submission_condition.wait(wait)
+                    continue
+                del self._submission_pending[mission_id]
+            try:
+                result = update_subject1_submission(self.output, mission_id)
+                summary = json.loads(result.read_text(encoding="utf-8"))
+                feature_count = len(summary.get("features", []))
+                skipped_count = len(summary.get("metadata", {}).get("indoorTargets", []))
+                self._diagnostic(
+                    "科目一结果整理成功", {"mission_id": mission_id},
+                    uav_ids=sorted(entry["uav_ids"]), new_images=entry["count"],
+                    submission_path=str(result), feature_count=feature_count,
+                    skipped_count=skipped_count,
+                )
+                print(
+                    "科目一结果已更新：任务=%s，新增回传=%d，有效目标=%d，未纳入=%d，文件=%s"
+                    % (mission_id, entry["count"], feature_count, skipped_count, result),
+                    flush=True,
+                )
+            except Exception as exc:
+                # 原始 JPG/JSON 已落盘且 ACK；整理失败保留原始数据供后续重建。
+                attempt = entry.get("attempt", 0)
+                retry_delay = (2 ** attempt) if attempt < 3 and not self.stop_event.is_set() else None
+                if retry_delay is not None:
+                    with self._submission_condition:
+                        pending = self._submission_pending.get(mission_id)
+                        if pending is None:
+                            self._submission_pending[mission_id] = {
+                                "due": time.monotonic() + retry_delay,
+                                "count": entry["count"],
+                                "uav_ids": set(entry["uav_ids"]),
+                                "attempt": attempt + 1,
+                            }
+                        else:
+                            pending["count"] += entry["count"]
+                            pending["uav_ids"].update(entry["uav_ids"])
+                            pending["due"] = min(pending["due"], time.monotonic() + retry_delay)
+                        self._submission_condition.notify()
+                self._diagnostic(
+                    "科目一结果整理失败", {"mission_id": mission_id},
+                    uav_ids=sorted(entry["uav_ids"]), new_images=entry["count"],
+                    error=str(exc), retry_number=attempt + 1 if retry_delay is not None else None,
+                    retry_delay_sec=retry_delay,
+                )
+                next_step = "%.0f 秒后重试（第 %d/3 次）" % (retry_delay, attempt + 1) if retry_delay is not None else "重试已结束，请检查原始回传"
+                print("科目一结果整理失败：任务=%s，原因=%s；%s" % (mission_id, exc, next_step), flush=True)
 
     def serve_forever(self) -> None:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server:
@@ -196,7 +288,12 @@ class GroundImageReceiver:
 
                 try:
                     image_path = self._save_image(metadata, jpeg)
-                    self._diagnostic("图片及结果已保存", metadata, bytes=len(jpeg), image_path=str(image_path))
+                    self._diagnostic(
+                        "图片及结果已保存", metadata, bytes=len(jpeg), image_path=str(image_path),
+                        file_name=image_path.name,
+                        target_id=metadata.get("target_id"), global_id=metadata.get("global_id"),
+                        image_stamp=metadata.get("image_stamp"),
+                    )
                     send_ack(client, True)
                     print(
                         "图片已保存：UAV%s，请求=%s，字节=%d，路径=%s"
@@ -209,7 +306,12 @@ class GroundImageReceiver:
                         flush=True,
                     )
                 except (OSError, ValueError) as exc:
-                    self._diagnostic("图片保存或确认失败", metadata, error=str(exc))
+                    self._diagnostic(
+                        "图片保存或确认失败", metadata, error=str(exc),
+                        file_name=metadata.get("file_name"),
+                        target_id=metadata.get("target_id"), global_id=metadata.get("global_id"),
+                        image_stamp=metadata.get("image_stamp"),
+                    )
                     print("图片保存失败：%s" % exc, flush=True)
                     try:
                         send_ack(client, False)
@@ -349,29 +451,36 @@ class GroundImageReceiver:
 
         image_path = target_dir / file_name
         metadata_path = image_path.with_suffix(".json")
-        image_tmp = image_path.with_suffix(".jpg.part")
-        metadata_tmp = metadata_path.with_suffix(".json.part")
-
-        with image_tmp.open("wb") as stream:
-            stream.write(jpeg)
-            stream.flush()
-            os.fsync(stream.fileno())
-        os.replace(image_tmp, image_path)
+        image_fd, image_tmp = tempfile.mkstemp(prefix=file_name + "-", suffix=".jpg.part", dir=str(target_dir))
+        try:
+            with os.fdopen(image_fd, "wb") as stream:
+                stream.write(jpeg)
+                stream.flush()
+                os.fsync(stream.fileno())
+            os.replace(image_tmp, image_path)
+        finally:
+            if os.path.exists(image_tmp):
+                os.unlink(image_tmp)
 
         public_metadata = dict(metadata)
         public_metadata.pop("auth_token", None)
-        with metadata_tmp.open("w", encoding="utf-8") as stream:
-            json.dump(public_metadata, stream, ensure_ascii=False, indent=2)
-            stream.write("\n")
-            stream.flush()
-            os.fsync(stream.fileno())
-        os.replace(metadata_tmp, metadata_path)
-        if str(metadata.get("mission_id", "")).startswith("subject1"):
-            try:
-                update_subject1_submission(self.output, metadata["mission_id"])
-            except (OSError, ValueError, TypeError) as exc:
-                # 原始 JPG/JSON 已安全落盘；提交包生成失败不丢弃本次回传。
-                print("科目一提交文件更新失败：%s" % exc, flush=True)
+        metadata_fd, metadata_tmp = tempfile.mkstemp(prefix=metadata_path.name + "-", suffix=".json.part", dir=str(target_dir))
+        try:
+            with os.fdopen(metadata_fd, "w", encoding="utf-8") as stream:
+                json.dump(public_metadata, stream, ensure_ascii=False, indent=2)
+                stream.write("\n")
+                stream.flush()
+                os.fsync(stream.fileno())
+            os.replace(metadata_tmp, metadata_path)
+        finally:
+            if os.path.exists(metadata_tmp):
+                os.unlink(metadata_tmp)
+        try:
+            self._queue_subject1_submission(metadata)
+        except Exception as exc:
+            # 后台整理线程故障不否定已安全落盘的回传。
+            self._diagnostic("科目一结果整理启动失败", metadata, error=str(exc))
+            print("科目一结果整理启动失败：任务=%s，原因=%s" % (metadata.get("mission_id", ""), exc), flush=True)
         image_count = len(list(target_dir.glob("*.jpg")))
         self._set_mission_image_count(metadata, image_count)
         return image_path
@@ -380,6 +489,10 @@ class GroundImageReceiver:
         self.stop_event.set()
         if self.server is not None:
             self.server.close()
+        with self._submission_condition:
+            self._submission_condition.notify_all()
+        if self._submission_thread is not None and threading.current_thread() is not self._submission_thread:
+            self._submission_thread.join(timeout=5.0)
 
 
 def parse_args():

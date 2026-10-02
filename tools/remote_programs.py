@@ -12,17 +12,32 @@ import time
 NAMES = {"onboard": "竞赛程序机载端", "detection": "目标检测程序", "flight": "自主飞行指令程序"}
 
 
+def detection_command(uid):
+    return ("source ~/SpireCV_bj/src/spirecv-ros/devel/setup.bash\n"
+            "exec roslaunch spirecv_ros uav_yolo26_botsort_geolocation.launch "
+            "uav_id:=%d runtime_mode:=debug debug_save_dir:=/tmp/yolo_debug" % uid)
+
+
 def command_for(key, uid, model, commands=None):
     if commands is not None and key in commands:
         command = commands[key]
         if not isinstance(command, str) or not command.strip() or '\x00' in command:
             raise ValueError('%s启动指令必须为非空字符串' % NAMES[key])
+        if key == 'detection' and (command == (
+                'source ~/SpireCV_bj/src/spirecv-ros/devel/setup.bash && exec roslaunch '
+                'spirecv_ros uav_yolo26_botsort_geolocation.launch uav_id:={uav_id}')
+                or command == detection_command(2)
+                or re.fullmatch(r'roslaunch spirecv_ros uav_yolo26_botsort_geolocation\.launch '
+                                r'uav_id:=(?:[1-6]|\{uav_id\}) runtime_mode:=debug '
+                                r'debug_save_dir:=/tmp/yolo_debug', command)):
+            # 已部署电脑会保留本机配置；只兼容升级已知旧默认指令，不改动其他自定义指令。
+            return detection_command(uid)
         # 仅替换约定变量，保留 Bash 的 ${HOME}、函数或其他花括号。
         return command.replace('{uav_id}', str(uid)).replace('{model}', model)
     if key == "onboard":
         return "exec bash ./tools/start_onboard_stack.sh --model %s --expect-uav-id %d --direct --enable-motion" % (model, uid)
     if key == "detection":
-        return "source ~/SpireCV_bj/src/spirecv-ros/devel/setup.bash && exec roslaunch spirecv_ros uav_yolo26_botsort_geolocation.launch uav_id:=%d" % uid
+        return detection_command(uid)
     # 兼容未提供启动配置的旧地面端；竞赛程序不按场景强制切换程序 B 模式。
     return "source ~/recon_ws/devel/setup.bash && exec roslaunch px4_north_camera p600_gx40_position_pid_reconnaissance.launch uav_id:=%d flight_mode:=outdoor" % uid
 
