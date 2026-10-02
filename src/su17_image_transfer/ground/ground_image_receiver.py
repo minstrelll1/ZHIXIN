@@ -46,6 +46,7 @@ class GroundImageReceiver:
         allowed_uav_ids=None,
         status_interval: float = 5.0,
         client_timeout: float = 15.0,
+        publisher_dedup: bool = False,
     ) -> None:
         self.bind = bind
         self.audit = None
@@ -59,6 +60,7 @@ class GroundImageReceiver:
         self.server = None
         self.status_interval = status_interval
         self.client_timeout = client_timeout
+        self.publisher_dedup = bool(publisher_dedup)
         self.mission_lock = threading.Lock()
         self.mission_states = {}
         self._submission_condition = threading.Condition()
@@ -117,15 +119,24 @@ class GroundImageReceiver:
                     continue
                 del self._submission_pending[mission_id]
             try:
-                result = update_subject1_submission(self.output, mission_id)
+                if self.publisher_dedup:
+                    result = update_subject1_submission(self.output, mission_id,
+                                                        publisher_dedup=True)
+                else:
+                    result = update_subject1_submission(self.output, mission_id)
                 summary = json.loads(result.read_text(encoding="utf-8"))
                 feature_count = len(summary.get("features", []))
                 skipped_count = len(summary.get("metadata", {}).get("indoorTargets", []))
+                decisions = (json.loads((result.parent / "dedup-decisions.json").read_text(encoding="utf-8"))
+                             if self.publisher_dedup else {})
                 self._diagnostic(
                     "科目一结果整理成功", {"mission_id": mission_id},
                     uav_ids=sorted(entry["uav_ids"]), new_images=entry["count"],
                     submission_path=str(result), feature_count=feature_count,
                     skipped_count=skipped_count,
+                    raw_count=decisions.get("raw_count"),
+                    merged_count=len(decisions.get("merged", [])),
+                    omitted_count=len(decisions.get("omitted", [])),
                 )
                 print(
                     "科目一结果已更新：任务=%s，新增回传=%d，有效目标=%d，未纳入=%d，文件=%s"

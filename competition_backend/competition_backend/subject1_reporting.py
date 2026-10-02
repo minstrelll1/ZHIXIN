@@ -1,10 +1,12 @@
 """科目一：校验、冻结 UTF-8 JSON 文件，支持人工与赛时定时上报。"""
 from datetime import datetime
+import copy
 import hashlib
 import http.client
 import importlib.util
 import json
 import math
+import os
 from pathlib import Path
 import re
 import threading
@@ -15,13 +17,14 @@ import uuid
 
 from fastapi import APIRouter, Body, HTTPException, Request
 from fastapi.responses import FileResponse
+from competition_shared.subject1_dedup import consolidate
 
 ENDPOINT = 'http://192.168.1.199:8001/api/v1/public/recognition-results'
 TEAM_NAME = '北方自控智群队'
 MAX_BYTES = 16 * 1024 * 1024
 
 
-def validate_document(document):
+def validate_document(document, *, allow_excess=False):
     def require(condition, message):
         if not condition:
             raise ValueError(message)
@@ -49,7 +52,7 @@ def validate_document(document):
         require(document['crs'] == {'type': 'lonlat', 'properties': {'lonlat': 'EPSG:4326'}}, '坐标系须为 EPSG:4326')
     features = document.get('features')
     require(isinstance(features, list) and len(features) > 0, '没有有效目标结果，不能上报空文件')
-    require(len(features) <= 16, '赛事结果最多包含 16 个目标，请先核对并整理')
+    require(allow_excess or len(features) <= 16, '赛事结果最多包含 16 个目标，请先核对并整理')
     seen = set()
     counts = {'fixed': 0, 'moving': 0}
     for index, feature in enumerate(features, 1):
@@ -92,6 +95,19 @@ def validate_document(document):
     return dict(target_count=len(features), **counts)
 
 
+def _write_intermediate(path, document):
+    temporary = path.with_name(path.name + '.' + uuid.uuid4().hex + '.part')
+    try:
+        with temporary.open('w', encoding='utf-8') as stream:
+            json.dump(document, stream, ensure_ascii=False, indent=2, allow_nan=False)
+            stream.write('\n')
+            stream.flush()
+            os.fsync(stream.fileno())
+        temporary.replace(path)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
 class NoRedirect(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, *args, **kwargs):
         return None
@@ -100,9 +116,10 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
 class Subject1Reporter:
     _draft_file_lock = threading.Lock()
 
-    def __init__(self, image_root, audit=None):
+    def __init__(self, image_root, audit=None, publisher_dedup=False):
         self.audit = audit
         self.image_root = Path(image_root).resolve()
+        self.publisher_dedup = bool(publisher_dedup)
         self.root = self.image_root / 'subject1_reports'
         self.lock = threading.Lock()
 
@@ -126,7 +143,8 @@ class Subject1Reporter:
         spec = importlib.util.spec_from_file_location('subject1_export', source)
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
-        path = module.update_subject1_submission(self.image_root, mission_id, team_name)
+        path = module.update_subject1_submission(self.image_root, mission_id, team_name,
+                                                 publisher_dedup=self.publisher_dedup)
         document = json.loads(path.read_text(encoding='utf-8'))
         if self.audit:
             self.audit.record('科目一赛事结果已生成', mission_id=mission_id,
@@ -135,7 +153,31 @@ class Subject1Reporter:
                                               for f in document.get('features', [])))
         return document
 
-    def prepare(self, document):
+    def _is_local_consolidated_result(self, document):
+        # 操作员可能把本机生成的 target-submission.json 再从文件导入。
+        # 它已按 UAV 来源去重，不能在缺少来源字段的副本上再次合并。
+        if not self.publisher_dedup:
+            return False
+        for path in self.image_root.glob('subject1_submissions/*/target-submission.json'):
+            try:
+                if json.loads(path.read_text(encoding='utf-8')) == document:
+                    return True
+            except (OSError, ValueError):
+                continue
+        return False
+
+    def prepare(self, document, *, already_deduplicated=False):
+        # 本机生成的结果已经按 UAV 来源去重；再次去重会误合并同机近邻目标。
+        # 人工导入的原始赛事 JSON 则在此完成去重和置信度排序。
+        already_deduplicated = already_deduplicated or self._is_local_consolidated_result(document)
+        validate_document(document, allow_excess=not already_deduplicated)
+        original = copy.deepcopy(document)
+        if already_deduplicated:
+            document = original
+            decisions = {'raw_count': len(document['features']),
+                         'result_count': len(document['features']), 'merged': [], 'omitted': []}
+        else:
+            document, decisions = consolidate(document)
         summary = validate_document(document)
         try:
             raw = (json.dumps(document, ensure_ascii=False, indent=2, allow_nan=False) + '\n').encode('utf-8')
@@ -157,8 +199,12 @@ class Subject1Reporter:
                     temporary.replace(path)
                 finally:
                     temporary.unlink(missing_ok=True)
+            if decisions['merged'] or decisions['omitted']:
+                _write_intermediate(self.root / (digest + '.dedup.json'), decisions)
+                _write_intermediate(self.root / (digest + '.raw.json'), original)
         if self.audit:
-            self.audit.record('赛事结果文件已整理', draft_id=digest, file=str(path), **summary)
+            self.audit.record('赛事结果文件已整理', draft_id=digest, file=str(path),
+                              merged_count=len(decisions['merged']), omitted_count=len(decisions['omitted']), **summary)
         metadata = document.get('metadata')
         skipped = metadata.get('indoorTargets', []) if isinstance(metadata, dict) else []
         return dict(draft_id=digest, team_name=document['name'], filename='target-submission.json',
@@ -223,8 +269,10 @@ class AutoSubject1Reporter:
     INTERVAL_SECONDS = 5
     ATTEMPT_COUNT = 5
 
-    def __init__(self, image_root, competition_clock, is_publisher, audit=None):
+    def __init__(self, image_root, competition_clock, is_publisher, audit=None,
+                 publisher_dedup=False):
         self.image_root = image_root
+        self.publisher_dedup = bool(publisher_dedup)
         self.clock = competition_clock
         self.is_publisher = is_publisher
         self.audit = audit
@@ -312,10 +360,11 @@ class AutoSubject1Reporter:
     def _submit_once(self, session_id, mission_id, number):
         # 每轮重新整理最新已回传目标；各轮独立实例，20 秒请求超时不会阻塞 5 秒间隔。
         try:
-            reporter = Subject1Reporter(self.image_root, audit=self.audit)
+            reporter = Subject1Reporter(self.image_root, audit=self.audit,
+                                        publisher_dedup=self.publisher_dedup)
             with self._prepare_lock:
                 document = reporter.build(mission_id, TEAM_NAME)
-                prepared = reporter.prepare(document)
+                prepared = reporter.prepare(document, already_deduplicated=self.publisher_dedup)
             current = self.clock.snapshot()
             if (self._stop.is_set() or current.get('session_id') != session_id
                     or not current.get('is_authority') or not self.is_publisher()):
@@ -348,8 +397,9 @@ class AutoSubject1Reporter:
                         last_result=dict(self._last_result) if self._last_result else None)
 
 
-def reporting_router(image_root, require_publisher, audit=None, auto_reporter=None):
-    reporter = Subject1Reporter(image_root, audit=audit)
+def reporting_router(image_root, require_publisher, audit=None, auto_reporter=None,
+                     publisher_dedup=False):
+    reporter = Subject1Reporter(image_root, audit=audit, publisher_dedup=publisher_dedup)
     router = APIRouter(prefix='/api/v1/subject1/report', tags=['科目一结果上报'])
     def permitted(request):
         from urllib.parse import urlparse
@@ -363,6 +413,7 @@ def reporting_router(image_root, require_publisher, audit=None, auto_reporter=No
     def status(request: Request):
         permitted(request)
         return dict(team_name=TEAM_NAME, endpoint=ENDPOINT, missions=reporter.missions(),
+                    results_directory=str(reporter.image_root),
                     automatic=auto_reporter.snapshot() if auto_reporter is not None else None)
     @router.post('/prepare')
     def prepare(request: Request, payload: dict = Body(...)):
@@ -372,12 +423,13 @@ def reporting_router(image_root, require_publisher, audit=None, auto_reporter=No
             if not isinstance(team_name, str) or not team_name.strip():
                 raise ValueError('参赛队名不能为空')
             document = payload.get('document')
-            if document is None:
+            built_here = document is None
+            if built_here:
                 document = reporter.build(payload.get('mission_id'), team_name.strip())
             if not isinstance(document, dict):
                 raise ValueError('JSON 顶层须是对象')
             document['name'] = team_name.strip()
-            return reporter.prepare(document)
+            return reporter.prepare(document, already_deduplicated=built_here and publisher_dedup)
         except (ValueError, OSError) as error:
             if audit:
                 audit.record('科目一赛事结果整理失败', mission_id=payload.get('mission_id'), error=str(error))

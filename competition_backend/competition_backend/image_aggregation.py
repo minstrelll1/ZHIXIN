@@ -3,7 +3,9 @@ from __future__ import annotations
 import hashlib
 import importlib.util
 import json
+import math
 import os
+import re
 import threading
 import time
 import urllib.parse
@@ -28,26 +30,59 @@ def _unchanged_file_sha256(path: str, size: int, mtime_ns: int) -> str:
     return sha256_file(Path(path))
 
 
-def local_image_manifest(root: Path, uav_id: int) -> List[Dict[str, Any]]:
-    """List completed image artifacts below exactly one UAV directory."""
+def local_image_manifest(
+    root: Path,
+    uav_id: int,
+    max_age_seconds: Optional[float] = None,
+    mission_id: Optional[str] = None,
+) -> List[Dict[str, Any]]:
+    """List completed artifacts for one UAV, optionally restricting recent files or a mission."""
+    root = root.resolve()
     base = (root / "UAV{}".format(int(uav_id))).resolve()
+    if max_age_seconds is not None:
+        max_age_seconds = float(max_age_seconds)
+        if not math.isfinite(max_age_seconds) or not 0 <= max_age_seconds <= 7 * 86400:
+            raise ValueError("图片清单时间范围必须在 0 秒至 7 天之间")
+        # 只与对端文件自己的时间比较，不依赖两台电脑时钟同步。
+        oldest_mtime = time.time() - max_age_seconds
+    else:
+        oldest_mtime = None
+    if mission_id is not None and not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,127}", mission_id):
+        raise ValueError("任务编号包含非法路径字符")
     if not base.exists():
         return []
+    if mission_id is not None:
+        mission_dir = (base / mission_id).resolve()
+        if base not in mission_dir.parents or not mission_dir.is_dir():
+            return []
+        directories = [mission_dir]
+    elif oldest_mtime is None:
+        directories = [base]
+    else:
+        # 接收器以原子替换保存新文件；新文件写入会更新任务目录的 mtime。
+        # 先排除旧任务目录，再计算单个文件的 SHA-256，避免每秒遍历历次比赛。
+        directories = [
+            path for path in sorted(base.iterdir())
+            if path.is_dir() and path.stat().st_mtime >= oldest_mtime
+        ]
     result = []
-    for path in sorted(base.rglob("*")):
-        if not path.is_file() or path.suffix.lower() not in (".jpg", ".jpeg", ".json"):
-            continue
-        resolved = path.resolve()
-        if base not in resolved.parents:
-            continue
-        stat = resolved.stat()
-        result.append(
-            {
-                "relative_path": resolved.relative_to(root.resolve()).as_posix(),
-                "size": stat.st_size,
-                "sha256": _unchanged_file_sha256(str(resolved), stat.st_size, stat.st_mtime_ns),
-            }
-        )
+    for directory in directories:
+        for path in sorted(directory.rglob("*")):
+            if not path.is_file() or path.suffix.lower() not in (".jpg", ".jpeg", ".json"):
+                continue
+            resolved = path.resolve()
+            if base not in resolved.parents:
+                continue
+            stat = resolved.stat()
+            if oldest_mtime is not None and stat.st_mtime < oldest_mtime:
+                continue
+            result.append(
+                {
+                    "relative_path": resolved.relative_to(root).as_posix(),
+                    "size": stat.st_size,
+                    "sha256": _unchanged_file_sha256(str(resolved), stat.st_size, stat.st_mtime_ns),
+                }
+            )
     return result
 
 
@@ -73,6 +108,9 @@ class PeerImageCollector:
         peer_token: str,
         interval_sec: float = 1.0,
         should_collect: Optional[Callable[[], bool]] = None,
+        mission_filter: Optional[Callable[[str], bool]] = None,
+        publisher_dedup: bool = False,
+        session_started_monotonic: Optional[float] = None,
     ) -> None:
         self.root = root.resolve()
         self.local_uav_id = int(local_uav_id)
@@ -80,6 +118,10 @@ class PeerImageCollector:
         self.peer_token = peer_token
         self.interval_sec = max(1.0, float(interval_sec))
         self.should_collect = should_collect or (lambda: True)
+        self.mission_filter = mission_filter or (lambda _mission_id: True)
+        self.publisher_dedup = bool(publisher_dedup)
+        self.session_started_monotonic = session_started_monotonic
+        self._seen_peer_missions: Dict[int, Set[str]] = {}
         self._stop_event = threading.Event()
         self._threads: Dict[int, threading.Thread] = {}
         self._aggregate_thread: Optional[threading.Thread] = None
@@ -166,13 +208,44 @@ class PeerImageCollector:
         )
 
     def _sync_peer(self, uav_id: int, base_url: str) -> None:
-        manifest_url = "{}/api/v1/peer/images/manifest?uav_id={}".format(
-            base_url.rstrip("/"), uav_id
-        )
+        query = {"uav_id": uav_id}
+        if self.session_started_monotonic is not None:
+            # 用对端自己的文件年龄比较，避免六台地面电脑时钟存在偏差。
+            query["max_age_seconds"] = "%.3f" % max(
+                0.0, time.monotonic() - self.session_started_monotonic + 2.0)
+        manifest_url = "{}/api/v1/peer/images/manifest?{}".format(
+            base_url.rstrip("/"), urllib.parse.urlencode(query))
         with urllib.request.urlopen(self._request(manifest_url), timeout=4.0) as response:
-            manifest = json.loads(response.read().decode("utf-8"))["files"]
+            payload = json.loads(response.read().decode("utf-8"))
+        if self.session_started_monotonic is not None and payload.get("filter_applied") is not True:
+            raise RuntimeError("对端图片清单尚未支持按本次启动时间筛选，请更新该地面终端")
+        manifest = payload["files"]
+        # 本次启动后第一次看到某个任务的新回传时，补齐该任务较早的图片/JSON，
+        # 以保留完整轨迹；其他旧任务始终不进入本次成果目录。
+        new_missions = set()
+        if self.session_started_monotonic is not None:
+            known = self._seen_peer_missions.setdefault(uav_id, set())
+            for item in manifest:
+                parts = Path(str(item.get("relative_path", ""))).parts
+                if len(parts) == 3 and parts[1].startswith("subject1") \
+                        and self.mission_filter(parts[1]) and parts[1] not in known:
+                    new_missions.add(parts[1])
+            all_items = {str(item["relative_path"]): item for item in manifest}
+            for mission_id in sorted(new_missions):
+                full_query = urllib.parse.urlencode({"uav_id": uav_id, "mission_id": mission_id})
+                full_url = "{}/api/v1/peer/images/manifest?{}".format(base_url.rstrip("/"), full_query)
+                with urllib.request.urlopen(self._request(full_url), timeout=15.0) as response:
+                    full = json.loads(response.read().decode("utf-8"))
+                for item in full["files"]:
+                    all_items[str(item["relative_path"])] = item
+            manifest = list(all_items.values())
         for item in manifest:
             relative = str(item["relative_path"])
+            parts = Path(relative).parts
+            if len(parts) != 3 or not self.mission_filter(parts[1]):
+                continue
+            if self.session_started_monotonic is not None and not parts[1].startswith("subject1"):
+                continue
             expected_size = int(item["size"])
             expected_sha = str(item["sha256"])
             target = (self.root / Path(relative)).resolve()
@@ -213,9 +286,11 @@ class PeerImageCollector:
                 self._queue_mission(target.parent.name)
             if getattr(self, "audit", None):
                 self.audit.record("跨地面端结果文件已同步", uav_id=uav_id, file=relative, bytes=expected_size, sha256=expected_sha)
+        if new_missions:
+            self._seen_peer_missions[uav_id].update(new_missions)
 
     def _queue_mission(self, mission_id: str) -> None:
-        if mission_id.startswith("subject1"):
+        if mission_id.startswith("subject1") and self.mission_filter(mission_id):
             with self._state_lock:
                 self._pending_missions.add(mission_id)
             self._pending_event.set()
@@ -268,7 +343,13 @@ class PeerImageCollector:
                     if getattr(self, "audit", None):
                         if recovered:
                             self.audit.record("科目一跨终端结果汇总恢复", mission_id=mission_id)
-                        self.audit.record("科目一跨终端结果已汇总", mission_id=mission_id, file=str(path))
+                        decisions = {}
+                        if self.publisher_dedup:
+                            decisions = json.loads((path.parent / "dedup-decisions.json").read_text(encoding="utf-8"))
+                        self.audit.record("科目一跨终端结果已汇总", mission_id=mission_id, file=str(path),
+                                          raw_count=decisions.get("raw_count"),
+                                          merged_count=len(decisions.get("merged", [])),
+                                          omitted_count=len(decisions.get("omitted", [])))
                 except Exception as error:
                     with self._state_lock:
                         changed = self._aggregation_errors.get(mission_id) != str(error)
@@ -285,4 +366,5 @@ class PeerImageCollector:
             raise RuntimeError("无法加载科目一结果整理模块")
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
-        return module.update_subject1_submission(self.root, mission_id)
+        return module.update_subject1_submission(self.root, mission_id,
+                                                 publisher_dedup=self.publisher_dedup)

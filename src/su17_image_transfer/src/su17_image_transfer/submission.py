@@ -51,6 +51,11 @@ def _number(value):
     return value if math.isfinite(value) else None
 
 
+def _confidence(metadata):
+    value = _number(metadata.get("confidence", metadata.get("score")))
+    return value if value is not None and 0 <= value <= 1 else None
+
+
 def _iso_from_metadata(metadata):
     stamp = metadata.get("image_stamp") or {}
     try:
@@ -123,7 +128,7 @@ def _all_metadata(output_root, mission_id):
             continue
 
 
-def update_subject1_submission(output_root, mission_id, team_name=None):
+def update_subject1_submission(output_root, mission_id, team_name=None, *, publisher_dedup=False):
     """生成指定任务的 JSON 和 images 目录，采用进程锁与临时文件原子替换。"""
     output_root = Path(output_root).resolve()
     mission_id = str(mission_id)
@@ -133,10 +138,26 @@ def update_subject1_submission(output_root, mission_id, team_name=None):
     mission_dir = output_root / "subject1_submissions" / mission_id
     mission_dir.mkdir(parents=True, exist_ok=True)
     with _submission_lock(mission_dir):
-        return _update_subject1_submission_locked(output_root, mission_dir, mission_id, team_name)
+        return _update_subject1_submission_locked(output_root, mission_dir, mission_id,
+                                                  team_name, publisher_dedup)
 
 
-def _update_subject1_submission_locked(output_root, mission_dir, mission_id, team_name):
+def _atomic_json(path, document):
+    fd, temporary = tempfile.mkstemp(prefix=path.stem + "-", suffix=".json.part", dir=str(path.parent))
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as stream:
+            json.dump(document, stream, ensure_ascii=False, indent=2, allow_nan=False)
+            stream.write("\n")
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, path)
+    finally:
+        if os.path.exists(temporary):
+            os.unlink(temporary)
+
+
+def _update_subject1_submission_locked(output_root, mission_dir, mission_id, team_name,
+                                       publisher_dedup=False):
     image_dir = mission_dir / "images"
     image_dir.mkdir(parents=True, exist_ok=True)
     records = {}
@@ -167,11 +188,16 @@ def _update_subject1_submission_locked(output_root, mission_dir, mission_id, tea
                     if os.path.exists(temporary):
                         os.unlink(temporary)
         rank = (timestamp or "", str(source_json))
-        item = records.setdefault(target_id, {
+        source_uav = source_json.parent.parent.name
+        record_key = (source_uav, target_id) if publisher_dedup else target_id
+        item = records.setdefault(record_key, {
+            "target_id": target_id, "source_uav": source_uav,
             "points": [], "latest": metadata, "latest_rank": rank,
             "category_metadata": None, "category_rank": ("", ""),
             "moving": False, "image": None, "image_rank": ("", ""),
+            "observations": [],
         })
+        item["observations"].append((metadata, "./images/" + image_name if image_path else None, rank))
         if rank >= item["latest_rank"]:
             item["latest"], item["latest_rank"] = metadata, rank
         extra = metadata.get("extra") if isinstance(metadata.get("extra"), dict) else {}
@@ -193,16 +219,30 @@ def _update_subject1_submission_locked(output_root, mission_dir, mission_id, tea
 
     features = []
     skipped_indoor = []
-    for target_id, item in sorted(records.items()):
+    for _, item in sorted(records.items()):
+        target_id = item["target_id"]
         metadata = item["category_metadata"] or item["latest"]
         moving = item["moving"]
         points = sorted(item["points"], key=lambda point: point["timestamp"])
+        matching_observations = [
+            (observation, image, observed_rank)
+            for observation, image, observed_rank in item["observations"]
+            if _target_model(observation) == _target_model(metadata)
+            and str(observation.get("target_type") or observation.get("category") or "其他")
+                == str(metadata.get("target_type") or metadata.get("category") or "其他")
+        ]
+        best_observation, best_image, _ = max(
+            matching_observations,
+            key=lambda entry: (_confidence(entry[0]) if _confidence(entry[0]) is not None else -1.0,
+                               entry[2]),
+        )
+        confidence = _confidence(best_observation)
         properties = {
             "targetCategory": "移动" if moving else "固定",
             "targetType": str(metadata.get("target_type") or metadata.get("category") or "其他"),
             "targetModel": _target_model(metadata),
-            "imagePath": item["image"],
-            "confidence": _number(metadata.get("confidence", metadata.get("score"))),
+            "imagePath": best_image or item["image"],
+            "confidence": confidence,
         }
         # 可选字段没有值时省略，不向赛事接口发送 null。
         properties = {key: value for key, value in properties.items() if value is not None}
@@ -226,7 +266,10 @@ def _update_subject1_submission_locked(output_root, mission_dir, mission_id, tea
             # 坐标和时间必须来自同一条真实反馈；固定目标采用最近一次有效点。
             properties["timestamp"] = points[-1]["timestamp"]
             geometry = {"type": "Point", "coordinates": points[-1]["coordinates"]}
-        features.append({"type": "Feature", "id": target_id, "geometry": geometry, "properties": properties})
+        feature = {"type": "Feature", "id": target_id, "geometry": geometry, "properties": properties}
+        if publisher_dedup:
+            feature["_source_uav"] = item["source_uav"]
+        features.append(feature)
 
     document = {
         "type": "FeatureCollection",
@@ -244,16 +287,12 @@ def _update_subject1_submission_locked(output_root, mission_dir, mission_id, tea
             "indoorTargets": skipped_indoor,
         },
     }
+    if publisher_dedup:
+        from competition_shared.subject1_dedup import consolidate
+
+        _atomic_json(mission_dir / "raw-targets.json", document)
+        document, decisions = consolidate(document)
+        _atomic_json(mission_dir / "dedup-decisions.json", decisions)
     target = mission_dir / "target-submission.json"
-    fd, temporary = tempfile.mkstemp(prefix="target-submission-", suffix=".json.part", dir=str(mission_dir))
-    try:
-        with os.fdopen(fd, "w", encoding="utf-8") as stream:
-            json.dump(document, stream, ensure_ascii=False, indent=2, allow_nan=False)
-            stream.write("\n")
-            stream.flush()
-            os.fsync(stream.fileno())
-        os.replace(temporary, target)
-    finally:
-        if os.path.exists(temporary):
-            os.unlink(temporary)
+    _atomic_json(target, document)
     return target

@@ -350,10 +350,14 @@ def create_app(environment=None, audit=None) -> FastAPI:
     image_root = Path(
         env.get("COMPETITION_IMAGE_ROOT", str(PACKAGE_ROOT.parent / "received_images"))
     )
+    publisher_results = env.get("COMPETITION_PUBLISHER_RESULTS") == "1"
+    results_started_monotonic = float(env.get("COMPETITION_RESULTS_STARTED_MONOTONIC", time.monotonic()))
+
     auto_subject1_reporter = AutoSubject1Reporter(
         image_root, competition_clock,
         lambda: bool(operator_state["configured"] and operator_state["task_publisher"]),
         audit=audit,
+        publisher_dedup=publisher_results,
     )
     image_collector = (
         PeerImageCollector(
@@ -363,6 +367,8 @@ def create_app(environment=None, audit=None) -> FastAPI:
             peer_token=peer_token,
             interval_sec=float(env.get("COMPETITION_IMAGE_SYNC_INTERVAL", "1")),
             should_collect=lambda: bool(operator_state["configured"] and operator_state["task_publisher"]),
+            session_started_monotonic=results_started_monotonic if publisher_results else None,
+            publisher_dedup=publisher_results,
         )
         if isinstance(adapter, DistributedFleetAdapter)
         else None
@@ -750,7 +756,8 @@ def create_app(environment=None, audit=None) -> FastAPI:
         return role
 
     app.include_router(reporting_router(image_root, _require_results_publisher, audit=audit,
-                                        auto_reporter=auto_subject1_reporter))
+                                        auto_reporter=auto_subject1_reporter,
+                                        publisher_dedup=publisher_results))
 
     def _verify_peer_publisher(node_id: str) -> Dict[str, Any]:
         if not operator_selection_required:
@@ -817,6 +824,8 @@ def create_app(environment=None, audit=None) -> FastAPI:
         if before["configured"] and (before["ground_terminal_id"], before["model"], before["task_publisher"]) == (selected_terminal, selected_type, selected_publisher):
             # 飞行期间刷新页面只确认原角色，不切换身份、不重写配置。
             return before
+        if operator_selection_required and before["configured"] and selected_publisher != before["task_publisher"]:
+            raise HTTPException(status_code=409, detail="切换任务发布角色需重启地面程序，以建立独立的比赛成果目录")
         _require_idle_for_configuration()
         mission = orchestrator.snapshot().get("mission") or {}
         if mission.get("uavs") and mission.get("phase") in ("planned", "preflight_ready"):
@@ -1626,12 +1635,22 @@ def create_app(environment=None, audit=None) -> FastAPI:
 
     @app.get("/api/v1/peer/images/manifest", include_in_schema=False)
     def peer_image_manifest(
-        uav_id: int, x_competition_peer_token: str = Header(default="")
+        uav_id: int,
+        max_age_seconds: Optional[float] = None,
+        mission_id: Optional[str] = None,
+        x_competition_peer_token: str = Header(default=""),
     ) -> Dict[str, Any]:
         _require_peer_token(x_competition_peer_token)
         if not isinstance(adapter, DistributedFleetAdapter) or uav_id != local_uav_id:
             raise HTTPException(status_code=404, detail="UAV is not local to this computer")
-        return {"uav_id": uav_id, "files": local_image_manifest(image_root, uav_id)}
+        try:
+            files = local_image_manifest(image_root, uav_id,
+                                         max_age_seconds=max_age_seconds,
+                                         mission_id=mission_id)
+        except ValueError as error:
+            raise HTTPException(status_code=422, detail=str(error)) from error
+        return {"uav_id": uav_id, "files": files,
+                "filter_applied": max_age_seconds is not None or mission_id is not None}
 
     @app.get("/api/v1/peer/images/file", include_in_schema=False)
     def peer_image_file(

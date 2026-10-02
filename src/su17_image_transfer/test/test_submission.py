@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 import tempfile
 import threading
+import time
 import unittest
 from concurrent.futures import ThreadPoolExecutor
 import importlib.util
@@ -11,6 +12,122 @@ from su17_image_transfer.submission import update_subject1_submission
 
 
 class SubmissionTest(unittest.TestCase):
+    def test_publisher_receiver_does_not_overwrite_deduplicated_submission(self):
+        package_root = Path(__file__).resolve().parents[1]
+        spec = importlib.util.spec_from_file_location(
+            "publisher_receiver_test", package_root / "ground" / "ground_image_receiver.py")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        with tempfile.TemporaryDirectory() as directory:
+            receiver = module.GroundImageReceiver("127.0.0.1", 0, Path(directory), "",
+                                                   status_interval=0, publisher_dedup=True)
+            try:
+                mission_id = "subject1-publisher-receiver"
+                for uav_id, longitude, confidence in ((1, 121.660000, .4), (2, 121.660050, .9)):
+                    receiver._save_image(dict(uav_id=uav_id, mission_id=mission_id,
+                                              request_id="target-%d" % uav_id,
+                                              target_type="车辆", target_model="车辆1",
+                                              target_latitude=39.05, target_longitude=longitude,
+                                              confidence=confidence,
+                                              image_stamp=dict(secs=1_700_000_000, nsecs=0)),
+                                         b"image-%d" % uav_id)
+                result = Path(directory) / "subject1_submissions" / mission_id / "target-submission.json"
+                decisions = result.parent / "dedup-decisions.json"
+                deadline = time.monotonic() + 4
+                while (not decisions.is_file() or not json.loads(decisions.read_text(encoding="utf-8"))["merged"]) \
+                        and time.monotonic() < deadline:
+                    time.sleep(.05)
+                self.assertTrue(decisions.is_file())
+                self.assertEqual(1, len(json.loads(decisions.read_text(encoding="utf-8"))["merged"]))
+                self.assertEqual(1, len(json.loads(result.read_text(encoding="utf-8"))["features"]))
+                self.assertEqual(2, len(list(Path(directory).glob("UAV*/*/*.json"))))
+            finally:
+                receiver.stop()
+
+    def test_publisher_merges_only_matching_cross_uav_targets_and_keeps_raw_files(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            mission_id = "subject1-cross-uav"
+
+            def add(uid, name, target_id, model, lon, confidence, moving=False, reverse=False):
+                folder = root / ("UAV%d" % uid) / mission_id
+                folder.mkdir(parents=True, exist_ok=True)
+                count = 2 if moving else 1
+                for index in range(count):
+                    longitude = lon + ((1 - index) if reverse else index) * 0.0001 if moving else lon
+                    payload = dict(mission_id=mission_id, target_id=target_id,
+                                   target_type="车辆", target_model=model,
+                                   is_moving=moving, target_latitude=39.05,
+                                   target_longitude=longitude, confidence=confidence,
+                                   image_stamp=dict(secs=1_700_000_000 + index * 10, nsecs=0))
+                    stem = "%s-%d" % (name, index)
+                    (folder / (stem + ".json")).write_text(json.dumps(payload), encoding="utf-8")
+                    (folder / (stem + ".jpg")).write_bytes(("image-" + name).encode())
+
+            add(1, "fixed-low", "same-id", "车辆1", 121.660000, .42)
+            add(2, "fixed-high", "other-id", "车辆1", 121.660050, .91)
+            add(3, "far-same-id", "same-id", "车辆1", 121.660500, .8)
+            add(4, "other-model", "another-id", "车辆2", 121.660052, .75)
+            add(1, "moving-a", "moving-1", "车辆3", 121.661000, .55, moving=True)
+            add(2, "moving-b", "moving-2", "车辆3", 121.661045, .88, moving=True)
+            add(3, "moving-opposite", "moving-3", "车辆3", 121.661000, .72, moving=True, reverse=True)
+
+            path = update_subject1_submission(root, mission_id, publisher_dedup=True)
+            document = json.loads(path.read_text(encoding="utf-8"))
+            from competition_backend.subject1_reporting import validate_document
+            self.assertEqual(5, validate_document(document)["target_count"])
+            features = document["features"]
+            self.assertEqual(sorted((f["properties"]["confidence"] for f in features), reverse=True),
+                             [f["properties"]["confidence"] for f in features])
+            self.assertEqual(len({f["id"] for f in features}), 5)
+            self.assertEqual("other-id", features[0]["id"])
+            self.assertEqual(b"image-fixed-high", (path.parent / features[0]["properties"]["imagePath"]).read_bytes())
+            self.assertEqual(3, len([f for f in features if f["properties"]["targetCategory"] == "固定"]))
+            self.assertEqual(2, len([f for f in features if f["properties"]["targetCategory"] == "移动"]))
+            decisions = json.loads((path.parent / "dedup-decisions.json").read_text(encoding="utf-8"))
+            self.assertEqual(2, len(decisions["merged"]))
+            self.assertEqual(7, len(json.loads((path.parent / "raw-targets.json").read_text(encoding="utf-8"))["features"]))
+            self.assertEqual(10, len(list(root.glob("UAV*/*/*.json"))))
+
+    def test_clock_offset_dedup_does_not_interleave_uncalibrated_moving_tracks(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            mission_id = "subject1-clock-offset"
+            start = 1_700_000_000
+            for uav_id, target_id, offset, confidence in (
+                (1, "moving-low", 0, .5),
+                (2, "moving-high", 3, .9),
+            ):
+                folder = root / ("UAV%d" % uav_id) / mission_id
+                folder.mkdir(parents=True)
+                for index in range(11):
+                    metadata = dict(
+                        mission_id=mission_id, target_id=target_id,
+                        target_type="车辆", target_model="车辆1", is_moving=True,
+                        target_latitude=39.05,
+                        target_longitude=121.66 + index * .000058,
+                        confidence=confidence,
+                        image_stamp=dict(secs=start + index + offset, nsecs=0),
+                    )
+                    stem = "frame-%02d" % index
+                    (folder / (stem + ".json")).write_text(json.dumps(metadata), encoding="utf-8")
+                    (folder / (stem + ".jpg")).write_bytes(b"jpeg")
+
+            path = update_subject1_submission(root, mission_id, publisher_dedup=True)
+            document = json.loads(path.read_text(encoding="utf-8"))
+            from competition_backend.subject1_reporting import validate_document
+            self.assertEqual(1, validate_document(document)["target_count"])
+            feature = document["features"][0]
+            self.assertEqual("moving-high", feature["id"])
+            self.assertEqual(11, len(feature["properties"]["trackPoints"]))
+            self.assertEqual("2023-11-14T22:13:23.000Z", feature["properties"]["trackStartTime"])
+            longitudes = [point[0] for point in feature["geometry"]["coordinates"]]
+            self.assertEqual(sorted(longitudes), longitudes)
+            decisions = json.loads((path.parent / "dedup-decisions.json").read_text(encoding="utf-8"))
+            self.assertEqual(1, len(decisions["merged"]))
+            self.assertNotEqual(0, decisions["merged"][0]["time_offset_seconds"])
+            self.assertFalse(decisions["merged"][0]["track_points_merged"])
+
     def test_outdoor_static_and_moving_are_exported_in_template_shape(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

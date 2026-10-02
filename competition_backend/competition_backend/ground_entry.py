@@ -2,6 +2,7 @@
 import asyncio
 import importlib.util
 import os
+from datetime import datetime
 from pathlib import Path
 import socket
 import subprocess
@@ -84,7 +85,8 @@ class GroundServices:
         spec.loader.exec_module(module)
         self.receiver = module.GroundImageReceiver("0.0.0.0", self.local["image_port"],
                                                   Path(self.env["COMPETITION_IMAGE_ROOT"]), self.env["COMPETITION_TCP_TOKEN"],
-                                                  allowed_uav_ids=[self.local["uav_id"]])
+                                                  allowed_uav_ids=[self.local["uav_id"]],
+                                                  publisher_dedup=self.env.get("COMPETITION_PUBLISHER_RESULTS") == "1")
         self.receiver.audit = getattr(self, "audit", None)
         errors = []
         def receive():
@@ -161,6 +163,8 @@ class GroundServices:
 class GroundEntry:
     def __init__(self, environment=None, app_factory=None, services_factory=GroundServices, programs_factory=ProgramManager):
         self.env = dict(os.environ if environment is None else environment)
+        self.started_at_folder = datetime.now().astimezone().strftime("%Y-%m-%d_%H-%M-%S_%f")
+        self.started_at_monotonic = time.monotonic()
         self.audit = Diagnostics(self.env.get("COMPETITION_DIAGNOSTICS_DIR", str(ROOT / "ground_logs" / "sessions")))
         self.store = FleetStore(self.env.get("COMPETITION_FLEET_CONFIG", str(ROOT / "config/fleet.json")))
         self.app_factory = app_factory
@@ -354,10 +358,16 @@ class GroundEntry:
             if not self.env.get("COMPETITION_TCP_TOKEN") or not self.env.get("COMPETITION_PEER_TOKEN"):
                 raise RuntimeError("缺少机地认证配置，请使用 tools/start_ground.ps1 启动")
             local, overrides = ground_environment(self.store.read(), selection["ground_terminal_id"])
+            image_base = Path(self.env.get("COMPETITION_IMAGE_ROOT", str(ROOT / "received_images")))
+            image_root = image_base / self.started_at_folder if selection["task_publisher"] else image_base
             env = {**self.env, **overrides, "COMPETITION_GROUND_TERMINAL_ID": str(selection["ground_terminal_id"]),
                    "COMPETITION_FLEET_CONFIG": str(self.store.path),
                    "COMPETITION_ADAPTER": "distributed", "COMPETITION_ASYNC_OPERATOR_SELECTION": "1",
-                   "COMPETITION_TASK_PUBLISHER": "", "COMPETITION_IMAGE_ROOT": str(ROOT / "received_images")}
+                   "COMPETITION_TASK_PUBLISHER": "", "COMPETITION_IMAGE_ROOT": str(image_root),
+                   "COMPETITION_PUBLISHER_RESULTS": "1" if selection["task_publisher"] else "0",
+                   "COMPETITION_RESULTS_STARTED_MONOTONIC": str(self.started_at_monotonic)}
+            if selection["task_publisher"]:
+                self.audit.record("发布端成果归档目录已确定", directory=str(image_root))
             env['COMPETITION_OPERATOR_ENTERED_MONOTONIC'] = str(getattr(self, 'selection_entered_monotonic', time.monotonic()))
             if self.app_factory is None:
                 from .api import create_app

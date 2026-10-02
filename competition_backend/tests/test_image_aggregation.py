@@ -19,6 +19,86 @@ from competition_backend.image_aggregation import (
 
 
 class ImageAggregationTest(unittest.TestCase):
+    def test_manifest_recent_filter_prunes_old_missions_and_mission_filter_restores_all_files(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            old = root / "UAV2" / "subject1-old"
+            current = root / "UAV2" / "subject1-current"
+            old.mkdir(parents=True)
+            current.mkdir(parents=True)
+            old_file = old / "first.jpg"
+            old_file.write_bytes(b"old")
+            older_current_file = current / "first.jpg"
+            older_current_file.write_bytes(b"earlier target in active mission")
+            recent_file = current / "second.jpg"
+            recent_file.write_bytes(b"latest target")
+            stale = time.time() - 3600
+            for path in (old_file, older_current_file, old):
+                os.utime(path, (stale, stale))
+
+            with mock.patch("competition_backend.image_aggregation.sha256_file", wraps=sha256_file) as hasher:
+                recent = local_image_manifest(root, 2, max_age_seconds=120)
+                self.assertEqual(["UAV2/subject1-current/second.jpg"],
+                                 [item["relative_path"] for item in recent])
+                self.assertEqual(1, hasher.call_count)
+            full_current = local_image_manifest(root, 2, mission_id="subject1-current")
+            self.assertEqual({"UAV2/subject1-current/first.jpg", "UAV2/subject1-current/second.jpg"},
+                             {item["relative_path"] for item in full_current})
+            self.assertEqual(3, len(local_image_manifest(root, 2)))
+
+    def test_manifest_filter_arguments_are_bounded_and_paths_are_safe(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for invalid_age in (-1, float("nan"), float("inf"), 8 * 86400):
+                with self.subTest(max_age_seconds=invalid_age), self.assertRaises(ValueError):
+                    local_image_manifest(root, 2, max_age_seconds=invalid_age)
+            for invalid_mission in ("../outside", "..", "subject1/current", "subject1\\current", ""):
+                with self.subTest(mission_id=invalid_mission), self.assertRaises(ValueError):
+                    local_image_manifest(root, 2, mission_id=invalid_mission)
+
+    def test_peer_manifest_endpoint_exposes_filter_status_and_rejects_unsafe_values(self):
+        from fastapi.testclient import TestClient
+        from competition_backend.api import create_app
+        from competition_shared.fleet import apply_fixed_binding, default_fleet
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            image_root = root / "images"
+            image = image_root / "UAV2" / "subject1-active" / "target.jpg"
+            image.parent.mkdir(parents=True)
+            image.write_bytes(b"test")
+            fleet = default_fleet()
+            for uav_id in range(1, 7):
+                fleet = apply_fixed_binding(fleet, uav_id, "p600")
+            config_path = root / "fleet.json"
+            config_path.write_text(json.dumps(fleet), encoding="utf-8")
+            app = create_app({
+                "COMPETITION_ADAPTER": "distributed",
+                "COMPETITION_GROUND_TERMINAL_ID": "2",
+                "COMPETITION_FLEET_CONFIG": str(config_path),
+                "COMPETITION_DATA_DIR": str(root / "data"),
+                "COMPETITION_DIAGNOSTICS_DIR": str(root / "diagnostics"),
+                "COMPETITION_IMAGE_ROOT": str(image_root),
+                "COMPETITION_PEER_TOKEN": "peer-secret",
+            })
+            client = TestClient(app)
+            headers = {"X-Competition-Peer-Token": "peer-secret"}
+            endpoint = "/api/v1/peer/images/manifest?uav_id=2"
+            plain = client.get(endpoint, headers=headers)
+            self.assertEqual(200, plain.status_code, plain.text)
+            self.assertFalse(plain.json()["filter_applied"])
+            self.assertEqual(1, len(plain.json()["files"]))
+            recent = client.get(endpoint + "&max_age_seconds=60", headers=headers)
+            self.assertEqual(200, recent.status_code, recent.text)
+            self.assertTrue(recent.json()["filter_applied"])
+            selected = client.get(endpoint + "&mission_id=subject1-active", headers=headers)
+            self.assertEqual(200, selected.status_code, selected.text)
+            self.assertTrue(selected.json()["filter_applied"])
+            self.assertEqual(1, len(selected.json()["files"]))
+            self.assertEqual(422, client.get(endpoint + "&max_age_seconds=nan", headers=headers).status_code)
+            self.assertEqual(422, client.get(endpoint + "&mission_id=..%2Fescape", headers=headers).status_code)
+            self.assertEqual(403, client.get(endpoint).status_code)
+
     def test_manifest_is_scoped_to_one_uav_and_contains_sha256(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -77,6 +157,24 @@ class ImageAggregationTest(unittest.TestCase):
             }
             (peer_mission / "target.json").write_text(json.dumps(metadata), encoding="utf-8")
             (peer_mission / "target.jpg").write_bytes(b"test-jpeg")
+            earlier = dict(metadata, target_id="target-earlier", target_longitude=121.662,
+                           image_stamp={"secs": 1_699_999_990, "nsecs": 0})
+            (peer_mission / "earlier.json").write_text(json.dumps(earlier), encoding="utf-8")
+            (peer_mission / "earlier.jpg").write_bytes(b"earlier-jpeg")
+            old_time = time.time() - 3600
+            for path in peer_mission.glob("earlier.*"):
+                os.utime(path, (old_time, old_time))
+            old_mission = remote_root / "UAV2" / "subject1-previous-run"
+            old_mission.mkdir(parents=True)
+            (old_mission / "old.json").write_text(
+                json.dumps(dict(metadata, mission_id="subject1-previous-run")), encoding="utf-8")
+            (old_mission / "old.jpg").write_bytes(b"previous-run")
+            for path in old_mission.iterdir():
+                os.utime(path, (old_time, old_time))
+            os.utime(old_mission, (old_time, old_time))
+            other_subject = remote_root / "UAV2" / "subject2-new"
+            other_subject.mkdir(parents=True)
+            (other_subject / "unrelated.json").write_text("{}", encoding="utf-8")
 
             class PeerHandler(BaseHTTPRequestHandler):
                 def do_GET(self):
@@ -86,7 +184,14 @@ class ImageAggregationTest(unittest.TestCase):
                         self.send_error(403)
                         return
                     if parsed.path.endswith("/manifest"):
-                        raw = json.dumps({"files": local_image_manifest(remote_root, 2)}).encode()
+                        age = query.get("max_age_seconds", [None])[0]
+                        mission = query.get("mission_id", [None])[0]
+                        raw = json.dumps({
+                            "files": local_image_manifest(remote_root, 2,
+                                                          max_age_seconds=float(age) if age else None,
+                                                          mission_id=mission),
+                            "filter_applied": age is not None,
+                        }).encode()
                     elif parsed.path.endswith("/file"):
                         raw = resolve_image_file(remote_root, 2, query["relative_path"][0]).read_bytes()
                     else:
@@ -108,6 +213,7 @@ class ImageAggregationTest(unittest.TestCase):
                 local_root, 1, {2: "http://127.0.0.1:%d" % server.server_port},
                 "peer-secret", interval_sec=1.0,
                 should_collect=lambda: role["publisher"],
+                session_started_monotonic=time.monotonic(),
             )
             try:
                 collector.start()  # 不调用 activate；角色选定后应自行开始。
@@ -116,17 +222,25 @@ class ImageAggregationTest(unittest.TestCase):
                 role["publisher"] = True
                 output = local_root / "subject1_submissions" / "subject1-live" / "target-submission.json"
                 deadline = time.monotonic() + 5
-                while not output.exists() and time.monotonic() < deadline:
+                while time.monotonic() < deadline:
+                    if output.exists():
+                        ids = {item["id"] for item in json.loads(output.read_text(encoding="utf-8"))["features"]}
+                        if ids == {"target-2", "target-earlier"}:
+                            break
                     time.sleep(0.05)
                 self.assertTrue(output.exists(), collector.status())
                 self.assertEqual((local_root / "UAV2/subject1-live/target.jpg").read_bytes(), b"test-jpeg")
+                self.assertEqual((local_root / "UAV2/subject1-live/earlier.jpg").read_bytes(), b"earlier-jpeg")
+                self.assertFalse((local_root / "UAV2/subject1-previous-run").exists())
+                self.assertFalse((local_root / "UAV2/subject2-new").exists())
                 self.assertEqual([], list((local_root / "UAV2/subject1-live").glob("*.part-*")))
                 document = json.loads(output.read_text(encoding="utf-8"))
-                self.assertEqual(["target-2"], [item["id"] for item in document["features"]])
+                self.assertEqual({"target-2", "target-earlier"},
+                                 {item["id"] for item in document["features"]})
                 self.assertTrue((output.parent / "images").exists())
                 status = collector.status()
                 self.assertTrue(status["active"])
-                self.assertEqual(2, status["downloaded_count"])
+                self.assertEqual(4, status["downloaded_count"])
                 self.assertGreaterEqual(status["aggregated_count"], 1)
                 self.assertIsNotNone(status["peers"]["2"]["last_success_at"])
                 later = dict(metadata, target_id="target-3", target_longitude=121.661,
@@ -136,16 +250,16 @@ class ImageAggregationTest(unittest.TestCase):
                 deadline = time.monotonic() + 5
                 while time.monotonic() < deadline:
                     document = json.loads(output.read_text(encoding="utf-8"))
-                    if {item["id"] for item in document["features"]} == {"target-2", "target-3"}:
+                    if {item["id"] for item in document["features"]} == {"target-2", "target-3", "target-earlier"}:
                         break
                     time.sleep(0.05)
-                self.assertEqual({"target-2", "target-3"},
+                self.assertEqual({"target-2", "target-3", "target-earlier"},
                                  {item["id"] for item in document["features"]})
-                self.assertEqual(4, collector.status()["downloaded_count"])
+                self.assertEqual(6, collector.status()["downloaded_count"])
                 from competition_backend.subject1_reporting import Subject1Reporter, TEAM_NAME
                 reporter = Subject1Reporter(local_root)
                 prepared = reporter.prepare(reporter.build("subject1-live", TEAM_NAME))
-                self.assertEqual(prepared["target_count"], 2)
+                self.assertEqual(prepared["target_count"], 3)
                 self.assertTrue(reporter.draft(prepared["draft_id"]).is_file())
                 role["publisher"] = False
                 self.assertFalse(collector.status()["active"])

@@ -23,6 +23,61 @@ def sample():
 
 
 class SubmissionReportTest(unittest.TestCase):
+    def test_publisher_freeze_keeps_two_nearby_targets_from_same_uav(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            mission_id = 'subject1-same-uav-neighbors'
+            directory = Path(tmp) / 'UAV1' / mission_id
+            directory.mkdir(parents=True)
+            for name, longitude, confidence in (('one', 121.660000, .7),
+                                                 ('two', 121.660040, .9)):
+                metadata = dict(mission_id=mission_id, target_id=name,
+                                target_type='车辆', target_model='车辆1', is_moving=False,
+                                target_latitude=39.05, target_longitude=longitude,
+                                confidence=confidence,
+                                image_stamp={'secs': 1700000000, 'nsecs': 0})
+                (directory / (name + '.json')).write_text(json.dumps(metadata), encoding='utf-8')
+                (directory / (name + '.jpg')).write_bytes(b'jpeg')
+            reporter = report.Subject1Reporter(tmp, publisher_dedup=True)
+            built = reporter.build(mission_id, report.TEAM_NAME)
+            self.assertEqual(['two', 'one'], [feature['id'] for feature in built['features']])
+            frozen = reporter.prepare(built, already_deduplicated=True)
+            final = json.loads(reporter.draft(frozen['draft_id']).read_text(encoding='utf-8'))
+            self.assertEqual(['two', 'one'], [feature['id'] for feature in final['features']])
+            self.assertEqual(2, report.validate_document(final)['target_count'])
+            app = FastAPI()
+            app.include_router(report.reporting_router(tmp, Mock(), publisher_dedup=True))
+            with TestClient(app) as client:
+                response = client.post('/api/v1/subject1/report/prepare', json={'mission_id': mission_id})
+                self.assertEqual(200, response.status_code, response.text)
+                self.assertEqual(2, response.json()['target_count'])
+                downloaded = client.get(response.json()['download_url']).json()
+                self.assertEqual(['two', 'one'], [feature['id'] for feature in downloaded['features']])
+                imported = client.post('/api/v1/subject1/report/prepare', json={'document': built})
+                self.assertEqual(200, imported.status_code, imported.text)
+                self.assertEqual(2, imported.json()['target_count'])
+
+    def test_imported_json_is_deduplicated_sorted_and_limited_to_sixteen(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            document = sample()
+            exemplar = next(feature for feature in document['features']
+                            if feature['properties']['targetCategory'] == '固定')
+            document['features'] = []
+            for index in range(18):
+                feature = json.loads(json.dumps(exemplar))
+                feature['id'] = 'target-%02d' % index
+                feature['geometry']['coordinates'] = [121.66 + index * .001, 39.05]
+                feature['properties']['confidence'] = index / 20
+                document['features'].append(feature)
+            reporter = report.Subject1Reporter(tmp)
+            prepared = reporter.prepare(document)
+            self.assertEqual(16, prepared['target_count'])
+            final = json.loads(reporter.draft(prepared['draft_id']).read_text(encoding='utf-8'))
+            self.assertEqual(['target-17', 'target-16'], [item['id'] for item in final['features'][:2]])
+            self.assertEqual('target-02', final['features'][-1]['id'])
+            self.assertEqual(2, len(json.loads((reporter.root / (prepared['draft_id'] + '.dedup.json'))
+                                         .read_text(encoding='utf-8'))['omitted']))
+            self.assertEqual(16, report.validate_document(final)['target_count'])
+
     def test_official_template_and_validation(self):
         self.assertEqual(report.validate_document(sample()),dict(target_count=3,fixed=2,moving=1))
         too_many = sample()

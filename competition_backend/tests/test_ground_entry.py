@@ -16,6 +16,47 @@ from competition_shared.fleet import default_fleet, apply_fixed_binding
 
 
 class GroundEntryTest(unittest.TestCase):
+    def test_publisher_uses_ground_start_time_as_one_results_root(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            fleet = root / 'fleet.json'
+            fleet.write_text(json.dumps(default_fleet()), encoding='utf-8')
+            services = Mock()
+            recorded = []
+
+            def factory(environment):
+                recorded.append(dict(environment))
+                app = create_app(environment)
+                for component in (app.state.orchestrator, app.state.image_collector,
+                                  app.state.pointcloud_collector, app.state.traffic_monitor):
+                    component.start = Mock()
+                    component.stop = Mock()
+                app.state.adapter._request_json = Mock(side_effect=RuntimeError('离线测试'))
+                return app
+
+            env = dict(os.environ, COMPETITION_FLEET_CONFIG=str(fleet),
+                       COMPETITION_DATA_DIR=str(root / 'state'),
+                       COMPETITION_DIAGNOSTICS_DIR=str(root / 'diagnostics'),
+                       COMPETITION_IMAGE_ROOT=str(root / 'received_images'),
+                       COMPETITION_TCP_TOKEN='test', COMPETITION_PEER_TOKEN='test')
+            entry = GroundEntry(env, app_factory=factory,
+                                services_factory=Mock(return_value=services),
+                                programs_factory=Mock(return_value=Mock()))
+            with TestClient(entry) as client:
+                result = client.post('/api/v1/operator', json={
+                    'ground_terminal_id': 1, 'task_publisher': True})
+                self.assertEqual(200, result.status_code)
+                deadline = time.monotonic() + 3
+                while (not recorded or entry.active is None) and time.monotonic() < deadline:
+                    time.sleep(.01)
+                self.assertTrue(recorded)
+                expected = root / 'received_images' / entry.started_at_folder
+                self.assertEqual(str(expected), recorded[0]['COMPETITION_IMAGE_ROOT'])
+                self.assertEqual('1', recorded[0]['COMPETITION_PUBLISHER_RESULTS'])
+                self.assertEqual(expected, entry.active.state.image_collector.root)
+                self.assertEqual(entry.started_at_monotonic,
+                                 entry.active.state.image_collector.session_started_monotonic)
+
     def test_netstat_output_uses_bytes_and_tolerates_windows_code_page(self):
         output = (
             b"TCP    0.0.0.0:8554    0.0.0.0:0    LISTENING    7764\r\n"
