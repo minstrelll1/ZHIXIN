@@ -18,6 +18,123 @@ class SuccessfulReturnTest(unittest.TestCase):
         self.node._assignment['assignment_checksum']=harness.assignment_checksum(self.node._assignment)
         self.node._resume_pending=False
         self.node.successful_return_pub=Mock()
+        self.node.external_follower_node='/uav3/trajectory_follower'
+        self.addCleanup(patch.stopall)
+        patch.object(harness.module.rospy, 'Time', types.SimpleNamespace(
+            now=lambda:types.SimpleNamespace(to_sec=lambda:101.0)), create=True).start()
+        patch.object(harness.module.time, 'monotonic', return_value=100.0).start()
+        patch.object(harness.module.UAVCommand, 'Land', 3, create=True).start()
+        patch.object(harness.module.UAVControlState, 'LAND_CONTROL', 3, create=True).start()
+
+    def arm_observer(self):
+        n=self.node
+        n._progress['phase']='external_waiting'
+        n._progress['external_return_watch']=dict(boot_id=n._boot_id, mission_id='test',
+            assignment_checksum=n._assignment['assignment_checksum'], started_ros=100.0)
+        n._state=types.SimpleNamespace(connected=True,armed=True,uav_id=3)
+        n._state_received=n._control_received=100.0
+        n._control=types.SimpleNamespace(control_state=2,failsafe=False,uav_id=3)
+
+    def land_command(self, caller='/uav3/trajectory_follower', stamp=101.0, command=3, latch='0'):
+        return types.SimpleNamespace(Agent_CMD=command,Command_ID=456,
+            _connection_header=dict(callerid=caller,latching=latch),
+            header=types.SimpleNamespace(stamp=types.SimpleNamespace(to_sec=lambda:stamp)))
+
+    def confirm_landing(self):
+        self.node._control_callback(types.SimpleNamespace(control_state=3,failsafe=False,uav_id=3))
+
+    def test_b_land_then_flight_control_confirmation_creates_one_read_only_event(self):
+        self.arm_observer(); n=self.node
+        n._external_return_command_callback(self.land_command())
+        self.assertFalse(n._successful_return_snapshot())
+        self.confirm_landing()
+        event=n._successful_return_snapshot()
+        self.assertEqual('external_program_b_land', event['source'])
+        self.assertEqual('/uav3/trajectory_follower',event['evidence']['command_node'])
+        self.assertEqual('LAND_CONTROL',event['evidence']['confirmed_control_state'])
+        self.assertEqual(n._assignment['assignment_checksum'],event['assignment_checksum'])
+        self.assertEqual('session',event['competition_session_id'])
+        n._external_return_command_callback(self.land_command())
+        self.confirm_landing()
+        self.assertEqual(event['event_id'], n._successful_return_snapshot()['event_id'])
+        n.successful_return_pub.publish.assert_called_once()
+        n._land.assert_not_called(); n._fly_to.assert_not_called(); n._hover.assert_not_called()
+
+    def test_control_state_before_command_is_supported_but_not_sufficient(self):
+        self.arm_observer(); n=self.node
+        self.confirm_landing()
+        self.assertFalse(n._successful_return_snapshot())
+        n._external_return_command_callback(self.land_command())
+        self.assertTrue(n._successful_return_snapshot())
+
+    def test_other_publishers_old_future_latched_and_non_land_are_ignored(self):
+        self.arm_observer(); n=self.node; self.confirm_landing()
+        commands=[self.land_command(caller=caller) for caller in
+                  ('/communication_bridge','/su17_competition_executor','/uav2/trajectory_follower',
+                   '/uav3/target_maneuver_gx40_position_pid')]
+        commands += [self.land_command(stamp=stamp) for stamp in (0,99.9,102,float('nan'),float('inf'))]
+        commands += [self.land_command(latch='1'), self.land_command(command=4)]
+        for cmd in commands:
+            n._external_return_command_callback(cmd)
+            self.assertFalse(n._successful_return_snapshot())
+
+    def test_without_handoff_internal_or_other_task_never_accepts_land(self):
+        self.arm_observer(); n=self.node; self.confirm_landing()
+        watch=n._progress.pop('external_return_watch')
+        n._external_return_command_callback(self.land_command())
+        self.assertFalse(n._successful_return_snapshot())
+        for overrides in ({'mission_id':'old'},{'assignment_checksum':'old'},{'boot_id':'old'}):
+            n._progress['external_return_watch']=dict(watch,**overrides)
+            n._external_return_command_callback(self.land_command())
+            self.assertFalse(n._successful_return_snapshot())
+        n._progress['external_return_watch']=watch
+        n._assignment['controller_mode']='internal'
+        n._external_return_command_callback(self.land_command())
+        self.assertFalse(n._successful_return_snapshot())
+
+    def test_expired_candidate_stale_feedback_disarmed_and_failsafe_do_not_confirm(self):
+        self.arm_observer(); n=self.node
+        n._external_return_command_callback(self.land_command())
+        n._control.control_state=3
+        for obj, attr, value in ((n._state,'armed',False),(n._state,'connected',False),
+                                 (n._control,'failsafe',True),(n,'_state_received',90),
+                                 (n,'_control_received',90)):
+            old=getattr(obj,attr);setattr(obj,attr,value)
+            n._confirm_external_return()
+            self.assertFalse(n._successful_return_snapshot())
+            setattr(obj,attr,old)
+        with patch.object(harness.module.time,'monotonic',return_value=106):
+            n._state_received=n._control_received=106
+            n._confirm_external_return()
+            self.assertFalse(n._successful_return_snapshot())
+
+    def test_candidate_survives_same_boot_restart_and_is_bound_to_assignment(self):
+        self.arm_observer(); n=self.node
+        n._external_return_command_callback(self.land_command())
+        n._progress={};n._restore_progress()
+        self.confirm_landing()
+        self.assertTrue(n._successful_return_snapshot())
+        self.assertFalse(n._resume_pending)
+
+    def test_handoff_written_when_external_task_published_and_not_reset_by_republish(self):
+        n=self.node
+        n._publish_external_mission({})
+        watch=dict(n._progress['external_return_watch'])
+        self.assertEqual(101,watch['started_ros'])
+        n._publish_external_mission({})
+        self.assertEqual(watch,n._progress['external_return_watch'])
+
+    def test_observer_is_compatible_with_all_scenes_and_coordinates(self):
+        self.arm_observer(); n=self.node
+        for profile in ('lab','outdoor5','lab10','outdoor100','outdoor200','competition','dalian_nanshan'):
+            for frame in ('ENU','WGS84'):
+                with self.subTest(profile=profile,frame=frame):
+                    n._progress.pop('successful_return',None)
+                    n._progress.pop('external_return_candidate',None)
+                    n._assignment.update(flight_profile=profile,coordinate_frame=frame)
+                    n._external_return_command_callback(self.land_command())
+                    self.confirm_landing()
+                    self.assertTrue(n._successful_return_snapshot())
 
     def send(self, **changes):
         n=self.node

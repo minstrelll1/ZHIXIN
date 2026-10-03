@@ -453,6 +453,31 @@ class OrchestratorTest(unittest.TestCase):
             result["preflight"]["failures"]["1"],
         )
 
+    def test_scaled_profiles_skip_only_battery_percentage_in_both_control_modes(self):
+        for profile in ("lab", "outdoor5", "lab10", "outdoor100", "outdoor200"):
+            for mode in ("internal", "external"):
+                with self.subTest(profile=profile, mode=mode):
+                    self.setUp()
+                    self.backend.plan("subject1", flight_profile=profile, controller_mode=mode)
+                    for uid in self.config.uav_ids:
+                        self.telemetry(uid, battery_percentage=0.1)
+                    self.assertTrue(self.backend.prepare_takeoff()["ready"])
+                    self.assertFalse(self.backend.preflight_report()["battery_threshold_enforced"])
+                    self.telemetry(1, battery_percentage=0.1, failsafe=True)
+                    self.assertIn("failsafe is active", self.backend.preflight_report()["failures"]["1"])
+
+    def test_full_size_profiles_retain_sixty_percent_boundary(self):
+        for profile in ("competition", "dalian_nanshan"):
+            with self.subTest(profile=profile):
+                self.setUp()
+                self.backend.plan("subject1", flight_profile=profile)
+                for uid in self.config.uav_ids:
+                    self.telemetry(uid, battery_percentage=0.6)
+                self.assertTrue(self.backend.prepare_takeoff()["ready"])
+                self.telemetry(1, battery_percentage=0.59)
+                self.assertIn("battery is below preflight threshold",
+                              self.backend.preflight_report()["failures"]["1"])
+
     def test_each_uav_starts_immediately_after_reaching_altitude(self):
         prepared = self.plan_and_prepare()
         self.backend.confirm_takeoff(prepared["confirmation_token"])

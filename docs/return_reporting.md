@@ -4,15 +4,23 @@
 
 定义：本机已到达返航点，并开始下降。收到返航指令、扫描完成、`returning`、`mission_timeout`、普通 `landing` 均不能作为该标记。
 
-**程序 B 的实际状态接口尚待提供，当前不自动推断它已成功返航。** 竞赛端已预留以下接入契约；此契约不表示程序 B 现有版本已实现发布。
+已只读核对 UAV2 的 `/home/amov/recon_ws/src/uav_reconnaissance/src/trajectory_follower.cpp`（2026-10-03）：`trajectory_follower` 唯一一处 `Land` 发布位于返航终点分支。它先完成返航航段，判断到点、高度、停稳与连续保持条件，然后发送降落指令。任务完成、低电量、超时和地面返航请求最终都经过该分支。
 
-程序 B 在上述时刻向 `/uavN/competition/external_status` 发布 `std_msgs/String`，其中 JSON 示例：
+竞赛机载端自动进行以下只读监测，无需修改程序 B：
+
+1. 监听 `/uavN/prometheus/command`，类型 `prometheus_msgs/UAVCommand`；只接受 ROS 连接头发布者为 `/uavN/trajectory_follower` 的 `Agent_CMD=3`（`Land`）。节点名称可用竞赛执行器私有参数 `~external_follower_node` 调整。
+2. 指令须为本次任务交给程序 B 之后发布的新消息（最多延迟2秒），拒绝锁存回放、其他无人机或其他节点的降落指令。仅当前已起飞、已向程序 B 发布航点的外部控制任务可接收。
+3. 收到候选后5秒内，确认新鲜的 `/uavN/prometheus/control_state` 为 `LAND_CONTROL=3`、`failsafe=false`，并且状态遥测显示连接、已解锁，才生成一次成功返航标记。支持指令与状态先后到达的两种顺序。这里表示程序 B 已到点且飞控开始降落控制，不表示已经落地。
+
+两类证据不齐时不把普通 `AUTO.LAND`、`returning` 或任务超时误算为成功返航，23分30秒补传与24分钟上报的计时触发仍可执行。候选和最终事件随任务进度保存在同次机载开机的缓存中，最终事件无线重连或执行器重启后仍可上报；监测本身不会发送飞行指令。旧版竞赛机载端需要更新，才有此自动观察功能。
+
+同时保留显式状态接口供后续其他程序 B 版本使用：向 `/uavN/competition/external_status` 发布 `std_msgs/String`，JSON 示例：
 
 ```json
 {"uav_id":2,"mission_id":"subject1-示例","assignment_checksum":"本次任务中的完整校验码","phase":"return_descent"}
 ```
 
-任务编号和校验码来自 `/uavN/competition/external_mission`。竞赛端仅接受本机已起飞任务，记录一次后在 `/uavN/competition/successful_return` 发布锁存的 `std_msgs/String` JSON，附带 `event_id`、比赛会话、任务编号、校验码、无人机编号及事件年龄。通过遥测和任务回执传回地面，并同步给发布端。重复消息及无线重连不重复计数。该接口不发送飞行指令，程序 B 继续负责下降。
+任务编号和校验码来自 `/uavN/competition/external_mission`。自动观察和显式接口共用同一个去重标记：在 `/uavN/competition/successful_return` 发布锁存的 `std_msgs/String` JSON，附带 `event_id`、比赛会话、任务编号、校验码、无人机编号及事件年龄。自动观察来源为 `external_program_b_land`，`evidence` 记录程序 B 节点名、指令编号、源时间和 `LAND_CONTROL` 确认。通过遥测和任务回执传回地面，并同步给发布端。重复消息及无线重连不重复计数。程序 B 继续负责下降。
 
 ## 图片缺失清单
 
@@ -40,6 +48,10 @@
 
 ## 更新与日志
 
-需要更新地面端和机载竞赛端，部署/启动命令保持 README 不变。程序 B 接入上述真实标记后，成功返航分支才可联调；在此之前，计时分支仍可运行。没有修改程序 B 或厂商源码。
+需要更新地面端和机载竞赛端，部署/启动命令保持 README 不变。没有修改程序 B 或厂商源码。本次只读连接核对了 UAV2 的真实节点名、指令类型和源码，没有在真机发布降落指令或执行实飞验证。
 
-机载 ROS 日志记录标记、触发原因、缺失数、补传完成和重试。地面审计日志记录已汇集的返航机号、选择的策略、每次整理/上报结果及回执路径；赛事回执仍保存在本场结果目录的 `subject1_reports/receipt-*.json`。自动化测试使用本机套接字和模拟赛事响应，不向真实赛事接口发送测试数据。
+机载 ROS 日志记录程序 B 到点降落候选、飞控确认后的成功返航标记、触发原因、缺失数、补传完成和重试。地面审计日志记录已汇集的返航机号、选择的策略、每次整理/上报结果及回执路径；赛事回执仍保存在本场结果目录的 `subject1_reports/receipt-*.json`。自动化测试使用模拟状态和赛事响应，不向真实赛事接口发送测试数据。
+
+## 起飞电量预检
+
+3m×3m、5m×5m、10m×10m、100m×100m、200m×200m 均跳过竞赛地面端的电量百分比门槛；竞赛1km×1km和大连南山坡仍按 `preflight_battery_min` 检查（默认60%，等于门槛可通过）。此规则与高度、坐标系及控制程序无关。`failsafe`、遥测有效性、飞控解锁保护和飞行中的低电处理不因该项修改而取消。

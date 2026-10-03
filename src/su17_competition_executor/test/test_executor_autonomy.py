@@ -4,6 +4,7 @@ import struct
 import sys
 import tempfile
 import threading
+import time
 import types
 import unittest
 from pathlib import Path
@@ -17,6 +18,7 @@ rospy.is_shutdown = lambda: False
 rospy.loginfo = Mock()
 rospy.logerr = Mock()
 rospy.logwarn = Mock()
+rospy.Time = types.SimpleNamespace(now=lambda: types.SimpleNamespace(to_sec=time.time))
 sys.modules.setdefault("rospy", rospy)
 for name in ("prometheus_msgs", "std_msgs", "sensor_msgs", "mavros_msgs"):
     sys.modules.setdefault(name, types.ModuleType(name))

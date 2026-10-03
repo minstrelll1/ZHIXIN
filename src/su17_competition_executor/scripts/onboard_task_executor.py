@@ -106,6 +106,8 @@ class OnboardTaskExecutor:
         self.external_return_topic = str(
             rospy.get_param("~external_return_topic", "")
         ).strip() or "/ground_mission_planner/vehicle_{}/return_home".format(self.local_ros_uav_id)
+        self.external_follower_node = str(rospy.get_param(
+            "~external_follower_node", "/uav{}/trajectory_follower".format(self.local_ros_uav_id))).strip()
         self.restart_all_command = str(rospy.get_param("~restart_all_command", "")).strip()
         self.max_speed = float(self.vehicle_config.get("max_speed_mps", 2.0))
         self.search_speed = min(self.search_speed, self.max_speed)
@@ -208,6 +210,9 @@ class OnboardTaskExecutor:
             self._external_status_callback,
             queue_size=10,
         )
+        # 只读观察程序 B 到达返航点后发出的 Land；不转发或生成飞行指令。
+        rospy.Subscriber(local_prefix + "/prometheus/command", UAVCommand,
+                         self._external_return_command_callback, queue_size=20)
         if self.transport in ("ros", "both"):
             rospy.Subscriber(
                 fleet_prefix + "/competition/high_level_command",
@@ -330,7 +335,71 @@ class OnboardTaskExecutor:
             publisher.publish(String(data=json.dumps(self._successful_return_snapshot(),
                                                       ensure_ascii=False, allow_nan=False)))
 
-    def _record_successful_return(self, source, assignment):
+    def _external_return_command_callback(self, message: UAVCommand) -> None:
+        """程序 B 的返航终点 Land 是候选，飞控进入降落控制后才确认。"""
+        try:
+            header = getattr(message, "_connection_header", {}) or {}
+            if (header.get("callerid") != self.external_follower_node
+                    or str(header.get("latching", "0")) != "0"
+                    or message.Agent_CMD != UAVCommand.Land):
+                return
+            stamp = float(message.header.stamp.to_sec())
+            age = float(rospy.Time.now().to_sec()) - stamp
+            if not math.isfinite(stamp) or stamp <= 0 or not 0.0 <= age <= 2.0:
+                return
+            with self._lock:
+                assignment = self._assignment
+                watch = self._progress.get("external_return_watch") or {}
+                if (not assignment or assignment.get("controller_mode") != "external"
+                        or self._home is None or self._progress.get("successful_return")
+                        or watch.get("boot_id") != self._boot_id
+                        or watch.get("mission_id") != assignment["mission_id"]
+                        or watch.get("assignment_checksum") != assignment["assignment_checksum"]
+                        or stamp < float(watch.get("started_ros", float("inf")))):
+                    return
+                candidate = dict(watch, received_monotonic=time.monotonic(),
+                                 command_stamp=stamp, command_id=int(message.Command_ID),
+                                 callerid=header["callerid"])
+                old = self._progress.get("external_return_candidate") or {}
+                if old.get("command_stamp") == stamp and old.get("command_id") == candidate["command_id"]:
+                    return
+                self._checkpoint(self._progress["phase"], external_return_candidate=candidate)
+            rospy.loginfo("已观察到程序 B 到点降落指令：UAV%d，节点=%s，指令编号=%d；等待飞控确认降落控制",
+                          self.uav_id, header["callerid"], candidate["command_id"])
+            self._confirm_external_return()
+        except (AttributeError, KeyError, TypeError, ValueError, OSError) as error:
+            rospy.logwarn("成功返航只读监测未确认：%s", error)
+
+    def _confirm_external_return(self) -> None:
+        """支持 Land 指令和控制状态任意到达顺序；失败不干扰飞行。"""
+        try:
+            with self._lock:
+                assignment = self._assignment
+                candidate = self._progress.get("external_return_candidate") or {}
+                if (not candidate or not assignment or self._progress.get("successful_return")
+                        or assignment.get("controller_mode") != "external"
+                        or candidate.get("boot_id") != self._boot_id
+                        or candidate.get("mission_id") != assignment["mission_id"]
+                        or candidate.get("assignment_checksum") != assignment["assignment_checksum"]):
+                    return
+                now = time.monotonic()
+                if not 0.0 <= now - float(candidate["received_monotonic"]) <= 5.0:
+                    return
+                state, control = self._state, self._control
+                if (state is None or control is None or not state.connected or not state.armed
+                        or not 0.0 <= now - self._state_received <= 2.0
+                        or not 0.0 <= now - self._control_received <= 2.0
+                        or int(control.control_state) != UAVControlState.LAND_CONTROL
+                        or control.failsafe):
+                    return
+                evidence = dict(command_node=candidate["callerid"], command_id=candidate["command_id"],
+                                command_stamp=candidate["command_stamp"],
+                                confirmed_control_state="LAND_CONTROL")
+                self._record_successful_return("external_program_b_land", assignment, evidence)
+        except (AttributeError, KeyError, TypeError, ValueError, OSError) as error:
+            rospy.logwarn("成功返航只读监测未确认：%s", error)
+
+    def _record_successful_return(self, source, assignment, evidence=None):
         with self._lock:
             if self._assignment is not assignment:
                 return False
@@ -346,6 +415,9 @@ class OnboardTaskExecutor:
                          competition_session_id=clock.get("session_id", ""),
                          event_id=uuid.uuid4().hex, phase="return_descent", source=source,
                          observed_monotonic=time.monotonic(), boot_id=self._boot_id)
+            if evidence:
+                event["evidence"] = evidence
+            self._resume_pending = False
             self._checkpoint("external_return_descent", successful_return=event)
         self._publish_successful_return()
         self._publish_status("successful_return", event=self._successful_return_snapshot())
@@ -404,6 +476,7 @@ class OnboardTaskExecutor:
             previous = self._state
             self._state = message
             self._state_received = time.monotonic()
+        self._confirm_external_return()
         if (getattr(self, "_automatic_control", False) and previous is not None
                 and previous.armed and not message.armed):
             if self._progress.get("phase") in ("landing", "landed", "external_return_requested", "external_return_descent"):
@@ -460,6 +533,7 @@ class OnboardTaskExecutor:
         with self._lock:
             self._control = message
             self._control_received = time.monotonic()
+        self._confirm_external_return()
         if getattr(self, "_automatic_control", False):
             mode = int(message.control_state)
             if mode == UAVControlState.COMMAND_CONTROL:
@@ -1538,6 +1612,13 @@ class OnboardTaskExecutor:
         self.external_mission_pub.publish(
             String(data=json.dumps(message, ensure_ascii=False, separators=(",", ":")))
         )
+        # 把只读观察绑定到本次起飞后交给程序 B 的任务，排除旧任务/旧锁存 Land。
+        # 同次开机重启执行器时随任务进度恢复；不会重启或修改程序 B。
+        with self._lock:
+            if self._assignment is assignment and not self._progress.get("external_return_watch"):
+                self._checkpoint(self._progress["phase"], external_return_watch=dict(
+                    mission_id=assignment["mission_id"], assignment_checksum=assignment["assignment_checksum"],
+                    boot_id=self._boot_id, started_ros=float(rospy.Time.now().to_sec())))
 
     def _publish_recon_start_mode(self, mode: int) -> None:
         if getattr(self, "_manual_override", False) or self._abort_motion.is_set():
