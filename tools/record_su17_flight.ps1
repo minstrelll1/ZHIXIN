@@ -83,6 +83,10 @@ $remoteBatteryCsv = "$remoteDir/battery.csv"
 $remoteTimeReferenceCsv = "$remoteDir/time_reference.csv"
 $remoteBagManifest = "$remoteDir/bag_sha256.txt"
 $reportProgram = Join-Path $PSScriptRoot "bsa_position_report.py"
+$transportProgram = Join-Path $PSScriptRoot "recording_transport.py"
+if (-not (Test-Path -LiteralPath $transportProgram)) {
+    throw "缺少断网恢复采集工具，请更新地面端代码：$transportProgram"
+}
 
 if ($modelLower -eq "p600") {
     $positionTopic = "/uav$LocalRosUavId/prometheus/odom"
@@ -164,19 +168,29 @@ function Invoke-RemoteBash {
     # the complete UTF-8 shell program as Base64.
     $scriptBytes = [System.Text.Encoding]::UTF8.GetBytes($ScriptText)
     $encodedScript = [Convert]::ToBase64String($scriptBytes)
-    $remoteCommand = "printf '%s' '$encodedScript' | base64 -d | bash"
-    & ssh @sshIdentityArgs -o BatchMode=yes -o ConnectTimeout=5 $sshTarget $remoteCommand
+    # 机载操作独立于 SSH 会话运行；失联后查询同一作业，不能重复启动录制。
+    $transportArgs = @($transportProgram, '--host', $sshTarget, '--directory', $remoteDir,
+        '--script-base64', $encodedScript)
+    if (Test-Path -LiteralPath $competitionKey -PathType Leaf) {
+        $transportArgs += @('--identity', $competitionKey)
+    }
+    & $PythonExe @transportArgs
     $script:lastRemoteExitCode = $LASTEXITCODE
 }
 
 function Stop-RemoteRecording {
     param([switch]$Quiet)
 
-    $stopInner = "if [ -f '$remotePidFile' ]; then " +
+    $stopInner = "record_alive() { kill -0 `"`$pid`" 2>/dev/null && [ `"`$(ps -p `"`$pid`" -o stat= | cut -c1)`" != Z ]; }; " +
+        "if [ -f '$remotePidFile' ]; then " +
         "pid=`$(cat '$remotePidFile'); " +
-        "if kill -0 `$pid 2>/dev/null; then kill -INT `$pid; fi; " +
-        "for i in `$(seq 1 60); do kill -0 `$pid 2>/dev/null || break; sleep 1; done; " +
-        "kill -0 `$pid 2>/dev/null && kill -TERM `$pid || true; " +
+        "if record_alive; then " +
+        "tr '\0' ' ' < /proc/`$pid/cmdline | grep -F -- '$remoteBagPrefix' >/dev/null || exit 42; fi; " +
+        "if record_alive; then kill -INT `$pid; fi; " +
+        "for i in `$(seq 1 60); do record_alive || break; sleep 1; done; " +
+        "record_alive && kill -TERM `$pid || true; " +
+        "for i in `$(seq 1 10); do record_alive || break; sleep 1; done; " +
+        "record_alive && exit 43; rm -f '$remotePidFile'; " +
         "fi"
     if (-not $Quiet) {
         Write-Host "正在停止机载 rosbag 并整理文件..." -ForegroundColor Yellow
@@ -190,7 +204,12 @@ function Stop-RemoteRecording {
 function Copy-RemoteRecording {
     New-Item -ItemType Directory -Force -Path $localDir | Out-Null
     Write-Host "正在将飞行记录复制到地面电脑..." -ForegroundColor Yellow
-    & scp @sshIdentityArgs -o BatchMode=yes -o ConnectTimeout=5 -r "${sshTarget}:${remoteDir}/." "$localDir"
+    $transportArgs = @($transportProgram, '--host', $sshTarget, '--directory', $remoteDir,
+        '--copy-to', $localDir)
+    if (Test-Path -LiteralPath $competitionKey -PathType Leaf) {
+        $transportArgs += @('--identity', $competitionKey)
+    }
+    & $PythonExe @transportArgs
     if ($LASTEXITCODE -ne 0) {
         throw "SCP 复制失败，完整记录仍保留在机载端：$remoteDir"
     }

@@ -194,7 +194,7 @@ class SubmissionReportTest(unittest.TestCase):
             self.assertNotIn('confidence',props);self.assertNotIn('imagePath',props)
             with self.assertRaises(ValueError):reporter.build('../../other',report.TEAM_NAME)
 
-    def test_auto_report_uses_current_mission_at_24_minutes_five_times(self):
+    def test_auto_report_uses_current_mission_during_competition_window(self):
         with tempfile.TemporaryDirectory() as tmp:
             state = dict(running=True, is_authority=True, session_id='competition-a', elapsed_seconds=1439)
             clock = Mock(snapshot=lambda: dict(state))
@@ -208,17 +208,19 @@ class SubmissionReportTest(unittest.TestCase):
                 state['elapsed_seconds'] = 1440
                 self.assertTrue(auto.tick(now=100))
                 self.assertFalse(auto.tick(now=104.9))
-                state['elapsed_seconds'] = 1200  # 已启动的五次上报仍按真实五秒间隔完成。
-                for number in range(2, 6):
+                state['elapsed_seconds'] = 1440
+                for number in range(2, 19):
+                    state["elapsed_seconds"] = 1440 + (number - 1) * 5
                     self.assertTrue(auto.tick(now=100 + (number - 1) * 5))
-                self.assertFalse(auto.tick(now=130))
                 deadline = time.monotonic() + 3
-                while auto.snapshot()['attempts_finished'] != 5 and time.monotonic() < deadline:
+                while auto.snapshot()['attempts_finished'] != 18 and time.monotonic() < deadline:
                     time.sleep(.01)
-                self.assertEqual(auto.snapshot()['attempts_finished'], 5)
-                self.assertEqual(submit.call_count, 5)
-                self.assertEqual([call.args[0] for call in build.call_args_list], ['subject1-current'] * 5)
+                self.assertEqual(auto.snapshot()['attempts_finished'], 18)
+                self.assertEqual(submit.call_count, 18)
+                self.assertEqual([call.args[0] for call in build.call_args_list], ['subject1-current'] * 18)
                 self.assertEqual(auto.snapshot()['last_result']['state'], 'http_received')
+                state['elapsed_seconds'] = 1530
+                self.assertFalse(auto.tick(now=190))
             state['session_id'] = 'competition-b'
             state['elapsed_seconds'] = 1500
             self.assertFalse(auto.tick(now=140))  # 新比赛不能沿用上一场任务。

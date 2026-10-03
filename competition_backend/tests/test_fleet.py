@@ -161,12 +161,18 @@ class MixedFleetTcpTest(unittest.TestCase):
         self.adapter.command_assign_task(1,{'mission_id':'still-correct'})
         self.assertEqual(receive_message(good,buf)['mission_id'],'still-correct')
 
-    def test_same_device_reconnect_gets_assignment(self):
+    def test_same_device_reconnect_waits_for_manual_assignment(self):
         one,buf,_=self.connect(1);self.adapter.command_assign_task(1,{'mission_id':'resume'})
         receive_message(one,buf);one.shutdown(socket.SHUT_RDWR);one.close()
         self.assertTrue(wait_until(lambda:1 not in self.adapter.connected_uav_ids))
         two,buf,ack=self.connect(1)
-        self.assertEqual(ack['type'],'hello_ack');self.assertEqual(receive_message(two,buf)['mission_id'],'resume')
+        self.assertEqual(ack['type'],'hello_ack')
+        two.settimeout(.15)
+        with self.assertRaises(socket.timeout):
+            receive_message(two,buf)
+        self.adapter.command_assign_task(1,{'mission_id':'manual-latest'})
+        two.settimeout(2)
+        self.assertEqual(receive_message(two,buf)['mission_id'],'manual-latest')
 
     def test_rebound_device_uses_fixed_uav_mapping_without_device_handshake(self):
         one,buf,_=self.connect(1);self.adapter.command_assign_task(1,{'mission_id':'old-device'})
@@ -174,7 +180,9 @@ class MixedFleetTcpTest(unittest.TestCase):
         self.assertTrue(wait_until(lambda:1 not in self.adapter.connected_uav_ids))
         self.config['vehicles'][0]['device_id']='new-device'
         two,buf,ack=self.connect(1,device_id='new-device');self.assertEqual(ack['type'],'hello_ack')
-        self.assertEqual(receive_message(two,buf)['mission_id'],'old-device')
+        two.settimeout(.15)
+        with self.assertRaises(socket.timeout):
+            receive_message(two,buf)
 
     def test_offline_unverified_assignment_is_not_cached(self):
         with self.assertRaises(RuntimeError):self.adapter.command_assign_task(1,{'mission_id':'unverified'})

@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 import re
+import select
 import socket
 import sys
 import tempfile
@@ -209,11 +210,15 @@ class GroundImageReceiver:
             client.settimeout(self.client_timeout)
             while not self.stop_event.is_set():
                 try:
+                    # 空闲允许长时间等待；帧接收中途超时必须丢弃连接，不能把剩余
+                    # JPEG 字节当成下一帧头。发送端从磁盘按缺失清单重新传完整帧。
+                    ready, _, _ = select.select([client], [], [], 1.0)
+                    if not ready:
+                        continue
                     metadata, jpeg = receive_frame(client)
                 except socket.timeout:
-                    # The timeout only wakes the thread so it can check stop_event.
-                    # Sparse snapshot traffic may legitimately be idle for minutes.
-                    continue
+                    self._diagnostic("图片帧接收超时，等待完整补传", address=address)
+                    break
                 except ConnectionError:
                     break
                 except (ProtocolError, OSError) as exc:

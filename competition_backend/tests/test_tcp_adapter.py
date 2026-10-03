@@ -126,7 +126,14 @@ class TcpFleetAdapterTest(unittest.TestCase):
         self.adapter.command_task(2, {"mission_id": "m1", "task": {"sector": 5}})
         self.assertEqual(receive_message(client2, buffer2)["type"], "execute_task")
 
-    def test_assignment_ack_and_offline_assignment_resend(self):
+    def test_assignment_ack_requires_manual_dispatch_after_connection(self):
+        with self.assertRaises(RuntimeError):
+            self.adapter.command_assign_task(1, {"mission_id": "offline"})
+        client, buffer = self.connect_uav(1)
+        client.settimeout(0.15)
+        with self.assertRaises(socket.timeout):
+            client.recv(1)
+        client.settimeout(3.0)
         self.adapter.command_assign_task(
             1,
             {
@@ -136,7 +143,6 @@ class TcpFleetAdapterTest(unittest.TestCase):
                 "target_altitude_m": 0.5,
             },
         )
-        client, buffer = self.connect_uav(1)
         assignment = receive_message(client, buffer)
         self.assertEqual(assignment["type"], "assign_task")
         self.assertEqual(assignment["mission_id"], "mission-new")

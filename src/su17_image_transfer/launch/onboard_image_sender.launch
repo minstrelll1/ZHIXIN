@@ -17,7 +17,7 @@
   <arg name="sync_slop_sec" default="0.5"/>
   <arg name="compressed_input" default="false"/>
   <arg name="enable_offline_recovery" default="true"/>
-  <arg name="reconcile_after_minutes" default="19.0"/>
+  <arg name="reconcile_after_minutes" default="23.5"/>
   <arg name="reconcile_retry_sec" default="30.0"/>
   <arg name="cache_root" default="$(env HOME)/competition_development/image_cache"/>
   <arg name="mission_id" default=""/>

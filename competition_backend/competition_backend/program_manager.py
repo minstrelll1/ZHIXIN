@@ -201,6 +201,11 @@ class ProgramManager:
                                 result[key] = self._request('start', offsets, program=key)[key]
                     else:
                         result = self._request(action, offsets)
+                    if failed_once:
+                        if getattr(self, 'audit', None):
+                            self.audit.record('机载程序管理连接恢复', uav_id=self.local['uav_id'])
+                        for key in offsets:
+                            self._append(key, '\nSSH 已恢复，继续读取原程序状态与日志。\n')
                     action, failed_once = 'status', False
                     for key in offsets:
                         info = result[key]
@@ -241,9 +246,14 @@ class ProgramManager:
                     if not failed_once:
                         self._append(key, '\n%s\n' % error)
                 failed_once = True
-                # 首次连接失败不在稍后突然启动飞机上的程序；重新确认终端后才重试启动。
-                if action == 'start':
+                # 启动请求的响应可能在断网时丢失：继续查询，不能永久退出监测。
+                # 查询不会重启飞机上的程序，也保留人工停止状态。
+                transient = isinstance(error, (OSError, subprocess.TimeoutExpired)) or re.search(
+                    r'(?i)timed out|connection (?:reset|closed|refused)|broken pipe|no route to host|network is unreachable',
+                    str(error))
+                if action == 'start' and not transient:
                     break
+                action = 'status'
             # 后续仅查询进程和增量日志，进程崩溃不自动重启，也不影响飞行/任务链路。
             if self.stop_event.wait(1):
                 break

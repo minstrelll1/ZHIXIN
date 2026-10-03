@@ -107,6 +107,24 @@ class OrchestratorTest(unittest.TestCase):
             self.backend.request_return_selected([1], mission_id='old-task')
         self.assertFalse(any(c['type'] == 'return_home' for c in self.adapter.commands))
 
+    def test_manual_return_after_reconnect_retries_unconfirmed_send(self):
+        self.launch_and_start_tasks()
+        self.backend.request_return_selected([1])
+        # 上次写入网络缓冲区的请求丢失；重连遥测显示仍执行原任务。
+        self.telemetry(1, task_phase='external_executing')
+        self.backend.request_return_selected([1])
+        self.assertEqual(len([c for c in self.adapter.commands if c['type'] == 'return_home']), 2)
+        self.telemetry(1, task_phase='returning')
+        self.backend.request_return_selected([1])
+        self.assertEqual(len([c for c in self.adapter.commands if c['type'] == 'return_home']), 2)
+
+    def test_old_mission_return_status_does_not_suppress_manual_return(self):
+        self.launch_and_start_tasks()
+        self.backend.request_return_selected([1])
+        self.telemetry(1, task_phase='returning', task_assignment_mission_id='old')
+        self.backend.request_return_selected([1])
+        self.assertEqual(len([c for c in self.adapter.commands if c['type'] == 'return_home']), 2)
+
     def telemetry(self, uav_id, **overrides):
         mission = self.backend.snapshot().get("mission")
         values = {

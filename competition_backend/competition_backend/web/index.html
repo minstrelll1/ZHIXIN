@@ -448,7 +448,7 @@ const 文本={
   任务:{search_sector:'区域搜索',lawnmower_search:'弓字形区域搜索',search_and_drop:'搜索与投放',forest_delivery:'林区物资投送'},
   字段:{sector:'区域',role:'角色',route:'路线'},
   角色:{search:'搜索',static_target:'静态目标',moving_target:'动态目标'},
-  事件:{manual_override:'遥控器接管',takeoff_failed:'自动起飞失败',mission_stopped:'任务已停止',task_assignment_sent:'子任务分派报文已发送',mission_planned:'任务规划完成',mission_planning_only:'无无人机在线：仅生成六机规划，未下发任务',preflight_passed:'启用无人机起飞预检通过',takeoff_commanded:'起飞命令已下发',uav_at_altitude:'无人机到达目标高度',uav_task_started:'无人机已出发执行子任务',all_tasks_started:'任务已开始',return_commanded:'无人机收到返航命令',uav_landed:'无人机已降落',mission_completed:'本次任务全部完成'},
+  事件:{manual_override:'遥控器接管',takeoff_failed:'自动起飞失败',mission_stopped:'任务已停止',task_assignment_sent:'子任务分派报文已发送',mission_planned:'任务规划完成',mission_planning_only:'无无人机在线：仅生成六机规划，未下发任务',preflight_passed:'启用无人机起飞预检通过',takeoff_commanded:'起飞命令已下发',uav_at_altitude:'无人机到达目标高度',uav_task_started:'无人机已出发执行子任务',all_tasks_started:'任务已开始',return_commanded:'返航请求已发送',uav_landed:'无人机已降落',mission_completed:'本次任务全部完成'},
   原因:{task_complete:'单机任务完成',time_limit:'比赛时间结束',low_battery:'电量达到返航阈值',manual:'人工命令返航',takeoff_timeout:'起飞阶段超时'},
   预检:{'no telemetry':'没有收到遥测','telemetry is stale':'遥测数据已超时','flight controller is disconnected':'飞控未连接','odometry is invalid':'定位无效','failsafe is active':'安全保护已触发','battery is below preflight threshold':'电量低于起飞阈值','UAV is not armed':'无人机尚未解锁','control_state is not COMMAND_CONTROL':'控制状态不是自主控制','task assignment is not acknowledged':'无人机尚未确认收到子任务','no UAV is connected; this mission is planning-only':'没有无人机连接，本次任务仅规划，不执行','production_config_confirmed is false; live takeoff is locked':'实机参数尚未确认，起飞已锁定'},
   错误:{'an active mission already exists':'已有正在进行的任务','mission must be planned before takeoff preparation':'请先完成任务规划，再执行起飞预检','takeoff is not awaiting confirmation':'当前没有等待确认的起飞任务','takeoff confirmation token is invalid or expired':'起飞确认已失效，请重新执行预检','preflight changed before confirmation':'确认前飞行状态发生变化，请重新执行预检','no mission exists':'当前没有任务','tasks_by_uav must contain exactly UAV IDs 1 through 6':'任务分配必须完整包含六架无人机','duration_seconds must be positive':'比赛时限必须大于零','invalid return reason':'返航原因无效'}
@@ -955,9 +955,9 @@ let 成果草稿=null,成果操作中=false;
 function 更新科目一自动上报状态(automatic){
   if(!automatic){$('subject1AutoStatus').textContent='自动上报状态暂不可用。';return}
   if(!automatic.enabled){$('subject1AutoStatus').textContent='自动上报仅由任务发布端执行。';return}
-  if(!automatic.mission_id){$('subject1AutoStatus').textContent='等待本次科目一任务规划；比赛用时满 24 分钟后，每隔 5 秒自动上报一次，共 5 次。';return}
+  if(!automatic.mission_id){$('subject1AutoStatus').textContent='等待本次科目一任务规划；先满足者生效：六机成功返航后每2秒上报10次，或24分至25分30秒每5秒上报。';return}
   const started=automatic.attempts_started||0,finished=automatic.attempts_finished||0;
-  $('subject1AutoStatus').textContent=started?`本次任务 ${automatic.mission_id}：自动上报已启动 ${started}/5 次，已结束 ${finished}/5 次。${automatic.last_result?.detail||''}`:`本次任务 ${automatic.mission_id}：比赛用时满 24 分钟后自动上报 5 次，每隔 5 秒一次。`;
+  $('subject1AutoStatus').textContent=`本次任务 ${automatic.mission_id}：成功返航 ${(automatic.returned_uav_ids||[]).length}/6 架；返航触发上报 ${automatic.return_attempts||0}/10 次，计时触发 ${automatic.clock_attempts||0} 次。实际请求 ${started} 次，已结束 ${finished} 次。只执行先触发的一套：六机到点下降3秒后每2秒10次，或24分至25分30秒每5秒一次。当前：${automatic.selected_strategy==='six_returns'?'返航触发':automatic.selected_strategy==='competition_time'?'计时触发':'等待触发'}。${automatic.last_result?.detail||''}`;
 }
 setInterval(()=>{if($('subject1ReportDialog').open)更新科目一自动上报状态(当前状态?.subject1_auto_report)},1000);
 function 清除成果草稿(){成果草稿=null;$('sendSubject1Report').disabled=true;$('downloadSubject1Report').hidden=true;$('subject1ReportSummary').textContent='内容已改变，请重新生成并校验。'}

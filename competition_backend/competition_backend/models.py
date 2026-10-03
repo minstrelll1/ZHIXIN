@@ -49,6 +49,7 @@ class Telemetry:
     velocity: List[float] = field(default_factory=lambda: [0.0, 0.0, 0.0])
     task_complete: bool = False
     task_phase: str = ""
+    successful_return: Dict[str, Any] = field(default_factory=dict)
     gps_status: int = 0
     location_source: int = -1
     gps_num: int = 0

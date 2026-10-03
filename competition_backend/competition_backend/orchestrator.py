@@ -728,8 +728,8 @@ class CompetitionOrchestrator:
             results = {}
             for uav_id in uav_ids:
                 try:
-                    self._request_return_one(uav_id, reason)
-                    results[str(uav_id)] = {"ok": True, "detail": "返航请求已发送或已在返航/落地状态"}
+                    sent = self._request_return_one(uav_id, reason, manual_retry=reason == ReturnReason.MANUAL)
+                    results[str(uav_id)] = {"ok": True, "detail": "返航请求已发送，等待机载状态确认" if sent else "已在返航/落地状态"}
                 except Exception as error:
                     results[str(uav_id)] = {"ok": False, "detail": str(error)}
                     self._event("return_send_failed", uav_id=uav_id, error=str(error))
@@ -738,12 +738,22 @@ class CompetitionOrchestrator:
             self._save()
             return dict(self.snapshot(), return_results=results)
 
-    def _request_return_one(self, uav_id: int, reason: ReturnReason) -> None:
+    def _request_return_one(self, uav_id: int, reason: ReturnReason, manual_retry: bool = False) -> bool:
         if not self._mission:
-            return
+            return False
         runtime = self._mission.uavs[uav_id]
-        if runtime.phase in (UavPhase.RETURN_COMMANDED, UavPhase.LANDED):
-            return
+        if runtime.phase == UavPhase.LANDED:
+            return False
+        if runtime.phase == UavPhase.RETURN_COMMANDED:
+            telemetry = self._telemetry.get(uav_id)
+            confirmed = (telemetry is not None and telemetry.connected
+                         and 0 <= self.clock() - telemetry.received_at <= self.config.safety.telemetry_max_age_seconds
+                         and telemetry.task_assignment_mission_id == self._mission.mission_id
+                         and telemetry.task_phase in ("returning", "landing", "landed", "external_return_requested"))
+            if not manual_retry or confirmed:
+                return False
+            # TCP 写入成功不等于机载收到。失联前丢失的返航请求允许人工再次发送，
+            # 重连本身不触发重发；机载继续校验任务编号、遥控器接管与重复返航。
         self.adapter.command_return(
             uav_id,
             {
@@ -755,6 +765,7 @@ class CompetitionOrchestrator:
         runtime.phase = UavPhase.RETURN_COMMANDED
         runtime.return_reason = reason.value
         self._event("return_commanded", uav_id=uav_id, reason=reason.value)
+        return True
 
     def _mark_autonomous_return(self, uav_id: int, reason: ReturnReason) -> None:
         """Record a return that the onboard executor performs autonomously."""
@@ -904,6 +915,7 @@ class CompetitionOrchestrator:
                     "velocity": list(item.velocity),
                     "task_complete": item.task_complete,
                     "task_phase": item.task_phase,
+                    "successful_return": dict(item.successful_return),
                     "gps_status": item.gps_status,
                     "location_source": item.location_source,
                     "gps_num": item.gps_num,

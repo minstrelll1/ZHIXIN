@@ -12,6 +12,9 @@ import socket
 import threading
 import time
 import uuid
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+from competition_shared.return_events import matches_return_event, competition_elapsed
 
 import cv2
 import message_filters
@@ -69,7 +72,7 @@ class OnboardImageSender:
             rospy.get_param("~enable_offline_recovery", True)
         )
         self.reconcile_after_minutes = float(
-            rospy.get_param("~reconcile_after_minutes", 19.0)
+            rospy.get_param("~reconcile_after_minutes", 23.5)
         )
         self.reconcile_retry_sec = float(
             rospy.get_param("~reconcile_retry_sec", 30.0)
@@ -158,6 +161,13 @@ class OnboardImageSender:
         self.recovery_revision = 0
         self.recovery_pending = False
         self.final_reconcile_done = False
+        self.final_reconcile_trigger = ""
+        self._competition_time = {}
+        self._competition_time_received = 0.0
+        self._successful_return = {}
+        self._recovery_in_progress = False
+        self._last_recovery_attempt = 0.0
+        self._announce_pending = False
 
         self.status_publisher = rospy.Publisher(
             self.status_topic, String, queue_size=20
@@ -168,6 +178,13 @@ class OnboardImageSender:
             self._mission_control_callback,
             queue_size=10,
         )
+
+        self.competition_time_subscriber = rospy.Subscriber(
+            "/uav%d/competition/competition_time" % self.uav_id,
+            String, self._competition_time_callback, queue_size=1)
+        self.successful_return_subscriber = rospy.Subscriber(
+            "/uav%d/competition/successful_return" % self.uav_id,
+            String, self._successful_return_callback, queue_size=1)
 
         if configured_mission_id:
             self._start_mission(configured_mission_id)
@@ -246,7 +263,7 @@ class OnboardImageSender:
 
         rospy.loginfo(
             "图片回传节点就绪：模式=%s，相机=%s，算法结果=%s，"
-            "任务话题=%s，地面=%s:%d，磁盘补传=%s，定时核对=%.2f 分钟",
+            "任务话题=%s，地面=%s:%d，磁盘补传=%s，最终核对=成功返航或比赛用时 %.2f 分钟（仅一次）",
             self.input_mode,
             self.target_image_topic if self.input_mode == "paired_topics" else self.image_topic,
             self.completed_target_topic if self.input_mode == "completed_target_array" else
@@ -405,6 +422,18 @@ class OnboardImageSender:
             self.recovery_revision = 0
             self.recovery_pending = False
             self.final_reconcile_done = False
+            self.final_reconcile_trigger = ""
+            self._announce_pending = False
+            # 同任务重启保持最终清单作业的触发/完成状态。
+            try:
+                saved = json.loads((mission_dir / ".final_reconciliation.json").read_text(encoding="utf-8"))
+                if saved.get("mission_id") == mission_id:
+                    self.final_reconcile_trigger = str(saved.get("trigger") or "")
+                    self.final_reconcile_done = saved.get("done") is True
+            except (OSError, ValueError):
+                pass
+            self.recovery_pending = any(not path.with_suffix(".acked").exists()
+                                        for path in mission_dir.glob("*.jpg"))
 
         mission_metadata = {
             "mission_id": mission_id,
@@ -429,9 +458,17 @@ class OnboardImageSender:
             metadata["auth_token"] = self.auth_token
         try:
             self._exchange_control(metadata)
+            with self.mission_lock:
+                if mission_id == self.active_mission_id:
+                    self._announce_pending = False
             self._publish_status("ground_mission_started", metadata)
         except Exception as exc:
             metadata["error"] = str(exc)
+            # 起飞通知单独重试，不提前触发最终缺失清单。
+            with self.mission_lock:
+                if mission_id == self.active_mission_id:
+                    self._announce_pending = True
+            self._mark_reconciliation_needed(mission_id)
             self._publish_status("mission_announce_pending", metadata)
             rospy.logwarn("地面任务计时通知失败：%s", exc)
 
@@ -442,7 +479,10 @@ class OnboardImageSender:
         elif command.startswith("start:"):
             self._start_mission(command.split(":", 1)[1])
         elif command == "sync":
-            self._schedule_reconciliation(force=True)
+            if self.final_reconcile_trigger and not self.final_reconcile_done:
+                self._schedule_reconciliation(force=True, final=True)
+            else:
+                rospy.loginfo("尚无待完成的最终补传作业，忽略重复补传请求")
         else:
             rospy.logwarn(
                 "未知任务控制指令“%s”；请使用 start、start:<任务编号> 或 sync",
@@ -665,6 +705,7 @@ class OnboardImageSender:
         )
         connection.settimeout(self.ack_timeout)
         connection.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+        connection.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
         self.connection = connection
         return connection
 
@@ -739,6 +780,7 @@ class OnboardImageSender:
                 try:
                     self._send_packet_with_ack(packet)
                     self.live_send_suppressed_until = 0.0
+                    self._mark_image_acked(metadata)
                     self._publish_status("sent", metadata)
                     rospy.loginfo(
                         "图片已发送：文件=%s，字节=%d",
@@ -763,40 +805,130 @@ class OnboardImageSender:
             finally:
                 self.jobs.task_done()
 
+    def _competition_time_callback(self, message):
+        try:
+            state = json.loads(message.data)
+            if not isinstance(state, dict):
+                return
+            with self.mission_lock:
+                self._competition_time = state
+                self._competition_time_received = time.monotonic()
+        except (TypeError, ValueError):
+            rospy.logwarn("忽略无效比赛计时消息")
+
+    def _successful_return_callback(self, message):
+        try:
+            event = json.loads(message.data)
+            with self.mission_lock:
+                self._successful_return = event if isinstance(event, dict) else {}
+            self._reconcile_timer_callback(None)
+        except (TypeError, ValueError):
+            rospy.logwarn("忽略无效成功返航消息")
+
+    def _save_final_reconciliation_locked(self):
+        path = self._mission_cache_dir(self.active_mission_id) / ".final_reconciliation.json"
+        tmp = path.with_suffix(".tmp")
+        try:
+            tmp.write_text(json.dumps(dict(mission_id=self.active_mission_id,
+                trigger=self.final_reconcile_trigger, done=self.final_reconcile_done),
+                ensure_ascii=False), encoding="utf-8")
+            os.replace(str(tmp), str(path))
+        except OSError as error:
+            rospy.logwarn("最终补传进度保存失败：%s", error)
+
     def _reconcile_timer_callback(self, _event):
         if not self.enable_offline_recovery:
             return
+        now = time.monotonic()
         with self.mission_lock:
-            if not self.active_mission_id:
+            mission = self.active_mission_id
+            if not mission:
                 return
-            elapsed = time.monotonic() - self.mission_started_monotonic
-            final_due = (
-                self.reconcile_after_minutes >= 0
-                and elapsed >= self.reconcile_after_minutes * 60.0
-                and not self.final_reconcile_done
-            )
-            recovery_pending = self.recovery_pending
+            state = self._competition_time
+            elapsed = competition_elapsed(state, self._competition_time_received, now, mission)
+            reason = ""
+            if matches_return_event(self._successful_return, mission, self.uav_id):
+                reason = "successful_return"
+            elif elapsed is not None and elapsed >= self.reconcile_after_minutes * 60.0:
+                reason = "competition_23m30s"
+            if reason and not self.final_reconcile_trigger:
+                self.final_reconcile_trigger = reason
+                # 最终作业首次触发立即运行，不受断连重试的节拍延迟。
+                self.last_reconcile_attempt = -float("inf")
+                self._save_final_reconciliation_locked()
+                rospy.loginfo("最终缺失清单补传已触发：UAV%d，任务=%s，原因=%s",
+                              self.uav_id, mission, reason)
+            final_due = bool(self.final_reconcile_trigger) and not self.final_reconcile_done
         if final_due:
-            # The scheduled final audit must still run even if an earlier
-            # automatic recovery or manual sync already completed.
+            # 同一作业失败后重试；第二个触发条件不会再创建作业。
             self._schedule_reconciliation(force=False, final=True)
-        elif recovery_pending:
-            # A failed live transfer is retried automatically. When the network
-            # comes back, the next manifest exchange recovers missing files.
-            self._schedule_reconciliation(force=False, final=False)
+        else:
+            # 网络恢复只重试没有 ACK 的原始文件，不额外请求缺失清单。
+            self._schedule_pending_delivery()
+
+    def _mark_image_acked(self, metadata):
+        if self.enable_offline_recovery:
+            path = self._mission_cache_dir(metadata["mission_id"]) / metadata["file_name"]
+            try:
+                path.with_suffix(".acked").touch()
+            except OSError as error:
+                rospy.logwarn("图片发送确认标记保存失败：%s", error)
+
+    def _schedule_pending_delivery(self):
+        with self.mission_lock:
+            if (self._recovery_in_progress or self.reconcile_in_progress
+                    or not (self.recovery_pending or self._announce_pending)
+                    or time.monotonic() - self._last_recovery_attempt < self.live_retry_interval):
+                return
+            self._recovery_in_progress = True
+            self._last_recovery_attempt = time.monotonic()
+            mission, revision = self.active_mission_id, self.recovery_revision
+        threading.Thread(target=self._retry_pending_delivery, args=(mission, revision), daemon=True).start()
+
+    def _retry_pending_delivery(self, mission, revision):
+        success = False
+        try:
+            with self.mission_lock:
+                started = self.mission_started_at_unix_ns
+                announce = self._announce_pending
+            if announce:
+                self._announce_mission(mission, started)
+            for path in sorted(self._mission_cache_dir(mission).glob("*.jpg")):
+                with self.mission_lock:
+                    if (mission != self.active_mission_id or self.stop_event.is_set()
+                            or (self.final_reconcile_trigger and not self.final_reconcile_done)):
+                        return
+                if path.with_suffix(".acked").exists() or not path.with_suffix(".json").exists():
+                    continue
+                metadata = self._load_cached_metadata(path)
+                jpeg = path.read_bytes()
+                metadata["jpeg_size"] = len(jpeg)
+                self._send_packet_with_ack(encode_frame(metadata, jpeg))
+                self._mark_image_acked(metadata)
+                self._publish_status("sent", metadata)
+                rospy.loginfo("断连后未确认图片已续传：任务=%s，文件=%s", mission, path.name)
+            success = True
+        except Exception as error:
+            rospy.logwarn("未确认图片续传暂未完成，稍后继续：%s", error)
+        finally:
+            with self.mission_lock:
+                if mission == self.active_mission_id and success and revision == self.recovery_revision:
+                    self.recovery_pending = False
+                self._recovery_in_progress = False
 
     def _schedule_reconciliation(self, force, final=False):
         now = time.monotonic()
         with self.mission_lock:
             if not self.active_mission_id:
                 return
-            if self.reconcile_in_progress:
+            if self.reconcile_in_progress or getattr(self, "_recovery_in_progress", False):
                 return
             if final and self.final_reconcile_done:
                 return
             if self.reconcile_done and not force and not final:
                 return
-            if not force and now - self.last_reconcile_attempt < self.reconcile_retry_sec:
+            retry_interval = min(2.0, self.reconcile_retry_sec) if final else self.reconcile_retry_sec
+            if not force and now - self.last_reconcile_attempt < retry_interval:
                 return
             mission_id = self.active_mission_id
             if force:
@@ -805,7 +937,7 @@ class OnboardImageSender:
             self.last_reconcile_attempt = now
             recovery_revision = self.recovery_revision
             reconcile_trigger = (
-                "scheduled_final"
+                self.final_reconcile_trigger
                 if final
                 else ("manual" if force else "automatic_recovery")
             )
@@ -895,6 +1027,8 @@ class OnboardImageSender:
         remaining = verification.get("missing", [])
         if remaining:
             raise RuntimeError("地面端仍缺少 %d 张图片" % len(remaining))
+        for path in image_paths:
+            self._mark_image_acked({"mission_id": mission_id, "file_name": path.name})
         return len(file_names), len(missing)
 
     def _reconcile_worker(
@@ -906,6 +1040,9 @@ class OnboardImageSender:
             "reconcile_trigger": reconcile_trigger,
         }
         try:
+            if (getattr(getattr(self, "detection_jobs", None), "unfinished_tasks", 0)
+                    or getattr(self, "pending_detections", [])):
+                raise RuntimeError("仍有目标原图正在匹配或落盘，稍后完成本次清单核对")
             total, recovered = self._reconcile_once(mission_id)
             metadata.update({"total": total, "recovered": recovered})
             self._publish_status("reconcile_complete", metadata)
@@ -923,7 +1060,7 @@ class OnboardImageSender:
             rospy.logwarn(
                 "图片补传核对失败：触发原因=%s；将在 %.1f 秒后重试：%s",
                 reconcile_trigger,
-                self.reconcile_retry_sec,
+                min(2.0, self.reconcile_retry_sec) if final else self.reconcile_retry_sec,
                 exc,
             )
         finally:
@@ -936,6 +1073,7 @@ class OnboardImageSender:
                         self.recovery_pending = False
                         if final:
                             self.final_reconcile_done = True
+                            self._save_final_reconciliation_locked()
                     self.reconcile_in_progress = False
 
     def _publish_status(self, state, metadata) -> None:

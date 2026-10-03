@@ -20,6 +20,7 @@ from std_msgs.msg import String, Float64MultiArray, Int32, Bool, Int32MultiArray
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 from competition_shared.navigation import resolve_waypoints
+from competition_shared.competition_time import normalize_competition_time
 from competition_shared.recognition import optional_recognition_selection
 from competition_shared.scan import ScanSession
 import uuid
@@ -168,6 +169,9 @@ class OnboardTaskExecutor:
         self.competition_time_pub = rospy.Publisher(
             self.competition_time_topic, String, queue_size=1, latch=True
         )
+        self.successful_return_pub = rospy.Publisher(
+            fleet_prefix + "/competition/successful_return", String, queue_size=1, latch=True)
+        self._publish_successful_return()
         self.recognition_categories_topic = fleet_prefix + "/competition/recognition_categories"
         self.recognition_categories_pub = rospy.Publisher(
             self.recognition_categories_topic, Int32MultiArray, queue_size=1, latch=True
@@ -284,7 +288,17 @@ class OnboardTaskExecutor:
                     return
                 if "next_waypoint" in payload:
                     self._progress["next_waypoint"] = int(payload["next_waypoint"])
-            if phase in ("completed", "task_complete", "finished"):
+            if phase == "return_descent":
+                if assignment.get("controller_mode") != "external":
+                    return
+                # 必须带本次任务和版本；普通 landing/returning 不能证明已到返航点。
+                if (payload.get("mission_id") != assignment["mission_id"]
+                        or payload.get("assignment_checksum") != assignment["assignment_checksum"]):
+                    raise ValueError("成功返航标记缺少本次任务编号或分派校验码")
+                if not self._record_successful_return("external_program_b", assignment):
+                    return
+                self._publish_status("external_return_descent", controller_mode="external", successful_return=True)
+            elif phase in ("completed", "task_complete", "finished"):
                 count = len(self._assignment["task"]["waypoints_m"])
                 self._checkpoint("completed", next_waypoint=count)
                 self._publish_status("completed", controller_mode="external")
@@ -299,6 +313,45 @@ class OnboardTaskExecutor:
                 self._publish_status("external_status", phase=phase)
         except (TypeError, ValueError, KeyError) as error:
             rospy.logwarn("已忽略无效的外部程序状态：%s", error)
+
+    def _successful_return_snapshot(self):
+        with self._lock:
+            event = dict(self._progress.get("successful_return") or {})
+            if not event or event.get("boot_id") != self._boot_id:
+                return {}
+            event["age_seconds"] = max(0.0, time.monotonic() - event["observed_monotonic"])
+            event.pop("observed_monotonic", None)
+            event.pop("boot_id", None)
+            return event
+
+    def _publish_successful_return(self):
+        publisher = getattr(self, "successful_return_pub", None)
+        if publisher is not None:
+            publisher.publish(String(data=json.dumps(self._successful_return_snapshot(),
+                                                      ensure_ascii=False, allow_nan=False)))
+
+    def _record_successful_return(self, source, assignment):
+        with self._lock:
+            if self._assignment is not assignment:
+                return False
+            if self._progress.get("successful_return"):
+                return True
+            # 只有已一键起飞的任务才接收标记；旧的锁存消息不能启动新任务补传。
+            if self._home is None or self._progress.get("phase") in ("idle", "assigned"):
+                return False
+            clock = getattr(self, "_competition_time_state", None) or assignment.get("competition_time") or {}
+            event = dict(schema_version=1, uav_id=self.uav_id,
+                         mission_id=assignment["mission_id"],
+                         assignment_checksum=assignment["assignment_checksum"],
+                         competition_session_id=clock.get("session_id", ""),
+                         event_id=uuid.uuid4().hex, phase="return_descent", source=source,
+                         observed_monotonic=time.monotonic(), boot_id=self._boot_id)
+            self._checkpoint("external_return_descent", successful_return=event)
+        self._publish_successful_return()
+        self._publish_status("successful_return", event=self._successful_return_snapshot())
+        rospy.loginfo("成功返航标记已记录：UAV%d，任务=%s，来源=%s；已到返航点并开始下降",
+                      self.uav_id, assignment["mission_id"], source)
+        return True
 
     def _validate_parameters(self) -> None:
         if self.uav_id <= 0:
@@ -353,7 +406,7 @@ class OnboardTaskExecutor:
             self._state_received = time.monotonic()
         if (getattr(self, "_automatic_control", False) and previous is not None
                 and previous.armed and not message.armed):
-            if self._progress.get("phase") in ("landing", "landed", "external_return_requested"):
+            if self._progress.get("phase") in ("landing", "landed", "external_return_requested", "external_return_descent"):
                 self._automatic_control = False
             else:
                 self._release_automatic_control("检测到上锁，停止自动控制；不会再次解锁")
@@ -414,7 +467,7 @@ class OnboardTaskExecutor:
             elif (getattr(self, "_command_control_seen", False)
                   or mode != getattr(self, "_startup_initial_control", mode)):
                 # 正常降落由厂商控制器进入 LAND_CONTROL，不应被记录为遥控器接管。
-                if self._progress.get("phase") not in ("landing", "landed", "external_return_requested"):
+                if self._progress.get("phase") not in ("landing", "landed", "external_return_requested", "external_return_descent"):
                     self._release_automatic_control("控制模式已退出自动控制，停止任务输出并交还遥控器")
 
     def _rc_callback(self, message: RCIn) -> None:
@@ -562,6 +615,8 @@ class OnboardTaskExecutor:
                 ground_origin_z=getattr(self, "_ground_origin_z", None),
                 ground_origin_source=getattr(self, "_ground_origin_source", ""),
                 boot_id=self._boot_id,
+                competition_time=getattr(self, "_competition_time_state", None),
+                competition_time_received_monotonic=getattr(self, "_competition_time_received_monotonic", 0.0),
                 device_id=getattr(self, "identity", {}).get("device_id"),
                 model=getattr(self, "identity", {}).get("model"),
                 fleet_revision=getattr(self, "identity", {}).get("fleet_revision"),
@@ -594,6 +649,9 @@ class OnboardTaskExecutor:
             self._gps_home = tuple(progress["gps_home"]) if progress.get("gps_home") else None
             origin = progress.get("ground_origin_z")
             same_boot = progress.get("boot_id") == self._boot_id
+            if same_boot and isinstance(progress.get("competition_time"), dict):
+                self._competition_time_state = progress["competition_time"]
+                self._competition_time_received_monotonic = float(progress.get("competition_time_received_monotonic", time.monotonic()))
             has_ground_origin = same_boot and origin is not None and math.isfinite(float(origin))
             if has_ground_origin:
                 self._ground_origin_z = float(origin)
@@ -618,7 +676,7 @@ class OnboardTaskExecutor:
     def _resume_tick(self, _event: Any) -> None:
         self._maybe_refresh_flight_speed_limit()
         state, _ = self._snapshot()
-        if (self._progress.get("phase") == "landing" and state is not None
+        if (self._progress.get("phase") in ("landing", "external_return_descent") and state is not None
                 and time.monotonic() - self._state_received < 2.0 and not state.armed):
             self._checkpoint("landed")
             self._resume_pending = False
@@ -734,6 +792,7 @@ class OnboardTaskExecutor:
                 "mission_altitude_m": float(state.position[2]) - self._home[2] if self._home and self._assignment and self._uses_ground_height_reference(self._assignment) else None,
                 "velocity": [float(value) for value in state.velocity],
                 "task_phase": self._progress.get("phase", "idle"),
+                "successful_return": self._successful_return_snapshot(),
                 "pengfei": self._pengfei_bridge.snapshot(),
                 "ego_exec_state": ego_state,
                 "ego_exec_state_age_seconds": ego_age,
@@ -767,7 +826,9 @@ class OnboardTaskExecutor:
             if int(payload.get("uav_id", -1)) != self.uav_id:
                 return
             command_type = payload.get("type")
-            if command_type == "assign_task":
+            if command_type == "sync_competition_time":
+                self._sync_competition_time(payload.get("competition_time"))
+            elif command_type == "assign_task":
                 self._accept_assignment(payload)
             elif command_type == "takeoff":
                 self._accept_motion_command("takeoff", payload, self._run_takeoff)
@@ -883,6 +944,7 @@ class OnboardTaskExecutor:
             self._progress = {"phase": "assigned", "next_waypoint": 0}
             self._checkpoint("assigned", next_waypoint=0, execution={})
         self._publish_competition_time()
+        self._publish_successful_return()
         self._publish_status(
             "task_received",
             waypoint_count=len(waypoints),
@@ -913,6 +975,28 @@ class OnboardTaskExecutor:
                 "完整下发任务 JSON：\n%s",
                 json.dumps(assignment, ensure_ascii=False, indent=2, sort_keys=True),
             )
+
+    def _sync_competition_time(self, raw):
+        """仅更新同一场比赛的计时，不重发或修改已确认的机载任务。"""
+        with self._lock:
+            if self._assignment is None or not self._competition_time_state:
+                return
+            state = normalize_competition_time(raw, self._assignment["mission_id"])
+            previous = self._competition_time_state
+            if (not state["running"] or not state["synchronized"]
+                    or state["session_id"] != previous.get("session_id")
+                    or state["publisher_terminal_id"] != previous.get("publisher_terminal_id")
+                    or state["revision"] < previous.get("revision", 0)):
+                return
+            now = time.monotonic()
+            if state["revision"] == previous.get("revision"):
+                state["elapsed_seconds"] = max(state["elapsed_seconds"],
+                    previous["elapsed_seconds"] + max(0., now - self._competition_time_received_monotonic))
+            else:
+                rospy.loginfo("比赛计时修订已同步：版本=%d，已用=%.1f秒", state["revision"], state["elapsed_seconds"])
+            self._competition_time_state = state
+            self._competition_time_received_monotonic = now
+        self._publish_competition_time()
 
     def _publish_competition_time(self, _event=None) -> None:
         """按分派时快照和机载单调时钟发布当前估计已用时间。"""

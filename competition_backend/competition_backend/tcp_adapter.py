@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import hmac
 import json
+import logging
 import math
+import select
 import socket
 import threading
 import time
@@ -17,6 +19,44 @@ from .pengfei_telemetry import sanitize_pengfei
 PROTOCOL_VERSION = 1
 MAX_MESSAGE_BYTES = 4 * 1024 * 1024
 COMMAND_SEND_TIMEOUT_SECONDS = 3.0
+LINK_IDLE_TIMEOUT_SECONDS = 8.0
+
+
+class _MessageReader:
+    """保留分片缓冲；socket 超时后不能继续使用 makefile.readline。"""
+
+    def __init__(self, connection, stop_event):
+        self.connection = connection
+        self.stop_event = stop_event
+        self.buffer = bytearray()
+
+    def read(self, timeout):
+        deadline = time.monotonic() + timeout
+        while b"\n" not in self.buffer:
+            if self.stop_event.is_set():
+                raise OSError("地面服务正在停止")
+            if time.monotonic() >= deadline:
+                raise TimeoutError("机载链路接收超时，已释放旧连接，等待自动重连")
+            ready, _, _ = select.select([self.connection], [], [], min(0.5, max(0, deadline - time.monotonic())))
+            if not ready:
+                continue
+            try:
+                chunk = self.connection.recv(65536)
+            except socket.timeout:
+                continue
+            if not chunk:
+                return None
+            self.buffer.extend(chunk)
+            if len(self.buffer) > MAX_MESSAGE_BYTES and b"\n" not in self.buffer:
+                raise ValueError("TCP 消息超出长度限制")
+        raw, _, remainder = self.buffer.partition(b"\n")
+        self.buffer = bytearray(remainder)
+        if len(raw) + 1 > MAX_MESSAGE_BYTES:
+            raise ValueError("TCP 消息超出长度限制")
+        payload = json.loads(raw.decode("utf-8"))
+        if not isinstance(payload, dict):
+            raise ValueError("TCP JSON 必须是对象")
+        return payload
 
 
 class _ClientConnection:
@@ -99,6 +139,9 @@ class TcpFleetAdapter(FleetAdapter):
         self._pengfei_telemetry_received: Dict[int, float] = {}
         self._ego_telemetry_received: Dict[int, float] = {}
         self._latest_assignments: Dict[int, Dict[str, Any]] = {}
+        self._telemetry_condition = threading.Condition()
+        self._telemetry_pending = set()
+        self._telemetry_thread = None
 
     @property
     def bound_port(self) -> int:
@@ -163,6 +206,8 @@ class TcpFleetAdapter(FleetAdapter):
         server.settimeout(0.5)
         self._server = server
         self._stop_event.clear()
+        self._telemetry_thread = threading.Thread(target=self._telemetry_loop, name="fleet-telemetry", daemon=True)
+        self._telemetry_thread.start()
         self._accept_thread = threading.Thread(
             target=self._accept_loop, name="fleet-tcp-accept", daemon=True
         )
@@ -170,6 +215,8 @@ class TcpFleetAdapter(FleetAdapter):
 
     def stop(self) -> None:
         self._stop_event.set()
+        with self._telemetry_condition:
+            self._telemetry_condition.notify_all()
         server = self._server
         self._server = None
         if server is not None:
@@ -187,6 +234,34 @@ class TcpFleetAdapter(FleetAdapter):
         for thread in list(self._client_threads):
             thread.join(timeout=1.0)
         self._client_threads = []
+        if self._telemetry_thread is not None:
+            self._telemetry_thread.join(timeout=2.0)
+
+    def _notify_telemetry(self, telemetry):
+        if self._telemetry_thread is None:
+            self.emit_telemetry(telemetry)
+            return
+        # 规划和界面状态处理可能持锁较久，不能堵住网络线程的心跳和回执。
+        # 每机只保留一次待通知，释放锁后读取最新快照，避免积压旧位置。
+        with self._telemetry_condition:
+            self._telemetry_pending.add(telemetry.uav_id)
+            self._telemetry_condition.notify()
+
+    def _telemetry_loop(self):
+        while not self._stop_event.is_set():
+            with self._telemetry_condition:
+                self._telemetry_condition.wait_for(lambda: self._telemetry_pending or self._stop_event.is_set())
+                if self._stop_event.is_set():
+                    return
+                pending = self._telemetry_pending
+                self._telemetry_pending = set()
+            for uid in pending:
+                try:
+                    snapshot = self.telemetry_snapshot(uid)
+                    if snapshot is not None:
+                        self.emit_telemetry(snapshot)
+                except Exception:
+                    logging.getLogger(__name__).exception("UAV%s 地面遥测处理失败，机地通信继续运行", uid)
 
     def _accept_loop(self) -> None:
         while not self._stop_event.is_set():
@@ -204,19 +279,9 @@ class TcpFleetAdapter(FleetAdapter):
                 name="fleet-tcp-client-{}".format(address[0]),
                 daemon=True,
             )
+            self._client_threads = [item for item in self._client_threads if item.is_alive()]
             self._client_threads.append(thread)
             thread.start()
-
-    def _read_message(self, stream: Any) -> Optional[Dict[str, Any]]:
-        line = stream.readline(MAX_MESSAGE_BYTES + 1)
-        if not line:
-            return None
-        if len(line.encode("utf-8")) > MAX_MESSAGE_BYTES or not line.endswith("\n"):
-            raise ValueError("invalid or oversized TCP message")
-        payload = json.loads(line)
-        if not isinstance(payload, dict):
-            raise ValueError("TCP JSON root must be an object")
-        return payload
 
     def _client_loop(self, connection: socket.socket, address: Tuple[str, int]) -> None:
         client = _ClientConnection(connection, address)
@@ -225,9 +290,9 @@ class TcpFleetAdapter(FleetAdapter):
             audit.record("任务链路连接", address=address)
         uav_id: Optional[int] = None
         try:
-            connection.settimeout(5.0)
-            stream = connection.makefile("r", encoding="utf-8", newline="\n")
-            hello = self._read_message(stream)
+            connection.settimeout(COMMAND_SEND_TIMEOUT_SECONDS)
+            stream = _MessageReader(connection, self._stop_event)
+            hello = stream.read(5.0)
             if hello is None or hello.get("type") != "hello":
                 raise ValueError("first TCP message must be hello")
             if int(hello.get("protocol_version", -1)) != PROTOCOL_VERSION:
@@ -253,7 +318,6 @@ class TcpFleetAdapter(FleetAdapter):
                 self.identity_errors.pop(uav_id, None)
                 self._get_telemetry_locked(uav_id).identity = identity
                 self._clients[uav_id] = client
-                assignment = self._latest_assignments.get(uav_id)
             if previous is not None and previous is not client:
                 previous.close()
             client.send(
@@ -262,18 +326,32 @@ class TcpFleetAdapter(FleetAdapter):
                     "uav_id": uav_id,
                     "protocol_version": PROTOCOL_VERSION,
                     "server_time": time.time(),
+                    "link_heartbeat": 1,
                 }
             )
-            if assignment is not None:
-                client.send(assignment)
-
-            connection.settimeout(None)
+            # 重连只恢复链路，绝不自动重放旧任务/起飞/返航。机载继续现有任务。
+            if audit:
+                audit.record("任务链路握手完成", uav_id=uav_id, address=address,
+                             heartbeat=hello.get("link_heartbeat") == 1)
             while not self._stop_event.is_set():
-                message = self._read_message(stream)
+                message = stream.read(LINK_IDLE_TIMEOUT_SECONDS)
                 if message is None:
                     break
                 if int(message.get("uav_id", -1)) != uav_id:
                     raise ValueError("message UAV ID changed after hello")
+                if message.get("type") == "link_ping":
+                    with self._lock:
+                        if self._clients.get(uav_id) is not client:
+                            break
+                    # 心跳只证明双向通信可用，不能刷新飞控/GPS/目标数据的年龄。
+                    pong = {"type": "link_pong", "uav_id": uav_id, "seq": message.get("seq")}
+                    provider = getattr(self, "competition_time_provider", None)
+                    if provider is not None:
+                        clock_state = provider()
+                        if clock_state.get("running") and clock_state.get("synchronized"):
+                            pong["competition_time"] = clock_state
+                    client.send(pong)
+                    continue
                 if not self._handle_message(uav_id, message, expected_client=client):
                     break
         except (ValueError, TypeError, KeyError) as error:
@@ -305,7 +383,7 @@ class TcpFleetAdapter(FleetAdapter):
                     else:
                         snapshot = None
                 if snapshot is not None:
-                    self.emit_telemetry(snapshot)
+                    self._notify_telemetry(snapshot)
             client.close()
 
     def _get_telemetry_locked(self, uav_id: int) -> Telemetry:
@@ -346,6 +424,8 @@ class TcpFleetAdapter(FleetAdapter):
                 telemetry.position = position
                 telemetry.velocity = velocity
                 telemetry.task_phase = str(message.get("task_phase", ""))
+                event = message.get("successful_return")
+                telemetry.successful_return = dict(event) if isinstance(event, dict) else {}
                 telemetry.gps_status = int(message.get("gps_status", 0))
                 telemetry.location_source = int(message.get("location_source", -1))
                 telemetry.gps_num = int(message.get("gps_num", 0))
@@ -419,6 +499,8 @@ class TcpFleetAdapter(FleetAdapter):
                         audit.record("收到机载任务回执", uav_id=uav_id, status=summary)
                         previous[uav_id] = summary
                         self._diagnostic_status = previous
+                if state == "successful_return" and isinstance(status.get("event"), dict):
+                    telemetry.successful_return = dict(status["event"])
                 if state in ("completed", "done"):
                     telemetry.task_complete = True
                 if bool(status.get("task_assignment_acked")) or state in (
@@ -440,7 +522,7 @@ class TcpFleetAdapter(FleetAdapter):
             snapshot = self._display_snapshot_locked(telemetry)
         # 回调会获取任务状态锁；规划线程持有该锁并调用本适配器发送任务。
         # 必须先释放 TCP 锁，调用方也不能在持有 TCP 锁时进入本方法。
-        self.emit_telemetry(snapshot)
+        self._notify_telemetry(snapshot)
         return True
 
     def _send_command(self, uav_id: int, command_type: str, payload: Dict[str, Any]) -> None:
@@ -448,8 +530,6 @@ class TcpFleetAdapter(FleetAdapter):
         with self._lock:
             client = self._clients.get(uav_id)
         if client is None:
-            if command_type == "assign_task":
-                return
             raise RuntimeError("UAV{} TCP link is not connected".format(uav_id))
         try:
             client.send(message)

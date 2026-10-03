@@ -299,6 +299,7 @@ def create_app(environment=None, audit=None) -> FastAPI:
     tcp_diagnostics = adapter.local_adapter if isinstance(adapter, DistributedFleetAdapter) else adapter
     adapter.audit = audit
     tcp_diagnostics.audit = audit
+    tcp_diagnostics.competition_time_provider = competition_clock.snapshot
     orchestrator = CompetitionOrchestrator(
         config=config,
         adapter=adapter,
@@ -358,6 +359,7 @@ def create_app(environment=None, audit=None) -> FastAPI:
         lambda: bool(operator_state["configured"] and operator_state["task_publisher"]),
         audit=audit,
         publisher_dedup=publisher_results,
+        telemetry_provider=lambda: orchestrator.snapshot()["telemetry"],
     )
     image_collector = (
         PeerImageCollector(
@@ -1435,7 +1437,7 @@ def create_app(environment=None, audit=None) -> FastAPI:
             raise
         mission = result.get("mission") or {}
         if role["task_publisher"] and mission.get("subject") == "subject1":
-            auto_subject1_reporter.note_mission(mission.get("mission_id"))
+            auto_subject1_reporter.note_mission(mission.get("mission_id"), mission.get("uavs"))
         if isinstance(adapter, DistributedFleetAdapter):
             assigned_uav_ids = list(orchestrator.active_uav_ids)
             result["dispatch_status"] = {

@@ -20,7 +20,7 @@
   </node>
   <arg name="enable_motion" default="false" />
   <arg name="enable_offline_recovery" default="true" />
-  <arg name="reconcile_after_minutes" default="19.0" />
+  <arg name="reconcile_after_minutes" default="23.5" />
   <arg name="start_image_mission_on_node_start" default="false" />
 
   <include file="$(find su17_competition_executor)/launch/onboard_task_executor.launch">

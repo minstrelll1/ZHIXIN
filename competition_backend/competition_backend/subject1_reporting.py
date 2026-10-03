@@ -267,10 +267,10 @@ class AutoSubject1Reporter:
 
     TRIGGER_SECONDS = 24 * 60
     INTERVAL_SECONDS = 5
-    ATTEMPT_COUNT = 5
 
     def __init__(self, image_root, competition_clock, is_publisher, audit=None,
-                 publisher_dedup=False):
+                 publisher_dedup=False, telemetry_provider=None):
+        self.telemetry_provider = telemetry_provider or (lambda: {})
         self.image_root = image_root
         self.publisher_dedup = bool(publisher_dedup)
         self.clock = competition_clock
@@ -285,8 +285,10 @@ class AutoSubject1Reporter:
         self._frozen_mission_id = None
         self._started = 0
         self._finished = 0
-        self._next_at = None
         self._last_result = None
+        from .return_report_schedule import ReturnReportSchedule
+        self._schedule = ReturnReportSchedule()
+        self._checksums = {}
 
     def start(self):
         if self._thread is None or not self._thread.is_alive():
@@ -314,10 +316,12 @@ class AutoSubject1Reporter:
             self._mission_id = None
             self._frozen_mission_id = None
             self._started = self._finished = 0
-            self._next_at = None
             self._last_result = None
+            from .return_report_schedule import ReturnReportSchedule
+            self._schedule = ReturnReportSchedule()
+            self._checksums = {}
 
-    def note_mission(self, mission_id):
+    def note_mission(self, mission_id, uavs=None):
         state = self.clock.snapshot()
         if not (state.get('running') and state.get('is_authority') and self.is_publisher()):
             return
@@ -326,39 +330,54 @@ class AutoSubject1Reporter:
         with self._lock:
             self._sync_session(state)
             if self._started == 0:
+                if self._mission_id != mission_id:
+                    from .return_report_schedule import ReturnReportSchedule
+                    self._schedule = ReturnReportSchedule()
                 self._mission_id = mission_id
+                self._checksums = {str(uid): item.get('assignment_checksum')
+                                   for uid, item in (uavs or {}).items()}
         if self.audit:
             self.audit.record('科目一自动上报已关联本次任务', mission_id=mission_id,
                               competition_session=state['session_id'])
 
     def tick(self, now=None):
-        """按比赛时间触发首发，后四次按单调时钟每隔五秒启动。"""
         state = self.clock.snapshot()
+        telemetry = self.telemetry_provider()
         with self._lock:
             self._sync_session(state)
             if (not state.get('is_authority') or not self.is_publisher()
-                    or (self._started == 0 and state.get('elapsed_seconds', 0) < self.TRIGGER_SECONDS)
-                    or not self._mission_id or self._started >= self.ATTEMPT_COUNT
-                    or self._stop.is_set()):
+                    or not self._mission_id or self._stop.is_set()):
                 return False
             now = time.monotonic() if now is None else now
-            if self._next_at is not None and now < self._next_at:
+            mission_id = self._frozen_mission_id or self._mission_id
+            added = self._schedule.observe(telemetry, mission_id, self._session_id,
+                                           self._checksums, now)
+            if added and self.audit:
+                self.audit.record('成功返航标记已汇集', mission_id=mission_id,
+                                  uav_ids=added, returned_uav_ids=sorted(self._schedule.returned))
+            previous_strategy = self._schedule.selected_strategy
+            reasons = self._schedule.due(now, float(state.get('elapsed_seconds', 0)))
+            if self._schedule.selected_strategy != previous_strategy and self.audit:
+                self.audit.record('科目一自动上报策略已选定', mission_id=mission_id,
+                                  competition_session=self._session_id,
+                                  strategy=self._schedule.selected_strategy,
+                                  competition_elapsed_seconds=state.get('elapsed_seconds'))
+            if not reasons:
                 return False
-            self._frozen_mission_id = self._frozen_mission_id or self._mission_id
+            self._frozen_mission_id = mission_id
             self._started += 1
             number = self._started
-            mission_id = self._frozen_mission_id
             session_id = self._session_id
-            self._next_at = now + self.INTERVAL_SECONDS if number < self.ATTEMPT_COUNT else None
         if self.audit:
             self.audit.record('科目一自动上报尝试开始', mission_id=mission_id,
-                              competition_session=session_id, attempt=number, total=self.ATTEMPT_COUNT)
-        threading.Thread(target=self._submit_once, args=(session_id, mission_id, number),
+                              competition_session=session_id, attempt=number, triggers=reasons,
+                              competition_elapsed_seconds=state.get('elapsed_seconds'))
+        threading.Thread(target=self._submit_once, args=(session_id, mission_id, number, reasons),
                          name='subject1-auto-report-%d' % number, daemon=True).start()
         return True
 
-    def _submit_once(self, session_id, mission_id, number):
-        # 每轮重新整理最新已回传目标；各轮独立实例，20 秒请求超时不会阻塞 5 秒间隔。
+    def _submit_once(self, session_id, mission_id, number, reasons=None):
+        # 每轮重新整理最新已回传目标；请求超时不会阻塞后续节拍。
         try:
             reporter = Subject1Reporter(self.image_root, audit=self.audit,
                                         publisher_dedup=self.publisher_dedup)
@@ -369,6 +388,9 @@ class AutoSubject1Reporter:
             if (self._stop.is_set() or current.get('session_id') != session_id
                     or not current.get('is_authority') or not self.is_publisher()):
                 raise RuntimeError('比赛会话或发布端身份已变化，本次不再发送旧任务结果')
+            if (reasons == ['competition_time']
+                    and not 1440 <= float(current.get('elapsed_seconds', 0)) < 1530):
+                raise RuntimeError('比赛时间已离开24分至25分30秒窗口，取消尚未发送的计时上报')
             receipt = reporter.submit(prepared['draft_id'], scheduled=True)
             outcome = dict(attempt=number, mission_id=mission_id, state=receipt['state'],
                            http_status=receipt['http_status'], detail=receipt['detail'],
@@ -383,7 +405,7 @@ class AutoSubject1Reporter:
                     self._last_result = outcome
         if self.audit:
             self.audit.record('科目一自动上报尝试结束', competition_session=session_id, **outcome)
-        print('科目一自动上报第 %d/%d 次：%s' % (number, self.ATTEMPT_COUNT, outcome['detail']), flush=True)
+        print('科目一自动上报第 %d 次：%s' % (number, outcome['detail']), flush=True)
 
     def snapshot(self):
         with self._lock:
@@ -391,7 +413,7 @@ class AutoSubject1Reporter:
             self._sync_session(state)
             return dict(enabled=bool(state.get('is_authority') and self.is_publisher()),
                         trigger_elapsed_seconds=self.TRIGGER_SECONDS,
-                        interval_seconds=self.INTERVAL_SECONDS, total_attempts=self.ATTEMPT_COUNT,
+                        interval_seconds=self.INTERVAL_SECONDS, **self._schedule.snapshot(),
                         mission_id=self._frozen_mission_id or self._mission_id,
                         attempts_started=self._started, attempts_finished=self._finished,
                         last_result=dict(self._last_result) if self._last_result else None)

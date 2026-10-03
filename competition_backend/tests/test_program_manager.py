@@ -214,6 +214,22 @@ class ProgramsTest(unittest.TestCase):
             self.assertEqual(manager.snapshot()['authorization']['state'], 'error')
             self.assertEqual(manager.snapshot()['programs']['ground']['state'], 'running')
 
+    def test_lost_start_response_recovers_monitoring_without_restarting_programs(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            manager = ProgramManager(tmp, {})
+            manager.local = dict(uav_id=1, model='p600', onboard_host='192.168.1.202')
+            calls = []
+            def request(action, offsets):
+                calls.append(action)
+                if len(calls) < 3:
+                    raise RuntimeError('ssh: connection timed out')
+                manager.stop_event.set()
+                return {key: dict(state='running') for key in ('onboard', 'detection', 'flight')}
+            manager._request = request
+            manager._watch()
+            self.assertEqual(calls, ['start', 'status', 'status'])
+            self.assertEqual(manager.snapshot()['programs']['flight']['state'], 'running')
+
     def test_healthy_launcher_with_dead_nodes_is_not_green(self):
         state = remote.apply_health(dict(state='running'), dict(ready=False, present=['a'], missing=['b']), {'started_at': 1})
         self.assertEqual(state['state'], 'error')
