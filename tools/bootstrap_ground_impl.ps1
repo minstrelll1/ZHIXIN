@@ -16,7 +16,8 @@ param(
     [string]$AuthToken = "",
     [string]$PeerToken = "",
     [switch]$SkipInstall,
-    [switch]$ForceTokenConfig
+    [switch]$ForceTokenConfig,
+    [switch]$FromUsb
 )
 
 $ErrorActionPreference = "Stop"
@@ -194,7 +195,10 @@ function Copy-GroundProjectFiles([string]$SourceRoot, [string]$TargetRoot) {
             throw "下载包中的文件路径异常：$($file.FullName)"
         }
         $relative = $file.FullName.Substring($sourcePrefix.Length)
-        if ($relative -in @('tools\local_tokens.ps1', 'tools\local_tokens.env')) { continue }
+        $relativeUnix = $relative.Replace('\', '/')
+        if ($relativeUnix -match '(^|/)(\.git|\.venv|__pycache__|ground_runtime|ground_logs|flight_records|received_images|pointcloud_records|position_tests|onboard_source_backup|\.codex_backup[^/]*|data)(/|$)' -or
+            $relativeUnix -match '(^|/)(local_tokens\.ps1|local_tokens\.env|auto\.key|auto\.crt)$' -or
+            $relativeUnix -match '\.(pyc|bag|log)$') { continue }
         if ($file.Attributes -band [IO.FileAttributes]::ReparsePoint) {
             throw "下载包中包含不支持的链接文件：$relative"
         }
@@ -232,7 +236,7 @@ function Copy-GroundProjectFiles([string]$SourceRoot, [string]$TargetRoot) {
 }
 
 # 已有部署的代码更新只拉取变化文件，不能回退到整仓库 ZIP。
-if ($SkipInstall) {
+if ($SkipInstall -and -not $FromUsb) {
     $updateRoot = [IO.Path]::GetFullPath($Destination)
     $updatePath = Join-Path $updateRoot "tools\update_ground.ps1"
     if (Test-Path -LiteralPath $updatePath) {
@@ -258,27 +262,44 @@ $Destination = [IO.Path]::GetFullPath($Destination)
 $parent = Split-Path $Destination -Parent
 if (-not (Test-Path -LiteralPath $parent)) { New-Item -ItemType Directory -Path $parent -Force | Out-Null }
 
-$tempRoot = Join-Path ([IO.Path]::GetTempPath()) ("zhixin_ground_" + [guid]::NewGuid().ToString("N"))
-$zipPath = Join-Path $tempRoot "source.zip"
-$extractRoot = Join-Path $tempRoot "extract"
-New-Item -ItemType Directory -Path $tempRoot,$extractRoot -Force | Out-Null
+$tempRoot = $null
 try {
-    $encodedRepo = $Repository -replace "^https?://github.com/", "" -replace "/$", ""
-    if ($Branch -match '\.\.' -or $Branch.Contains('\') -or $Branch.Contains('"')) { throw "分支名包含不安全字符。" }
-    $zipUrl = "https://github.com/$encodedRepo/archive/refs/heads/$Branch.zip"
-    Write-Host "正在下载竞赛地面端：$encodedRepo / $Branch" -ForegroundColor Cyan
-    Invoke-WebRequest -UseBasicParsing -Uri $zipUrl -OutFile $zipPath
-    Expand-Archive -LiteralPath $zipPath -DestinationPath $extractRoot -Force
-    $source = Get-ChildItem -LiteralPath $extractRoot -Directory | Select-Object -First 1
-    if (-not $source -or -not (Test-Path (Join-Path $source.FullName "tools\install_ground_station.ps1"))) {
-        throw "下载包中没有找到有效的竞赛地面端项目。请检查仓库和分支。"
+    if ($FromUsb) {
+        $sourceRoot = [IO.Path]::GetFullPath((Split-Path $PSScriptRoot -Parent))
+        if (-not (Test-Path -LiteralPath (Join-Path $sourceRoot "tools\install_ground_station.ps1") -PathType Leaf)) {
+            throw "U 盘项目不完整：缺少 tools\install_ground_station.ps1。"
+        }
+        $sourcePrefix = $sourceRoot.TrimEnd('\') + '\'
+        $destinationPrefix = $Destination.TrimEnd('\') + '\'
+        if ($Destination -eq $sourceRoot -or
+            $Destination.StartsWith($sourcePrefix, [StringComparison]::OrdinalIgnoreCase) -or
+            $sourceRoot.StartsWith($destinationPrefix, [StringComparison]::OrdinalIgnoreCase)) {
+            throw "目标目录不能与 U 盘源码目录重叠。"
+        }
+        Write-Host "正在从 U 盘部署地面端：$sourceRoot" -ForegroundColor Cyan
+    } else {
+        $tempRoot = Join-Path ([IO.Path]::GetTempPath()) ("zhixin_ground_" + [guid]::NewGuid().ToString("N"))
+        $zipPath = Join-Path $tempRoot "source.zip"
+        $extractRoot = Join-Path $tempRoot "extract"
+        New-Item -ItemType Directory -Path $tempRoot,$extractRoot -Force | Out-Null
+        $encodedRepo = $Repository -replace "^https?://github.com/", "" -replace "/$", ""
+        if ($Branch -match '\.\.' -or $Branch.Contains('\') -or $Branch.Contains('"')) { throw "分支名包含不安全字符。" }
+        $zipUrl = "https://github.com/$encodedRepo/archive/refs/heads/$Branch.zip"
+        Write-Host "正在下载竞赛地面端：$encodedRepo / $Branch" -ForegroundColor Cyan
+        Invoke-WebRequest -UseBasicParsing -Uri $zipUrl -OutFile $zipPath
+        Expand-Archive -LiteralPath $zipPath -DestinationPath $extractRoot -Force
+        $source = Get-ChildItem -LiteralPath $extractRoot -Directory | Select-Object -First 1
+        if (-not $source -or -not (Test-Path (Join-Path $source.FullName "tools\install_ground_station.ps1"))) {
+            throw "下载包中没有找到有效的竞赛地面端项目。请检查仓库和分支。"
+        }
+        $sourceRoot = $source.FullName
     }
     if (Test-Path -LiteralPath $Destination) {
         Write-Host "正在更新现有项目，保留本机令牌、日志和接收数据..." -ForegroundColor Cyan
     } else {
         New-Item -ItemType Directory -Path $Destination -Force | Out-Null
     }
-    Copy-GroundProjectFiles -SourceRoot $source.FullName -TargetRoot $Destination
+    Copy-GroundProjectFiles -SourceRoot $sourceRoot -TargetRoot $Destination
     Ensure-TokenConfig $Destination
 
     $media = Join-Path $Destination "third_party\mediamtx\mediamtx.exe"
@@ -295,13 +316,15 @@ try {
     Write-Host "启动：在该目录执行 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\start_ground.ps1" -ForegroundColor Green
 }
 finally {
-    $resolvedTemp = [IO.Path]::GetFullPath($tempRoot)
-    $tempPrefix = [IO.Path]::GetFullPath([IO.Path]::GetTempPath()).TrimEnd('\') + '\'
-    if (-not $resolvedTemp.StartsWith($tempPrefix, [StringComparison]::OrdinalIgnoreCase)) {
-        throw "部署临时目录超出系统临时路径，已停止清理：$resolvedTemp"
-    }
-    if (Test-Path -LiteralPath $tempRoot) {
-        try { Remove-Item -LiteralPath $tempRoot -Recurse -Force }
-        catch { Write-Warning "部署临时文件未能清理：$tempRoot；$($_.Exception.Message)" }
+    if ($tempRoot) {
+        $resolvedTemp = [IO.Path]::GetFullPath($tempRoot)
+        $tempPrefix = [IO.Path]::GetFullPath([IO.Path]::GetTempPath()).TrimEnd('\') + '\'
+        if (-not $resolvedTemp.StartsWith($tempPrefix, [StringComparison]::OrdinalIgnoreCase)) {
+            throw "部署临时目录超出系统临时路径，已停止清理：$resolvedTemp"
+        }
+        if (Test-Path -LiteralPath $tempRoot) {
+            try { Remove-Item -LiteralPath $tempRoot -Recurse -Force }
+            catch { Write-Warning "部署临时文件未能清理：$tempRoot；$($_.Exception.Message)" }
+        }
     }
 }

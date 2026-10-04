@@ -16,27 +16,19 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& ([scriptblock]::Cr
 
 #### 使用 U 盘首次部署
 
-将当前电脑项目中的以下内容复制到 U 盘，保留 `competition_development` 目录结构，再复制到目标电脑：
-
-```text
-competition_development/
-├─ competition_backend/   排除 .venv、data、__pycache__
-├─ competition_shared/
-├─ config/
-├─ src/
-├─ tools/                 包含 local_tokens.ps1、local_tokens.env
-├─ third_party/
-├─ docs/
-└─ README.md
-```
-
-不复制飞行记录、接收图片、日志、运行缓存及厂商工作区。目标电脑安装 Python 3.9～3.12（建议 3.11，并加入 PATH），在项目父目录执行：
+在原电脑的项目父目录执行，`E:` 改为 U 盘盘符：
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\competition_development\tools\install_ground_station.ps1"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\competition_development\tools\prepare_ground_usb.ps1" -Destination "E:\competition_development"
 ```
 
-该命令创建本机 Python 环境并安装依赖；MediaMTX 和令牌使用已复制的文件。安装依赖仍需网络，完全离线时需另备 Python 安装包和依赖包。完成后按下方“地面端”命令启动。
+它将代码、`智信竞赛.exe` 和 MediaMTX 复制到 U 盘并校验；不复制本机令牌、虚拟环境、日志和飞行数据。在目标电脑打开 PowerShell，进入希望保存项目的父目录，执行：
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "E:\competition_development\tools\bootstrap_ground_impl.ps1" -FromUsb
+```
+
+该命令直接从 U 盘复制代码，提示填写本机 AuthToken、PeerToken，自动检查或安装 Python 并安装地面依赖；已有本机令牌、机队配置和数据会保留。**不访问 GitHub**；缺少 Python 或依赖时，首次安装仍需能访问 Python 官网或软件包下载源。完成后按下方“地面端”命令启动。
 
 ### 2. 地面端仅更新代码
 
