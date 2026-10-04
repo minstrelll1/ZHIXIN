@@ -97,6 +97,16 @@ P600 机载地址：
 
 各独立图传网络的地面网卡设为 `192.168.1.230/24`；地面互联网卡保持表中地址。
 
+#### 自动配置双网口 IP
+
+在目标地面电脑上，先接好 USB-C／USB 转网口的图传线，以及内置网口到交换机的网线。以管理员身份打开 PowerShell，进入项目目录，运行：
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\configure_ground_network.ps1
+```
+
+按提示输入本机地面终端编号 1～6。脚本把外置 USB 图传网口设为 `192.168.1.230/24`，把内置交换机网口设为上表对应的 `192.168.2.x/24`；两个专用网口均无默认网关，不修改其他网卡。也可直接加 `-TerminalId 2` 指定编号。先查看选择结果而不修改网卡时加 `-Preview`。若电脑有多个 USB 或内置以太网卡，脚本会停止并列出名称，再以 `-ExternalAdapterName "外置网卡名" -InternalAdapterName "内置网卡名"` 明确指定。修改前的设置保存在 `ground_logs\network_before_*.json`。
+
 其他 P600 只替换 `-UavAddress`。SU17 机载地址为 `192.168.1.88`，地面图传网卡同样为 `192.168.1.230`，并将 `-Model p600` 改为 `-Model su17`。部署脚本不修改厂商工作区。
 
 ## 二、启动
