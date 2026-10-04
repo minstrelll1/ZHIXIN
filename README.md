@@ -12,6 +12,8 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& ([scriptblock]::Cr
 
 首次部署会安装 Python 依赖，检查并使用仓库内的 MediaMTX，并提示在本机填写 AuthToken、PeerToken。
 
+若复制某个文件时被短暂占用，部署脚本会自动重试。持续拒绝访问时，错误会列出来源、目标及哪一侧无法读取；核对对应路径的权限和 Windows 安全中心“保护历史”后，重新执行同一条命令即可继续，已有本机令牌与机队配置会保留。
+
 #### 使用 U 盘首次部署
 
 将当前电脑项目中的以下内容复制到 U 盘，保留 `competition_development` 目录结构，再复制到目标电脑：

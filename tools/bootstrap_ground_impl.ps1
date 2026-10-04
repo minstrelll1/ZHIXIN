@@ -136,6 +136,53 @@ function Ensure-TokenConfig([string]$Root) {
     Write-Host "已写入本机令牌配置（令牌未输出，且不会上传 GitHub）。" -ForegroundColor Green
 }
 
+function Copy-GroundProjectFiles([string]$SourceRoot, [string]$TargetRoot) {
+    # 逐文件复制，可准确报告拒绝访问发生在源文件还是目标文件；也避免
+    # Copy-Item -Recurse 合并已有 tools 目录时中途失败后难以定位。
+    $sourcePrefix = [IO.Path]::GetFullPath($SourceRoot).TrimEnd('\') + '\'
+    $targetPrefix = [IO.Path]::GetFullPath($TargetRoot).TrimEnd('\') + '\'
+    foreach ($file in Get-ChildItem -LiteralPath $SourceRoot -Recurse -File -Force) {
+        if (-not $file.FullName.StartsWith($sourcePrefix, [StringComparison]::OrdinalIgnoreCase)) {
+            throw "下载包中的文件路径异常：$($file.FullName)"
+        }
+        $relative = $file.FullName.Substring($sourcePrefix.Length)
+        if ($relative -in @('tools\local_tokens.ps1', 'tools\local_tokens.env')) { continue }
+        if ($file.Attributes -band [IO.FileAttributes]::ReparsePoint) {
+            throw "下载包中包含不支持的链接文件：$relative"
+        }
+        $target = [IO.Path]::GetFullPath((Join-Path $TargetRoot $relative))
+        if (-not $target.StartsWith($targetPrefix, [StringComparison]::OrdinalIgnoreCase)) {
+            throw "下载包中的文件路径越界：$relative"
+        }
+        if ($relative -in @('config\fleet.json', 'config\onboard_programs.json') -and
+            (Test-Path -LiteralPath $target -PathType Leaf)) { continue }
+        $targetDirectory = Split-Path $target -Parent
+        if (-not (Test-Path -LiteralPath $targetDirectory -PathType Container)) {
+            New-Item -ItemType Directory -Path $targetDirectory -Force | Out-Null
+        }
+        for ($attempt = 1; $attempt -le 4; $attempt++) {
+            try {
+                Copy-Item -LiteralPath $file.FullName -Destination $target -Force -ErrorAction Stop
+                break
+            } catch {
+                if ($attempt -lt 4) {
+                    Start-Sleep -Milliseconds (500 * $attempt)
+                    continue
+                }
+                $sourceState = try {
+                    $stream = [IO.File]::Open($file.FullName, [IO.FileMode]::Open,
+                        [IO.FileAccess]::Read, [IO.FileShare]::ReadWrite)
+                    $stream.Dispose()
+                    '此时源文件可读取；请检查目标目录的写入权限或文件占用'
+                } catch {
+                    '此时源文件不可读取；请检查 Windows 安全中心的保护历史和下载包'
+                }
+                throw "部署文件复制失败：$relative`n来源：$($file.FullName)`n目标：$target`n诊断：$sourceState`n原始错误：$($_.Exception.Message)"
+            }
+        }
+    }
+}
+
 # 已有部署的代码更新只拉取变化文件，不能回退到整仓库 ZIP。
 if ($SkipInstall) {
     $updateRoot = [IO.Path]::GetFullPath($Destination)
@@ -183,22 +230,7 @@ try {
     } else {
         New-Item -ItemType Directory -Path $Destination -Force | Out-Null
     }
-    Get-ChildItem -LiteralPath $source.FullName -Force | Where-Object {
-        $_.Name -notin @("tools\local_tokens.ps1", "tools\local_tokens.env", ".git")
-    } | ForEach-Object {
-        if ($_.Name -eq 'config') {
-            $configDestination = Join-Path $Destination 'config'
-            New-Item -ItemType Directory -Path $configDestination -Force | Out-Null
-            Get-ChildItem -LiteralPath $_.FullName -Force | ForEach-Object {
-                $configTarget = Join-Path $configDestination $_.Name
-                if ($_.Name -ne 'onboard_programs.json' -or -not (Test-Path -LiteralPath $configTarget)) {
-                    Copy-Item -LiteralPath $_.FullName -Destination $configDestination -Recurse -Force
-                }
-            }
-        } else {
-            Copy-Item -LiteralPath $_.FullName -Destination $Destination -Recurse -Force
-        }
-    }
+    Copy-GroundProjectFiles -SourceRoot $source.FullName -TargetRoot $Destination
     Ensure-TokenConfig $Destination
 
     $media = Join-Path $Destination "third_party\mediamtx\mediamtx.exe"
@@ -215,5 +247,13 @@ try {
     Write-Host "启动：在该目录执行 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\start_ground.ps1" -ForegroundColor Green
 }
 finally {
-    if (Test-Path -LiteralPath $tempRoot) { Remove-Item -LiteralPath $tempRoot -Recurse -Force }
+    $resolvedTemp = [IO.Path]::GetFullPath($tempRoot)
+    $tempPrefix = [IO.Path]::GetFullPath([IO.Path]::GetTempPath()).TrimEnd('\') + '\'
+    if (-not $resolvedTemp.StartsWith($tempPrefix, [StringComparison]::OrdinalIgnoreCase)) {
+        throw "部署临时目录超出系统临时路径，已停止清理：$resolvedTemp"
+    }
+    if (Test-Path -LiteralPath $tempRoot) {
+        try { Remove-Item -LiteralPath $tempRoot -Recurse -Force }
+        catch { Write-Warning "部署临时文件未能清理：$tempRoot；$($_.Exception.Message)" }
+    }
 }
