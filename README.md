@@ -10,7 +10,7 @@
 powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& ([scriptblock]::Create((Invoke-RestMethod 'https://raw.githubusercontent.com/minstrelll1/ZHIXIN/codex/portable-ground-deployment/tools/bootstrap_ground.ps1'))) -Destination (Join-Path (Get-Location) 'competition_development')"
 ```
 
-首次部署会安装 Python 依赖，检查并使用仓库内的 MediaMTX，并提示在本机填写 AuthToken、PeerToken。
+首次部署会安装 Python 依赖，检查并使用仓库内的 MediaMTX，并提示在本机填写 AuthToken、PeerToken。若没有兼容的 Python，脚本先尝试 `winget`；未安装 `winget` 或安装失败时，自动从 Python 官网下载并校验安装包，为当前用户安装 Python 3.11。此时无需单独安装 `winget`，但电脑需要能访问 Python 官网和 Python 依赖下载源。
 
 若复制某个文件时被短暂占用，部署脚本会自动重试。持续拒绝访问时，错误会列出来源、目标及哪一侧无法读取；核对对应路径的权限和 Windows 安全中心“保护历史”后，重新执行同一条命令即可继续，已有本机令牌与机队配置会保留。
 

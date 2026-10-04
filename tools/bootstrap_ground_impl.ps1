@@ -66,7 +66,7 @@ function Get-PythonCommand {
             if ($interpreter) { return $interpreter }
         }
     }
-    # winget 安装后当前进程的 PATH 未刷新，直接查找用户范围的解释器。
+    # 安装后当前进程的 PATH 未刷新，直接查找用户范围的解释器。
     if ($env:LOCALAPPDATA) {
         foreach ($version in @("311", "312", "310", "39")) {
             $candidate = Join-Path $env:LOCALAPPDATA "Programs\Python\Python$version\python.exe"
@@ -79,19 +79,67 @@ function Get-PythonCommand {
     return $null
 }
 
+function Install-OfficialPython {
+    if (-not [Environment]::Is64BitOperatingSystem -or
+        $env:PROCESSOR_ARCHITECTURE -eq "ARM64" -or
+        $env:PROCESSOR_ARCHITEW6432 -eq "ARM64") {
+        throw "自动安装目前只支持 x64 Windows。请安装兼容的 Python 3.9～3.12 后重试。"
+    }
+    # 官方 3.11.9 Windows x64 安装包；MD5 来自 python.org 发布页，再校验代码签名。
+    $url = "https://www.python.org/ftp/python/3.11.9/python-3.11.9-amd64.exe"
+    $expectedMd5 = "e8dcd502e34932eebcaf1be056d5cbcd"
+    $installer = Join-Path ([IO.Path]::GetTempPath()) ("zhixin-python-3.11.9-" + [Guid]::NewGuid().ToString("N") + ".exe")
+    try {
+        Write-Host "正在从 Python 官网下载 Python 3.11.9（约 25 MB）..." -ForegroundColor Yellow
+        try {
+            Invoke-WebRequest -Uri $url -UseBasicParsing -TimeoutSec 180 -OutFile $installer
+        } catch {
+            throw "无法从 Python 官网下载安装包：$($_.Exception.Message)。请检查网络后重试。"
+        }
+        if ((Get-FileHash -LiteralPath $installer -Algorithm MD5).Hash -ine $expectedMd5) {
+            throw "Python 安装包校验不通过，已取消安装。"
+        }
+        $signature = Get-AuthenticodeSignature -LiteralPath $installer
+        if ($signature.Status -ne "Valid" -or
+            -not $signature.SignerCertificate -or
+            $signature.SignerCertificate.Subject -notmatch "Python Software Foundation") {
+            throw "Python 安装包的代码签名无效，已取消安装。"
+        }
+        Write-Host "安装包校验通过，正在为当前用户安装 Python 3.11..." -ForegroundColor Yellow
+        $process = Start-Process -FilePath $installer -ArgumentList @(
+            "/quiet", "InstallAllUsers=0", "Include_launcher=0", "Include_test=0",
+            "Include_pip=1", "PrependPath=0"
+        ) -Wait -PassThru -WindowStyle Hidden
+        if ($process.ExitCode -ne 0) {
+            throw "Python 安装程序退出码为 $($process.ExitCode)，请检查系统安装日志。"
+        }
+    } finally {
+        if (Test-Path -LiteralPath $installer -PathType Leaf) {
+            Remove-Item -LiteralPath $installer -Force
+        }
+    }
+}
+
 function Ensure-Python {
     $python = Get-PythonCommand
     if ($python) { return $python }
 
     $winget = Get-Command winget -ErrorAction SilentlyContinue
-    if (-not $winget) {
-        throw "未找到兼容的 Python 3.9～3.12，且本机没有 winget。请先安装 Python 3.11，再重新执行本命令。"
+    if ($winget) {
+        Write-Host "未找到兼容的 Python，正在尝试用 winget 安装 Python 3.11（用户范围）..." -ForegroundColor Yellow
+        try {
+            & $winget.Source install --id Python.Python.3.11 --exact --scope user --accept-source-agreements --accept-package-agreements
+            if ($LASTEXITCODE -eq 0) { $python = Get-PythonCommand }
+        } catch {
+            Write-Warning "winget 安装未完成：$($_.Exception.Message)"
+        }
     }
-    Write-Host "未找到兼容的 Python，正在尝试用 winget 安装 Python 3.11（用户范围）..." -ForegroundColor Yellow
-    & $winget.Source install --id Python.Python.3.11 --exact --scope user --accept-source-agreements --accept-package-agreements
-    if ($LASTEXITCODE -ne 0) { throw "Python 安装失败，请手动安装 Python 3.11 后重试。" }
-    $python = Get-PythonCommand
-    if (-not $python) { throw "未找到已安装的 Python 3.11 解释器，请检查 Python 安装结果后重试。" }
+    if (-not $python) {
+        Write-Host "winget 不可用或未安装成功，改用 Python 官方安装包。" -ForegroundColor Yellow
+        Install-OfficialPython
+        $python = Get-PythonCommand
+    }
+    if (-not $python) { throw "未找到已安装的 Python 3.11 解释器，请检查安装结果后重试。" }
     return $python
 }
 
