@@ -1,5 +1,6 @@
 """由地面端通过 SSH 传送执行；只管理竞赛目录内的进程记录和日志。"""
 import base64
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -10,6 +11,15 @@ import sys
 import time
 
 NAMES = {"onboard": "竞赛程序机载端", "detection": "目标检测程序", "flight": "自主飞行指令程序"}
+
+
+def boot_id():
+    """仅操作系统重新开机才改变；无线断连、ROS 重启、时钟校准均不改变。"""
+    try:
+        value = Path('/proc/sys/kernel/random/boot_id').read_text(encoding='ascii').strip()
+        return value if re.fullmatch(r'[0-9a-fA-F-]{36}', value) else ''
+    except (OSError, ValueError):
+        return ''
 
 
 def detection_command(uid):
@@ -52,6 +62,8 @@ def stamp(pid):
 
 
 def alive(meta):
+    if meta.get('boot_id') and meta['boot_id'] != boot_id():
+        return False
     return bool(meta.get('pid') and stamp(meta['pid']) == meta.get('stamp') and meta.get('stamp'))
 
 
@@ -68,26 +80,31 @@ def write_json(path, value):
     temp.replace(path)
 
 
+def current_record(path, current_boot):
+    record = read_json(path)
+    return record if current_boot and record.get('boot_id') == current_boot else {}
+
+
 def existing(key, uid):
-    expected = {'onboard': 'onboard_preflight.py', 'detection': 'uav_yolo26_botsort_geolocation.launch',
-                'flight': 'p600_gx40_position_pid_reconnaissance.launch'}[key]
-    for proc in Path('/proc').glob('[0-9]*'):
-        try:
-            args = (proc / 'cmdline').read_bytes().decode(errors='replace').split('\0')
-            if '--worker' in args:
-                continue
-            text = ' '.join(args)
-            if expected not in text:
-                # onboard_preflight 最终 exec roslaunch；检查本工程的 launch。
-                if key != 'onboard' or 'su17_competition_executor' not in text or 'roslaunch' not in text:
-                    continue
-            match = re.search(r'(?:uav_id:=|--expect-uav-id\s+)([1-6])(?:\s|$)', text)
-            if match and int(match[1]) == uid:
-                pid = int(proc.name)
-                return {'pid': pid, 'stamp': stamp(pid), 'borrowed': True}
-        except (OSError, ValueError):
-            continue
+    for item in matching_launchers(process_table(), key, uid).values():
+        return dict(item, borrowed=True, boot_id=boot_id())
     return {}
+
+
+def matching_launchers(table, key, uid):
+    """匹配真实 argv 项，不把包含启动字符串的 shell/管理连接当作程序。"""
+    expected = {'onboard': ('onboard_preflight.py', 'start_onboard_stack.sh', 'onboard_competition_stack.launch'),
+                'detection': ('uav_yolo26_botsort_geolocation.launch',),
+                'flight': ('p600_gx40_position_pid_reconnaissance.launch',)}[key]
+    result = {}
+    for pid, item in table.items():
+        args = item.get('args', [])
+        if '--worker' in args or not any(Path(arg).name in expected for arg in args if arg):
+            continue
+        match = re.search(r'(?:\buav_id:=|--expect-uav-id\s+)([1-6])(?:\s|$)', ' '.join(args))
+        if match and int(match[1]) == uid:
+            result[pid] = item
+    return result
 
 
 def worker(directory, command):
@@ -100,7 +117,8 @@ def worker(directory, command):
             child = subprocess.Popen(['bash', '-lc', 'set -eo pipefail; ' + command],
                                      cwd=str(Path.home() / 'competition_development'),
                                      stdin=subprocess.DEVNULL, stdout=log, stderr=log, env=env)
-            write_json(meta_path, {'pid': child.pid, 'stamp': stamp(child.pid), 'started_at': time.time(), 'borrowed': False})
+            write_json(meta_path, {'pid': child.pid, 'stamp': stamp(child.pid), 'started_at': time.time(),
+                                  'borrowed': False, 'boot_id': boot_id()})
             code = child.wait()
             meta = read_json(meta_path)
             meta.update(exit_code=code, stopped_at=time.time())
@@ -108,20 +126,64 @@ def worker(directory, command):
             log.write(('\n程序已停止，退出码：%s\n' % code).encode())
         except Exception as error:
             log.write(('\n程序启动失败：%s\n' % error).encode())
-            write_json(meta_path, {'exit_code': -1, 'error': str(error)})
+            write_json(meta_path, {'exit_code': -1, 'error': str(error), 'boot_id': boot_id()})
 
 
-def status(directory, offset):
-    meta = read_json(directory / 'process.json')
+def latest_log_window(directory, log, size):
+    """只索引最近一次启动的字节范围；不删改机载原始日志或重启程序。"""
+    marker = re.compile(rb'(?m)^\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\] ' + '启动指令：'.encode('utf-8'))
+    stat = os.fstat(log.fileno())
+    identity = [stat.st_dev, stat.st_ino]
+    index_path = directory / 'log_index.json'
+    index = read_json(index_path)
+    start, header, lower = 0, b'', 0
+    if index.get('identity') == identity and 0 <= index.get('size', -1) <= size:
+        old_start = index.get('start', 0)
+        old_header = index.get('header', '').encode('utf-8')
+        log.seek(old_start)
+        if old_header and log.read(len(old_header)) == old_header:
+            start, header = old_start, old_header
+            lower = max(start, index['size'] - 128)
+    end, overlap = size, b''
+    while end > lower:
+        begin = max(lower, end - 1024 * 1024)
+        # 多读一个前置字节，防止把块中间误认为行首；保留跨块的启动标记。
+        read_begin = max(0, begin - 1)
+        log.seek(read_begin)
+        block = log.read(end - read_begin) + overlap
+        matches = list(marker.finditer(block))
+        if matches:
+            match = matches[-1]
+            start, header = read_begin + match.start(), match.group()
+            break
+        overlap = block[begin - read_begin:begin - read_begin + 128]
+        end = begin
+    record = dict(identity=identity, size=size, start=start, header=header.decode('utf-8'))
+    if record != index:
+        try:
+            write_json(index_path, record)
+        except OSError:
+            pass  # 索引只是加速缓存；不能因索引写入失败影响状态查询。
+    session = hashlib.sha256(json.dumps([identity, start, header.decode('utf-8')]).encode()).hexdigest()
+    return start, session
+
+
+def status(directory, offset, latest_log=False):
+    meta = current_record(directory / 'process.json', boot_id())
     live = alive(meta)
     log_path = directory / 'console.log'
     size = log_path.stat().st_size if log_path.exists() else 0
     offset = max(0, min(int(offset), size))
     data, tail = b'', b''
+    log_meta = {}
     if size:
         with log_path.open('rb') as log:
+            if latest_log:
+                start, session = latest_log_window(directory, log, size)
+                offset = max(start, offset)
+                log_meta = dict(log_start=start, log_session=session, log_read_start=offset)
             log.seek(offset)
-            data = log.read(65536)
+            data = log.read(min(65536, size - offset))
             log.seek(max(0, size - 32768))
             tail = log.read()
     # roslaunch 自身仍活着时，关键子进程也可能已经崩溃。
@@ -141,8 +203,14 @@ def status(directory, offset):
         detail = '检测到子进程异常，请查看打印内容'
     if meta.get('borrowed') and live:
         detail = '复用原有进程；原终端历史输出无法追溯'
+    if latest_log and meta.get('borrowed'):
+        # 人工启动程序的 stdout 没有接入此日志，不能把旧程序输出当作本次打印。
+        identity = [meta.get(k) for k in ('boot_id', 'pid', 'stamp')]
+        log_meta = dict(log_session='borrowed-' + hashlib.sha256(json.dumps(identity).encode()).hexdigest(),
+                        log_start=size, log_read_start=size)
+        data, offset = b'', size
     return dict(state=state, detail=detail, pid=meta.get('pid'), exit_code=meta.get('exit_code'),
-                log=base64.b64encode(data).decode(), offset=offset + len(data), size=size)
+                log=base64.b64encode(data).decode(), offset=offset + len(data), size=size, **log_meta)
 
 
 def expected_nodes(uid):
@@ -167,23 +235,31 @@ def ros_health(uid):
     caller = '/competition_program_monitor'
     expected = expected_nodes(uid)
     def ping(name):
+        address = ''
         try:
             with xmlrpc.client.ServerProxy(master_uri, transport=Transport()) as master:
                 code, _, address = master.lookupNode(caller, name)
                 if code != 1:
-                    return name, 0
+                    return name, 0, '', '', False
             with xmlrpc.client.ServerProxy(address, transport=Transport()) as node:
                 code, _, pid = node.getPid(caller)
-                return name, int(pid) if code == 1 else 0
-        except Exception:
-            return name, 0
+                return name, int(pid) if code == 1 else 0, '' if code == 1 else '节点未确认响应', address, False
+        except Exception as error:
+            return name, 0, str(error), address, bool(address and isinstance(error, ConnectionRefusedError))
     names = [name for group in expected.values() for name in group]
     with ThreadPoolExecutor(max_workers=8) as pool:
-        available = dict(pool.map(ping, names))
+        replies = list(pool.map(ping, names))
+    available = {name: pid for name, pid, _, _, _ in replies}
+    errors = {name: error for name, _, error, _, _ in replies if error}
+    addresses = {name: address for name, _, _, address, _ in replies if address}
+    refused = {name for name, _, _, _, closed in replies if closed}
     result = {key: {'ready': all(available[name] for name in group),
                     'present': [name for name in group if available[name]],
                     'missing': [name for name in group if not available[name]],
-                    'pids': {name: available[name] for name in group if available[name]}} for key, group in expected.items()}
+                    'pids': {name: available[name] for name in group if available[name]},
+                    'errors': {name: errors[name] for name in group if name in errors},
+                    'addresses': {name: addresses[name] for name in group if name in addresses},
+                    'refused': [name for name in group if name in refused]} for key, group in expected.items()}
     # 读取实际生效参数，而不是猜测启动命令：人工启动或复用已有程序时也正确。
     result['flight']['flight_mode'] = 'unknown'
     result['flight']['reconnaissance_radius_m'] = None
@@ -264,37 +340,76 @@ def collect_tree(table, roots):
         targets.update(added)
 
 
-def stop_program(directory, key, uid):
-    import signal
-    roots = {}
-    meta = read_json(directory / 'process.json')
-    for item in (meta, read_json(directory / 'worker.json'), existing(key, uid)):
+def stop_targets(directory, key, uid, previous=None):
+    table = process_table()
+    roots = dict(previous or {})
+    for item in (read_json(directory / 'process.json'), read_json(directory / 'worker.json'), existing(key, uid)):
         if alive(item):
             roots[item['pid']] = item
-    table = process_table()
-    # 手工启动或启动指令被修改时，可由已验证的本机 ROS 节点找到进程。
+    # 不能只停止找到的第一个 roslaunch；重复启动及遗留 worker 全部纳入。
+    roots.update(matching_launchers(table, key, uid))
+    for pid, item in table.items():
+        args = item.get('args', [])
+        if '--worker' in args:
+            index = args.index('--worker')
+            if index + 1 < len(args) and args[index + 1] == str(directory) and any(Path(arg).name == 'runner.py' for arg in args if arg):
+                roots[pid] = item
     health = ros_health(uid)[key]
     for name, pid in health.get('pids', {}).items():
         item = table.get(pid)
-        if item and any(name.rsplit('/', 1)[-1] in arg for arg in item['args']):
+        node_name = name.rsplit('/', 1)[-1]
+        if item and any(arg == '__name:=' + node_name or Path(arg).stem == node_name for arg in item['args']):
             roots[pid] = item
-            # 程序 B 的日志包装器也要退出；不纳入未知 roslaunch 或交互 shell。
             parent = table.get(item['parent'])
             if parent and any(Path(arg).name == 'ros_log_capture.py' for arg in parent['args']):
                 roots[parent['pid']] = parent
     targets = collect_tree(table, roots)
     if any(protected_process(item) and item['parent'] in targets for item in table.values()):
-        raise RuntimeError('该启动进程同时管理共享 ROS 主节点，无法单独结束；未执行停止，请在原启动终端处理')
+        raise RuntimeError('该启动进程同时管理共享 ROS 主节点，无法单独结束；请在原启动终端处理')
     if os.getpid() in targets:
         raise RuntimeError('拒绝将管理连接自身作为停止目标')
+    return targets, health
+
+
+def stale_stopped_nodes(initial, final, targets):
+    """只有旧 URI 拒绝连接且其已核验 PID 确实退出，才视为旧注册残留。"""
+    return [name for name in final.get('refused', [])
+            if initial.get('addresses', {}).get(name)
+            and initial['addresses'][name] == final.get('addresses', {}).get(name)
+            and initial.get('pids', {}).get(name) in targets
+            and not alive(targets[initial['pids'][name]])]
+
+
+def stop_program(directory, key, uid):
+    import signal
+    targets, initial_nodes = stop_targets(directory, key, uid)
+    previous_stop = current_record(directory / 'process.json', boot_id())
+    if previous_stop.get('stopped_by_operator'):
+        previous_nodes = previous_stop.get('stop_nodes', {})
+        for field in ('pids', 'addresses'):
+            initial_nodes[field] = dict(previous_nodes.get(field, {}), **initial_nodes.get(field, {}))
+        for pid, item in previous_stop.get('checked_processes', {}).items():
+            targets.setdefault(int(pid), item)
+    identified = set(targets)
+    signals = []
     with (directory / 'console.log').open('ab') as log:
         log.write(('\n请求停止%s；已识别进程：%s\n' % (NAMES[key], ','.join(map(str, targets)) or '无')).encode())
     # 先让 roslaunch 接收 SIGINT 完成节点退出；残留节点再 TERM/KILL。
     for sig, seconds in ((signal.SIGINT, 4), (signal.SIGTERM, 2), (signal.SIGKILL, 1)):
-        table = process_table()
-        targets.update(collect_tree(table, targets))
+        # 重新枚举同程序 launcher/节点，捕获停止过程中被 respawn 的进程。
+        targets.update(stop_targets(directory, key, uid, targets)[0])
+        identified.update(targets)
         pending = {pid: item for pid, item in targets.items() if alive(item)}
-        for pid, item in pending.items():
+        if pending:
+            signals.append(int(sig))
+        to_signal = pending
+        if sig == signal.SIGINT:
+            # 优先中断业务 launcher，让其正常注销 ROS 节点；不同时打断监督 worker。
+            candidates = {pid: item for pid, item in pending.items()
+                          if '--worker' not in item.get('args', [])
+                          or not any(child.get('parent') == pid for child in pending.values())}
+            to_signal = {pid: item for pid, item in candidates.items() if item.get('parent') not in candidates}
+        for pid, item in to_signal.items():
             if not alive(item):
                 continue
             try:
@@ -307,19 +422,27 @@ def stop_program(directory, key, uid):
             if not any(alive(item) for item in targets.values()):
                 break
             time.sleep(.1)
+        targets.update(stop_targets(directory, key, uid, targets)[0])
+        identified.update(targets)
         if not any(alive(item) for item in targets.values()):
             break
-    remaining = [pid for pid, item in targets.items() if alive(item)]
-    nodes = ros_health(uid)[key]
-    verified = not remaining and not nodes['present']
-    detail = '程序及已识别子进程已退出' if verified else '仍有进程或 ROS 节点未退出：%s %s' % (remaining, nodes['present'])
+    final_targets, nodes = stop_targets(directory, key, uid, targets)
+    identified.update(final_targets)
+    remaining = [pid for pid, item in final_targets.items() if alive(item)]
+    stale_nodes = stale_stopped_nodes(initial_nodes, nodes, targets)
+    unresolved = {name: error for name, error in nodes.get('errors', {}).items() if name not in stale_nodes}
+    verified = not remaining and not nodes['present'] and not unresolved
+    detail = ('程序及子进程已退出，已核验 %d 个进程和对应 ROS 节点' % len(identified)) if verified else (
+        '停止未确认，残留进程：%s；ROS 节点：%s；查询失败：%s' % (remaining, nodes['present'], unresolved))
     if verified:
-        write_json(directory / 'process.json', {'stopped_by_operator': True, 'stopped_at': time.time()})
+        write_json(directory / 'process.json', {'stopped_by_operator': True, 'stopped_at': time.time(), 'boot_id': boot_id(),
+                   'stop_nodes': initial_nodes, 'checked_processes': targets})
         write_json(directory / 'worker.json', {})
     with (directory / 'console.log').open('ab') as log:
         log.write((detail + '\n').encode())
     return dict(state='stopped' if verified else 'error', detail=detail, stop_verified=verified,
-                remaining_pids=remaining, nodes=nodes)
+                remaining_pids=remaining, checked_pids=sorted(identified), signals=signals, nodes=nodes,
+                stale_nodes=stale_nodes)
 
 
 def rpc(payload):
@@ -335,35 +458,77 @@ def rpc(payload):
     result = {}
     action = payload.get('action', 'status')
     selected = payload.get('program')
-    if action not in ('start', 'status', 'stop') or (selected is not None and selected not in NAMES):
+    if action not in ('start', 'auto_start', 'status', 'stop') or (selected is not None and selected not in NAMES):
         raise ValueError('程序操作无效')
     if action == 'stop' and selected not in NAMES:
         raise ValueError('停止时必须指定一个程序')
+    current_boot = boot_id()
+    if action == 'auto_start' and (not current_boot or payload.get('expected_boot_id') != current_boot):
+        raise RuntimeError('机载开机标识尚未确认或已改变，请重新查询；未启动程序')
+    skip = payload.get('skip_programs', [])
+    if not isinstance(skip, list) or any(key not in NAMES for key in skip):
+        raise ValueError('跳过启动的程序名称无效')
     health = ros_health(uid)
+    # 一次开机只有一批自动启动。整批意图先写盘，部分启动后断线也不能
+    # 在飞行中补启动其余程序；启动失败由操作员查看日志后主动处理。
+    session_path = runtime / 'boot_autostart.json'
+    auto_allowed = False
+    with (runtime / 'boot_autostart.lock').open('a') as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        known_session = current_record(session_path, current_boot)
+        if current_boot and not known_session:
+            observed_session = any(
+                health[key]['present'] or existing(key, uid)
+                or alive(current_record(runtime / key / 'process.json', current_boot))
+                or alive(current_record(runtime / key / 'worker.json', current_boot))
+                for key in NAMES)
+            if observed_session or action in ('start', 'stop', 'auto_start'):
+                auto_allowed = action == 'auto_start' and not observed_session
+                write_json(session_path, dict(boot_id=current_boot, at=time.time(),
+                           reason='existing_session' if observed_session else action))
     for key in NAMES:
         directory = runtime / key
         directory.mkdir(exist_ok=True)
         try:
             with (directory / 'launch.lock').open('a') as lock:
                 fcntl.flock(lock, fcntl.LOCK_EX)
+                marker_path = directory / 'autostart.json'
+                marker = read_json(marker_path)
+                handled = bool(current_boot and marker.get('boot_id') == current_boot)
                 if action == 'stop' and key == selected:
+                    # 先记录人工停止意图，停止请求的回包丢失也不能触发自动拉起。
+                    write_json(marker_path, dict(boot_id=current_boot, reason='operator_stopped', at=time.time()))
                     result[key] = stop_program(directory, key, uid)
                     continue
-                meta = read_json(directory / 'process.json')
-                pending = read_json(directory / 'worker.json')
+                meta = current_record(directory / 'process.json', current_boot)
+                pending = current_record(directory / 'worker.json', current_boot)
+                # PID 与启动时钟可能跨重启复用，旧版无 boot_id 的记录也重新扫描确认。
                 found = existing(key, uid) if not alive(meta) else {}
-                if action == 'start' and (selected is None or selected == key) and health[key]['ready'] and not meta:
-                    write_json(directory / 'process.json', {'borrowed': True, 'node_only': True})
+                if found:
+                    write_json(directory / 'process.json', found)
+                    meta = found
+                observed = bool(alive(meta) or alive(pending) or health[key]['present'])
+                if current_boot and not handled and (observed or meta.get('stopped_by_operator') or key in skip):
+                    marker = dict(boot_id=current_boot, reason='observed' if observed else 'operator_stopped', at=time.time())
+                    write_json(marker_path, marker)
+                    handled = True
+                should_start = (selected is None or selected == key) and (
+                    action == 'start' or (auto_allowed and not handled and key not in skip))
+                if should_start:
+                    # 启动意图必须先持久化。在 SSH 超时、回包丢失或地面重开时只查询，
+                    # 不把同次开机的崩溃/退出当成新的开机事件。
+                    write_json(marker_path, dict(boot_id=current_boot, reason='start_requested', at=time.time()))
+                if health[key]['ready'] and not meta:
+                    meta = {'borrowed': True, 'node_only': True, 'boot_id': current_boot}
+                    write_json(directory / 'process.json', meta)
                     with (directory / 'console.log').open('ab') as log:
                         log.write(('复用已经就绪的%s ROS 节点；原终端历史输出无法追溯。\n' % NAMES[key]).encode())
-                if found and payload.get('action') != 'start':
-                    write_json(directory / 'process.json', found)
-                if action == 'start' and (selected is None or selected == key) and not alive(meta) and not alive(pending) and not health[key]['ready']:
+                if should_start and not alive(meta) and not alive(pending) and not health[key]['ready']:
                     if health[key]['present'] and not found:
                         message = '已有部分 ROS 节点运行，暂不重复启动：' + '、'.join(health[key]['present'])
                         with (directory / 'console.log').open('ab') as log:
                             log.write((message + '\n').encode())
-                        info = status(directory, payload.get('offsets', {}).get(key, 0))
+                        info = status(directory, payload.get('offsets', {}).get(key, 0), payload.get('latest_log', False))
                         info.update(state='error', detail=message, nodes=health[key])
                         result[key] = info
                         continue
@@ -377,7 +542,7 @@ def rpc(payload):
                         with (directory / 'console.log').open('ab') as log:
                             process = subprocess.Popen([sys.executable, str(helper), '--worker', str(directory), command_for(key, uid, model, payload.get('commands'))],
                                                        stdin=subprocess.DEVNULL, stdout=log, stderr=log, start_new_session=True, close_fds=True)
-                        write_json(directory / 'worker.json', {'pid': process.pid, 'stamp': stamp(process.pid)})
+                        write_json(directory / 'worker.json', {'pid': process.pid, 'stamp': stamp(process.pid), 'boot_id': current_boot})
                         # 启动锁覆盖 worker 写入 child PID 的时间，防止并发确认重复启动。
                         until = time.monotonic() + 2
                         while time.monotonic() < until and process.poll() is None:
@@ -385,10 +550,13 @@ def rpc(payload):
                             if new != meta and new:
                                 break
                             time.sleep(.03)
-                info = status(directory, payload.get('offsets', {}).get(key, 0))
+                info = status(directory, payload.get('offsets', {}).get(key, 0), payload.get('latest_log', False))
                 result[key] = apply_health(info, health[key], read_json(directory / 'process.json'))
         except Exception as error:
             result[key] = dict(state='error', detail='程序操作失败：%s' % error)
+    session = current_record(session_path, current_boot)
+    result['_lifecycle'] = dict(boot_id=current_boot, auto_start_reason=session.get('reason', ''),
+                               auto_start_pending=list(NAMES) if current_boot and not session else [])
     print(json.dumps(result, ensure_ascii=False))
 
 

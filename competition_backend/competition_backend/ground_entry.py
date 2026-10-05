@@ -229,6 +229,23 @@ class GroundEntry:
             except ValueError as error:
                 raise HTTPException(status_code=409, detail=str(error)) from error
 
+        @app.post("/api/v1/programs/{key}/start")
+        async def start_program(key: str, request: Request):
+            from urllib.parse import urlparse
+            if request.client and request.client.host not in ('127.0.0.1', '::1', 'testclient'):
+                raise HTTPException(status_code=403, detail='只能在本机网页启动机载程序')
+            origin = request.headers.get('origin', '')
+            if origin and urlparse(origin).hostname not in ('127.0.0.1', 'localhost', '::1'):
+                raise HTTPException(status_code=403, detail='只允许本机网页操作')
+            if self.shutting_down:
+                raise HTTPException(status_code=409, detail='地面程序正在退出')
+            try:
+                return await asyncio.to_thread(self.programs.start_program, key)
+            except ValueError as error:
+                raise HTTPException(status_code=422, detail=str(error)) from error
+            except RuntimeError as error:
+                raise HTTPException(status_code=409, detail=str(error)) from error
+
         @app.post("/api/v1/programs/{key}/stop")
         async def stop_program(key: str, request: Request):
             from urllib.parse import urlparse
@@ -272,9 +289,9 @@ class GroundEntry:
                 raise HTTPException(status_code=409, detail=str(error)) from error
 
         @app.get("/api/v1/programs/{key}/logs")
-        def program_logs(key: str, offset: int = 0):
+        def program_logs(key: str, offset: int = 0, generation: str = ""):
             try:
-                return self.programs.read_log(key, offset)
+                return self.programs.read_log(key, offset, generation=generation)
             except ValueError as error:
                 raise HTTPException(status_code=404, detail=str(error)) from error
 

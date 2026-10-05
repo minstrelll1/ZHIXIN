@@ -97,6 +97,7 @@ class ProgramsTest(unittest.TestCase):
             gate = threading.Event()
             def request(*args):
                 gate.wait(2)
+                manager.stop_event.set()
                 raise RuntimeError('SSH 密钥验证失败')
             manager._request = Mock(side_effect=request)
             manager.select(dict(uav_id=3, model='p600', onboard_host='192.168.1.212'))
@@ -132,6 +133,12 @@ class ProgramsTest(unittest.TestCase):
                 for command in ('echo 第一次 {uav_id}', 'echo 第二次 {uav_id}'):
                     path.write_text(json.dumps({'commands': {'flight': command}}, ensure_ascii=False), encoding='utf-8-sig')
                     self.assertEqual(manager._request('start', {})['commands']['flight'], command)
+                    manager.boot_id = 'boot-test'
+                    manager.operator_stopped = {'detection'}
+                    automatic = manager._request('auto_start', {})
+                    self.assertEqual(automatic['commands']['flight'], command)
+                    self.assertEqual(automatic['expected_boot_id'], 'boot-test')
+                    self.assertEqual(automatic['skip_programs'], ['detection'])
                 path.write_text('{broken', encoding='utf-8')
                 with self.assertRaisesRegex(RuntimeError, 'onboard_programs.json'):
                     manager._request('start', {})
@@ -151,7 +158,10 @@ class ProgramsTest(unittest.TestCase):
                          'source ${HOME}/test/setup.bash && echo 中文 3 p600')
 
     def test_detection_config_sources_ros_and_uses_selected_drone(self):
-        commands = json.loads((ROOT / 'config/onboard_programs.json').read_text(encoding='utf-8'))['commands']
+        # 启动配置由操作员修改，测试使用固定协议输入，不读取本机定制值。
+        commands = {'detection': 'source ~/SpireCV_bj/src/spirecv-ros/devel/setup.bash\n'
+                    'exec roslaunch spirecv_ros uav_yolo26_botsort_geolocation.launch '
+                    'uav_id:={uav_id} runtime_mode:=debug debug_save_dir:=/tmp/yolo_debug'}
         for uid in range(1, 7):
             lines = remote.command_for('detection', uid, 'p600', commands).splitlines()
             self.assertEqual(lines[0], 'source ~/SpireCV_bj/src/spirecv-ros/devel/setup.bash')
@@ -199,7 +209,7 @@ class ProgramsTest(unittest.TestCase):
             manager._request = request
             manager._authorize = Mock(return_value=True)
             manager._watch()
-            self.assertEqual(calls, ['start', 'start'])
+            self.assertEqual(calls, ['status', 'status'])
             manager._authorize.assert_called_once()
             self.assertEqual(manager.snapshot()['programs']['flight']['state'], 'running')
 
@@ -207,7 +217,13 @@ class ProgramsTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             manager = ProgramManager(tmp, {})
             manager.local = dict(uav_id=1, model='p600', onboard_host='192.168.1.202')
-            manager._request = Mock(side_effect=RuntimeError('Permission denied (publickey,password)'))
+            calls = []
+            def request(*args):
+                calls.append(args)
+                if len(calls) == 2:
+                    manager.stop_event.set()
+                raise RuntimeError('Permission denied (publickey,password)')
+            manager._request = request
             manager._authorize = Mock(side_effect=RuntimeError('用户关闭授权窗口'))
             manager._watch()
             manager._authorize.assert_called_once()
@@ -227,7 +243,7 @@ class ProgramsTest(unittest.TestCase):
                 return {key: dict(state='running') for key in ('onboard', 'detection', 'flight')}
             manager._request = request
             manager._watch()
-            self.assertEqual(calls, ['start', 'status', 'status'])
+            self.assertEqual(calls, ['status', 'status', 'status'])
             self.assertEqual(manager.snapshot()['programs']['flight']['state'], 'running')
 
     def test_healthy_launcher_with_dead_nodes_is_not_green(self):
@@ -283,7 +299,7 @@ class ProgramsTest(unittest.TestCase):
                 directory = Path(argv[3])
                 pid = 100 + len(calls)
                 calls.append(argv)
-                remote.write_json(directory / 'process.json', {'pid': pid, 'stamp': 'live'})
+                remote.write_json(directory / 'process.json', {'pid': pid, 'stamp': 'live', 'boot_id': 'test-boot'})
                 return SimpleNamespace(pid=pid + 1000, poll=lambda: None)
             fake_fcntl = SimpleNamespace(flock=lambda *args: None, LOCK_EX=2)
             request = dict(action='start', uav_id=3, model='p600', commands={'flight': 'exec custom_program --uav {uav_id}'})
@@ -291,6 +307,7 @@ class ProgramsTest(unittest.TestCase):
                     patch.object(remote.Path, 'home', return_value=home), \
                     patch.object(remote, 'PROGRAM_SOURCE', '# isolated test', create=True), \
                     patch.object(remote, 'existing', return_value={}), \
+                    patch.object(remote, 'boot_id', return_value='test-boot'), \
                     patch.object(remote, 'ros_health', return_value={key: dict(ready=False, present=[], missing=[]) for key in remote.NAMES}), \
                     patch.object(remote, 'stamp', return_value='live'), \
                     patch.object(remote.subprocess, 'Popen', side_effect=spawn), \

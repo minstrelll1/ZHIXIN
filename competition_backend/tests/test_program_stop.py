@@ -67,11 +67,11 @@ class ProgramStopTests(unittest.TestCase):
             calls=[]
             def request(action,offsets,program=None):
                 calls.append((action,program))
-                if program=='onboard': manager.stop_event.set()
+                manager.stop_event.set()
                 return {key:dict(state='stopped') for key in remote.NAMES}
             manager._request=request
             manager._watch()
-            self.assertEqual(calls,[('status',None),('start','onboard')])
+            self.assertEqual(calls,[('status',None)])
 
     def test_tree_excludes_shared_ros_and_reused_pids(self):
         def item(pid,parent,args,stamp='one'):
