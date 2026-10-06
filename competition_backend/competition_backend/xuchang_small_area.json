@@ -1,0 +1,22 @@
+{
+  "name": "许昌试飞场地（小）",
+  "coordinate_system": "WGS84",
+  "coordinate_format": "decimal_degrees",
+  "coordinate_order": "longitude_latitude",
+  "source": "用户提供的四个场地角点和固定起飞点",
+  "boundary_lon_lat": [
+    [113.908559, 34.136123],
+    [113.912981, 34.136278],
+    [113.912085, 34.140655],
+    [113.908491, 34.140263]
+  ],
+  "departure_lon_lat": [113.909077, 34.138282],
+  "excluded_lon_lat": [
+    [113.91025, 34.13725],
+    [113.91185, 34.13725],
+    [113.91185, 34.13915],
+    [113.91025, 34.13915]
+  ],
+  "excluded_area_note": "场地内部测试用矩形扣除区；这些坐标由规划程序选定，实际试飞前应核对该区及飞行通道",
+  "boundary_role": "reconnaissance_area_only"
+}

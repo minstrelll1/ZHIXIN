@@ -20,7 +20,7 @@ def stamp_ns(stamp):
 class FrameCache:
     """由调用者加锁；使用整数时间戳索引，使用单调时钟限制内存驻留时间。"""
 
-    def __init__(self, duration_sec=0.5, fps=30.0, clock=time.monotonic):
+    def __init__(self, duration_sec=2.0, fps=30.0, clock=time.monotonic):
         if not math.isfinite(duration_sec) or duration_sec <= 0:
             raise ValueError("帧缓存时长必须为正数")
         if not math.isfinite(fps) or fps <= 0:
@@ -52,6 +52,23 @@ class FrameCache:
         self.prune()
         entry = self.frames.get(key)
         return None if entry is None else entry[1]
+
+    def resolve(self, requested_key):
+        """精确匹配；仅当请求比最新相机帧早超过窗口时取两秒前的可用帧。"""
+        self.prune()
+        if not self.frames:
+            return None
+        latest_key = max(self.frames)
+        duration_ns = int(self.duration_sec * 1_000_000_000)
+        if latest_key - requested_key > duration_ns:
+            cutoff = latest_key - duration_ns
+            candidates = [key for key in self.frames if key >= cutoff]
+            if not candidates:
+                return None
+            selected_key = min(candidates)
+            return self.frames[selected_key][1], selected_key, "clamped_to_cache_window"
+        entry = self.frames.get(requested_key)
+        return None if entry is None else (entry[1], requested_key, "exact")
 
 
 def _finite(value, name):

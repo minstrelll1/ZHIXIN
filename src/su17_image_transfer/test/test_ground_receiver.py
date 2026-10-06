@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import importlib.util
+import json
 from pathlib import Path
 import socket
 import sys
@@ -24,6 +25,56 @@ from su17_image_transfer.protocol import encode_frame, receive_ack, receive_resp
 
 
 class GroundReceiverTest(unittest.TestCase):
+    def test_json_arrives_and_updates_submission_even_when_image_upload_fails(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            receiver = receiver_module.GroundImageReceiver(
+                "127.0.0.1", 0, root, "test-token", status_interval=0, client_timeout=0.2)
+            server_thread = threading.Thread(target=receiver.serve_forever, daemon=True)
+            server_thread.start()
+            deadline = time.monotonic() + 2.0
+            while receiver.server is None and time.monotonic() < deadline:
+                time.sleep(0.01)
+            self.assertIsNotNone(receiver.server)
+            port = receiver.server.getsockname()[1]
+            metadata = {
+                "message_type": "target_result", "request_id": "result-7",
+                "mission_id": "subject1-json-first", "file_name": "result-7.jpg", "uav_id": 1,
+                "auth_token": "test-token", "target_id": "global-7", "target_type": "车辆",
+                "target_latitude": 34.1, "target_longitude": 113.9,
+                "image_stamp": {"secs": 1_789_000_000, "nsecs": 100},
+                "confidence": 0.9, "is_moving": False,
+            }
+            try:
+                with socket.create_connection(("127.0.0.1", port), timeout=2) as client:
+                    client.sendall(encode_frame(metadata, b"\x00"))
+                    self.assertTrue(receive_ack(client))
+                destination = root / "UAV1" / "subject1-json-first"
+                result_path = destination / "result-7.json"
+                image_path = destination / "result-7.jpg"
+                self.assertTrue(result_path.is_file())
+                self.assertFalse(image_path.exists())
+                self.assertNotIn("auth_token", json.loads(result_path.read_text(encoding="utf-8")))
+                # 图片传输中断不回滚已经 ACK 的 JSON。
+                with socket.create_connection(("127.0.0.1", port), timeout=2) as client:
+                    client.sendall(encode_frame(dict(metadata, message_type="image"), b"\xff\xd8bad\xff\xd9")[:25])
+                time.sleep(0.05)
+                self.assertTrue(result_path.is_file())
+                draft = root / "subject1_submissions" / "subject1-json-first" / "target-submission.json"
+                deadline = time.monotonic() + 3.0
+                while not draft.is_file() and time.monotonic() < deadline:
+                    time.sleep(0.02)
+                self.assertTrue(draft.is_file())
+                self.assertEqual(json.loads(draft.read_text(encoding="utf-8"))["features"][0]["id"], "global-7")
+                with socket.create_connection(("127.0.0.1", port), timeout=2) as client:
+                    client.sendall(encode_frame(dict(metadata, message_type="image"), b"\xff\xd8good\xff\xd9"))
+                    self.assertTrue(receive_ack(client))
+                self.assertTrue(image_path.is_file())
+                self.assertTrue(result_path.is_file())
+            finally:
+                receiver.stop()
+                server_thread.join(timeout=2)
+
     def test_receives_and_saves_one_image(self):
         with tempfile.TemporaryDirectory() as temporary_directory:
             receiver = receiver_module.GroundImageReceiver(

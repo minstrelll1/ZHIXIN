@@ -14,6 +14,7 @@ from competition_shared.fleet import default_fleet, apply_fixed_binding
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'src/su17_competition_executor/src'))
 from su17_competition_executor import task_protocol as _protocol
+from su17_competition_executor.transit_protocol import route_messages
 
 
 class CompetitionDispatchTest(unittest.TestCase):
@@ -95,6 +96,12 @@ class CompetitionDispatchTest(unittest.TestCase):
                 validated = _protocol.validate_assignment({'type': 'assign_task', 'uav_id': uid, **payload}, uid)
                 self.assertEqual(validated['task']['waypoints_wgs84'], payload['task']['waypoints_wgs84'])
                 self.assertEqual(validated['competition_time'], payload['competition_time'])
+                _, returns = route_messages(validated)
+                self.assertEqual(returns['uav_id'],uid)
+                self.assertEqual({r['source_uav_id'] for r in returns['routes']},set(range(1,7)))
+                self.assertEqual(len(returns['routes']),sum(len(w['task']['waypoints_m']) for w in result['mission']['planned_uavs'].values()))
+                landing = [payload['landing_point_wgs84'][1],payload['landing_point_wgs84'][0],payload['target_altitude_m']]
+                self.assertTrue(all(r['path'][-1]==landing for r in returns['routes']))
 
     def test_saved_plan_external_mode_uses_wgs84_without_inventing_a_global_home(self):
         with tempfile.TemporaryDirectory() as tmp:

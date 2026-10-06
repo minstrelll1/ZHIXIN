@@ -239,6 +239,11 @@ class PeerImageCollector:
                 for item in full["files"]:
                     all_items[str(item["relative_path"])] = item
             manifest = list(all_items.values())
+        # 赛事结果先依赖目标 JSON；不要让大图片下载或超时挡住后续目标记录。
+        manifest.sort(key=lambda item: (
+            0 if Path(str(item.get("relative_path", ""))).suffix.lower() == ".json" else 1,
+            str(item.get("relative_path", "")),
+        ))
         for item in manifest:
             relative = str(item["relative_path"])
             parts = Path(relative).parts

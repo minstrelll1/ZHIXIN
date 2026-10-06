@@ -80,6 +80,28 @@ def _target_id(metadata):
     return str(metadata.get("global_id") or metadata.get("target_id") or metadata.get("request_id") or "target-unknown")
 
 
+def _observation_rank(metadata, timestamp, source_json):
+    """按机载收到结果的先后排序；旧版记录退回目标时间戳。"""
+    received = metadata.get("detection_received_at_unix_ns")
+    if received is None:
+        received = metadata.get("requested_at_unix_ns")
+    try:
+        order_ns = int(received)
+        if order_ns <= 0:
+            raise ValueError("invalid receipt time")
+    except (TypeError, ValueError, OverflowError):
+        try:
+            order_ns = int(datetime.datetime.fromisoformat(
+                timestamp.replace("Z", "+00:00")).timestamp() * 1_000_000_000)
+        except (AttributeError, TypeError, ValueError, OverflowError):
+            order_ns = 0
+    try:
+        sequence = int(metadata.get("sequence") or 0)
+    except (TypeError, ValueError, OverflowError):
+        sequence = 0
+    return order_ns, sequence, str(source_json)
+
+
 def _position(metadata):
     if bool(metadata.get("indoor_position", False)):
         return None
@@ -187,14 +209,14 @@ def _update_subject1_submission_locked(output_root, mission_dir, mission_id, tea
                 finally:
                     if os.path.exists(temporary):
                         os.unlink(temporary)
-        rank = (timestamp or "", str(source_json))
+        rank = _observation_rank(metadata, timestamp, source_json)
         source_uav = source_json.parent.parent.name
         record_key = (source_uav, target_id) if publisher_dedup else target_id
         item = records.setdefault(record_key, {
             "target_id": target_id, "source_uav": source_uav,
             "points": [], "latest": metadata, "latest_rank": rank,
-            "category_metadata": None, "category_rank": ("", ""),
-            "moving": False, "image": None, "image_rank": ("", ""),
+            "category_metadata": None, "category_rank": (-1, -1, ""),
+            "moving": False, "image": None, "image_rank": (-1, -1, ""),
             "observations": [],
         })
         item["observations"].append((metadata, "./images/" + image_name if image_path else None, rank))
@@ -221,33 +243,42 @@ def _update_subject1_submission_locked(output_root, mission_dir, mission_id, tea
     skipped_indoor = []
     for _, item in sorted(records.items()):
         target_id = item["target_id"]
-        metadata = item["category_metadata"] or item["latest"]
         moving = item["moving"]
         points = sorted(item["points"], key=lambda point: point["timestamp"])
-        matching_observations = [
-            (observation, image, observed_rank)
-            for observation, image, observed_rank in item["observations"]
-            if _target_model(observation) == _target_model(metadata)
-            and str(observation.get("target_type") or observation.get("category") or "其他")
-                == str(metadata.get("target_type") or metadata.get("category") or "其他")
-        ]
-        best_observation, best_image, _ = max(
-            matching_observations,
-            key=lambda entry: (_confidence(entry[0]) if _confidence(entry[0]) is not None else -1.0,
-                               entry[2]),
-        )
+        if moving:
+            metadata = item["category_metadata"] or item["latest"]
+            matching_observations = [
+                (observation, image, observed_rank)
+                for observation, image, observed_rank in item["observations"]
+                if _target_model(observation) == _target_model(metadata)
+                and str(observation.get("target_type") or observation.get("category") or "其他")
+                    == str(metadata.get("target_type") or metadata.get("category") or "其他")
+            ]
+            best_observation, best_image, _ = max(
+                matching_observations,
+                key=lambda entry: (_confidence(entry[0]) if _confidence(entry[0]) is not None else -1.0,
+                                   entry[2]),
+            )
+        else:
+            # 同一静目标 ID 多次上报时，最终结果只采用最后收到的一整条记录。
+            metadata = item["latest"]
+            best_observation, best_image, _ = max(item["observations"], key=lambda entry: entry[2])
         confidence = _confidence(best_observation)
         properties = {
             "targetCategory": "移动" if moving else "固定",
             "targetType": str(metadata.get("target_type") or metadata.get("category") or "其他"),
             "targetModel": _target_model(metadata),
-            "imagePath": best_image or item["image"],
+            "imagePath": (best_image or item["image"]) if moving else best_image,
             "confidence": confidence,
         }
         # 可选字段没有值时省略，不向赛事接口发送 null。
         properties = {key: value for key, value in properties.items() if value is not None}
         if item.get("local_positions"):
-            properties["localPosition"] = item["local_positions"]
+            local = _local_position(metadata)
+            if moving:
+                properties["localPosition"] = item["local_positions"]
+            elif local:
+                properties["localPosition"] = [dict(local, timestamp=_iso_from_metadata(metadata))]
         if moving:
             if len(points) < 2:
                 # 轨迹不足时保留原始反馈，但不伪造符合模板的 LineString。
@@ -259,13 +290,15 @@ def _update_subject1_submission_locked(output_root, mission_dir, mission_id, tea
             properties["trackPoints"] = points
             geometry = {"type": "LineString", "coordinates": [p["coordinates"] for p in points]}
         else:
-            if not points:
+            position = _position(metadata)
+            timestamp = _iso_from_metadata(metadata)
+            if not position or not timestamp:
                 skipped_indoor.append({"id": target_id, "reason": "室内 XYZ 或无效 WGS84 坐标不能写入 EPSG:4326 几何",
                                        "localPosition": item.get("local_positions", [])})
                 continue
-            # 坐标和时间必须来自同一条真实反馈；固定目标采用最近一次有效点。
-            properties["timestamp"] = points[-1]["timestamp"]
-            geometry = {"type": "Point", "coordinates": points[-1]["coordinates"]}
+            # 静目标的坐标、时间、类别、置信度及图片均来自同一条最后反馈。
+            properties["timestamp"] = timestamp
+            geometry = {"type": "Point", "coordinates": position}
         feature = {"type": "Feature", "id": target_id, "geometry": geometry, "properties": properties}
         if publisher_dedup:
             feature["_source_uav"] = item["source_uav"]

@@ -313,6 +313,38 @@ class AutonomyTest(unittest.TestCase):
         self.assertEqual(node._fly_to.call_args.args[:4], (2.,3.,.5,.4))
         node._land.assert_called_once_with()
 
+    def test_fleet_return_routes_publish_at_receiver_height_after_successful_takeoff(self):
+        for reached in (False, True):
+            with tempfile.TemporaryDirectory() as directory, self.subTest(reached=reached):
+                node = self.executor(directory)
+                node._assignment.update(controller_mode='external', coordinate_frame='ENU',
+                                        landing_point_m=[2.,2.],landing_mode='selected_departure')
+                catalog = {str(uid): [[uid,1.],[uid,2.]] for uid in range(1,7)}
+                catalog['3'] = node._assignment['task']['waypoints_m']
+                node._assignment['task']['transit_routes'] = dict(
+                    schema_version=2, recipient_uav_id=3, route_scope='all_uav_waypoints',
+                    plan_sha256='fixed', coordinate_frame='ENU', departure=[2.,2.],
+                    entry_path=[[2.,2.],catalog['3'][0]], waypoints_by_uav=catalog,
+                    return_paths=[dict(source_uav_id=int(uid),waypoint_index=i+1,path=[p,[2.,2.]])
+                                  for uid,points in catalog.items() for i,p in enumerate(points)])
+                node.external_entry_path_pub, node.external_return_paths_pub = Mock(), Mock()
+                node._checkpoint = Mock()
+                node._motion_entry('takeoff',lambda _:reached,{'mission_id':'test'})
+                if not reached:
+                    node.external_return_paths_pub.publish.assert_not_called()
+                    continue
+                returns = json.loads(node.external_return_paths_pub.publish.call_args.args[0].data)
+                landing = node.external_landing_pub.publish.call_args.args[0].data
+                self.assertEqual(returns['uav_id'],3)
+                self.assertEqual(returns['schema_version'],2)
+                self.assertEqual(len(returns['routes']),13)
+                self.assertEqual({r['source_uav_id'] for r in returns['routes']},set(range(1,7)))
+                self.assertTrue(all(r['path'][-1]==landing for r in returns['routes']))
+                self.assertTrue(all(p[2]==.5 for r in returns['routes'] for p in r['path']))
+                # 扩展返航信息不改变本机侦察任务。
+                self.assertEqual(node.external_path_pub.publish.call_args.args[0].data,
+                                 [0.,0.,.5,1.,0.,.5,1.,1.,.5])
+
     def test_global_task_records_anchor_and_uses_relative_altitude(self):
         with tempfile.TemporaryDirectory() as directory:
             node = self.executor(directory)

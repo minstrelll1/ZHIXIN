@@ -1,36 +1,41 @@
-# 程序 B 进场、逐航点返航接口
+# 程序 B 进场与全机队航点返航接口
 
-## 生效范围与时机
+## 范围与发布时间
 
-- 覆盖 3m、5m、10m、100m、200m、竞赛、大连南山坡全部固定场景及其可选出发点，共 13 组固定方案；支持各场景允许的 GPS / XYZ 坐标系及全部高度选项。
-- 进场起点、每条返航路线终点、降落点统一为界面选定的出发点：区域右下角、操场中央或大连固定起飞点，不再使用各机实际起飞位置作为降落点。
-- 点击“规划与分派”：两类航线随该机任务通过现有机地通信发送、校验和缓存；此时不在新 ROS 话题发布。
-- 点击“一键起飞”，机载执行器确认到达任务高度后：发布进场路线、返航路线集合、原侦察航点和降落点，然后发布 `recon_start_mode=0`。起飞失败或取消时不发布新任务航线。
-- 一键起飞后保留原有任务锁定，不允许分派覆盖正在执行的任务。
+覆盖 3m、5m、10m、100m、200m、竞赛、大连南山坡、许昌试飞场地（小）全部场景及可选出发点，共 14 组固定方案，支持允许的 GPS / XYZ 坐标系和全部高度选项。
 
-## 新增话题
+- 每架接收机收到 UAV1～6 **全部规划航点**的返航路线，包括当次未连接飞机的规划点。各机仍只执行自己的侦察任务，进场目的地为自己的第一个侦察航点。
+- 所有路线返回**接收机自己的降落点**。例如 UAV1 收到的 UAV2 第 3 个航点路线，从该航点返回 UAV1 降落点；UAV2 收到的同一来源航点路线返回 UAV2 降落点。
+- 所有路线高度使用**接收机的任务相对高度**，不是来源机高度。
+- GPS 实飞时，降落点取本次规划分派前取得的各机自身 GPS；规划后保持固定，不是点击起飞时重新采样。XYZ 固定方案沿用选定出发点。离线 GPS 预览使用固定出发点示意，不代替实飞 GPS。
+- 点击“规划与分派”：航线随任务发送至竞赛机载执行器，校验、缓存；此时不发布新航线话题。
+- 点击“一键起飞”并成功到达任务高度：发布进场、返航路线、侦察航点和降落点，最后发布 `recon_start_mode=0`。起飞未成功时不发布新航线；起飞后不允许新分派覆盖机载任务。
 
-以下 N 是本机 ROS 无人机编号，范围 1～6。两个话题均为 `std_msgs/String`，内容为 UTF-8 JSON，锁存最新消息，供后启动的订阅者读取。消息是任务数据，不是速度或飞控控制指令。
+## 话题与字段
 
-| 话题 | 用途 |
-| --- | --- |
-| `/ground_mission_planner/vehicle_N/entry_path` | 选定出发点至第一个侦察航点的路线 |
-| `/ground_mission_planner/vehicle_N/return_paths` | 每个侦察航点各一条返回选定出发点的路线 |
+两个话题均为 `std_msgs/String`，`data` 是 UTF-8 JSON，锁存最后一条消息。N 为本机 ROS 编号；消息内 `uav_id` 为接收机的竞赛逻辑编号。
 
-共同字段：`schema_version=1`、`mission_id`、`uav_id`、`assignment_checksum`、`plan_sha256`、`coordinate_frame`、`coordinate_order`、`altitude_frame`。
+| 话题 | 内容 | JSON 版本 |
+| --- | --- | --- |
+| `/ground_mission_planner/vehicle_N/entry_path` | 接收机降落点至接收机第一个侦察航点 | `schema_version=1`，不变 |
+| `/ground_mission_planner/vehicle_N/return_paths` | 六机全部航点至接收机降落点的路线集合 | `schema_version=2` |
 
-- GPS：`coordinate_frame="WGS84"`，`coordinate_order="longitude_latitude_relative_altitude"`，每点为 `[经度, 纬度, 相对起飞点高度米]`。
-- XYZ：`coordinate_frame="ENU"`，`coordinate_order="x_y_z"`，每点为 `[X米, Y米, 任务高度米]`，沿用原任务 XYZ 坐标约定。
-- 高度始终使用该架无人机实际选定的 `target_altitude_m`，不叠加 GPS 海拔；`altitude_frame="RELATIVE_TO_TAKEOFF"`。
-- `entry_path` 消息的 `path` 是点数组，含出发点和首个侦察航点。
-- `return_paths` 消息的 `routes` 是对象数组，每项为 `{"waypoint_index":1,"path":[...]}`。编号从 1 开始，与原侦察航点顺序一一对应，每条含对应侦察点和选定出发点。
-- 中间点只是进返场转折点，不新增扫描动作或侦察点编号。路线末点仍为任务高度，降落由控制程序执行。
+共同字段为 `mission_id`、`uav_id`、`assignment_checksum`、`plan_sha256`、`coordinate_frame`、`coordinate_order`、`altitude_frame`。
 
-XYZ 内容示意（坐标仅解释协议，不用于飞行）：
+- GPS：`coordinate_frame="WGS84"`，`coordinate_order="longitude_latitude_relative_altitude"`，每点 `[经度, 纬度, 相对起飞点高度米]`。
+- XYZ：`coordinate_frame="ENU"`，`coordinate_order="x_y_z"`，每点 `[X米, Y米, 任务高度米]`，沿用任务局部坐标约定。
+- `altitude_frame="RELATIVE_TO_TAKEOFF"`。所有路线点高度为接收机的 `target_altitude_m`，不叠加 GPS 海拔；末点高度不是触地高度，下降和降落由程序 B 执行。
+- 返航消息 `route_scope="all_uav_waypoints"`；`landing_point` 与该机 `jiangluodian` 的三个数值相同。
+- `waypoint_counts_by_uav` 给出各来源机规划航点数量。
+- `routes` 按 `source_uav_id` 升序、再按 `waypoint_index` 升序排列。`source_uav_id` 为来源机编号 1～6；`waypoint_index` 为该来源机航点编号，从 1 开始。
+- 唯一键是 **`(source_uav_id, waypoint_index)`**，不能仅凭 `waypoint_index` 或数组下标选择路线。
+- 每条 `path` 包含来源航点、必要的区域内转折点、接收机降落点。中间转折点不新增扫描动作。
+
+UAV1 接收的 XYZ 返航消息示意（仅展示两条，真实消息包含六机全部航点；示例坐标不可用于飞行）：
 
 ```json
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "mission_id": "示例任务",
   "uav_id": 1,
   "assignment_checksum": "当前任务校验值",
@@ -38,50 +43,60 @@ XYZ 内容示意（坐标仅解释协议，不用于飞行）：
   "coordinate_frame": "ENU",
   "coordinate_order": "x_y_z",
   "altitude_frame": "RELATIVE_TO_TAKEOFF",
-  "path": [[0, 0, 1.5], [1, 0, 1.5], [1, 1, 1.5]]
+  "route_scope": "all_uav_waypoints",
+  "landing_point": [0, 0, 1.5],
+  "waypoint_counts_by_uav": {"1":18,"2":11,"3":8,"4":8,"5":13,"6":15},
+  "routes": [
+    {"source_uav_id":1,"waypoint_index":1,"path":[[1,1,1.5],[1,0,1.5],[0,0,1.5]]},
+    {"source_uav_id":2,"waypoint_index":3,"path":[[2,1,1.5],[1,0,1.5],[0,0,1.5]]}
+  ]
 }
 ```
 
-返航消息使用相同共同字段，将 `path` 换为：
+各场景和出发点的实际航点数量不同，以消息中的数量为准。
 
-```json
-"routes": [
-  {"waypoint_index": 1, "path": [[1, 1, 1.5], [1, 0, 1.5], [0, 0, 1.5]]},
-  {"waypoint_index": 2, "path": [[2, 1, 1.5], [1, 0, 1.5], [0, 0, 1.5]]}
-]
-```
+程序 B 需接入新版 `schema_version=2` 和来源编号；此次未修改程序 B 源码。升级后的竞赛机载端仍兼容旧的版本 1 单机任务，但旧缓存不会自动变成全机队路线，更新后需重新规划与分派。地面端与竞赛机载端均需更新，部署、构建、启动命令不变。
 
-程序 B 需要自行接入这两个新话题；本次没有修改程序 B 源码。不同 ROS 话题到达顺序并非原子事务：接收方应缓存消息，核对 `mission_id` 和 `assignment_checksum` 属于同一任务、数据齐全且收到启动信号后再使用。锁存消息可能是上一任务，不能仅以“收到话题”作为开始飞行依据。
+多个 ROS 话题不是原子事务。程序 B 应核对 `mission_id` 和 `assignment_checksum`，确认同一任务的数据齐全且收到启动信号后使用；锁存消息可能来自旧任务。原 `path_stage_1` 和 `jiangluodian` 仍为 `Float64MultiArray`，分别承载本机侦察航点与降落点。
 
-原 `path_stage_1`、`jiangluodian` 仍为 `Float64MultiArray`，GPS 顺序仍为经度、纬度、相对高度，XYZ 顺序不变，降落点仍只含三个数值。
+## 几何来源与返航请求
 
-## 返航按钮
+### 100m、200m、竞赛 1km 场景的 5 米边界间距
 
-任务发布端点击“返航”后勾选本次任务的无人机；普通地面端只能选择本机配对无人机。界面逐机显示发送结果，一机失败不阻止其他机；不会自动重发。“已发送”表示发出请求，不代表已落地。
+这三个场景的两种出发点均使用重新生成的固定侦察方案。侦察点、相邻侦察航段、区域内进场航段和返航航段距整个任务区域外边界至少 5 米；不是距六机子区之间的分界线 5 米。侦察航线按 5.03 米内缩，进返场航线按 5.02 米内缩，额外间距用于抵消坐标舍入误差，适用于全部高度和 GPS / XYZ 表达。
 
-- 本工程自主控制：飞到选定出发点后发送降落指令。旧任务无选定出发点数据时兼容原实际起飞点返航。
-- 外部程序 B：继续在 `/ground_mission_planner/vehicle_N/return_home` 发布 `std_msgs/Bool` 的 `true`。程序 B 负责从已接收的路线集合选择对应路线并完成返航、降落。
-- 遥控器已接管时保留原有自动控制退出逻辑。
+保留原方案的扫描密度，对近边点进行内移、补齐覆盖缺口，再改善航点顺序。树林和湖泊内部仍按原有地类排除规则免侦察；外侧 5 米边界带没有从目标覆盖面积中删除，通过内侧侦察点的覆盖半径覆盖。凹边界的必要转折点也写入实际下发的航点，避免只在预览中绕弯、实际发出的相邻点直线却穿出安全区。任务估时计入这些下发点。
 
-## 固定规划
+**固定起降点连接段例外：**起降点若位于边界上、距边界不足 5 米或区域外，保持该实际起降点不变，使用通往内缩区域的可见连接段；只有这段无法满足 5 米。进入内缩区域后保持间距，返航仅最后返回该起降点的连接段例外。不会把近边侦察航点当成例外。
 
-文件：`competition_backend/competition_backend/external_transit_prepared.json`。赛前计算多边形内可见图最短路径，进场路线到首个侦察点，返航路线为对应最短进场路线的反向。
+新消息包含 `boundary_clearance_m: 5.0` 与 `endpoint_clearance_policy: "takeoff_landing_connector_only"`。原 3m、5m、10m、大连场景不启用这一新约束。
 
-区域内航段不得穿越凹边界；出发点在区域外时只允许起始进场连接段在外部，进入区域后不再离开；返航只允许最后返回区域外出发点的连接段离开。约束为整个任务区域，允许经过其他无人机的子区。运行时校验固定文件、边界、航点和坐标转换，不重复求解。
+### 许昌试飞场地（小）的内部扣除区
 
-这是几何边界规划，没有加入建筑物、动态障碍或多机避碰。程序 B 从追踪位置等任意位置返航时，还须自行连接到选用的航点返航路线；不能假定任意当前位置与路线首点之间的直线一定在区域内。六机共用选定降落点，实际降落间隔由执行程序或操作人员安排。
+许昌场景使用固定 WGS84 外边界与起飞点，内部另有一个矩形扣除区；见 [许昌场地坐标与固定方案](xuchang_small_scene.md)。六机侦察点、相邻航段、进场和全机队返航路线均距**外边界与内部扣除区边界**至少 5 米，扣除区完全不作为侦察目标。UAV1～3 分在更远的东侧，UAV4～6 分在靠起点的西侧。绕行转折点写入实际下发的路线，不依赖预览图推测路径。
 
-更新区域或侦察航点后，在项目目录预生成：
+许昌实飞分派前仍取每架飞机的实际起降 GPS，并以此重接本机接收的全部返航路线。若实际起降点处在扣除区或不足 5 米的边界缓冲区，拒绝分派该机任务，确保许昌场景的进返场路线没有靠边起降段例外。
 
-```powershell
-.\competition_backend\.venv\Scripts\python.exe .\tools\prepare_transit_routes.py
-```
+固定侦察方案由 `tools/prepare_clearance_plans.py` 赛前生成，保存在 `competition_backend/competition_backend/competition_clearance_prepared.json`，运行时只读；区域内进返场几何仍保存于下述文件，GPS 实际起降点变化时按相同 5 米规则重接。更新后应在起飞前重新规划与分派，旧任务不会在飞行中自动替换。
 
-本次需更新地面程序和竞赛机载程序，部署、构建、启动命令保持原样。未修改 P600 / SU17 厂家源码、目标检测程序或程序 B。未执行实飞验证。
+固定文件为 `competition_backend/competition_backend/external_transit_prepared.json`，保存全部场景各机的原始进返场几何。地面端组合六机几何；GPS 实飞再依据接收机实测起飞点，重接全机队航点的返航路线，不改变侦察点。
 
-查看 UAV1 的新话题：
+路线约束为整个任务区域，允许经过其他飞机子区。区域内航段不得穿越凹边界；出发点在区域外时，进场只允许初始连接段在区域外，返航只允许最后连接段离开区域。未加入建筑物、动态障碍或多机避碰；程序 B 从任意追踪位置返航时，应自行连接到选定路线的首点。
+
+地面“返航”按钮继续发送 `/ground_mission_planner/vehicle_N/return_home`，类型 `std_msgs/Bool`、值 `true`；程序 B 选择路线并执行返航、下降和降落。上述路线扩展不会自动发出返航指令。
+
+查看 UAV1 话题：
 
 ```bash
 rostopic echo /ground_mission_planner/vehicle_1/entry_path
 rostopic echo /ground_mission_planner/vehicle_1/return_paths
+```
+
+区域或原始侦察航点变化后，在项目目录预生成固定几何：
+
+```powershell
+.\competition_backend\.venv\Scripts\python.exe .\tools\prepare_clearance_plans.py
+.\competition_backend\.venv\Scripts\python.exe .\tools\prepare_xuchang_small_plan.py
+.\competition_backend\.venv\Scripts\python.exe .\tools\prepare_transit_routes.py
+.\competition_backend\.venv\Scripts\python.exe .\tools\build_plans_3d.py
 ```

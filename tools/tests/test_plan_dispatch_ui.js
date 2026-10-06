@@ -4,6 +4,8 @@ const path=require('node:path');
 const vm=require('node:vm');
 const html=fs.readFileSync(path.resolve(__dirname,'../../competition_backend/competition_backend/web/index.html'),'utf8');
 new vm.Script(html.match(/<script>([\s\S]*?)<\/script>/)[1]);
+assert.match(html, /<option value="xuchang_small">许昌试飞场地（小）/);
+assert.match(html, /<option value="fixed_xuchang" hidden>许昌固定起飞点<\/option>/);
 const receiptContext=vm.createContext({});
 vm.runInContext(html.split('\n').find(line=>line.startsWith('function 任务回执文字(')),receiptContext);
 const receipt=receiptContext.任务回执文字;

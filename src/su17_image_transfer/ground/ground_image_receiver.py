@@ -63,6 +63,7 @@ class GroundImageReceiver:
         self.client_timeout = client_timeout
         self.publisher_dedup = bool(publisher_dedup)
         self.mission_lock = threading.Lock()
+        self._file_locks = [threading.Lock() for _ in range(64)]
         self.mission_states = {}
         self._submission_condition = threading.Condition()
         self._submission_pending = {}
@@ -295,6 +296,25 @@ class GroundImageReceiver:
                         send_response(client, False, {"error": str(exc)})
                     continue
 
+                if message_type == "target_result":
+                    try:
+                        with self._file_lock(metadata):
+                            result_path = self._save_result_metadata(metadata)
+                        self._diagnostic("目标 JSON 独立保存", metadata,
+                                         json_path=str(result_path),
+                                         target_id=metadata.get("target_id"))
+                        send_ack(client, True)
+                        print("目标 JSON 已保存：UAV%s，请求=%s，路径=%s" % (
+                            metadata["uav_id"], metadata.get("request_id", ""), result_path), flush=True)
+                    except (OSError, ValueError, TypeError) as exc:
+                        self._diagnostic("目标 JSON 独立保存失败", metadata, error=str(exc))
+                        print("目标 JSON 保存失败：%s" % exc, flush=True)
+                        try:
+                            send_ack(client, False)
+                        except OSError:
+                            pass
+                    continue
+
                 if message_type != "image":
                     try:
                         send_ack(client, False)
@@ -303,7 +323,8 @@ class GroundImageReceiver:
                     continue
 
                 try:
-                    image_path = self._save_image(metadata, jpeg)
+                    with self._file_lock(metadata):
+                        image_path = self._save_image(metadata, jpeg)
                     self._diagnostic(
                         "图片及结果已保存", metadata, bytes=len(jpeg), image_path=str(image_path),
                         file_name=image_path.name,
@@ -345,6 +366,10 @@ class GroundImageReceiver:
         if uav_id not in self.allowed_uav_ids:
             raise ValueError("不允许 UAV%d 接入本图片接收器" % uav_id)
         return uav_id
+
+    def _file_lock(self, metadata):
+        key = (metadata.get("uav_id"), metadata.get("mission_id"), metadata.get("file_name"))
+        return self._file_locks[hash(key) % len(self._file_locks)]
 
     @staticmethod
     def _format_duration(elapsed_sec: float) -> str:
@@ -500,6 +525,43 @@ class GroundImageReceiver:
         image_count = len(list(target_dir.glob("*.jpg")))
         self._set_mission_image_count(metadata, image_count)
         return image_path
+
+    def _save_result_metadata(self, metadata: Dict) -> Path:
+        if not metadata.get("request_id") or not metadata.get("target_type"):
+            raise ValueError("目标 JSON 缺少请求 ID 或类型")
+        request_id = safe_component(metadata.get("request_id"), "target")
+        file_name = safe_component(metadata.get("file_name"), request_id + ".jpg")
+        if not file_name.lower().endswith(".jpg"):
+            raise ValueError("目标 JSON 的关联图片文件名无效")
+        target_dir = self._target_directory(metadata)
+        target_dir.mkdir(parents=True, exist_ok=True)
+        image_path = target_dir / file_name
+        result_path = image_path.with_suffix(".json")
+        if image_path.is_file() and result_path.is_file():
+            return result_path
+        public = dict(metadata)
+        public.pop("auth_token", None)
+        public["file_name"] = file_name
+        public["message_type"] = "target_result"
+        descriptor, temporary = tempfile.mkstemp(prefix=result_path.name + "-", suffix=".json.part",
+                                                  dir=str(target_dir))
+        try:
+            with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
+                json.dump(public, stream, ensure_ascii=False, allow_nan=False, indent=2)
+                stream.write("\n")
+                stream.flush()
+                os.fsync(stream.fileno())
+            os.replace(temporary, result_path)
+        finally:
+            if os.path.exists(temporary):
+                os.unlink(temporary)
+        self._register_mission(metadata)
+        try:
+            self._queue_subject1_submission(public)
+        except Exception as exc:
+            self._diagnostic("科目一 JSON 整理启动失败", public, error=str(exc))
+            print("科目一 JSON 整理启动失败：%s" % exc, flush=True)
+        return result_path
 
     def stop(self) -> None:
         self.stop_event.set()

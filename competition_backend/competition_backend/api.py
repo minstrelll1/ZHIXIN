@@ -723,7 +723,7 @@ def create_app(environment=None, audit=None) -> FastAPI:
     def _external_program_b_radius_warnings(flight_profile: str, controller_mode: str, uav_ids) -> list:
         if str(controller_mode).lower() != "external":
             return []
-        requested = 75.0 if flight_profile in ("competition", "outdoor100", "outdoor200", "dalian_nanshan") else 1.0
+        requested = 75.0 if flight_profile in ("competition", "outdoor100", "outdoor200", "dalian_nanshan", "xuchang_small") else 1.0
         manager = getattr(app.state, "program_manager", None)
         peer_states = (adapter.peer_program_b_status()
                        if isinstance(adapter, DistributedFleetAdapter) else {})
@@ -1173,9 +1173,9 @@ def create_app(environment=None, audit=None) -> FastAPI:
             coordinate_mode = str(payload.get("coordinate_mode", "gps")).strip().lower()
             flight_profile = str(payload.get("flight_profile", "competition")).strip().lower()
             flight_altitude_plan = str(payload.get("flight_altitude_plan", "default")).strip().lower()
-            if flight_altitude_plan not in ("default", "around1m", "around2m", "around5m", "around10m", "around45m"):
+            if flight_altitude_plan not in ("default", "around1m", "around2m", "around5m", "around10m", "around45m", "around54m"):
                 raise HTTPException(status_code=422, detail="未知的飞行高度方案")
-            if flight_profile not in ("lab", "lab10", "outdoor5", "outdoor100", "outdoor200", "competition", "dalian_nanshan"):
+            if flight_profile not in ("lab", "lab10", "outdoor5", "outdoor100", "outdoor200", "competition", "dalian_nanshan", "xuchang_small"):
                 raise HTTPException(status_code=422, detail="未知的飞行场景")
             connected_ids = (
                 adapter.connected_uav_ids_snapshot()
@@ -1190,19 +1190,24 @@ def create_app(environment=None, audit=None) -> FastAPI:
                     detail="GPS 规划前需取得每架已连接无人机的有效经纬度；尚缺 UAV{}".format(
                         "、UAV".join(str(uid) for uid in missing_gps_ids)),
                 )
-            if flight_profile == "dalian_nanshan":
-                # 大连场地使用已核定的 WGS84 边界与固定起飞点；飞行前飞机的
-                # 实时位置只用于状态展示，不得平移赛前固定航点。
+            if flight_profile in ("dalian_nanshan", "xuchang_small"):
+                # 固定 WGS84 场地不按机载实时 GPS 平移赛前航点。
+                fixed_name = "大连南山坡外场" if flight_profile == "dalian_nanshan" else "许昌试飞场地（小）"
+                required_departure = "fixed_dalian" if flight_profile == "dalian_nanshan" else "fixed_xuchang"
                 if coordinate_mode != "gps":
-                    raise HTTPException(status_code=422, detail="大连南山坡外场仅支持 GPS 坐标系")
-                if departure_point not in ("fixed_dalian", "southeast"):
-                    raise HTTPException(status_code=422, detail="大连南山坡外场使用固定起飞点")
+                    raise HTTPException(status_code=422, detail=fixed_name + "仅支持 GPS 坐标系")
+                if departure_point not in (required_departure, "southeast"):
+                    raise HTTPException(status_code=422, detail=fixed_name + "使用固定起飞点")
                 if (float(payload.get("reconnaissance_radius_m", 75.0)) != 75.0
                         or float(payload.get("speed_mps", 5.0)) != 5.0
                         or float(payload.get("hover_scan_seconds", 10.0)) != 10.0):
-                    raise HTTPException(status_code=409, detail="大连南山坡外场仅支持已保存的半径 75m、航速 5m/s、扫描 10s 方案")
-                from .fixed_gps_scene import load_dalian_nanshan_plan
-                result = load_dalian_nanshan_plan(coordinate_mode="gps")
+                    raise HTTPException(status_code=409, detail=fixed_name + "仅支持已保存的半径 75m、航速 5m/s、扫描 10s 方案")
+                if flight_profile == "dalian_nanshan":
+                    from .fixed_gps_scene import load_dalian_nanshan_plan
+                    result = load_dalian_nanshan_plan(coordinate_mode="gps")
+                else:
+                    from .xuchang_small_scene import load_xuchang_small_plan
+                    result = load_xuchang_small_plan(coordinate_mode="gps")
                 result["subject"] = subject
                 result["flight_altitude_plan"] = flight_altitude_plan
                 result = attach_routes(result)
@@ -1355,8 +1360,8 @@ def create_app(environment=None, audit=None) -> FastAPI:
             payload.get("flight_profile", "competition" if payload.get("planning_mode") == "competition" else "lab")
         ).strip().lower()
         requested_altitude_plan = str(payload.get("flight_altitude_plan", "default")).strip().lower()
-        if requested_profile == "dalian_nanshan" and payload.get("planning_mode") != "competition":
-            raise HTTPException(status_code=422, detail="大连南山坡固定区域必须使用比赛区域规划模式")
+        if requested_profile in ("dalian_nanshan", "xuchang_small") and payload.get("planning_mode") != "competition":
+            raise HTTPException(status_code=422, detail="固定 GPS 区域必须使用比赛区域规划模式")
         if payload.get("planning_mode") == "competition":
             plan_checkpoint("读取固定规划和 GPS 基准")
             if payload.get("tasks_by_uav") is not None:
@@ -1426,7 +1431,7 @@ def create_app(environment=None, audit=None) -> FastAPI:
                 requested_profile,
                 requested_altitude_plan,
                 str(payload.get("controller_mode", "internal")),
-                None if requested_profile == "dalian_nanshan" else payload.get("gps_origin"),
+                None if requested_profile in ("dalian_nanshan", "xuchang_small") else payload.get("gps_origin"),
                 payload.get("landing_area"),
                 prepared,
                 recognition_selection,

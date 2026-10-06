@@ -24,7 +24,8 @@ spec.loader.exec_module(receiver_module)
 def sender_methods():
     tree = ast.parse((ROOT / 'scripts/onboard_image_sender.py').read_text(encoding='utf-8'))
     methods = {'_announce_mission', '_mark_reconciliation_needed', '_reconcile_once',
-               '_load_cached_metadata', '_reconcile_timer_callback', '_mark_image_acked'}
+               '_load_cached_metadata', '_reconcile_timer_callback', '_mark_image_acked',
+               '_retry_pending_results', '_mark_result_acked'}
     cls = next(node for node in tree.body if isinstance(node, ast.ClassDef))
     functions = [node for node in cls.body if isinstance(node, ast.FunctionDef) and node.name in methods]
     from competition_shared.return_events import matches_return_event, competition_elapsed
@@ -83,6 +84,7 @@ class ImageReconnectionTest(unittest.TestCase):
             sender.active_mission_id = 'reconnect-test'
             sender.mission_started_at_unix_ns = time.time_ns() - 10_000_000_000
             sender.mission_lock = threading.Lock()
+            sender.stop_event = threading.Event()
             sender._mission_cache_dir = lambda _: cache
             frames = []
             with connection(receiver) as client:

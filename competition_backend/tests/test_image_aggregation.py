@@ -268,6 +268,162 @@ class ImageAggregationTest(unittest.TestCase):
                 server.shutdown()
                 server.server_close()
 
+    def test_json_arrives_at_publisher_before_a_failed_peer_image(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            remote_root = root / "remote"
+            local_root = root / "publisher"
+            mission = remote_root / "UAV2" / "subject1-json-priority"
+            mission.mkdir(parents=True)
+            metadata = dict(mission_id="subject1-json-priority", target_id="fixed-2",
+                            target_type="车辆", target_model="车辆1", is_moving=False,
+                            target_latitude=34.1, target_longitude=113.9, confidence=.8,
+                            image_stamp=dict(secs=1_700_000_000, nsecs=0))
+            (mission / "target.json").write_text(json.dumps(metadata), encoding="utf-8")
+            (mission / "target.jpg").write_bytes(b"large-image-placeholder")
+
+            class PeerHandler(BaseHTTPRequestHandler):
+                def do_GET(self):
+                    parsed = urllib.parse.urlparse(self.path)
+                    query = urllib.parse.parse_qs(parsed.query)
+                    if self.headers.get("X-Competition-Peer-Token") != "peer-secret":
+                        self.send_error(403)
+                        return
+                    if parsed.path.endswith("/manifest"):
+                        raw = json.dumps({"files": local_image_manifest(remote_root, 2)}).encode()
+                    elif parsed.path.endswith("/file"):
+                        if query["relative_path"][0].endswith(".jpg"):
+                            self.send_error(503, "image temporarily unavailable")
+                            return
+                        raw = resolve_image_file(remote_root, 2, query["relative_path"][0]).read_bytes()
+                    else:
+                        self.send_error(404)
+                        return
+                    self.send_response(200)
+                    self.send_header("Content-Length", str(len(raw)))
+                    self.end_headers()
+                    self.wfile.write(raw)
+
+                def log_message(self, *_args):
+                    pass
+
+            server = ThreadingHTTPServer(("127.0.0.1", 0), PeerHandler)
+            thread = threading.Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+            url = "http://127.0.0.1:%d" % server.server_port
+            collector = PeerImageCollector(local_root, 1, {2: url}, "peer-secret",
+                                           publisher_dedup=True)
+            try:
+                with self.assertRaises(Exception):
+                    collector._sync_peer(2, url)
+                self.assertTrue((local_root / "UAV2/subject1-json-priority/target.json").is_file())
+                self.assertFalse((local_root / "UAV2/subject1-json-priority/target.jpg").exists())
+                result = collector._rebuild_subject1("subject1-json-priority")
+                document = json.loads(result.read_text(encoding="utf-8"))
+                self.assertEqual(["fixed-2"], [item["id"] for item in document["features"]])
+            finally:
+                server.shutdown()
+                server.server_close()
+                thread.join(timeout=2)
+
+    def test_two_peers_moving_results_prepare_and_upload_selected_forty_points(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            publisher = root / "publisher"
+            servers = []
+
+            def open_peer(uav_id, count, confidence):
+                remote = root / ("ground-%d" % uav_id)
+                mission = remote / ("UAV%d" % uav_id) / "subject1-multi-ground"
+                mission.mkdir(parents=True)
+                for index in range(count):
+                    record = dict(mission_id="subject1-multi-ground",
+                                  target_id="moving-%d" % uav_id, target_type="车辆",
+                                  target_model="车辆1", is_moving=True,
+                                  target_latitude=34.1,
+                                  target_longitude=113.9 + index * .00001,
+                                  confidence=confidence,
+                                  image_stamp=dict(secs=1_700_000_000 + index * 3, nsecs=0))
+                    (mission / ("point-%03d.json" % index)).write_text(
+                        json.dumps(record), encoding="utf-8")
+
+                class PeerHandler(BaseHTTPRequestHandler):
+                    def do_GET(self):
+                        parsed = urllib.parse.urlparse(self.path)
+                        query = urllib.parse.parse_qs(parsed.query)
+                        if self.headers.get("X-Competition-Peer-Token") != "peer-secret":
+                            self.send_error(403)
+                            return
+                        if parsed.path.endswith("/manifest"):
+                            raw = json.dumps({"files": local_image_manifest(remote, uav_id)}).encode()
+                        elif parsed.path.endswith("/file"):
+                            raw = resolve_image_file(remote, uav_id,
+                                                     query["relative_path"][0]).read_bytes()
+                        else:
+                            self.send_error(404)
+                            return
+                        self.send_response(200)
+                        self.send_header("Content-Length", str(len(raw)))
+                        self.end_headers()
+                        self.wfile.write(raw)
+
+                    def log_message(self, *_args):
+                        pass
+
+                server = ThreadingHTTPServer(("127.0.0.1", 0), PeerHandler)
+                thread = threading.Thread(target=server.serve_forever, daemon=True)
+                thread.start()
+                servers.append((server, thread))
+                return "http://127.0.0.1:%d" % server.server_port
+
+            try:
+                peer2 = open_peer(2, 6, .95)
+                peer3 = open_peer(3, 43, .40)
+                collector = PeerImageCollector(publisher, 1, {2: peer2, 3: peer3},
+                                               "peer-secret", publisher_dedup=True)
+                collector._sync_peer(2, peer2)
+                collector._sync_peer(3, peer3)
+                self.assertEqual(49, len(list(publisher.glob("UAV*/*/*.json"))))
+                result = collector._rebuild_subject1("subject1-multi-ground")
+                document = json.loads(result.read_text(encoding="utf-8"))
+                feature, = document["features"]
+                self.assertEqual("moving-3", feature["id"])
+                self.assertEqual(40, len(feature["properties"]["trackPoints"]))
+                from competition_backend.subject1_reporting import Subject1Reporter, TEAM_NAME
+                reporter = Subject1Reporter(publisher, publisher_dedup=True)
+                prepared = reporter.prepare(document, already_deduplicated=True)
+                sent = []
+
+                class Response:
+                    code = 200
+
+                    def __enter__(self):
+                        return self
+
+                    def __exit__(self, *_args):
+                        return False
+
+                    def read(self, _size):
+                        return b'{"accepted":true}'
+
+                class Opener:
+                    def open(self, request, timeout):
+                        sent.append((request, timeout))
+                        return Response()
+
+                with mock.patch("competition_backend.subject1_reporting.urllib.request.build_opener",
+                                return_value=Opener()):
+                    receipt = reporter.submit(prepared["draft_id"])
+                self.assertEqual("http_received", receipt["state"])
+                self.assertEqual(1, len(sent))
+                self.assertIn(b'name="file"; filename="target-submission.json"', sent[0][0].data)
+                self.assertIn(b'"trackPoints"', sent[0][0].data)
+            finally:
+                for server, thread in servers:
+                    server.shutdown()
+                    server.server_close()
+                    thread.join(timeout=2)
+
     def test_slow_peer_does_not_block_another_peer(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

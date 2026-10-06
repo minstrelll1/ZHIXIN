@@ -1,4 +1,5 @@
 """赛前固定进场/逐航点返航路径；运行时仅校验并转换坐标。"""
+import copy
 import hashlib
 import heapq
 import json
@@ -6,24 +7,126 @@ import math
 from pathlib import Path
 
 CACHE = Path(__file__).with_name('external_transit_prepared.json')
-PROFILES = ('lab', 'outdoor5', 'lab10', 'outdoor100', 'outdoor200', 'competition', 'dalian_nanshan')
+PROFILES = ('lab', 'outdoor5', 'lab10', 'outdoor100', 'outdoor200', 'competition', 'dalian_nanshan', 'xuchang_small')
+CLEARANCE_PROFILES = ('outdoor100', 'outdoor200', 'competition')
+SAFE_TRANSIT_PROFILES = CLEARANCE_PROFILES + ('xuchang_small',)
+BOUNDARY_CLEARANCE_M = 5.0
 
 
-def scene_plan(profile, departure):
+def clearance_region(boundary, distance_m, holes=()):
+    """直线航段使用保守内缩多边形；额外 2cm 余量抵消坐标舍入误差。"""
+    from shapely.geometry import Polygon
+    polygon = Polygon(boundary, holes=holes)
+    if not polygon.is_valid or polygon.is_empty:
+        raise ValueError('带扣除区的任务边界无效')
+    region = polygon.buffer(-float(distance_m) - 0.02, join_style=2)
+    if region.is_empty or not region.is_valid or region.geom_type != 'Polygon':
+        raise ValueError('任务区域内缩后没有连通的安全航行区域，无法满足边界间距')
+    return region
+
+
+def clearance_routes(boundary, departure, targets, distance_m, *, holes=(), allow_target_connectors=False):
+    """内部航段保持边界间距，边缘/区域外起降点仅经专门连接段进出。"""
+    from shapely.geometry import Polygon, Point, LineString
+    flyable = Polygon(boundary, holes=holes)
+    outer = flyable.buffer(2e-5)
+    safe = clearance_region(boundary, distance_m, holes=holes)
+    vertices = [list(p) for ring in (safe.exterior, *safe.interiors) for p in list(ring.coords)[:-1]]
+    if any(Polygon(hole).contains(Point(departure)) for hole in holes):
+        raise ValueError('实际起降点位于扣除区内，不可规划穿越扣除区的进返场航线')
+
+    def gateway(point, allow_outside=False):
+        p = Point(point)
+        if safe.covers(p):
+            return list(point)
+        if not allow_outside and not outer.covers(p):
+            raise ValueError('侦察航点不在任务区域内部')
+        candidates = []
+        for a, b in zip(vertices, vertices[1:] + vertices[:1]):
+            edge = LineString([a, b])
+            candidate = edge.interpolate(edge.project(p))
+            candidates.extend((list(candidate.coords[0]), list(a)))
+        for candidate in sorted(candidates, key=lambda c: math.dist(point, c)):
+            segment = LineString([point, candidate])
+            if outer.covers(segment):
+                return candidate
+            if allow_outside and not outer.covers(p):
+                intersection = segment.intersection(outer)
+                if (intersection.geom_type == 'LineString' and not intersection.is_empty
+                        and intersection.distance(Point(candidate)) <= 2e-5):
+                    return candidate
+        raise ValueError('无法通过单一连接段进入内缩安全区，请调整起降点或侦察航点')
+
+    if not allow_target_connectors and any(not safe.covers(Point(p)) for p in targets):
+        raise ValueError('侦察航点距离任务边界不足要求的安全间距')
+    start = gateway(departure, allow_outside=True)
+    ends = [gateway(point) for point in targets]
+    # 包含内环顶点的可见图，直线只有完全位于内缩后的可飞区才可用。
+    nodes = [start, *vertices, *ends]
+    allowed = safe.buffer(1e-8)
+    graph = [[] for _ in nodes]
+    for i, a in enumerate(nodes):
+        for j in range(i + 1, len(nodes)):
+            b = nodes[j]
+            if math.dist(a, b) < 1e-9 or allowed.covers(LineString([a, b])):
+                length = math.dist(a, b)
+                graph[i].append((j, length))
+                graph[j].append((i, length))
+    distances, previous, queue = {0: 0.0}, {}, [(0.0, 0)]
+    while queue:
+        distance, node = heapq.heappop(queue)
+        if distance != distances[node]:
+            continue
+        for other, length in graph[node]:
+            candidate = distance + length
+            if candidate + 1e-10 < distances.get(other, math.inf):
+                distances[other], previous[other] = candidate, node
+                heapq.heappush(queue, (candidate, other))
+    paths = []
+    for node in range(1 + len(vertices), len(nodes)):
+        if node not in distances:
+            raise ValueError('侦察航点与起降点在安全区域内无法连通')
+        chain = [nodes[node]]
+        while node:
+            node = previous[node]
+            chain.append(nodes[node])
+        paths.append(list(reversed(chain)))
+    result = []
+    for target, inner_path in zip(targets, paths):
+        path = []
+        for point in [list(departure)] + inner_path + [list(target)]:
+            if not path or math.dist(path[-1], point) > 1e-9:
+                path.append(list(point))
+        if len(path) == 1:
+            path.append(list(path[0]))
+        result.append(path)
+    return result
+
+
+def scene_plan(profile, departure, apply_clearance=True):
     from .polygon_coverage import plan_competition_coverage, adapt_competition_plan
     from .stadium_departure import load_prepared_stadium_plan, anchor_stadium_plan
     from .scaled_scene_plans import load_scaled_scene_plan
     if profile == 'dalian_nanshan':
         from .fixed_gps_scene import load_dalian_nanshan_plan
         return load_dalian_nanshan_plan()
+    if profile == 'xuchang_small':
+        from .xuchang_small_scene import load_xuchang_small_plan
+        return load_xuchang_small_plan()
     base = plan_competition_coverage()
     if profile in ('outdoor100', 'outdoor200'):
-        return load_scaled_scene_plan(base, flight_profile=profile, departure_point=departure)
-    source = load_prepared_stadium_plan(base, flight_profile=profile) if departure == 'stadium_center' else base
-    plan = adapt_competition_plan(source, coordinate_mode='xyz', flight_profile=profile,
-                                 max_extent_m={'lab': 3, 'outdoor5': 5, 'lab10': 10}.get(profile, 3),
-                                 lab_speed_mps=.5 if profile == 'lab10' else .2)
-    return anchor_stadium_plan(plan, source) if departure == 'stadium_center' else plan
+        plan = load_scaled_scene_plan(base, flight_profile=profile, departure_point=departure)
+    else:
+        source = load_prepared_stadium_plan(base, flight_profile=profile) if departure == 'stadium_center' else base
+        plan = adapt_competition_plan(source, coordinate_mode='xyz', flight_profile=profile,
+                                     max_extent_m={'lab': 3, 'outdoor5': 5, 'lab10': 10}.get(profile, 3),
+                                     lab_speed_mps=.5 if profile == 'lab10' else .2)
+        if departure == 'stadium_center':
+            plan = anchor_stadium_plan(plan, source)
+    if apply_clearance and profile in CLEARANCE_PROFILES:
+        from .clearance_plans import apply_clearance_plan
+        plan = apply_clearance_plan(plan)
+    return plan
 
 
 def shortest_routes(boundary, departure, targets):
@@ -81,7 +184,7 @@ def shortest_routes(boundary, departure, targets):
 
 
 def rebase_gps_routes_for_takeoff(area, task, takeoff_gps):
-    """保持固定侦察点，按该机实测起飞 GPS 重接进场和逐点返航路径。"""
+    """保持六机侦察点，按接收机实测起飞 GPS 重接进场和全机队返航路径。"""
     fixed = task['transit_routes']
     if fixed.get('coordinate_frame') != 'WGS84':
         raise ValueError('只有 GPS 航线可按实测起飞位置重接')
@@ -102,21 +205,46 @@ def rebase_gps_routes_for_takeoff(area, task, takeoff_gps):
         return [gps_scans[0][1] + (point[1] - scans[0][1]) * factors[1],
                 gps_scans[0][0] + (point[0] - scans[0][0]) * factors[0]]
     key = area['flight_profile'] + '/' + area.get('departure_point', 'southeast')
-    saved_boundary = json.loads(CACHE.read_text(encoding='utf-8'))['scenes'][key]['boundary_m']
+    saved = json.loads(CACHE.read_text(encoding='utf-8'))['scenes'][key]
+    saved_boundary = saved['boundary_m']
+    if area['flight_profile'] == 'xuchang_small':
+        from shapely.geometry import Point
+        if not clearance_region(saved_boundary, BOUNDARY_CLEARANCE_M,
+                                holes=saved.get('excluded_polygons_m', [])).covers(Point(home)):
+            raise ValueError('许昌实际起降点距外边界或内部扣除区不足 5 米，不能下发此航线')
     # 比赛 GPS 方案会整体平移地图边界的局部坐标；扫描点保留赛前坐标。
     # 重接路径必须与扫描点使用同一局部坐标系。
-    paths = shortest_routes(saved_boundary, home, scans)
-    def convert_path(path, index, reverse=False):
+    if fixed.get('schema_version') == 2:
+        sources = [(int(uid), index + 1, point) for uid, points in
+                   sorted(fixed['waypoints_by_uav'].items(), key=lambda item: int(item[0]))
+                   for index, point in enumerate(points)]
+        # 固定局部坐标是区域内几何的依据，避免经纬度舍入后反投影将边界点推到区域外。
+        targets = [saved['vehicles'][str(uid)]['waypoints_m'][index - 1] for uid, index, _ in sources]
+        if any(math.dist(convert(target), point) > 2e-8 for target, (_, _, point) in zip(targets, sources)):
+            raise ValueError('全机队侦察航点与固定返航几何不一致')
+        first_index = next(i for i, (uid, index, _) in enumerate(sources)
+                           if uid == fixed['recipient_uav_id'] and index == 1)
+    else:
+        sources = [(None, i + 1, [point[1], point[0]]) for i, point in enumerate(gps_scans)]
+        targets, first_index = scans, 0
+    distance = BOUNDARY_CLEARANCE_M if area['flight_profile'] in SAFE_TRANSIT_PROFILES else 0.0
+    if distance:
+        paths = clearance_routes(saved_boundary, home, targets, distance,
+                                 holes=saved.get('excluded_polygons_m', []))
+    else:
+        paths = shortest_routes(saved_boundary, home, targets)
+    def convert_path(path, point, reverse=False):
         points = [convert(point) for point in (reversed(path) if reverse else path)]
         if reverse:
-            points[0], points[-1] = [gps_scans[index][1], gps_scans[index][0]], [lon, lat]
+            points[0], points[-1] = list(point), [lon, lat]
         else:
-            points[0], points[-1] = [lon, lat], [gps_scans[index][1], gps_scans[index][0]]
+            points[0], points[-1] = [lon, lat], list(point)
         return points
     return dict(fixed, departure=[lon, lat],
-                entry_path=convert_path(paths[0], 0),
-                return_paths=[dict(waypoint_index=i + 1, path=convert_path(path, i, True))
-                              for i, path in enumerate(paths)])
+                entry_path=convert_path(paths[first_index], sources[first_index][2]),
+                return_paths=[dict(waypoint_index=index, path=convert_path(path, point, True),
+                                   **({'source_uav_id': uid} if uid is not None else {}))
+                              for (uid, index, point), path in zip(sources, paths)])
 
 
 def prepare_routes(plan):
@@ -125,20 +253,36 @@ def prepare_routes(plan):
     departure = area.get('departure_point_m', [0., 0.])
     wrappers = plan['planned_uavs']
     targets = [p for item in wrappers.values() for p in item['task']['waypoints_m']]
-    paths = iter(shortest_routes(boundary, departure, targets))
+    distance = BOUNDARY_CLEARANCE_M if area['flight_profile'] in SAFE_TRANSIT_PROFILES else 0.0
+    holes = area.get('excluded_polygons_m', [])
+    paths = iter(clearance_routes(boundary, departure, targets, distance, holes=holes) if distance
+                 else shortest_routes(boundary, departure, targets))
     vehicles = {}
     for uid, item in wrappers.items():
         scans = item['task']['waypoints_m']
         routes = [next(paths) for _ in scans]
         vehicles[str(uid)] = dict(waypoints_m=scans, entry_path_m=routes[0],
                                  return_paths_m=[list(reversed(route)) for route in routes])
-    return dict(boundary_m=boundary, departure_m=departure, vehicles=vehicles)
+    result = dict(boundary_m=boundary, departure_m=departure, vehicles=vehicles)
+    if distance:
+        result.update(boundary_clearance_m=distance,
+                      endpoint_clearance_policy='takeoff_landing_connector_only',
+                      safe_boundary_m=[list(p) for p in list(clearance_region(boundary,distance,holes=holes).exterior.coords)[:-1]])
+        if area['flight_profile'] in CLEARANCE_PROFILES:
+            result['prepared_clearance_sha256'] = plan['prepared_clearance_sha256']
+        if holes:
+            result['excluded_polygons_m'] = copy.deepcopy(holes)
+            result['safe_excluded_polygons_m'] = [list(map(list, list(ring.coords)[:-1])) for ring in
+                                                   clearance_region(boundary,distance,holes=holes).interiors]
+    return result
 
 
 def save_all_routes():
     scenes = {}
     for profile in PROFILES:
-        for departure in (('fixed_dalian',) if profile == 'dalian_nanshan' else ('southeast', 'stadium_center')):
+        for departure in (('fixed_dalian',) if profile == 'dalian_nanshan' else
+                          ('fixed_xuchang',) if profile == 'xuchang_small' else
+                          ('southeast', 'stadium_center')):
             scenes[profile + '/' + departure] = prepare_routes(scene_plan(profile, departure))
     canonical = json.dumps(scenes, sort_keys=True, separators=(',', ':'), ensure_ascii=False)
     document = dict(schema_version=1, sha256=hashlib.sha256(canonical.encode()).hexdigest(), scenes=scenes)
@@ -148,6 +292,9 @@ def save_all_routes():
 
 def attach_routes(plan):
     """不求解路径。高度在机载发布时统一填入本机任务相对高度。"""
+    if plan['search_area']['flight_profile'] in CLEARANCE_PROFILES:
+        from .clearance_plans import apply_clearance_plan
+        plan = apply_clearance_plan(plan)
     area = plan['search_area']
     key = area['flight_profile'] + '/' + area.get('departure_point', 'southeast')
     data = json.loads(CACHE.read_text(encoding='utf-8'))
@@ -155,6 +302,14 @@ def attach_routes(plan):
     if data.get('schema_version') != 1 or data.get('sha256') != digest:
         raise ValueError('固定进返场航线文件校验失败，请重新生成')
     saved = data['scenes'][key]
+    if area['flight_profile'] in CLEARANCE_PROFILES and (
+            saved.get('boundary_clearance_m') != BOUNDARY_CLEARANCE_M
+            or saved.get('prepared_clearance_sha256') != plan.get('prepared_clearance_sha256')):
+        raise ValueError('5米边界间距的进返场方案与侦察方案不一致，请更新固定规划文件')
+    if area['flight_profile'] == 'xuchang_small' and (
+            saved.get('boundary_clearance_m') != BOUNDARY_CLEARANCE_M
+            or saved.get('excluded_polygons_m') != area.get('excluded_polygons_m', [])):
+        raise ValueError('许昌扣除区与固定进返场方案不一致，请更新固定规划文件')
     # GPS 原竞赛场景的 points_m 保留地图投影原点，XYZ 已平移；仅允许整体平移。
     boundary, expected = area['points_m'], saved['boundary_m']
     shift = [boundary[0][i] - expected[0][i] for i in (0, 1)]
@@ -189,6 +344,28 @@ def attach_routes(plan):
             coordinate_order='longitude_latitude' if frame == 'WGS84' else 'x_y',
             departure=convert(saved['departure_m']), entry_path=[convert(p) for p in fixed['entry_path_m']],
             return_paths=[dict(waypoint_index=i+1, path=[convert(p) for p in route]) for i, route in enumerate(fixed['return_paths_m'])])
+        if saved.get('boundary_clearance_m'):
+            task['transit_routes'].update(boundary_clearance_m=saved['boundary_clearance_m'],
+                endpoint_clearance_policy=saved['endpoint_clearance_policy'])
+    # 静态方案六机共用选定出发点，可以直接复用已保存的每条几何路线。
+    # GPS 实飞在分派阶段再按接收机自己的起降点重接全机队路线。
+    fleet_points, fleet_returns = {}, []
+    for uid, item in sorted(plan['planned_uavs'].items(), key=lambda item: int(item[0])):
+        task = item['task']
+        fleet_points[str(uid)] = ([[p[1], p[0]] for p in task['waypoints_wgs84']]
+                                  if area['coordinate_mode'] == 'gps' else copy.deepcopy(task['waypoints_m']))
+        for route in task['transit_routes']['return_paths']:
+            fleet_returns.append(dict(copy.deepcopy(route), source_uav_id=int(uid)))
+    for uid, item in plan['planned_uavs'].items():
+        routes = item['task']['transit_routes']
+        returns = copy.deepcopy(fleet_returns)
+        for route in returns:
+            route['path'][0] = list(fleet_points[str(route['source_uav_id'])][route['waypoint_index'] - 1])
+            route['path'][-1] = list(routes['departure'])
+        routes['entry_path'][-1] = list(fleet_points[str(uid)][0])
+        routes.update(
+            schema_version=2, recipient_uav_id=int(uid), route_scope='all_uav_waypoints',
+            waypoints_by_uav=copy.deepcopy(fleet_points), return_paths=returns)
     area['landing_mode'] = 'selected_departure'
     area['departure_point_m'] = list(saved['departure_m'])
     plan['prepared_transit_sha256'] = data['sha256']

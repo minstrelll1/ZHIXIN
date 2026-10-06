@@ -128,6 +128,62 @@ class SubmissionTest(unittest.TestCase):
             self.assertNotEqual(0, decisions["merged"][0]["time_offset_seconds"])
             self.assertFalse(decisions["merged"][0]["track_points_merged"])
 
+    def test_multi_uav_moving_target_chooses_longest_single_track(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            mission_id = "subject1-moving-longest"
+            for uav_id, count, confidence in ((1, 29, .95), (2, 35, .42)):
+                folder = root / ("UAV%d" % uav_id) / mission_id
+                folder.mkdir(parents=True)
+                for index in range(count):
+                    payload = dict(mission_id=mission_id, target_id="moving-1",
+                                   target_type="车辆", target_model="车辆1", is_moving=True,
+                                   target_latitude=34.1,
+                                   target_longitude=113.9 + index * .00001,
+                                   confidence=confidence,
+                                   image_stamp=dict(secs=1_700_000_000 + index * 3, nsecs=0))
+                    (folder / ("point-%03d.json" % index)).write_text(
+                        json.dumps(payload), encoding="utf-8")
+            result = update_subject1_submission(root, mission_id, publisher_dedup=True)
+            document = json.loads(result.read_text(encoding="utf-8"))
+            feature, = document["features"]
+            self.assertEqual(35, len(feature["properties"]["trackPoints"]))
+            self.assertEqual(.42, feature["properties"]["confidence"])
+            self.assertEqual(1, len(json.loads((result.parent / "dedup-decisions.json").read_text(
+                encoding="utf-8"))["merged"]))
+            from competition_backend.subject1_reporting import validate_document
+            self.assertEqual(1, validate_document(document)["moving"])
+
+    def test_moving_track_over_forty_keeps_earliest_forty_points(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            mission_id = "subject1-moving-forty"
+            for uav_id, count, confidence in ((1, 47, .41), (2, 39, .96)):
+                folder = root / ("UAV%d" % uav_id) / mission_id
+                folder.mkdir(parents=True)
+                for index in range(count):
+                    payload = dict(mission_id=mission_id, target_id="moving-1",
+                                   target_type="车辆", target_model="车辆1", is_moving=True,
+                                   target_latitude=34.1,
+                                   target_longitude=113.9 + index * .00001,
+                                   confidence=confidence,
+                                   image_stamp=dict(secs=1_700_000_000 + index * 3, nsecs=0))
+                    (folder / ("point-%03d.json" % index)).write_text(
+                        json.dumps(payload), encoding="utf-8")
+            result = update_subject1_submission(root, mission_id, publisher_dedup=True)
+            document = json.loads(result.read_text(encoding="utf-8"))
+            feature, = document["features"]
+            points = feature["properties"]["trackPoints"]
+            self.assertEqual(40, len(points))
+            self.assertEqual(.41, feature["properties"]["confidence"])
+            self.assertEqual([113.9, 34.1], points[0]["coordinates"])
+            self.assertAlmostEqual(113.9 + 39 * .00001, points[-1]["coordinates"][0])
+            self.assertEqual(points[-1]["timestamp"], feature["properties"]["trackEndTime"])
+            decisions = json.loads((result.parent / "dedup-decisions.json").read_text(encoding="utf-8"))
+            self.assertEqual(7, decisions["track_truncations"][0]["omitted_track_points"])
+            from competition_backend.subject1_reporting import validate_document
+            self.assertEqual(1, validate_document(document)["moving"])
+
     def test_outdoor_static_and_moving_are_exported_in_template_shape(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -187,6 +243,52 @@ class SubmissionTest(unittest.TestCase):
             feature = document["features"][0]
             self.assertEqual([113.702, 33.86], feature["geometry"]["coordinates"])
             self.assertEqual("2023-11-14T22:13:40.000Z", feature["properties"]["timestamp"])
+
+    def test_repeated_static_id_uses_last_received_report_even_with_older_source_stamp(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            mission_id = "subject1-static-overwrite"
+            mission = root / "UAV2" / mission_id
+            mission.mkdir(parents=True)
+            for name, source_seconds, received_ns, longitude, confidence, model in (
+                ("first", 1_700_000_020, 1_800_000_000_000_000_001, 113.701, .93, "车辆1"),
+                ("second", 1_700_000_010, 1_800_000_000_000_000_002, 113.702, .21, "车辆2"),
+            ):
+                metadata = dict(mission_id=mission_id, target_id="same-static-id",
+                                target_type="车辆", target_model=model, is_moving=False,
+                                target_latitude=33.86, target_longitude=longitude,
+                                confidence=confidence, detection_received_at_unix_ns=received_ns,
+                                image_stamp=dict(secs=source_seconds, nsecs=0))
+                (mission / (name + ".json")).write_text(json.dumps(metadata), encoding="utf-8")
+                (mission / (name + ".jpg")).write_bytes(name.encode())
+            result = update_subject1_submission(root, mission_id, publisher_dedup=True)
+            feature, = json.loads(result.read_text(encoding="utf-8"))["features"]
+            self.assertEqual("same-static-id", feature["id"])
+            self.assertEqual([113.702, 33.86], feature["geometry"]["coordinates"])
+            self.assertEqual("2023-11-14T22:13:30.000Z", feature["properties"]["timestamp"])
+            self.assertEqual("车辆2", feature["properties"]["targetModel"])
+            self.assertEqual(.21, feature["properties"]["confidence"])
+            self.assertEqual(b"second", (result.parent / feature["properties"]["imagePath"]).read_bytes())
+
+    def test_json_only_last_static_report_does_not_reuse_old_image(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            mission_id = "subject1-static-json-only"
+            mission = root / "UAV1" / mission_id
+            mission.mkdir(parents=True)
+            for index in (1, 2):
+                metadata = dict(mission_id=mission_id, target_id="same-static-id",
+                                target_type="工事", is_moving=False,
+                                target_latitude=33.86, target_longitude=113.7 + index / 1000,
+                                confidence=index / 10,
+                                detection_received_at_unix_ns=1_800_000_000_000_000_000 + index,
+                                image_stamp=dict(secs=1_700_000_000 + index, nsecs=0))
+                (mission / ("report-%d.json" % index)).write_text(json.dumps(metadata), encoding="utf-8")
+            (mission / "report-1.jpg").write_bytes(b"old image")
+            result = update_subject1_submission(root, mission_id)
+            feature, = json.loads(result.read_text(encoding="utf-8"))["features"]
+            self.assertEqual([113.702, 33.86], feature["geometry"]["coordinates"])
+            self.assertNotIn("imagePath", feature["properties"])
 
     def test_concurrent_rebuilds_leave_complete_json_and_no_partial_images(self):
         with tempfile.TemporaryDirectory() as directory:

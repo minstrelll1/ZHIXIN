@@ -8,7 +8,7 @@
   <arg name="input_mode" default="completed_target_array"/>
   <arg name="detection_topic" default="/uav$(arg uav_id)/image_transfer/target_detection"/>
   <arg name="completed_target_topic" default="/target_stcheduler/complemend_targets"/>
-  <arg name="frame_cache_sec" default="0.5"/>
+  <arg name="frame_cache_sec" default="2.0"/>
   <arg name="camera_fps" default="30.0"/>
   <arg name="image_buffer_bytes" default="67108864"/>
   <arg name="target_image_topic" default="/uav$(arg uav_id)/image_transfer/target_image"/>

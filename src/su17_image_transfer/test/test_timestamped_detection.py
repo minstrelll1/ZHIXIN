@@ -18,7 +18,8 @@ import numpy as np
 
 PACKAGE_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PACKAGE_ROOT / "src"))
-from su17_image_transfer.frame_cache import FrameCache, detection_metadata, clipped_rectangle
+from su17_image_transfer.frame_cache import (FrameCache, detection_metadata,
+                                             completed_target_metadata, clipped_rectangle)
 
 
 def frame(nsecs=123456789, value=0):
@@ -40,22 +41,22 @@ def detection(image=None, **values):
 
 
 class FrameCacheTest(unittest.TestCase):
-    def test_30fps_keeps_15_frames_and_exact_nanoseconds(self):
+    def test_30fps_keeps_60_frames_and_exact_nanoseconds(self):
         now = [0.0]
         cache = FrameCache(clock=lambda: now[0])
         keys = []
-        for i in range(30):
+        for i in range(75):
             now[0] = i / 30.0
             keys.append(cache.add(frame(i + 1)))
-        self.assertEqual(15, len(cache.frames))
+        self.assertEqual(60, len(cache.frames))
         self.assertIsNone(cache.get(keys[14]))
         self.assertEqual(16, cache.get(keys[15]).header.stamp.nsecs)
-        self.assertEqual(30, cache.get(keys[29]).header.stamp.nsecs)
-        self.assertIsNone(cache.get(keys[29] + 1))
+        self.assertEqual(75, cache.get(keys[74]).header.stamp.nsecs)
+        self.assertIsNone(cache.get(keys[74] + 1))
 
     def test_expiry_when_camera_stops_and_duplicate_does_not_refresh(self):
         now = [0.0]
-        cache = FrameCache(clock=lambda: now[0])
+        cache = FrameCache(duration_sec=0.5, clock=lambda: now[0])
         original = frame()
         key = cache.add(original)
         now[0] = 0.4
@@ -71,6 +72,23 @@ class FrameCacheTest(unittest.TestCase):
         earlier = cache.add(frame(100))
         self.assertEqual(200, cache.get(later).header.stamp.nsecs)
         self.assertEqual(100, cache.get(earlier).header.stamp.nsecs)
+
+    def test_older_than_two_seconds_uses_frame_nearest_window_start(self):
+        cache = FrameCache()
+        old = frame(100)
+        old.header.stamp.secs = 1_789_000_000
+        first = frame(400)
+        first.header.stamp.secs = 1_789_000_001
+        newest = frame(300)
+        newest.header.stamp.secs = 1_789_000_003
+        for image in (old, first, newest):
+            cache.add(image)
+        selected, key, policy = cache.resolve(1_789_000_000_000000099)
+        self.assertIs(selected, first)
+        self.assertEqual(key, 1_789_000_001_000000400)
+        self.assertEqual(policy, "clamped_to_cache_window")
+        self.assertIsNone(cache.resolve(1_789_000_002_000000001))
+        self.assertEqual(cache.resolve(1_789_000_003_000000300)[2], "exact")
 
     def test_metadata_preserves_extra_without_overwriting_identity(self):
         key, metadata = detection_metadata(detection())
@@ -160,7 +178,7 @@ class SenderTest(unittest.TestCase):
     def test_default_subscriptions_and_full_frame_box_only(self):
         self.assertEqual("/uav1/gimbal/image_original", self.sender.image_subscriber.topic)
         self.assertEqual("/uav3/image_transfer/target_detection", self.sender.detection_subscriber.topic)
-        self.assertEqual(15, self.sender.image_subscriber.options["queue_size"])
+        self.assertEqual(60, self.sender.image_subscriber.options["queue_size"])
         image = frame()
         self.sender._camera_cache_callback(image)
         self.sender._detection_callback(detection(image))
@@ -200,6 +218,80 @@ class SenderTest(unittest.TestCase):
         self.sender._frame_cache_timer(None)
         self.assertEqual("frame_not_found", self.statuses[-1]["state"])
         self.assertTrue(self.sender.jobs.empty())
+
+    def test_old_program_b_timestamp_returns_two_second_frame_and_keeps_requested_stamp(self):
+        two_seconds_old = frame(100, value=20)
+        two_seconds_old.header.stamp.secs = 1_789_000_001
+        latest = frame(0, value=80)
+        latest.header.stamp.secs = 1_789_000_003
+        self.sender._camera_cache_callback(two_seconds_old)
+        self.sender._camera_cache_callback(latest)
+        requested = frame(90)
+        self.sender._detection_callback(detection(requested))
+        _, metadata = self.process_next()
+        self.assertEqual(metadata["image_match_policy"], "clamped_to_2s")
+        self.assertEqual(metadata["requested_image_stamp"], {"secs": 1_789_000_000, "nsecs": 90})
+        self.assertEqual(metadata["image_stamp"], {"secs": 1_789_000_000, "nsecs": 90})
+        self.assertEqual(metadata["selected_image_stamp"], {"secs": 1_789_000_001, "nsecs": 100})
+        self.assertEqual(metadata["source_stamp_sec"], 1_789_000_001)
+
+    def test_program_b_result_json_is_cached_before_image_matching(self):
+        target = SimpleNamespace(
+            header=SimpleNamespace(stamp=SimpleNamespace(secs=1_789_000_003, nsecs=0)),
+            global_id="global-7", target_type="车辆", timestamp=frame(99).header.stamp,
+            image_stamp=frame(99).header.stamp, localization_time=frame(99).header.stamp,
+            cx=50.0, cy=40.0, w=20.0, h=20.0, score=0.9,
+            category_id=0, speed_mps=0.0, category="车辆", is_moving=False,
+            indoor_position=False, east_m=0.0, north_m=0.0, up_m=0.0,
+            latitude_deg=34.1, longitude_deg=113.9, altitude_gps_m=52.0)
+        self.sender.input_mode = "completed_target_array"
+        self.sender._detection_callback(SimpleNamespace(targets=[target]))
+        self.assertEqual(1, self.sender.result_jobs.qsize())
+        self.assertTrue(self.sender.detection_jobs.empty())
+        result = self.sender.result_jobs.get_nowait()
+        json_path = (Path(self.directory.name) / result["mission_id"] /
+                     Path(result["file_name"]).with_suffix(".json").name)
+        self.assertTrue(json_path.is_file())
+        self.assertEqual(json.loads(json_path.read_text(encoding="utf-8"))["target_id"], "global-7")
+        self.assertEqual(result["message_type"], "target_result")
+
+    def test_cached_json_reaches_ground_without_any_matching_image(self):
+        target = SimpleNamespace(
+            header=SimpleNamespace(stamp=SimpleNamespace(secs=1_789_000_003, nsecs=0)),
+            global_id="global-8", target_type="车辆", timestamp=frame(99).header.stamp,
+            image_stamp=frame(99).header.stamp, localization_time=frame(99).header.stamp,
+            cx=50.0, cy=40.0, w=20.0, h=20.0, score=0.9,
+            category_id=0, speed_mps=0.0, category="车辆", is_moving=False,
+            indoor_position=False, east_m=0.0, north_m=0.0, up_m=0.0,
+            latitude_deg=34.1, longitude_deg=113.9, altitude_gps_m=52.0)
+        self.sender.input_mode = "completed_target_array"
+        self.sender._detection_callback(SimpleNamespace(targets=[target]))
+        result = self.sender.result_jobs.get_nowait()
+        receiver_spec = importlib.util.spec_from_file_location(
+            "result_only_ground_receiver", PACKAGE_ROOT / "ground" / "ground_image_receiver.py")
+        receiver_module = importlib.util.module_from_spec(receiver_spec)
+        receiver_spec.loader.exec_module(receiver_module)
+        with tempfile.TemporaryDirectory() as output:
+            receiver = receiver_module.GroundImageReceiver(
+                "127.0.0.1", 0, Path(output), "test-secret", [3], status_interval=0)
+            server = threading.Thread(target=receiver.serve_forever, daemon=True)
+            server.start()
+            deadline = time.monotonic() + 2
+            while receiver.server is None and time.monotonic() < deadline:
+                time.sleep(0.01)
+            self.assertIsNotNone(receiver.server)
+            self.sender.ground_host = "127.0.0.1"
+            self.sender.ground_port = receiver.server.getsockname()[1]
+            try:
+                self.sender._retry_pending_results(result["mission_id"])
+                saved = Path(output) / "UAV3" / result["mission_id"]
+                self.assertTrue((saved / Path(result["file_name"]).with_suffix(".json").name).is_file())
+                self.assertFalse((saved / result["file_name"]).exists())
+                self.assertTrue((Path(self.directory.name) / result["mission_id"] /
+                                 Path(result["file_name"]).with_suffix(".jsonacked").name).is_file())
+            finally:
+                receiver.stop()
+                server.join(timeout=2)
 
     def test_matched_frame_and_mission_survive_eviction_and_task_switch(self):
         image = frame()
@@ -241,6 +333,8 @@ class SenderTest(unittest.TestCase):
         self.sender._camera_cache_callback(image)
         self.sender._detection_callback(detection(image))
         jpeg, metadata = self.process_next()
+        # 此用例只模拟图片连接故障；独立 JSON 通道已经收到确认。
+        Path(metadata["cache_path"]).with_suffix(".jsonacked").touch()
         # 即时发送失败后仍保留原来的图片、框和扩展信息。
         self.sender.jobs.put((jpeg, metadata))
         with patch.object(self.sender, "_send_packet_with_ack", side_effect=OSError("模拟断网")):

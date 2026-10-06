@@ -1,6 +1,6 @@
 # SU17 目标图片回传
 
-默认流程：持续接收相机原图 → 在内存中保留最近 0.5 秒画面 → 算法发布 `CompletedTargetArray` → 按每个目标的 `timestamp` 精确匹配原帧 → 在原图上画目标框 → 保存 JPEG 和 JSON → 经 TCP 回传地面。
+默认流程：持续接收相机原图并缓存最近 2 秒 → 程序 B 发布 `CompletedTargetArray` → 目标 JSON 立即独立落盘并回传 → 按目标的 `timestamp` 匹配原帧、绘框并回传 JPEG。图片匹配、编码或传输失败不撤销已收到的 JSON；断网时两者分别保存在机载磁盘等待续传。
 
 图片只增加绿色目标框，不加坐标文字、底部信息栏或其他标签；保持原图宽高，不主动缩放。JPEG 默认质量为 80，因此不是无损原始图像。坐标、置信度、类型及扩展信息通过配套 JSON 回传和保存。
 
@@ -21,13 +21,13 @@
 
 ### 帧缓存
 
-- frame_cache_sec 默认 0.5，camera_fps 默认 30，容量为 ceil(时长 × 帧率)，默认最多 15 帧。
+- frame_cache_sec 默认 2.0，camera_fps 默认 30，容量为 ceil(时长 × 帧率)，默认最多 60 帧。相机原始帧占用的内存随分辨率和帧率增加。
 - 每帧按原始 header.stamp.secs/nsecs 保存整数纳秒索引，另用单调时钟记录接收时间并淘汰超过窗口的帧；相机停止更新时也清理过期缓存。
 - 相机回调只缓存消息引用和匹配请求；绘框、编码和落盘在后台线程执行，网络发送仍由独立线程处理。
 - 不生成、插值或强制修改相机帧率，也不按算法结果频率采样。30 FPS 必须由相机源提供；若源帧率高于配置，容量上限会缩短可回查时间。可用 rostopic hz 核实。
 - 连续原始帧只在短时内存中滚动保留，只有算法选中的带框图片沿用原有磁盘缓存。已匹配且排队处理的帧保留引用至处理完成。
-- **精确匹配时间戳，不找最近帧，也不回退到最新帧。**若结果先于相机回调到达，最多再等待一个缓存窗口；仍找不到则报告 frame_not_found。
-- 算法应在原帧到达回传节点后的 0.5 秒内提交结果。复制 header.stamp，不要使用推理完成时间或把时间戳转成浮点秒后重建。非空 header.frame_id 也必须与原图一致。
+- 2 秒窗口内精确匹配，不用邻近帧代替；若结果时间戳早于最新相机帧 2 秒，则取缓存中最接近窗口起点（约 2 秒前）的那一帧，不取最新帧。JSON 保留 `image_stamp`（程序 B 原始目标时间），另记录 `selected_image_stamp`（实际选用图片时间）及 `image_match_policy=clamped_to_2s`。若相机已停止或缓存为空，图片仍可能失败，但目标 JSON 独立回传。
+- 结果先于相机回调到达时最多等待一个缓存窗口。程序 B 应复制原帧 header.stamp；非空 header.frame_id 必须与原图一致。使用 2 秒前的替代帧时，运动目标的框位置可能与画面不完全对应，应查看上述匹配标记。
 
 ### CompletedTarget 消息
 
@@ -109,13 +109,17 @@ AUTH_TOKEN 使用已配置的固定 AuthToken，地面图片接收器需使用�
 
 ## 4. 保存格式和传输状态
 
-地面目录：received_images/UAV3/<图片任务编号>/<文件名>.jpg 和同名 .json。
+地面目录：received_images/UAV3/<图片任务编号>/<文件名>.json；图片成功时同目录下另有同名 .jpg。JSON 可先于图片到达，即使图片最终失败也保留。科目一持续整理结果位于 received_images/subject1_submissions/<图片任务编号>/target-submission.json。
+
+同一无人机的同一静目标 ID 可多次回传：原始 JSON/图片逐次保留供追溯，赛事格式结果只保留机载最后收到的那条记录，其坐标、类型、置信度、目标时间戳及关联图片来自同一次反馈。最新反馈尚无图片时，不把旧图片冒充最新结果。动目标仍按同一 ID 的多次有效经纬度反馈整理时间轨迹。
+
+任务发布端每轮先同步各地面端的目标 JSON，再同步 JPG；图片下载失败不妨碍已同步的 JSON 参与整理。跨机动目标仅在类别和轨迹相似时去重：选择有效轨迹点数最多的单机轨迹，同长度以置信度裁决，不拼接不同飞机的点；超过 40 点时按目标时间只保留最早 40 点。`dedup-decisions.json` 记录合并及截断，`raw-targets.json` 保留整理前结果。赛事上报仍由发布端将最终 UTF-8 JSON 作为 `file` 表单文件提交。
 
 机载持久缓存：/home/amov/competition_development/image_cache/<图片任务编号>/。
 
 JSON 保留原有任务、序号、相机话题、源时间戳、图片宽高等字段，并增加：
 
-- image_stamp：原图秒与纳秒；detection_received_at_unix_ns：算法消息接收时间。
+- image_stamp：程序 B 提供的原始目标时间戳，供赛事结果保持真实识别时间；selected_image_stamp：实际选用图片的时间戳。超时回退时另有 requested_image_stamp 和 image_match_policy；detection_received_at_unix_ns：算法消息接收时间。
 - bbox：原始中心和宽高；rendered_bbox：实际绘制角点，最大角点为闭区间。
 - target_id、target_type、confidence、target_longitude、target_latitude、target_altitude。
 - coordinate_system 为 WGS84；camera_frame_id、detection_frame_id、detection_topic。
@@ -129,8 +133,9 @@ rostopic echo /uav3/image_transfer/status
 
 | 状态 | 含义 |
 |---|---|
-| waiting_for_frame | 已收到算法结果，等待完全相同时间戳的相机原帧 |
-| frame_not_found | 缓存窗口内无法找到原帧，没有改用其他画面 |
+| result_sent | 目标 JSON 已单独到达地面，不依赖 JPEG |
+| waiting_for_frame | 已收到算法结果，仍在等待匹配相机帧；JSON 已独立缓存和尝试发送 |
+| frame_not_found | 缓存为空或窗口内无法找到原帧；JSON 仍独立回传 |
 | detection_rejected | 字段无效、frame_id 不一致、框完全越界或处理失败 |
 | processing_queue_full | 待匹配或绘框队列已满，请求尚未落盘，需要上游处理 |
 | cached | 带框 JPEG 和元数据已写入机载硬盘 |
@@ -151,7 +156,7 @@ rostopic pub -1 /uav3/image_transfer/mission_control \
   std_msgs/String "data: 'start:subject1-run-001'"
 ```
 
-图片落盘后若 TCP 发送失败，保留磁盘缓存，默认即时发送抑制 5 秒；后台清单核对尝试间隔为 30 秒，第 19 分钟仍进行一次定时核对。机载发送当前任务 JPG 文件名，地面返回缺失文件名，机载补发完整图片和元数据，再次核对。每张补传图片默认最多尝试 3 次。
+图片落盘后若 TCP 发送失败，保留磁盘缓存；目标 JSON 使用独立 TCP 连接和确认标记，不等待 JPEG 编码或图片链路恢复。断线恢复时先补传未确认的 JSON，再补传图片；最终缺失清单补传前也先核对 JSON。图片清单仍按 JPG 文件名核对，每张补传图片默认最多尝试 3 次。
 
 ```bash
 rostopic pub -1 /uav3/image_transfer/mission_control std_msgs/String "data: 'sync'"

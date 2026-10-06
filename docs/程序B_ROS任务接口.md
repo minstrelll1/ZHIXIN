@@ -75,7 +75,14 @@
 /ground_mission_planner/vehicle_N/return_home
 ```
 
-固定比赛方案没有单独的降落区域时，`jiangluodian` 使用无人机记录的起飞点；XYZ/ENU 模式发布 `[0, 0, 任务相对高度]`，WGS84 模式发布 `[起飞点经度, 起飞点纬度, 任务相对高度]`。该点是返回起飞位置时的航点，最终降落由程序 B 执行，第三个值不是触地高度。因此外部程序 B 仍会收到降落点消息。
+GPS 实飞任务的 `jiangluodian` 使用规划分派前获取并锁定的本机 GPS，发布 `[本机起飞点经度, 本机起飞点纬度, 本机任务相对高度]`。XYZ 固定方案使用选定出发点 `[X, Y, 本机任务相对高度]`；旧任务未附带降落点时兼容 `[0, 0, 本机任务相对高度]`。该点是返航点，最终下降、降落由程序 B 执行，第三个值不是触地高度。
 
 其中 `N` 为机载 ROS 编号，例如 UAV1 使用 `/ground_mission_planner/vehicle_1/return_home`。该消息不附带任务编号或其他字段；程序 B 可按当前任务上下文处理重复的 `true` 消息。
 
+## 全机队航点的返航路线
+
+`/ground_mission_planner/vehicle_N/entry_path` 和 `/ground_mission_planner/vehicle_N/return_paths` 均为锁存的 `std_msgs/String` JSON，在成功升到任务高度后发布。
+
+进场消息保持版本 1，终点为本机首个侦察点。返航消息升级为 `schema_version=2`：每架接收机收到六机全部规划航点的返航路线，**每条终点均为接收机自身的 `jiangluodian`，所有路线高度均为接收机任务高度**。`uav_id` 表示接收机；每项 `routes` 新增 `source_uav_id`，必须和来源机内从 1 开始的 `waypoint_index` 一起选择路线，不能只用数组下标。`landing_point` 为接收机降落点，`waypoint_counts_by_uav` 为各来源机航点数量。
+
+例如 UAV1 消息中 `source_uav_id=2, waypoint_index=3` 表示从 UAV2 第 3 个侦察点返回 UAV1 降落点。GPS 仍为 `[经度,纬度,相对高度]`，XYZ 为 `[X,Y,Z]`。完整示例与时机见 [进场与全机队返航接口](external_transit_routes.md)。程序 B 的读取端需适配这些字段，本工程没有修改程序 B 源码。

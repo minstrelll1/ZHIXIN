@@ -10,6 +10,7 @@ import math
 
 STATIC_DISTANCE_M = 10.0
 MOVING_DISTANCE_M = 10.0
+MAX_MOVING_TRACK_POINTS = 40
 MAX_SUBMISSION_TARGETS = 16
 
 
@@ -123,20 +124,18 @@ def _similar_tracks(left, right):
     return best is not None, best
 
 
-def _merge_tracks(winner, member):
-    combined = {}
-    # 后加入的高置信度轨迹覆盖相同时间戳的低置信度点。
-    for feature in sorted((winner, member), key=_confidence):
-        for point in feature.get("properties", {}).get("trackPoints", []):
-            if isinstance(point, dict) and _timestamp(point.get("timestamp")) is not None:
-                combined[point["timestamp"]] = copy.deepcopy(point)
-    ordered = sorted(combined.values(), key=lambda point: _timestamp(point["timestamp"]))
-    if len(ordered) >= 2:
-        props = winner["properties"]
-        props["trackPoints"] = ordered
-        props["trackStartTime"] = ordered[0]["timestamp"]
-        props["trackEndTime"] = ordered[-1]["timestamp"]
-        winner["geometry"]["coordinates"] = [point["coordinates"] for point in ordered]
+def _limit_moving_track(feature):
+    """保留单条轨迹中按目标时间排序的最早 40 个有效点。"""
+    props = feature["properties"]
+    points = sorted(props.get("trackPoints", []), key=lambda point: _timestamp(point["timestamp"]))
+    original_count = len(points)
+    selected = points[:MAX_MOVING_TRACK_POINTS]
+    if len(selected) >= 2:
+        props["trackPoints"] = selected
+        props["trackStartTime"] = selected[0]["timestamp"]
+        props["trackEndTime"] = selected[-1]["timestamp"]
+        feature["geometry"]["coordinates"] = [point["coordinates"] for point in selected]
+    return original_count - len(selected)
 
 
 def consolidate(document, *, max_targets=MAX_SUBMISSION_TARGETS):
@@ -146,7 +145,7 @@ def consolidate(document, *, max_targets=MAX_SUBMISSION_TARGETS):
     if not isinstance(raw, list):
         return result, {"merged": [], "omitted": [], "raw_count": 0, "result_count": 0}
     ordered = sorted(raw, key=lambda f: (-_confidence(f), str(f.get("id", ""))))
-    groups, merged = [], []
+    groups, merged, track_truncations = [], [], []
     for feature in ordered:
         source = feature.pop("_source_uav", None)
         kind = _kind(feature)
@@ -166,24 +165,50 @@ def consolidate(document, *, max_targets=MAX_SUBMISSION_TARGETS):
                 if comparisons and all(similar for similar, _ in comparisons):
                     evidence = max((detail for _, detail in comparisons),
                                    key=lambda detail: detail["mean_distance_m"])
-                    # 偏移只用于判断是否同一目标，未经校时的点不能混入上报轨迹。
-                    evidence = dict(evidence, track_points_merged=all(
-                        detail["time_offset_seconds"] == 0 for _, detail in comparisons))
+                    # 时间偏移只用于判断同一目标；最终选一条完整的机载轨迹，不拼接多机点。
+                    evidence = dict(evidence, track_points_merged=False)
                     matched = (group, evidence)
                     break
         if matched is None:
             groups.append({"feature": feature, "members": [feature], "sources": {source} if source else set(),
-                           "kind": kind})
+                           "kind": kind, "member_sources": [source], "member_evidence": [None]})
             continue
         group, evidence = matched
-        if kind[0] == "移动" and evidence["track_points_merged"]:
-            _merge_tracks(group["feature"], feature)
         group["members"].append(feature)
+        group["member_sources"].append(source)
+        group["member_evidence"].append(evidence)
         if source:
             group["sources"].add(source)
-        merged.append({"kept_id": group["feature"].get("id"), "merged_id": feature.get("id"),
-                       "source_uav": source, "target_category": kind[0], "target_type": kind[1], **evidence})
-    features = [group["feature"] for group in groups]
+    features = []
+    for group in groups:
+        kind = group["kind"]
+        if kind[0] == "移动":
+            # 不把不同飞机采集的轨迹拼成一条；点数优先，置信度只作同长度裁决。
+            group["feature"] = max(group["members"], key=lambda member: (
+                len(_track(member)), _confidence(member), str(member.get("id", ""))))
+        winner = group["feature"]
+        for member, source, evidence in zip(group["members"], group["member_sources"],
+                                            group["member_evidence"]):
+            if member is winner:
+                continue
+            if evidence is None:
+                if kind[0] == "移动":
+                    _, evidence = _similar_tracks(winner, member)
+                    evidence = dict(evidence or {}, track_points_merged=False)
+                else:
+                    evidence = {"max_distance_m": round(_distance(
+                        winner.get("geometry", {}).get("coordinates"),
+                        member.get("geometry", {}).get("coordinates")), 2)}
+            merged.append({"kept_id": winner.get("id"), "merged_id": member.get("id"),
+                           "source_uav": source, "target_category": kind[0], "target_type": kind[1],
+                           **evidence})
+        if kind[0] == "移动":
+            original_count = len(winner["properties"].get("trackPoints", []))
+            omitted_points = _limit_moving_track(winner)
+            if omitted_points:
+                track_truncations.append({"id": winner.get("id"), "source_track_points": original_count,
+                                          "omitted_track_points": omitted_points})
+        features.append(winner)
     features.sort(key=lambda f: (-_confidence(f), str(f.get("id", ""))))
     omitted = [{"id": feature.get("id"), "reason": "超出赛事最多16个目标"}
                for feature in features[max_targets:]]
@@ -201,4 +226,6 @@ def consolidate(document, *, max_targets=MAX_SUBMISSION_TARGETS):
     result["features"] = features
     return result, {"raw_count": len(raw), "result_count": len(features), "merged": merged,
                     "omitted": omitted, "static_distance_m": STATIC_DISTANCE_M,
-                    "moving_distance_m": MOVING_DISTANCE_M}
+                    "moving_distance_m": MOVING_DISTANCE_M,
+                    "moving_track_point_limit": MAX_MOVING_TRACK_POINTS,
+                    "track_truncations": track_truncations}

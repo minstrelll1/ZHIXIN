@@ -105,12 +105,13 @@ class OnboardImageSender:
             "~completed_target_topic", "/target_stcheduler/complemend_targets"
         )
         self.frame_cache = FrameCache(
-            float(rospy.get_param("~frame_cache_sec", 0.5)),
+            float(rospy.get_param("~frame_cache_sec", 2.0)),
             float(rospy.get_param("~camera_fps", 30.0)),
         )
         self.frame_lock = threading.Lock()
         self.pending_detections = []
         self.detection_jobs = queue.Queue(maxsize=queue_size)
+        self.result_jobs = queue.Queue(maxsize=max(64, queue_size))
         self.max_pending_detections = queue_size
         self.image_buffer_bytes = int(rospy.get_param("~image_buffer_bytes", 67108864))
         if queue_size <= 0 or self.image_buffer_bytes <= 0:
@@ -148,6 +149,8 @@ class OnboardImageSender:
         self.stop_event = threading.Event()
         self.connection = None
         self.connection_lock = threading.Lock()
+        self.result_lock = threading.Lock()
+        self.result_send_suppressed_until = 0.0
         self.live_send_suppressed_until = 0.0
 
         self.mission_lock = threading.Lock()
@@ -256,6 +259,8 @@ class OnboardImageSender:
 
         self.worker = threading.Thread(target=self._worker_loop, daemon=True)
         self.worker.start()
+        self.result_worker = threading.Thread(target=self._result_worker_loop, daemon=True)
+        self.result_worker.start()
         self.reconcile_timer = rospy.Timer(
             rospy.Duration(1.0), self._reconcile_timer_callback
         )
@@ -279,10 +284,22 @@ class OnboardImageSender:
         self._publish_status(state, dict(metadata, error=reason))
         rospy.logwarn("目标图片未回传：请求=%s，原因=%s", metadata.get("request_id", ""), reason)
 
-    def _queue_detection(self, image, metadata):
+    def _queue_detection(self, resolved, metadata):
+        image = resolved[0] if resolved is not None else None
         if image is None:
             self._reject_detection(metadata, "frame_not_found", "原图缓存已过期")
             return
+        _, _, policy = resolved
+        metadata["selected_image_stamp"] = {"secs": int(image.header.stamp.secs),
+                                            "nsecs": int(image.header.stamp.nsecs)}
+        if policy != "exact":
+            requested = dict(metadata["image_stamp"])
+            metadata["requested_image_stamp"] = requested
+            metadata["image_match_policy"] = "clamped_to_2s"
+            rospy.logwarn("目标原图时间戳早于 2 秒缓存：请求=%s，原时间=%s，实际选帧=%s",
+                          metadata.get("request_id", ""), requested, metadata["selected_image_stamp"])
+        else:
+            metadata["image_match_policy"] = "exact"
         frame_id = metadata["detection_frame_id"]
         if frame_id and frame_id != image.header.frame_id:
             self._reject_detection(metadata, "detection_rejected", "算法结果与原图的 frame_id 不一致")
@@ -310,8 +327,9 @@ class OnboardImageSender:
                 self._expire_pending_locked()
                 remaining = []
                 for pending_key, deadline, metadata in self.pending_detections:
-                    if pending_key == key:
-                        self._queue_detection(self.frame_cache.get(key), metadata)
+                    resolved = self.frame_cache.resolve(pending_key)
+                    if resolved is not None:
+                        self._queue_detection(resolved, metadata)
                     else:
                         remaining.append((pending_key, deadline, metadata))
                 self.pending_detections = remaining
@@ -347,11 +365,27 @@ class OnboardImageSender:
             self._reject_detection(metadata, "mission_not_started", "尚未一键起飞，图片任务未开始")
             return
         metadata["detection_received_at_unix_ns"] = time.time_ns()
+        metadata["uav_id"] = self.uav_id
+        metadata["message_type"] = "target_result"
+        metadata["file_name"] = "%s_UAV%02d_%06d_%s.jpg" % (
+            mission_id, self.uav_id, metadata["sequence"],
+            datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%S.%fZ"))
+        metadata["requested_at_unix_ns"] = metadata["detection_received_at_unix_ns"]
+        try:
+            self._cache_result_metadata(metadata)
+        except (OSError, ValueError, TypeError) as exc:
+            rospy.logerr("目标 JSON 本地缓存失败，仍尝试立即传送：%s", exc)
+        try:
+            self.result_jobs.put_nowait(dict(metadata))
+        except queue.Full:
+            rospy.logwarn("目标 JSON 即时发送队列已满，已留在机载缓存等待续传：%s",
+                          metadata["file_name"])
+        self._mark_reconciliation_needed(mission_id)
         with self.frame_lock:
             self._expire_pending_locked()
-            image = self.frame_cache.get(key)
-            if image is not None:
-                self._queue_detection(image, metadata)
+            resolved = self.frame_cache.resolve(key)
+            if resolved is not None:
+                self._queue_detection(resolved, metadata)
             elif len(self.pending_detections) < self.max_pending_detections:
                 # ROS 不同话题回调可能乱序，短暂等待对应相机帧，不匹配邻近帧。
                 self.pending_detections.append((key, time.monotonic() + self.frame_cache.duration_sec, metadata))
@@ -405,8 +439,10 @@ class OnboardImageSender:
 
         highest_sequence = 0
         if mission_dir.exists():
-            for image_path in mission_dir.glob("*.jpg"):
-                match = re.search(r"_([0-9]{6})_[0-9]{8}T", image_path.name)
+            for source_path in mission_dir.iterdir():
+                if source_path.suffix not in (".jpg", ".json"):
+                    continue
+                match = re.search(r"_([0-9]{6})_[0-9]{8}T", source_path.name)
                 if match:
                     highest_sequence = max(highest_sequence, int(match.group(1)))
 
@@ -433,7 +469,10 @@ class OnboardImageSender:
             except (OSError, ValueError):
                 pass
             self.recovery_pending = any(not path.with_suffix(".acked").exists()
-                                        for path in mission_dir.glob("*.jpg"))
+                                        for path in mission_dir.glob("*.jpg")) or any(
+                                            not path.name.startswith(".")
+                                            and not path.with_suffix(".jsonacked").exists()
+                                            for path in mission_dir.glob("*.json"))
 
         mission_metadata = {
             "mission_id": mission_id,
@@ -576,11 +615,12 @@ class OnboardImageSender:
                 mission_started_at_unix_ns = self.mission_started_at_unix_ns
 
         request_id = requested_id or uuid.uuid4().hex
-        timestamp_ns = time.time_ns()
+        timestamp_ns = int(detection.get("requested_at_unix_ns", time.time_ns())) if detection is not None else time.time_ns()
         utc_stamp = datetime.datetime.fromtimestamp(
             timestamp_ns / 1_000_000_000, datetime.timezone.utc
         ).strftime("%Y%m%dT%H%M%S.%fZ")
-        file_name = "%s_UAV%02d_%06d_%s.jpg" % (
+        file_name = detection.get("file_name") if detection is not None else None
+        file_name = file_name or "%s_UAV%02d_%06d_%s.jpg" % (
             mission_id,
             self.uav_id,
             sequence,
@@ -608,6 +648,7 @@ class OnboardImageSender:
         }
         if detection is not None:
             metadata.update(detection)
+            metadata["message_type"] = "image"
             metadata["detection_topic"] = self.detection_topic
         if latitude is not None and longitude is not None:
             metadata["target_latitude"] = latitude
@@ -697,6 +738,68 @@ class OnboardImageSender:
             os.fsync(stream.fileno())
         os.replace(str(metadata_tmp), str(metadata_path))
         return image_path
+
+    def _cache_result_metadata(self, metadata):
+        mission_dir = self._mission_cache_dir(metadata["mission_id"])
+        if self.cache_root not in mission_dir.parents:
+            raise ValueError("目标 JSON 缓存路径不安全")
+        mission_dir.mkdir(parents=True, exist_ok=True)
+        path = mission_dir / Path(metadata["file_name"]).with_suffix(".json").name
+        temporary = path.with_suffix(".json.part")
+        public = dict(metadata)
+        public.pop("auth_token", None)
+        with temporary.open("w", encoding="utf-8") as stream:
+            json.dump(public, stream, ensure_ascii=False, allow_nan=False)
+            stream.write("\n")
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(str(temporary), str(path))
+        return path
+
+    def _send_result_with_ack(self, metadata):
+        result = dict(metadata, message_type="target_result")
+        result.pop("cache_path", None)
+        if self.auth_token:
+            result["auth_token"] = self.auth_token
+        packet = encode_frame(result, b"\x00")
+        with self.result_lock, socket.create_connection(
+            (self.ground_host, self.ground_port), timeout=self.connect_timeout
+        ) as connection:
+            connection.settimeout(self.ack_timeout)
+            connection.sendall(packet)
+            if not receive_ack(connection):
+                raise RuntimeError("地面端拒绝目标 JSON")
+
+    def _mark_result_acked(self, metadata):
+        path = self._mission_cache_dir(metadata["mission_id"]) / metadata["file_name"]
+        try:
+            path.with_suffix(".jsonacked").touch()
+        except OSError as error:
+            rospy.logwarn("目标 JSON 发送确认标记保存失败：%s", error)
+
+    def _result_worker_loop(self):
+        while not self.stop_event.is_set() and not rospy.is_shutdown():
+            try:
+                metadata = self.result_jobs.get(timeout=0.25)
+            except queue.Empty:
+                continue
+            try:
+                marker = (self._mission_cache_dir(metadata["mission_id"]) /
+                          metadata["file_name"]).with_suffix(".jsonacked")
+                if marker.exists() or time.monotonic() < self.result_send_suppressed_until:
+                    continue
+                self._send_result_with_ack(metadata)
+                self._mark_result_acked(metadata)
+                self.result_send_suppressed_until = 0.0
+                self._publish_status("result_sent", metadata)
+                rospy.loginfo("目标 JSON 已独立送达地面：%s", metadata["file_name"])
+            except Exception as exc:
+                self.result_send_suppressed_until = time.monotonic() + self.live_retry_interval
+                self._mark_reconciliation_needed(metadata["mission_id"])
+                rospy.logwarn("目标 JSON 暂未送达，等待独立续传：%s，原因=%s",
+                              metadata["file_name"], exc)
+            finally:
+                self.result_jobs.task_done()
 
     def _connect_locked(self):
         self._close_connection_locked()
@@ -871,6 +974,8 @@ class OnboardImageSender:
             path = self._mission_cache_dir(metadata["mission_id"]) / metadata["file_name"]
             try:
                 path.with_suffix(".acked").touch()
+                if path.with_suffix(".json").exists():
+                    self._mark_result_acked(metadata)
             except OSError as error:
                 rospy.logwarn("图片发送确认标记保存失败：%s", error)
 
@@ -893,6 +998,7 @@ class OnboardImageSender:
                 announce = self._announce_pending
             if announce:
                 self._announce_mission(mission, started)
+            self._retry_pending_results(mission)
             for path in sorted(self._mission_cache_dir(mission).glob("*.jpg")):
                 with self.mission_lock:
                     if (mission != self.active_mission_id or self.stop_event.is_set()
@@ -915,6 +1021,20 @@ class OnboardImageSender:
                 if mission == self.active_mission_id and success and revision == self.recovery_revision:
                     self.recovery_pending = False
                 self._recovery_in_progress = False
+
+    def _retry_pending_results(self, mission):
+        for path in sorted(self._mission_cache_dir(mission).glob("*.json")):
+            if path.with_suffix(".jsonacked").exists():
+                continue
+            with self.mission_lock:
+                if mission != self.active_mission_id or self.stop_event.is_set():
+                    return
+            metadata = json.loads(path.read_text(encoding="utf-8"))
+            if not isinstance(metadata, dict) or not metadata.get("target_type"):
+                continue
+            self._send_result_with_ack(metadata)
+            self._mark_result_acked(metadata)
+            rospy.loginfo("目标 JSON 已补传：任务=%s，文件=%s", mission, path.name)
 
     def _schedule_reconciliation(self, force, final=False):
         now = time.monotonic()
@@ -979,6 +1099,7 @@ class OnboardImageSender:
 
     def _reconcile_once(self, mission_id):
         mission_dir = self._mission_cache_dir(mission_id)
+        self._retry_pending_results(mission_id)
         image_paths = sorted(path for path in mission_dir.glob("*.jpg") if path.is_file())
         file_names = [path.name for path in image_paths]
         with self.mission_lock:
@@ -1122,4 +1243,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

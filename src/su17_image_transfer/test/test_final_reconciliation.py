@@ -19,7 +19,8 @@ ROOT = Path(__file__).resolve().parents[1]
 def sender_type():
     names = {'_start_mission', '_competition_time_callback', '_successful_return_callback', '_save_final_reconciliation_locked',
              '_reconcile_timer_callback', '_schedule_reconciliation', '_reconcile_worker',
-             '_mark_image_acked', '_retry_pending_delivery', '_schedule_pending_delivery',
+             '_mark_image_acked', '_mark_result_acked', '_retry_pending_results',
+             '_retry_pending_delivery', '_schedule_pending_delivery',
              '_load_cached_metadata'}
     tree = ast.parse((ROOT/'scripts/onboard_image_sender.py').read_text(encoding='utf8'))
     cls = next(n for n in tree.body if isinstance(n, ast.ClassDef))
