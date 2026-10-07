@@ -574,7 +574,7 @@ class CompetitionOrchestrator:
             now = self.clock()
             battery_threshold_enforced = not (
                 self._mission is not None
-                and self._mission.flight_profile in ("lab", "lab10", "outdoor5", "outdoor100", "outdoor200")
+                and self._mission.flight_profile in ("lab", "lab10", "outdoor5", "outdoor100", "outdoor200", "xuchang_small")
             )
             per_uav: Dict[str, List[str]] = {}
             if self.live_mode and not self.config.safety.production_config_confirmed:

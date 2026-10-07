@@ -453,8 +453,8 @@ class OrchestratorTest(unittest.TestCase):
             result["preflight"]["failures"]["1"],
         )
 
-    def test_scaled_profiles_skip_only_battery_percentage_in_both_control_modes(self):
-        for profile in ("lab", "outdoor5", "lab10", "outdoor100", "outdoor200"):
+    def test_selected_profiles_skip_only_battery_percentage_in_both_control_modes(self):
+        for profile in ("lab", "outdoor5", "lab10", "outdoor100", "outdoor200", "xuchang_small"):
             for mode in ("internal", "external"):
                 with self.subTest(profile=profile, mode=mode):
                     self.setUp()
