@@ -50,7 +50,7 @@ def _area():
 
 
 def _regions(flyable, hole):
-    """外环按东西两侧分六个连通区；东侧三机离固定起点更远。"""
+    """外环按东西两侧分六个连通区；UAV1 与 UAV4 交换原分区。"""
     from shapely.geometry import Point, box
     from shapely.ops import unary_union
 
@@ -70,9 +70,12 @@ def _regions(flyable, hole):
     if (any(region.geom_type != "Polygon" or region.is_empty or region.interiors for region in regions)
             or flyable.symmetric_difference(unary_union(regions)).area > 1e-5):
         raise ValueError("许昌六机分区未能完整且连通地覆盖可飞区域")
+    # 保留原有六块几何形状和扫描覆盖，仅交换 UAV1、UAV4 的任务归属。
+    regions[0], regions[3] = regions[3], regions[0]
     depot = Point(0, 0)
-    if max(region.distance(depot) for region in regions[3:]) >= min(region.distance(depot) for region in regions[:3]):
-        raise ValueError("UAV1～3 未分配到离起飞点更远的子区")
+    if max(regions[i].distance(depot) for i in (0, 4, 5)) >= min(
+            regions[i].distance(depot) for i in (1, 2, 3)):
+        raise ValueError("UAV2、3、4 应比 UAV1、5、6 距固定起点更远")
     return regions
 
 

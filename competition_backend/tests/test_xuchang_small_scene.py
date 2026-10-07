@@ -26,7 +26,7 @@ class XuchangSmallSceneTest(unittest.TestCase):
         cls.hole = Polygon(cls.area["excluded_polygons_m"][0])
         cls.flyable = Polygon(cls.area["points_m"], holes=cls.area["excluded_polygons_m"])
 
-    def test_fixed_geometry_and_coverage_keep_first_three_further_away(self):
+    def test_fixed_geometry_and_coverage_swap_uav1_and_uav4(self):
         area = self.area
         source = json.loads(AREA_PATH.read_text(encoding="utf-8"))
         self.assertEqual(area["points"], [[lat, lon] for lon, lat in source["boundary_lon_lat"]])
@@ -51,9 +51,11 @@ class XuchangSmallSceneTest(unittest.TestCase):
             self.assertLess(region.difference(unary_union(disks)).area, 1e-5)
         self.assertLess(self.flyable.symmetric_difference(unary_union(regions)).area, 1e-5)
         self.assertLess(self.flyable.difference(unary_union(disks)).area, 1e-5)
-        near = [regions[i].distance(Point(0, 0)) for i in range(3, 6)]
-        far = [regions[i].distance(Point(0, 0)) for i in range(3)]
+        near = [regions[i].distance(Point(0, 0)) for i in (0, 4, 5)]
+        far = [regions[i].distance(Point(0, 0)) for i in (1, 2, 3)]
         self.assertGreater(min(far), max(near))
+        self.assertEqual([self.plan["planned_uavs"][str(i)]["task"]["scan_count"]
+                          for i in (1, 4)], [5, 3])
 
     def test_entry_and_all_fleet_return_routes_detour_around_hole(self):
         safe = clearance_region(self.area["points_m"], 5.0, holes=self.area["excluded_polygons_m"])
