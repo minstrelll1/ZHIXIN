@@ -6,6 +6,7 @@ import bisect
 import copy
 import datetime as dt
 import math
+from .target_quality import quality_rank
 
 
 STATIC_DISTANCE_M = 10.0
@@ -19,6 +20,10 @@ def _confidence(feature):
     if type(value) in (int, float) and math.isfinite(value) and 0 <= value <= 1:
         return float(value)
     return -1.0
+
+
+def _quality(feature):
+    return quality_rank(feature.get("_quality", {}), _confidence(feature))
 
 
 def _kind(feature):
@@ -139,12 +144,12 @@ def _limit_moving_track(feature):
 
 
 def consolidate(document, *, max_targets=MAX_SUBMISSION_TARGETS):
-    """返回去重并按置信度排序的 GeoJSON 及可追溯的合并记录。"""
+    """返回去重并按成功标记、识别次数、检测分数排序的 GeoJSON 及审计记录。"""
     result = copy.deepcopy(document)
     raw = result.get("features", [])
     if not isinstance(raw, list):
         return result, {"merged": [], "omitted": [], "raw_count": 0, "result_count": 0}
-    ordered = sorted(raw, key=lambda f: (-_confidence(f), str(f.get("id", ""))))
+    ordered = sorted(raw, key=lambda f: (tuple(-v for v in _quality(f)), str(f.get("id", ""))))
     groups, merged, track_truncations = [], [], []
     for feature in ordered:
         source = feature.pop("_source_uav", None)
@@ -183,9 +188,9 @@ def consolidate(document, *, max_targets=MAX_SUBMISSION_TARGETS):
     for group in groups:
         kind = group["kind"]
         if kind[0] == "移动":
-            # 不把不同飞机采集的轨迹拼成一条；点数优先，置信度只作同长度裁决。
+            # 不把不同飞机采集的轨迹拼成一条；有效点数优先（最多40），质量用于相同长度裁决。
             group["feature"] = max(group["members"], key=lambda member: (
-                len(_track(member)), _confidence(member), str(member.get("id", ""))))
+                min(MAX_MOVING_TRACK_POINTS, len(_track(member))), _quality(member), str(member.get("id", ""))))
         winner = group["feature"]
         for member, source, evidence in zip(group["members"], group["member_sources"],
                                             group["member_evidence"]):
@@ -201,6 +206,8 @@ def consolidate(document, *, max_targets=MAX_SUBMISSION_TARGETS):
                         member.get("geometry", {}).get("coordinates")), 2)}
             merged.append({"kept_id": winner.get("id"), "merged_id": member.get("id"),
                            "source_uav": source, "target_category": kind[0], "target_type": kind[1],
+                           "kept_quality": winner.get("_quality", {}),
+                           "merged_quality": member.get("_quality", {}),
                            **evidence})
         if kind[0] == "移动":
             original_count = len(winner["properties"].get("trackPoints", []))
@@ -209,12 +216,14 @@ def consolidate(document, *, max_targets=MAX_SUBMISSION_TARGETS):
                 track_truncations.append({"id": winner.get("id"), "source_track_points": original_count,
                                           "omitted_track_points": omitted_points})
         features.append(winner)
-    features.sort(key=lambda f: (-_confidence(f), str(f.get("id", ""))))
+    features.sort(key=lambda f: (tuple(-v for v in _quality(f)), str(f.get("id", ""))))
     omitted = [{"id": feature.get("id"), "reason": "超出赛事最多16个目标"}
                for feature in features[max_targets:]]
     features = features[:max_targets]
+    quality_ranking = [{"id": f.get("id"), **f.get("_quality", {}), "score": _confidence(f)} for f in features]
     seen = set()
     for feature in features:
+        feature.pop("_quality", None)
         original = str(feature.get("id", ""))
         identifier = original
         suffix = 2
@@ -228,4 +237,5 @@ def consolidate(document, *, max_targets=MAX_SUBMISSION_TARGETS):
                     "omitted": omitted, "static_distance_m": STATIC_DISTANCE_M,
                     "moving_distance_m": MOVING_DISTANCE_M,
                     "moving_track_point_limit": MAX_MOVING_TRACK_POINTS,
-                    "track_truncations": track_truncations}
+                    "track_truncations": track_truncations, "quality_ranking": quality_ranking,
+                    "quality_order": ["tracking_success", "detection_count", "score"]}

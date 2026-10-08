@@ -18,6 +18,7 @@ import uuid
 from fastapi import APIRouter, Body, HTTPException, Request
 from fastapi.responses import FileResponse
 from competition_shared.subject1_dedup import consolidate
+from competition_shared.target_quality import category_fields
 
 ENDPOINT = 'http://192.168.1.199:8001/api/v1/public/recognition-results'
 TEAM_NAME = '北方自控智群队'
@@ -158,9 +159,14 @@ class Subject1Reporter:
         # 它已按 UAV 来源去重，不能在缺少来源字段的副本上再次合并。
         if not self.publisher_dedup:
             return False
+        def content(value):
+            value = copy.deepcopy(value)
+            if isinstance(value.get('metadata'), dict):
+                value['metadata'].pop('createdAt', None)
+            return value
         for path in self.image_root.glob('subject1_submissions/*/target-submission.json'):
             try:
-                if json.loads(path.read_text(encoding='utf-8')) == document:
+                if content(json.loads(path.read_text(encoding='utf-8'))) == content(document):
                     return True
             except (OSError, ValueError):
                 continue
@@ -172,8 +178,12 @@ class Subject1Reporter:
         already_deduplicated = already_deduplicated or self._is_local_consolidated_result(document)
         validate_document(document, allow_excess=not already_deduplicated)
         original = copy.deepcopy(document)
+        document = copy.deepcopy(original)
+        for feature in document['features']:
+            props = feature['properties']
+            kind, model = category_fields(dict(target_type=props['targetType'], target_model=props['targetModel']))
+            props['targetType'], props['targetModel'] = kind, model
         if already_deduplicated:
-            document = original
             decisions = {'raw_count': len(document['features']),
                          'result_count': len(document['features']), 'merged': [], 'omitted': []}
         else:

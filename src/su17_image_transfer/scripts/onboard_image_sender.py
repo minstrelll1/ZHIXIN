@@ -701,7 +701,7 @@ class OnboardImageSender:
         except (CvBridgeError, ValueError) as exc:
             raise RuntimeError("camera image conversion failed: %s" % exc) from exc
 
-        if detection is not None:
+        if detection is not None and detection.get("bbox"):
             # cv_bridge 可能返回原 ROS 数据的视图，必须复制后绘制，避免污染缓存。
             image = image.copy()
             x1, y1, x2, y2 = clipped_rectangle(detection["bbox"], image.shape[1], image.shape[0])

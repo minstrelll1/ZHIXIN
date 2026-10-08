@@ -12,6 +12,7 @@ import re
 import shutil
 import tempfile
 from contextlib import contextmanager
+from competition_shared.target_quality import category_fields, quality_metadata, quality_rank
 
 
 _SAFE_MISSION_ID = re.compile(r"[A-Za-z0-9_.-]{1,120}\Z")
@@ -57,7 +58,9 @@ def _confidence(metadata):
 
 
 def _iso_from_metadata(metadata):
-    stamp = metadata.get("image_stamp") or {}
+    stamp = (metadata.get("localization_time") if metadata.get("is_moving") else None) or metadata.get("image_stamp") or {}
+    if isinstance(stamp, dict) and stamp.get("secs") == 0 and stamp.get("nsecs", 0) == 0:
+        stamp = metadata.get("image_stamp") or {}
     try:
         seconds = int(stamp["secs"])
         nanoseconds = int(stamp["nsecs"])
@@ -124,13 +127,7 @@ def _local_position(metadata):
 
 
 def _target_model(metadata):
-    extra = metadata.get("extra")
-    if isinstance(extra, dict):
-        value = extra.get("targetModel") or extra.get("target_model")
-        if value:
-            return str(value)
-    category_id = metadata.get("category_id")
-    return str(metadata.get("target_model") or ("类别%s" % category_id if category_id not in (None, "", -1) else metadata.get("target_type", "未知")))
+    return category_fields(metadata)[1]
 
 
 def _all_metadata(output_root, mission_id):
@@ -244,7 +241,8 @@ def _update_subject1_submission_locked(output_root, mission_dir, mission_id, tea
     for _, item in sorted(records.items()):
         target_id = item["target_id"]
         moving = item["moving"]
-        points = sorted(item["points"], key=lambda point: point["timestamp"])
+        points = sorted({point["timestamp"]: point for point in item["points"]}.values(),
+                        key=lambda point: point["timestamp"])
         if moving:
             metadata = item["category_metadata"] or item["latest"]
             matching_observations = [
@@ -256,8 +254,7 @@ def _update_subject1_submission_locked(output_root, mission_dir, mission_id, tea
             ]
             best_observation, best_image, _ = max(
                 matching_observations,
-                key=lambda entry: (_confidence(entry[0]) if _confidence(entry[0]) is not None else -1.0,
-                                   entry[2]),
+                key=lambda entry: (quality_rank(entry[0], _confidence(entry[0])), entry[2]),
             )
         else:
             # 同一静目标 ID 多次上报时，最终结果只采用最后收到的一整条记录。
@@ -266,7 +263,7 @@ def _update_subject1_submission_locked(output_root, mission_dir, mission_id, tea
         confidence = _confidence(best_observation)
         properties = {
             "targetCategory": "移动" if moving else "固定",
-            "targetType": str(metadata.get("target_type") or metadata.get("category") or "其他"),
+            "targetType": category_fields(metadata)[0],
             "targetModel": _target_model(metadata),
             "imagePath": (best_image or item["image"]) if moving else best_image,
             "confidence": confidence,
@@ -301,6 +298,7 @@ def _update_subject1_submission_locked(output_root, mission_dir, mission_id, tea
             geometry = {"type": "Point", "coordinates": position}
         feature = {"type": "Feature", "id": target_id, "geometry": geometry, "properties": properties}
         if publisher_dedup:
+            feature["_quality"] = quality_metadata(best_observation)
             feature["_source_uav"] = item["source_uav"]
         features.append(feature)
 

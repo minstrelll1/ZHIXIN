@@ -121,6 +121,12 @@ def validate_assignment(
             route_messages(normalized)
         except (ValueError, TypeError, KeyError, IndexError) as error:
             raise TaskValidationError('进返场航线校验失败：{}'.format(error)) from error
+    if task.get("task_region") is not None:
+        from competition_shared.task_region import task_region_message
+        try:
+            task_region_message(normalized)
+        except (ValueError, TypeError, KeyError) as error:
+            raise TaskValidationError("任务子区域校验失败：{}".format(error)) from error
     return normalized
 
 

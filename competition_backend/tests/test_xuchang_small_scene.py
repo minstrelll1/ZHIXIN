@@ -132,7 +132,7 @@ class XuchangSmallSceneTest(unittest.TestCase):
                     "around5m": [4.5, 5., 5.5, 4.5, 5., 5.5],
                     "around10m": [8., 10., 12., 8., 10., 12.],
                     "around45m": [40., 50., 40., 45., 50., 45.],
-                    "around54m": [64., 60., 56., 52., 48., 44.]}
+                    "around54m": [61., 58., 55., 52., 49., 46.]}
         homes = {str(uid): {"latitude": 34.138282 + uid * .00001,
                            "longitude": 113.909077 + uid * .00001} for uid in range(1, 7)}
         for altitude, heights in expected.items():
@@ -248,10 +248,10 @@ class XuchangSmallSceneTest(unittest.TestCase):
                 self.assertTrue(all(item["task"]["reconnaissance_radius_m"] == 45.0 for item in assignments))
                 mission = response.json()["mission"]
                 self.assertEqual([mission["uavs"][str(i)]["target_altitude_m"] for i in range(1, 7)],
-                                 [64.0, 60.0, 56.0, 52.0, 48.0, 44.0])
+                                 [61.0, 58.0, 55.0, 52.0, 49.0, 46.0])
                 self.assertEqual([entry["payload"]["target_altitude_m"] for entry in app.state.adapter.snapshot()
                                   if entry["type"] == "assign_task"],
-                                 [64.0, 60.0, 56.0, 52.0, 48.0, 44.0])
+                                 [61.0, 58.0, 55.0, 52.0, 49.0, 46.0])
                 invalid = client.post("/api/v1/planning/competition-coverage",
                                       json={**payload, "coordinate_mode": "xyz"})
                 self.assertEqual(invalid.status_code, 422)

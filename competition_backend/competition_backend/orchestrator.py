@@ -401,6 +401,13 @@ class CompetitionOrchestrator:
                 for task in task_source.values():
                     task["recognition_selection"] = copy.deepcopy(recognition_selection)
 
+            from .task_region import build_task_region
+            task_source = copy.deepcopy(task_source)
+            for uid, task in task_source.items():
+                region = build_task_region(task, area, uid)
+                if region is not None:
+                    task["task_region"] = region
+
             now = self.clock()
             mission_id = "%s-%s" % (subject, uuid.uuid4().hex[:10])
             planned_uavs = {

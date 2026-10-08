@@ -23,6 +23,18 @@ def sample():
 
 
 class SubmissionReportTest(unittest.TestCase):
+    def test_imported_detector_names_are_converted_before_submission(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            document=sample()
+            props=document['features'][0]['properties']
+            props.update(targetType='solider3',targetModel='类别13')
+            reporter=report.Subject1Reporter(tmp)
+            prepared=reporter.prepare(document)
+            final=json.loads(reporter.draft(prepared['draft_id']).read_text(encoding='utf-8'))
+            converted=next(f['properties'] for f in final['features'] if f['id']==document['features'][0]['id'])
+            self.assertEqual((converted['targetType'],converted['targetModel']),('人员','人员3'))
+            self.assertEqual(props['targetType'],'solider3')
+
     def test_publisher_freeze_keeps_two_nearby_targets_from_same_uav(self):
         with tempfile.TemporaryDirectory() as tmp:
             mission_id = 'subject1-same-uav-neighbors'
@@ -52,6 +64,8 @@ class SubmissionReportTest(unittest.TestCase):
                 self.assertEqual(2, response.json()['target_count'])
                 downloaded = client.get(response.json()['download_url']).json()
                 self.assertEqual(['two', 'one'], [feature['id'] for feature in downloaded['features']])
+                # 仅重新生成时间不同，不能把已经去重的本机成果再次空间合并。
+                built['metadata']['createdAt'] = '2020-01-01T00:00:00Z'
                 imported = client.post('/api/v1/subject1/report/prepare', json={'document': built})
                 self.assertEqual(200, imported.status_code, imported.text)
                 self.assertEqual(2, imported.json()['target_count'])

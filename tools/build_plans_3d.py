@@ -89,7 +89,7 @@ const byId=id=>document.getElementById(id), canvas=byId('view'),ctx=canvas.getCo
 let angle=-0.55,pitch=0.80,zoom=1,drag=false,last=null,live=null,hovered='';
 function fillSelect(id,items,current){const s=byId(id);s.innerHTML='';for(const [value,label] of items){const o=document.createElement('option');o.value=value;o.textContent=label;s.append(o)}if(current&&items.some(x=>x[0]===current))s.value=current}
 fillSelect('scene',Object.keys(names).map(k=>[k,names[k]]),'competition');
-fillSelect('height',[['default','场景默认'],['around1m','约 1m'],['around2m','约 2m'],['around5m','约 5m'],['around10m','约 10m'],['around45m','约 45m'],['around54m','约 54m：64/60/56/52/48/44m']],'default');
+fillSelect('height',[['default','场景默认'],['around1m','约 1m'],['around2m','约 2m'],['around5m','约 5m'],['around10m','约 10m'],['around45m','约 45m'],['around54m','六机不同：61/58/55/52/49/46m']],'default');
 fillSelect('uav',[['all','全部'],...Array.from({length:6},(_,i)=>[String(i+1),'UAV'+(i+1)])],'all');
 function departures(){const scene=byId('scene').value;fillSelect('departure',scene==='dalian_nanshan'?[['fixed_dalian','大连固定起飞点']]:scene==='xuchang_small'?[['fixed_xuchang','许昌固定起飞点']]:[['southeast','区域右下角'],['stadium_center','操场中央']]);render()}
 function profileKey(){let choice=byId('height').value;if(choice==='around1m')return 'lab';if(choice==='around2m')return 'lab2';if(choice==='around5m')return 'lab5';if(choice==='around10m')return 'around10m';if(choice==='around45m')return 'competition';if(choice==='around54m')return 'around54m';let scene=byId('scene').value;return ['competition','outdoor100','outdoor200','dalian_nanshan','xuchang_small'].includes(scene)?'competition':scene==='outdoor5'?'lab5':'lab'}

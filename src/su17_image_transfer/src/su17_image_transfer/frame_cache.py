@@ -134,10 +134,15 @@ def completed_target_metadata(target):
     if int(source_stamp.secs) == 0 and int(source_stamp.nsecs) == 0:
         source_stamp = target.image_stamp
     key = stamp_ns(source_stamp)
-    width = _finite(target.w, "目标框宽度")
-    height = _finite(target.h, "目标框高度")
-    if width <= 0 or height <= 0:
-        raise ValueError("目标框宽高必须大于零")
+    box = None
+    try:
+        values = [float(target.cx), float(target.cy), float(target.w), float(target.h)]
+        if (all(math.isfinite(v) for v in values) and 0 <= values[0] <= 1
+                and 0 <= values[1] <= 1 and 0 < values[2] <= 1 and 0 < values[3] <= 1):
+            box = dict(zip(("center_x", "center_y", "width", "height"), values))
+            box.update(units="normalized", origin="top_left")
+    except (TypeError, ValueError, OverflowError):
+        pass  # 缺少框不影响目标 JSON 回传，也不编造图片中的位置。
     target_type = str(target.target_type or target.category).strip()
     if not target_type:
         raise ValueError("目标类型不能为空")
@@ -151,10 +156,10 @@ def completed_target_metadata(target):
         "image_stamp": {"secs": int(source_stamp.secs), "nsecs": int(source_stamp.nsecs)},
         # CompletedTarget.header.frame_id 是 wgs84，不是相机 frame。
         "detection_frame_id": "",
-        "bbox": {"center_x": _finite(target.cx, "目标框中心X"),
-                 "center_y": _finite(target.cy, "目标框中心Y"),
-                 "width": width, "height": height,
-                 "units": "pixels", "origin": "top_left"},
+        "bbox": box,
+        "bbox_status": "available" if box else "invalid_or_unavailable",
+        "detection_count": int(getattr(target, "detection_count", 0)),
+        "tracking_success": bool(getattr(target, "tracking_success", False)),
         "confidence": score,
         "target_type": target_type,
         "category": str(target.category),
@@ -187,6 +192,10 @@ def completed_target_metadata(target):
 
 def clipped_rectangle(box, image_width, image_height):
     """像素坐标采用中心和宽高，输出 OpenCV 使用的闭区间角点。"""
+    if box.get("units") == "normalized":
+        box = dict(box, center_x=box["center_x"] * image_width,
+                   center_y=box["center_y"] * image_height,
+                   width=box["width"] * image_width, height=box["height"] * image_height)
     left = box["center_x"] - box["width"] / 2
     top = box["center_y"] - box["height"] / 2
     right = box["center_x"] + box["width"] / 2

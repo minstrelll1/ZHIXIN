@@ -240,7 +240,8 @@ class SenderTest(unittest.TestCase):
             header=SimpleNamespace(stamp=SimpleNamespace(secs=1_789_000_003, nsecs=0)),
             global_id="global-7", target_type="车辆", timestamp=frame(99).header.stamp,
             image_stamp=frame(99).header.stamp, localization_time=frame(99).header.stamp,
-            cx=50.0, cy=40.0, w=20.0, h=20.0, score=0.9,
+            cx=0.5, cy=0.5, w=0.25, h=0.25, score=0.9,
+            detection_count=123, tracking_success=True,
             category_id=0, speed_mps=0.0, category="车辆", is_moving=False,
             indoor_position=False, east_m=0.0, north_m=0.0, up_m=0.0,
             latitude_deg=34.1, longitude_deg=113.9, altitude_gps_m=52.0)
@@ -254,13 +255,16 @@ class SenderTest(unittest.TestCase):
         self.assertTrue(json_path.is_file())
         self.assertEqual(json.loads(json_path.read_text(encoding="utf-8"))["target_id"], "global-7")
         self.assertEqual(result["message_type"], "target_result")
+        self.assertEqual(result["detection_count"], 123)
+        self.assertTrue(result["tracking_success"])
 
     def test_cached_json_reaches_ground_without_any_matching_image(self):
         target = SimpleNamespace(
             header=SimpleNamespace(stamp=SimpleNamespace(secs=1_789_000_003, nsecs=0)),
             global_id="global-8", target_type="车辆", timestamp=frame(99).header.stamp,
             image_stamp=frame(99).header.stamp, localization_time=frame(99).header.stamp,
-            cx=50.0, cy=40.0, w=20.0, h=20.0, score=0.9,
+            cx=0.5, cy=0.5, w=0.25, h=0.25, score=0.9,
+            detection_count=123, tracking_success=True,
             category_id=0, speed_mps=0.0, category="车辆", is_moving=False,
             indoor_position=False, east_m=0.0, north_m=0.0, up_m=0.0,
             latitude_deg=34.1, longitude_deg=113.9, altitude_gps_m=52.0)
@@ -286,6 +290,9 @@ class SenderTest(unittest.TestCase):
                 self.sender._retry_pending_results(result["mission_id"])
                 saved = Path(output) / "UAV3" / result["mission_id"]
                 self.assertTrue((saved / Path(result["file_name"]).with_suffix(".json").name).is_file())
+                received_json = json.loads((saved / Path(result["file_name"]).with_suffix(".json").name).read_text(encoding="utf-8"))
+                self.assertEqual(received_json["detection_count"],123)
+                self.assertTrue(received_json["tracking_success"])
                 self.assertFalse((saved / result["file_name"]).exists())
                 self.assertTrue((Path(self.directory.name) / result["mission_id"] /
                                  Path(result["file_name"]).with_suffix(".jsonacked").name).is_file())

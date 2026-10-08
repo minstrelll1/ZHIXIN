@@ -174,6 +174,8 @@ class OnboardTaskExecutor:
         self.successful_return_pub = rospy.Publisher(
             fleet_prefix + "/competition/successful_return", String, queue_size=1, latch=True)
         self._publish_successful_return()
+        self.task_region_topic = "/ground_mission_planner/vehicle_{}/task_region".format(self.local_ros_uav_id)
+        self.task_region_pub = rospy.Publisher(self.task_region_topic, String, queue_size=1, latch=True)
         self.recognition_categories_topic = fleet_prefix + "/competition/recognition_categories"
         self.recognition_categories_pub = rospy.Publisher(
             self.recognition_categories_topic, Int32MultiArray, queue_size=1, latch=True
@@ -964,11 +966,24 @@ class OnboardTaskExecutor:
         rospy.loginfo("已发布科目一识别类别：%s，共 %d 类，编号=%s", self.recognition_categories_topic,
                       selection["category_count"], message.data)
 
+    def _publish_task_region(self, assignment):
+        from competition_shared.task_region import task_region_message
+        region = task_region_message(assignment)
+        if region is None:
+            return
+        try:
+            self.task_region_pub.publish(String(data=json.dumps(region, ensure_ascii=False, allow_nan=False)))
+        except Exception as error:
+            raise TaskValidationError("任务子区域话题发布失败：{}".format(error)) from error
+        rospy.loginfo("任务子区域已发布：%s，任务=%s，UAV%d，多边形=%d",
+                      self.task_region_topic, assignment["mission_id"], self.uav_id, len(region["polygons"]))
+
     def _accept_assignment(self, payload: Dict[str, Any]) -> None:
         try:
             assignment = validate_assignment(payload, self.uav_id)
             if self._assignment and self._assignment_acked and assignment["assignment_checksum"] == self._assignment["assignment_checksum"]:
                 self._publish_competition_time()
+                self._publish_task_region(assignment)
                 self._publish_status("task_received")
                 return
             if self._motion_thread is not None and self._motion_thread.is_alive():
@@ -991,6 +1006,7 @@ class OnboardTaskExecutor:
                 )
             save_assignment_atomic(self.cache_path, assignment)
             self._publish_recognition_categories(assignment)
+            self._publish_task_region(assignment)
         except (OSError, TaskValidationError) as error:
             self._assignment_acked = False
             rospy.logerr("任务下发被拒绝：%s", error)

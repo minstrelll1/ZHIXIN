@@ -22,6 +22,26 @@ class RecognitionPublisherTest(unittest.TestCase):
         node._checkpoint=Mock()
         return node,assignment
 
+    def test_region_published_on_assignment_before_ack_without_takeoff(self):
+        for mode in ('internal', 'external'):
+            with self.subTest(mode=mode), tempfile.TemporaryDirectory() as directory:
+                node,msg=self.node(directory)
+                msg['controller_mode']=mode
+                msg['task']['task_region']=dict(schema_version=1,uav_id=3,coordinate_frame='ENU',
+                    coordinate_order='x_y',polygons=[dict(outer=[[0,0],[2,0],[2,2],[0,0]],holes=[])])
+                msg['assignment_checksum']=assignment_checksum(msg)
+                node.task_region_pub=Mock();node.task_region_topic='/ground_mission_planner/vehicle_3/task_region'
+                events=[]
+                node.task_region_pub.publish.side_effect=lambda m:events.append(('region',json.loads(m.data)))
+                node._publish_status.side_effect=lambda kind,**kw:events.append(('status',kind))
+                node._accept_assignment(msg)
+                self.assertTrue(node._assignment_acked)
+                self.assertEqual(events[0][0],'region')
+                self.assertEqual(events[0][1]['mission_id'],msg['mission_id'])
+                self.assertEqual(events[0][1]['assignment_checksum'],msg['assignment_checksum'])
+                self.assertEqual(events[1],('status','task_received'))
+                self.assertIsNone(node._motion_thread)
+
     def test_accept_publishes_before_ack_in_both_control_modes(self):
         for mode in ['internal','external']:
             with self.subTest(mode=mode),tempfile.TemporaryDirectory() as directory:
