@@ -14,10 +14,12 @@ from .clearance_plans import _safe_route
 
 PROFILE = "xuchang_small"
 DEPARTURE = "fixed_xuchang"
-RADIUS_M = 75.0
+RADIUS_M = 45.0
 SPEED_MPS = 5.0
 HOVER_SECONDS = 10.0
 CLEARANCE_M = 5.0
+# 六个源子区按首次定义的顺序规划；只交换接收机编号，不交换高度配置。
+SOURCE_REGION_UAV_IDS = (4, 2, 3, 1, 5, 6)
 AREA_PATH = Path(__file__).with_name("xuchang_small_area.json")
 PLAN_PATH = Path(__file__).with_name("xuchang_small_prepared.json")
 
@@ -35,11 +37,14 @@ def _area():
     boundary = data["boundary_lon_lat"]
     excluded = data["excluded_lon_lat"]
     departure = data["departure_lon_lat"]
-    if len(boundary) != 4 or len(excluded) != 4 or len(departure) != 2:
-        raise ValueError("许昌场景需要四个外边界点、四个扣除区点和一个起飞点")
+    if len(boundary) != 4 or len(excluded) < 3 or len(departure) != 2:
+        raise ValueError("许昌场景需要四个外边界点、至少三个扣除区点和一个起飞点")
     if len(data.get("uav4_boundary_lon_lat", [])) != 4:
         raise ValueError("许昌 UAV4 固定子区需要四个经纬度点")
-    for lon, lat in [*boundary, *excluded, departure, *data["uav4_boundary_lon_lat"]]:
+    if len(data.get("uav1_requested_boundary_lon_lat", [])) != 4:
+        raise ValueError("许昌 UAV1 大致子区需要四个经纬度点")
+    for lon, lat in [*boundary, *excluded, departure, *data["uav4_boundary_lon_lat"],
+                     *data["uav1_requested_boundary_lon_lat"]]:
         if not (math.isfinite(lon) and math.isfinite(lat) and abs(lon) <= 180 and abs(lat) <= 90):
             raise ValueError("许昌场景经纬度无效")
     lat0, lon0 = departure[1], departure[0]
@@ -51,36 +56,40 @@ def _area():
     return data, [project(point) for point in boundary], [project(point) for point in excluded], projection
 
 
-def _regions(flyable, hole, fixed_uav4, cut_fraction):
-    """UAV4 使用指定四边形，东侧三机及西侧南北两机填满剩余区域。"""
-    from shapely.geometry import Point, box
+def _regions(flyable, hole, fixed_uav1, fixed_uav4, cut_fraction):
+    """按最初的子区编号计算几何；接收机编号由 SOURCE_REGION_UAV_IDS 统一分配。"""
+    from shapely.geometry import box
     from shapely.ops import unary_union
 
+    for uid, region in ((1, fixed_uav1), (4, fixed_uav4)):
+        if (not region.is_valid or region.is_empty or region.geom_type != "Polygon"
+                or region.interiors or region.difference(flyable).area > 1e-5):
+            raise ValueError("UAV{} 子区必须是扣除禁飞区后连通的可飞区域".format(uid))
+    if fixed_uav1.intersection(fixed_uav4).area > 1e-5:
+        raise ValueError("UAV1 子区不能与保留的 UAV4 子区重叠")
+    joined = unary_union([hole, fixed_uav1])
+    remaining = flyable.difference(unary_union([fixed_uav1, fixed_uav4]))
     minx, miny, maxx, maxy = flyable.bounds
-    hx0, hy0, hx1, hy1 = hole.bounds
-    outer = (minx - 1, miny - 1, maxx + 1, maxy + 1)
-    east_masks = [box(hx0, outer[1], hx1, hy0),
-                  box(outer[0], outer[1], hx0, hy1),
-                  box(hx1, outer[1], outer[2], hy1)]
-    west = flyable.intersection(box(outer[0], hy1, outer[2], outer[3]))
-    if not fixed_uav4.is_valid or fixed_uav4.is_empty or not west.covers(fixed_uav4):
-        raise ValueError("UAV4 指定子区必须完整位于西侧可飞区域，且不能与扣除区重叠")
-    # 分割线穿过 UAV4 内部，使剩余南北子区各自连通且不带孔洞。
-    cut = fixed_uav4.bounds[0] + cut_fraction * (fixed_uav4.bounds[2] - fixed_uav4.bounds[0])
-    remaining = west.difference(fixed_uav4)
-    regions = [flyable.intersection(mask) for mask in east_masks] + [
-        fixed_uav4,
-        remaining.intersection(box(cut, hy1, outer[2], outer[3])),
-        remaining.intersection(box(outer[0], hy1, cut, outer[3])),
-    ]
-    if (any(region.geom_type != "Polygon" or region.is_empty or region.interiors for region in regions)
+    # X 向北、Y 向西。东西分界位于两个保留区之间，南北分界同时穿过两个内环，
+    # 把剩余场地分成四个无孔洞的连通子区，避免填平禁飞区或遗漏细小边角。
+    y_cut = (fixed_uav4.bounds[1] + joined.bounds[3]) / 2
+    low_x = max(fixed_uav4.bounds[0], joined.bounds[0])
+    high_x = min(fixed_uav4.bounds[2], joined.bounds[2])
+    if joined.bounds[3] >= fixed_uav4.bounds[1] or low_x >= high_x:
+        raise ValueError("固定子区的位置不支持当前四向分区，请离线重新划分")
+    x_cut = low_x + cut_fraction * (high_x - low_x)
+    regions = [fixed_uav1,
+               remaining.intersection(box(minx - 1, miny - 1, x_cut, y_cut)),
+               remaining.intersection(box(x_cut, miny - 1, maxx + 1, y_cut)),
+               fixed_uav4,
+               remaining.intersection(box(x_cut, y_cut, maxx + 1, maxy + 1)),
+               remaining.intersection(box(minx - 1, y_cut, x_cut, maxy + 1))]
+    if (any(region.geom_type != "Polygon" or region.is_empty or not region.is_valid or region.interiors
+            for region in regions)
             or flyable.symmetric_difference(unary_union(regions)).area > 1e-5
             or any(a.intersection(b).area > 1e-5
                    for i, a in enumerate(regions) for b in regions[i + 1:])):
         raise ValueError("许昌六机分区未能无重叠、完整且连通地覆盖可飞区域")
-    depot = Point(0, 0)
-    if max(region.distance(depot) for region in regions[3:]) >= min(region.distance(depot) for region in regions[:3]):
-        raise ValueError("UAV1～3 未分配到离起飞点更远的子区")
     return regions
 
 
@@ -127,13 +136,22 @@ def prepare_xuchang_small_plan():
         raise ValueError("许昌固定起降点不在可飞区域")
     # 侦察航点比进返场路线多留 1 厘米，避免多边形编码的浮点舍入使边缘点失效。
     safe = clearance_region(boundary, CLEARANCE_M + .01, holes=[hole_points])
-    fixed_uav4 = Polygon([[(lat - projection["latitude"]) * projection["north_m_per_degree"],
-                           -(lon - projection["longitude"]) * projection["west_m_per_degree"]]
-                          for lon, lat in data["uav4_boundary_lon_lat"]])
+    def project_polygon(points):
+        return Polygon([[(lat - projection["latitude"]) * projection["north_m_per_degree"],
+                         -(lon - projection["longitude"]) * projection["west_m_per_degree"]]
+                        for lon, lat in points])
+
+    # 配置中的 UAV1/UAV4 是源子区名称；当前接收机编号在生成任务时统一映射。
+    fixed_uav4 = project_polygon(data["uav4_boundary_lon_lat"])
+    requested_uav1 = project_polygon(data["uav1_requested_boundary_lon_lat"])
+    if not requested_uav1.is_valid:
+        raise ValueError("UAV1 大致子区边界无效")
+    # 禁飞区优先，UAV4 保持原边界；UAV1 仅取用户给定范围内的剩余可飞区域。
+    fixed_uav1 = requested_uav1.intersection(flyable).difference(fixed_uav4)
     best, route_cache = None, {}
     # 离线比较 19 个南北分割位置；先缩短最晚完成用时，再缩短六机总航程。
     for step in range(1, 20):
-        candidate_regions = _regions(flyable, hole, fixed_uav4, step / 20)
+        candidate_regions = _regions(flyable, hole, fixed_uav1, fixed_uav4, step / 20)
         candidate_routes = []
         for region in candidate_regions:
             if region.wkb not in route_cache:
@@ -146,7 +164,7 @@ def prepare_xuchang_small_plan():
             best = (score, candidate_regions, candidate_routes, step / 20)
     _, regions, selected_routes, split_fraction = best
     planned, routes = {}, []
-    for uid, (region, selected_route) in enumerate(zip(regions, selected_routes), 1):
+    for uid, region, selected_route in zip(SOURCE_REGION_UAV_IDS, regions, selected_routes):
         route = copy.deepcopy(selected_route)
         scans, flight = route["waypoints_m"], route["flight_path_m"]
         if (not flyable.buffer(1e-7).covers(LineString(flight))
@@ -175,9 +193,12 @@ def prepare_xuchang_small_plan():
     times = [task["mission_time_s"] for task in routes]
     coverage_info = {
         "objective": "cover_flyable_area_with_five_meter_clearance_and_short_routes",
-        "algorithm": "fixed_uav4_partition_search_safe_disk_cover_visibility_graph_multistart_2opt",
-        "fixed_subregion_uav_id": 4, "partition_candidates": 19,
-        "west_split_fraction": split_fraction,
+        "algorithm": "fixed_uav1_uav4_partition_search_safe_disk_cover_visibility_graph_multistart_2opt",
+        "fixed_subregion_uav_ids": [1, 4], "partition_candidates": 19,
+        "source_region_by_uav": {str(uid): index for index, uid in enumerate(SOURCE_REGION_UAV_IDS, 1)},
+        "north_south_split_fraction": split_fraction,
+        "uav4_requested_area_m2": requested_uav1.area,
+        "uav4_removed_area_m2": requested_uav1.difference(fixed_uav1).area,
         "partition_objective": "minimize_maximum_completion_time_then_total_distance",
         "global_optimum_proven": False, "uav_count": 6,
         "reconnaissance_radius_m": RADIUS_M, "speed_mps": SPEED_MPS,
@@ -206,7 +227,14 @@ def prepare_xuchang_small_plan():
             "points_m": boundary,
             "excluded_points": [[lat, lon] for lon, lat in data["excluded_lon_lat"]],
             "excluded_polygons_m": [hole_points],
-            "fixed_subregions_lon_lat": {"4": copy.deepcopy(data["uav4_boundary_lon_lat"])},
+            "requested_subregions_lon_lat": {
+                "4": copy.deepcopy(data["uav1_requested_boundary_lon_lat"]),
+                "1": copy.deepcopy(data["uav4_boundary_lon_lat"])},
+            "fixed_subregions_lon_lat": {
+                "4": [[projection["longitude"] - point[1] / projection["west_m_per_degree"],
+                       projection["latitude"] + point[0] / projection["north_m_per_degree"]]
+                      for point in list(fixed_uav1.exterior.coords)[:-1]],
+                "1": copy.deepcopy(data["uav4_boundary_lon_lat"])},
             "origin_x_m": minx, "origin_y_m": miny,
             "width_m": maxy - miny, "height_m": maxx - minx,
             "polygon_width_m": outer.bounds[3] - outer.bounds[1],

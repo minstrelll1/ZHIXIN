@@ -6,6 +6,24 @@ const html=fs.readFileSync(path.resolve(__dirname,'../../competition_backend/com
 new vm.Script(html.match(/<script>([\s\S]*?)<\/script>/)[1]);
 assert.match(html, /<option value="xuchang_small">许昌试飞场地（小）/);
 assert.match(html, /<option value="fixed_xuchang" hidden>许昌固定起飞点<\/option>/);
+// Exercise scene selection: Xuchang uses the saved 45 m plan; other scenes keep their defaults.
+const sceneNodes=new Map();
+const sceneContext=vm.createContext({
+  $:id=>{if(!sceneNodes.has(id))sceneNodes.set(id,{value:'gps',dataset:{},disabled:false});return sceneNodes.get(id)},
+  更新飞行高度选项:()=>{},更新GPS参考:()=>{}
+});
+const sceneStart=html.indexOf('function 应用飞行环境默认值()');
+vm.runInContext(html.slice(sceneStart,html.indexOf('function 切换坐标系()',sceneStart)),sceneContext);
+for(const [profile,radius] of [['xuchang_small','45'],['dalian_nanshan','75'],['competition','75'],['outdoor100','75'],['outdoor200','75'],['lab','1']]){
+  sceneContext.$('flightProfile').value=profile;
+  sceneContext.应用飞行环境默认值();
+  assert.equal(sceneNodes.get('scoutRadius').value,radius);
+  if(profile==='xuchang_small'){
+    assert.equal(sceneNodes.get('coordinateMode').value,'gps');
+    assert.equal(sceneNodes.get('departurePoint').value,'fixed_xuchang');
+    assert.equal(sceneNodes.get('flightSpeed').value,'5');
+  }
+}
 const receiptContext=vm.createContext({});
 vm.runInContext(html.split('\n').find(line=>line.startsWith('function 任务回执文字(')),receiptContext);
 const receipt=receiptContext.任务回执文字;

@@ -28,6 +28,7 @@ from competition_shared.fleet import (
 from competition_shared.runtime import ground_environment
 from .adapter import RecordingAdapter
 from .config import load_config
+from .xuchang_small_scene import RADIUS_M as XUCHANG_RADIUS_M
 from .distributed_adapter import DistributedFleetAdapter, parse_ground_peers
 from .image_aggregation import (
     PeerImageCollector,
@@ -723,7 +724,8 @@ def create_app(environment=None, audit=None) -> FastAPI:
     def _external_program_b_radius_warnings(flight_profile: str, controller_mode: str, uav_ids) -> list:
         if str(controller_mode).lower() != "external":
             return []
-        requested = 75.0 if flight_profile in ("competition", "outdoor100", "outdoor200", "dalian_nanshan", "xuchang_small") else 1.0
+        requested = (XUCHANG_RADIUS_M if flight_profile == "xuchang_small" else
+                     75.0 if flight_profile in ("competition", "outdoor100", "outdoor200", "dalian_nanshan") else 1.0)
         manager = getattr(app.state, "program_manager", None)
         peer_states = (adapter.peer_program_b_status()
                        if isinstance(adapter, DistributedFleetAdapter) else {})
@@ -1198,10 +1200,11 @@ def create_app(environment=None, audit=None) -> FastAPI:
                     raise HTTPException(status_code=422, detail=fixed_name + "仅支持 GPS 坐标系")
                 if departure_point not in (required_departure, "southeast"):
                     raise HTTPException(status_code=422, detail=fixed_name + "使用固定起飞点")
-                if (float(payload.get("reconnaissance_radius_m", 75.0)) != 75.0
+                fixed_radius = XUCHANG_RADIUS_M if flight_profile == "xuchang_small" else 75.0
+                if (float(payload.get("reconnaissance_radius_m", fixed_radius)) != fixed_radius
                         or float(payload.get("speed_mps", 5.0)) != 5.0
                         or float(payload.get("hover_scan_seconds", 10.0)) != 10.0):
-                    raise HTTPException(status_code=409, detail=fixed_name + "仅支持已保存的半径 75m、航速 5m/s、扫描 10s 方案")
+                    raise HTTPException(status_code=409, detail=fixed_name + "仅支持已保存的半径 {:g}m、航速 5m/s、扫描 10s 方案".format(fixed_radius))
                 if flight_profile == "dalian_nanshan":
                     from .fixed_gps_scene import load_dalian_nanshan_plan
                     result = load_dalian_nanshan_plan(coordinate_mode="gps")

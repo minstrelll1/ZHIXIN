@@ -321,7 +321,7 @@
      </div>
     <p id="gpsReferenceStatus" class="area-note">GPS 基准等待机载遥测。</p>
     <div class="area-controls">
-      <div class="field"><label for="flightProfile">飞行场景</label><select id="flightProfile"><option value="lab">实验室 3m×3m：GPS/XYZ，半径 1m，0.2m/s</option><option value="outdoor5">室外 5m×5m：GPS/XYZ，半径 1m，0.2m/s</option><option value="lab10">实验室 10m×10m：GPS/XYZ，半径 1m，0.5m/s</option><option value="outdoor100">100m×100m：GPS/XYZ，半径 75m，5m/s</option><option value="outdoor200">200m×200m：GPS/XYZ，半径 75m，5m/s</option><option value="competition" selected>竞赛 1km×1km：40～50m</option><option value="dalian_nanshan">大连南山坡外场：固定 GPS 区域，半径 75m，5m/s</option><option value="xuchang_small">许昌试飞场地（小）：固定 GPS、内部扣除区，半径 75m，5m/s</option></select></div>
+      <div class="field"><label for="flightProfile">飞行场景</label><select id="flightProfile"><option value="lab">实验室 3m×3m：GPS/XYZ，半径 1m，0.2m/s</option><option value="outdoor5">室外 5m×5m：GPS/XYZ，半径 1m，0.2m/s</option><option value="lab10">实验室 10m×10m：GPS/XYZ，半径 1m，0.5m/s</option><option value="outdoor100">100m×100m：GPS/XYZ，半径 75m，5m/s</option><option value="outdoor200">200m×200m：GPS/XYZ，半径 75m，5m/s</option><option value="competition" selected>竞赛 1km×1km：40～50m</option><option value="dalian_nanshan">大连南山坡外场：固定 GPS 区域，半径 75m，5m/s</option><option value="xuchang_small">许昌试飞场地（小）：固定 GPS、内部扣除区，半径 45m，5m/s</option></select></div>
       <div class="field"><label for="coordinateMode">坐标系</label><select id="coordinateMode"><option value="gps" selected>GPS（纬度、经度）</option><option value="xyz">XYZ / ENU（米）</option></select></div>
       <div class="field"><label for="flightAltitudePlan">飞行高度</label><select id="flightAltitudePlan"><option value="around1m">约 1 米：0.5/1/1.5 米</option><option value="around2m">约 2 米：1.5/2/2.5 米</option><option value="around5m">约 5 米：4.5/5/5.5 米</option><option value="around10m">约 10 米：8/10/12 米</option><option value="around45m">约 45 米：40/45/50 米</option><option value="around54m">约 54 米：64/60/56/52/48/44 米（UAV1～6）</option><option value="default">场景默认分层高度：40/45/50 米</option></select></div>
       <div class="field"><label for="departurePoint">出发点</label><select id="departurePoint"><option value="southeast" selected>区域右下角</option><option value="stadium_center">操场中央</option><option value="fixed_dalian" hidden>大连南山坡固定起飞点</option><option value="fixed_xuchang" hidden>许昌固定起飞点</option></select></div>
@@ -812,7 +812,7 @@ $('simReady').onclick=()=>模拟遥测('ready').then(()=>提示('六机模拟就
        $('gpsLatitude').value=$('gpsLatitude').dataset.previousValue||$('gpsLatitude').value;
        $('gpsLongitude').value=$('gpsLongitude').dataset.previousValue||$('gpsLongitude').value;
      }
-     更新飞行高度选项();$('scoutRadius').value=['lab','lab10','outdoor5'].includes(profile)?'1':'75';$('flightSpeed').value=profile==='lab'||profile==='outdoor5'?'0.2':profile==='lab10'?'0.5':'5';$('hoverScanSeconds').value='10';更新GPS参考();
+     更新飞行高度选项();$('scoutRadius').value=profile==='xuchang_small'?'45':['lab','lab10','outdoor5'].includes(profile)?'1':'75';$('flightSpeed').value=profile==='lab'||profile==='outdoor5'?'0.2':profile==='lab10'?'0.5':'5';$('hoverScanSeconds').value='10';更新GPS参考();
    }
   function 切换坐标系(){应用飞行环境默认值()}
  $('coordinateMode').onchange=切换坐标系;$('flightProfile').onchange=()=>{应用飞行环境默认值();更新规划模式()};$('flightAltitudePlan').onchange=()=>{比赛覆盖方案=null;更新规划模式()};切换坐标系();$('subject').onchange=()=>{更新规划模式();更新详情点云视图();刷新详情点云();更新规划模式()};window.addEventListener('resize',()=>{绘制规划(当前状态?.mission);if(详情显示点云())绘制详情点云();else 同步详情规划图()});
