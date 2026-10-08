@@ -1,16 +1,15 @@
 """许昌固定 GPS 场景：扣除区、五米间距、六机进返场和高度合同。"""
 import json
 import math
+import sys
 import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from fastapi.testclient import TestClient
 from shapely.geometry import LineString, Point, Polygon
 from shapely.ops import unary_union
 
-from competition_backend.api import create_app
 from competition_backend import polygon_coverage as coverage
 from competition_backend.orchestrator import _altitude_profile_for
 from competition_backend.transit_routes import CACHE, attach_routes, clearance_region, rebase_gps_routes_for_takeoff, scene_plan
@@ -26,7 +25,7 @@ class XuchangSmallSceneTest(unittest.TestCase):
         cls.hole = Polygon(cls.area["excluded_polygons_m"][0])
         cls.flyable = Polygon(cls.area["points_m"], holes=cls.area["excluded_polygons_m"])
 
-    def test_fixed_geometry_and_coverage_swap_uav1_and_uav4(self):
+    def test_fixed_geometry_and_coverage_keep_first_three_further_away(self):
         area = self.area
         source = json.loads(AREA_PATH.read_text(encoding="utf-8"))
         self.assertEqual(area["points"], [[lat, lon] for lon, lat in source["boundary_lon_lat"]])
@@ -47,15 +46,92 @@ class XuchangSmallSceneTest(unittest.TestCase):
                 segment = LineString([a, b])
                 self.assertTrue(self.flyable.covers(segment))
                 self.assertGreaterEqual(segment.distance(self.flyable.boundary), 5.0)
-            disks.extend(Point(p).buffer(74.98, quad_segs=32) for p in task["waypoints_m"])
-            self.assertLess(region.difference(unary_union(disks)).area, 1e-5)
+            own_disks = [Point(p).buffer(74.98, quad_segs=32) for p in task["waypoints_m"]]
+            disks.extend(own_disks)
+            self.assertLess(region.difference(unary_union(own_disks)).area, 1e-5)
         self.assertLess(self.flyable.symmetric_difference(unary_union(regions)).area, 1e-5)
         self.assertLess(self.flyable.difference(unary_union(disks)).area, 1e-5)
-        near = [regions[i].distance(Point(0, 0)) for i in (0, 4, 5)]
-        far = [regions[i].distance(Point(0, 0)) for i in (1, 2, 3)]
+        near = [regions[i].distance(Point(0, 0)) for i in range(3, 6)]
+        far = [regions[i].distance(Point(0, 0)) for i in range(3)]
         self.assertGreater(min(far), max(near))
-        self.assertEqual([self.plan["planned_uavs"][str(i)]["task"]["scan_count"]
-                          for i in (1, 4)], [5, 3])
+
+    def test_uav4_matches_requested_boundary_and_other_uavs_fill_remainder(self):
+        points_lat_lon = [
+            [34.13835116989908, 113.90969315353426],
+            [34.13835116989908, 113.90860191266768],
+            [34.1390373699571, 113.90861993970964],
+            [34.139028715001785, 113.90968131590746],
+        ]
+        self.assertEqual(self.area["fixed_subregions_lon_lat"]["4"],
+                         [[lon, lat] for lat, lon in points_lat_lon])
+        projection = self.area["coverage"]["projection"]
+        requested = Polygon([[(lat - projection["latitude"]) * projection["north_m_per_degree"],
+                              -(lon - projection["longitude"]) * projection["west_m_per_degree"]]
+                             for lat, lon in points_lat_lon])
+        regions = {uid: Polygon(item["task"]["polygon_m"])
+                   for uid, item in self.plan["planned_uavs"].items()}
+        self.assertLess(regions["4"].symmetric_difference(requested).area, 1e-8)
+        self.assertLess(requested.difference(self.flyable).area, 1e-8)
+        for uid, region in regions.items():
+            for other_uid, other in regions.items():
+                if uid != other_uid:
+                    self.assertLess(region.intersection(other).area, 1e-8)
+        remainder = unary_union([region for uid, region in regions.items() if uid != "4"])
+        self.assertLess(remainder.symmetric_difference(self.flyable.difference(requested)).area, 1e-5)
+        for point in self.plan["planned_uavs"]["4"]["task"]["waypoints_m"]:
+            self.assertTrue(requested.covers(Point(point)))
+        self.assertEqual(self.area["excluded_points"], [[34.13725, 113.91025],
+                         [34.13725, 113.91185], [34.13915, 113.91185], [34.13915, 113.91025]])
+
+    def test_all_altitudes_dispatch_same_new_geometry_and_own_landing_routes(self):
+        from competition_backend.adapter import RecordingAdapter
+        from competition_backend.config import load_config
+        from competition_backend.orchestrator import CompetitionOrchestrator
+        root = Path(__file__).resolve().parents[2]
+        sys.path.insert(0, str(root / "src/su17_competition_executor/src"))
+        from su17_competition_executor.transit_protocol import route_messages
+        from su17_competition_executor.task_protocol import validate_assignment
+        config = load_config(str(root / "competition_backend/config/competition.example.json"))
+        expected = {"around1m": [.5, 1.5, .5, 1., 1.5, 1.],
+                    "around2m": [1.5, 2., 2.5, 1.5, 2., 2.5],
+                    "around5m": [4.5, 5., 5.5, 4.5, 5., 5.5],
+                    "around10m": [8., 10., 12., 8., 10., 12.],
+                    "around45m": [40., 50., 40., 45., 50., 45.],
+                    "around54m": [64., 60., 56., 52., 48., 44.]}
+        homes = {str(uid): {"latitude": 34.138282 + uid * .00001,
+                           "longitude": 113.909077 + uid * .00001} for uid in range(1, 7)}
+        for altitude, heights in expected.items():
+            with self.subTest(altitude=altitude):
+                prepared = attach_routes(load_xuchang_small_plan())
+                prepared["search_area"]["takeoff_gps_by_uav"] = homes
+                adapter = RecordingAdapter()
+                planner = CompetitionOrchestrator(config, adapter, live_mode=False)
+                planner.plan("subject1", flight_profile="xuchang_small", flight_altitude_plan=altitude,
+                             controller_mode="external", prepared_plan=prepared)
+                sent = [item for item in adapter.snapshot() if item["type"] == "assign_task"]
+                self.assertEqual(len(sent), 6)
+                for item, height in zip(sent, heights):
+                    uid, assignment = str(item["uav_id"]), item["payload"]
+                    task = assignment["task"]
+                    home = homes[uid]
+                    self.assertEqual(assignment["target_altitude_m"], height)
+                    self.assertEqual(task["waypoints_wgs84"], self.plan["planned_uavs"][uid]["task"]["waypoints_wgs84"])
+                    self.assertEqual(assignment["landing_point_wgs84"], [home["latitude"], home["longitude"], height])
+                    message = dict(assignment, type="assign_task", uav_id=int(uid))
+                    validate_assignment(message, int(uid))
+                    entry, returns = route_messages(message)
+                    landing = [home["longitude"], home["latitude"], height]
+                    self.assertEqual(entry["path"][0], landing)
+                    self.assertEqual(returns["landing_point"], landing)
+                    self.assertEqual(len(returns["routes"]), self.area["coverage"]["total_scan_count"])
+                    for part in returns["routes"]:
+                        self.assertEqual(part["path"][-1], landing)
+                        self.assertTrue(all(point[2] == height for point in part["path"]))
+                    transit = task["transit_routes"]
+                    self.assertEqual(transit["entry_path"][0], [home["longitude"], home["latitude"]])
+                    self.assertEqual(len(transit["return_paths"]), self.area["coverage"]["total_scan_count"])
+                    for part in transit["return_paths"]:
+                        self.assertEqual(part["path"][-1], [home["longitude"], home["latitude"]])
 
     def test_entry_and_all_fleet_return_routes_detour_around_hole(self):
         safe = clearance_region(self.area["points_m"], 5.0, holes=self.area["excluded_polygons_m"])
@@ -92,7 +168,7 @@ class XuchangSmallSceneTest(unittest.TestCase):
             task = planned["planned_uavs"][str(uid)]["task"]
             result = rebase_gps_routes_for_takeoff(area, task, home)
             self.assertEqual(result["departure"], [home["longitude"], home["latitude"]])
-            self.assertEqual(len(result["return_paths"]), 31)
+            self.assertEqual(len(result["return_paths"]), self.area["coverage"]["total_scan_count"])
             self.assertEqual({part["source_uav_id"] for part in result["return_paths"]}, set(range(1, 7)))
             for path in [result["entry_path"], *(part["path"] for part in result["return_paths"])]:
                 local = [[(p[1] - projection["latitude"]) * projection["north_m_per_degree"],
@@ -104,6 +180,8 @@ class XuchangSmallSceneTest(unittest.TestCase):
                                           {"latitude": 34.1378, "longitude": 113.9108})
 
     def test_cache_is_read_only_and_api_dispatch_selects_new_altitudes(self):
+        from fastapi.testclient import TestClient
+        from competition_backend.api import create_app
         with patch("competition_backend.xuchang_small_scene.prepare_xuchang_small_plan",
                    side_effect=AssertionError("运行时不应重新规划")):
             self.assertEqual(load_xuchang_small_plan()["search_area"]["flight_profile"], "xuchang_small")
