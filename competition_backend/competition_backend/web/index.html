@@ -241,7 +241,7 @@
     #sshAuthNotice{padding:8px 0;color:#b42318;font-size:13px}#sshAuthNotice button{height:30px;margin-left:10px;font-size:12px}
     #programDescription{font-size:13px;color:#64748b;padding-top:8px}
     @media(max-width:850px){.program-row{align-items:flex-start}.program-status{gap:4px 14px}.program-status button{font-size:12px}}
-  .recognition-toolbar{display:flex;align-items:end;gap:16px;flex-wrap:wrap;margin:14px 0}.recognition-toolbar .field{max-width:160px}.recognition-groups{display:flex;flex-wrap:wrap;gap:12px}.recognition-groups fieldset{flex:1;min-width:210px;border:1px solid var(--border,#cad5e2);border-radius:8px;padding:10px}.recognition-options{display:flex;gap:10px 18px;flex-wrap:wrap}.recognition-options label{display:inline-flex;align-items:center;gap:5px;white-space:nowrap}.recognition-options input{width:auto;margin:0}.recognition-count{align-self:center;font-weight:600}
+  .recognition-toolbar{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin:14px 0}.recognition-groups{display:flex;flex-wrap:wrap;gap:12px}.recognition-groups fieldset{flex:1;min-width:210px;border:1px solid var(--border,#cad5e2);border-radius:8px;padding:10px}.recognition-options{display:flex;gap:10px 18px;flex-wrap:wrap}.recognition-options label{display:inline-flex;align-items:center;gap:5px;white-space:nowrap}.recognition-options input{width:auto;margin:0}.recognition-count{align-self:center;font-weight:600}
   .detail-data{max-height:min(52vh,460px);overflow-y:auto}
   .detail-pengfei{padding:8px;border-top:1px solid var(--line);font-size:11px}
   .detail-pengfei-head{font-weight:650;color:#18304d;margin:2px 1px 7px}
@@ -340,8 +340,8 @@
   <details id="recognitionSettings" class="panel area-settings">
     <summary>科目一识别类别 <span id="recognitionSummary"></span></summary>
     <div class="recognition-toolbar">
-      <div class="field"><label for="recognitionCount">需要识别的类别数</label><select id="recognitionCount"><option value="0" selected>0 类</option><option value="1">1 类</option><option value="2">2 类</option><option value="3">3 类</option><option value="4">4 类</option><option value="5">5 类</option><option value="6">6 类</option><option value="7">7 类</option><option value="8">8 类</option><option value="9">9 类</option><option value="10">10 类</option><option value="11">11 类</option><option value="12">12 类</option><option value="13">13 类</option><option value="14">14 类</option><option value="15">15 类</option><option value="16">16 类</option><option value="17">17 类</option><option value="18">18 类</option><option value="19">19 类</option></select></div>
-      <span id="recognitionCounter" class="recognition-count" role="status" aria-live="polite">已选择 0 / 0 类</span>
+      <button id="recognitionSelectAll" type="button" class="secondary">全选</button>
+      <span id="recognitionCounter" class="recognition-count" role="status" aria-live="polite">已选择 0 类</span>
     </div>
     <div id="recognitionGroups" class="recognition-groups"></div>
     <p id="recognitionFeedback" class="area-note" role="status">默认 0 类；勾选后随本次规划与分派直接发送，无需保存。</p>
@@ -835,15 +835,14 @@ const 点云画布=$('detailPointcloudCanvas');点云画布.addEventListener('co
 const 识别类别目录=Array.from({length:19},(_,i)=>({id:i,name:i<7?'车辆'+(i+1):i<11?'工事'+(i-6):i<15?'人员'+(i-10):'运动的人员'+(i-14)}));
 function 读取类别勾选(){return [...document.querySelectorAll('#recognitionGroups input:checked')].map(el=>Number(el.value)).sort((a,b)=>a-b)}
 function 更新类别计数(){
-  const count=Number($('recognitionCount').value),ids=读取类别勾选();
-  $('recognitionCounter').textContent=`已选择 ${ids.length} / ${count} 类`;
-  for(const el of document.querySelectorAll('#recognitionGroups input'))el.disabled=!el.checked&&ids.length>=count;
+  const ids=读取类别勾选();
+  $('recognitionCounter').textContent=`已选择 ${ids.length} 类`;
   $('recognitionSummary').textContent=`· 已选 ${ids.length} 类`;
+  $('recognitionSelectAll').disabled=ids.length===识别类别目录.length;
 }
 function 修改类别选择(){
   更新类别计数();
-  const count=Number($('recognitionCount').value),chosen=读取类别勾选().length;
-  $('recognitionFeedback').textContent=count===chosen?'当前选择将在下一次规划与分派时直接发送。':`当前勾选 ${chosen} 类，将按实际勾选发送；不会阻止规划或起飞。`;
+  $('recognitionFeedback').textContent='当前选择将在点击“规划与分派”时发送。';
 }
 function 获取规划识别类别(){
   const ids=读取类别勾选();
@@ -855,7 +854,7 @@ for(const [title,start,end] of [['车辆',0,6],['工事',7,10],['人员',11,14],
     const label=document.createElement('label'),input=document.createElement('input');input.type='checkbox';input.value=item.id;input.onchange=修改类别选择;label.append(input,document.createTextNode(item.name));options.append(label);
   }$('recognitionGroups').append(group);
 }
-$('recognitionCount').onchange=修改类别选择;更新类别计数();
+$('recognitionSelectAll').onclick=()=>{for(const el of document.querySelectorAll('#recognitionGroups input'))el.checked=true;修改类别选择()};更新类别计数();
 
 let 比赛覆盖方案=null,覆盖规划中=false,规划点击序号=0,固定规划绘制键='',分派反馈任务ID='',规划结果待核对=false,本次规划告警={missionId:'',messages:[]};
   function 真实区域模式(){return ['subject1','subject2'].includes($('subject').value)&&$('planningAreaMode').value==='competition'}

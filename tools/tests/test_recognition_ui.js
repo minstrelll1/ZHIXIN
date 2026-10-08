@@ -8,14 +8,14 @@ const start=html.indexOf('const 识别类别目录=');
 const end=html.indexOf('let 比赛覆盖方案=',start);
 assert.ok(start>0&&end>start);
 assert.doesNotMatch(html, /id="saveRecognition"|require_recognition_selection:true/);
-assert.match(html, /<option value="0" selected>0 类<\/option>/);
+assert.doesNotMatch(html, /id="recognitionCount"/);
+assert.match(html, /id="recognitionSelectAll"[^>]*>全选<\/button>/);
 
 function openPage(){
  const nodes=new Map();
  const inputs=[];
  const makeNode=()=>({append(){},textContent:'',disabled:false});
  const get=id=>{if(!nodes.has(id))nodes.set(id,makeNode());return nodes.get(id)};
- get('recognitionCount').value='0';
  const context={
   $:get,
   document:{
@@ -42,19 +42,31 @@ assert.deepEqual(catalog.map(item=>item.name),
   '工事1','工事2','工事3','工事4','人员1','人员2','人员3','人员4',
   '运动的人员1','运动的人员2','运动的人员3','运动的人员4']);
 assert.equal(first.inputs.length,19);
-assert.equal(first.get('recognitionCounter').textContent,'已选择 0 / 0 类');
+assert.equal(first.get('recognitionCounter').textContent,'已选择 0 类');
 assert.deepEqual(JSON.parse(JSON.stringify(first.run('获取规划识别类别()'))),{category_count:0,category_ids:[]});
 
-first.get('recognitionCount').value='3';first.get('recognitionCount').onchange();
+assert.ok(first.inputs.every(item=>!item.disabled),'默认 0 类时所有类别均可直接勾选');
 for(const id of [18,0,7]){
  const input=first.inputs.find(item=>item.value===id);
  input.checked=true;input.onchange();
 }
-assert.equal(first.get('recognitionCounter').textContent,'已选择 3 / 3 类');
+assert.equal(first.get('recognitionCounter').textContent,'已选择 3 类');
 assert.deepEqual(JSON.parse(JSON.stringify(first.run('获取规划识别类别()'))),{category_count:3,category_ids:[0,7,18]});
-first.get('recognitionCount').value='2';first.get('recognitionCount').onchange();
-assert.deepEqual(JSON.parse(JSON.stringify(first.run('获取规划识别类别()'))),{category_count:3,category_ids:[0,7,18]},'数量不一致也不能阻断任务');
+assert.ok(first.inputs.every(item=>!item.disabled),'选择若干类别后不能限制继续勾选');
+first.get('recognitionSelectAll').onclick();
+assert.equal(first.get('recognitionCounter').textContent,'已选择 19 类');
+assert.equal(first.get('recognitionSummary').textContent,'· 已选 19 类');
+assert.equal(first.get('recognitionSelectAll').disabled,true);
+assert.deepEqual(JSON.parse(JSON.stringify(first.run('获取规划识别类别()'))),{category_count:19,category_ids:Array.from({length:19},(_,i)=>i)});
+first.inputs[7].checked=false;first.inputs[7].onchange();
+assert.equal(first.get('recognitionCounter').textContent,'已选择 18 类');
+assert.equal(first.get('recognitionSelectAll').disabled,false);
+assert.ok(first.inputs.every(item=>!item.disabled),'全选后仍可逐项取消');
+assert.deepEqual(JSON.parse(JSON.stringify(first.run('获取规划识别类别()'))).category_ids,Array.from({length:19},(_,i)=>i).filter(i=>i!==7));
+for(const input of first.inputs){input.checked=false;input.onchange()}
+assert.equal(first.get('recognitionCounter').textContent,'已选择 0 类');
+assert.deepEqual(JSON.parse(JSON.stringify(first.run('获取规划识别类别()'))),{category_count:0,category_ids:[]});
 const reopened=openPage();
 assert.equal(reopened.inputs.filter(item=>item.checked).length,0);
 assert.deepEqual(JSON.parse(JSON.stringify(reopened.run('获取规划识别类别()'))),{category_count:0,category_ids:[]});
-console.log('19 类编号、默认 0 类、无需保存、数量不匹配不阻断及重新打开重置通过。');
+console.log('19 类编号、自由勾选、全选、取消、实时计数及重新打开重置通过。');

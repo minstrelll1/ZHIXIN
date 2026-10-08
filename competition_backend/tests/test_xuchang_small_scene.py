@@ -55,14 +55,14 @@ class XuchangSmallSceneTest(unittest.TestCase):
         self.assertLess(self.flyable.difference(unary_union(disks)).area, 1e-5)
 
 
-    def test_uav4_matches_requested_boundary_and_other_uavs_fill_remainder(self):
+    def test_uav1_matches_requested_boundary_and_other_uavs_fill_remainder(self):
         points_lat_lon = [
             [34.13835116989908, 113.90969315353426],
             [34.13835116989908, 113.90860191266768],
             [34.1390373699571, 113.90861993970964],
             [34.139028715001785, 113.90968131590746],
         ]
-        self.assertEqual(self.area["fixed_subregions_lon_lat"]["4"],
+        self.assertEqual(self.area["fixed_subregions_lon_lat"]["1"],
                          [[lon, lat] for lat, lon in points_lat_lon])
         projection = self.area["coverage"]["projection"]
         requested = Polygon([[(lat - projection["latitude"]) * projection["north_m_per_degree"],
@@ -70,20 +70,20 @@ class XuchangSmallSceneTest(unittest.TestCase):
                              for lat, lon in points_lat_lon])
         regions = {uid: Polygon(item["task"]["polygon_m"])
                    for uid, item in self.plan["planned_uavs"].items()}
-        self.assertLess(regions["4"].symmetric_difference(requested).area, 1e-8)
+        self.assertLess(regions["1"].symmetric_difference(requested).area, 1e-8)
         self.assertLess(requested.difference(self.flyable).area, 1e-8)
         for uid, region in regions.items():
             for other_uid, other in regions.items():
                 if uid != other_uid:
                     self.assertLess(region.intersection(other).area, 1e-8)
-        remainder = unary_union([region for uid, region in regions.items() if uid != "4"])
+        remainder = unary_union([region for uid, region in regions.items() if uid != "1"])
         self.assertLess(remainder.symmetric_difference(self.flyable.difference(requested)).area, 1e-5)
-        for point in self.plan["planned_uavs"]["4"]["task"]["waypoints_m"]:
+        for point in self.plan["planned_uavs"]["1"]["task"]["waypoints_m"]:
             # 分割线上的航点允许浮点几何误差；外边界和扣除区的 5 米间距另行严格校验。
             self.assertLessEqual(requested.distance(Point(point)), 1e-7)
 
 
-    def test_uav1_is_requested_area_minus_new_exclusion_and_original_rectangle_is_removed(self):
+    def test_uav4_is_requested_area_minus_new_exclusion_and_original_rectangle_is_removed(self):
         exclusion = [
             [34.139176470619766, 113.90981948390986],
             [34.13911894613526, 113.91127900740348],
@@ -104,19 +104,19 @@ class XuchangSmallSceneTest(unittest.TestCase):
             return [(lat - projection["latitude"]) * projection["north_m_per_degree"],
                     -(lon - projection["longitude"]) * projection["west_m_per_degree"]]
         self.assertEqual(self.area["excluded_points"], exclusion)
-        self.assertEqual(self.area["requested_subregions_lon_lat"]["1"], [[lon, lat] for lat, lon in requested])
-        region = Polygon(self.plan["planned_uavs"]["1"]["task"]["polygon_m"])
-        uav4 = Polygon(self.plan["planned_uavs"]["4"]["task"]["polygon_m"])
+        self.assertEqual(self.area["requested_subregions_lon_lat"]["4"], [[lon, lat] for lat, lon in requested])
+        region = Polygon(self.plan["planned_uavs"]["4"]["task"]["polygon_m"])
+        uav1 = Polygon(self.plan["planned_uavs"]["1"]["task"]["polygon_m"])
         raw = Polygon([project(point) for point in requested])
-        expected = raw.intersection(self.flyable).difference(uav4)
+        expected = raw.intersection(self.flyable).difference(uav1)
         self.assertTrue(region.is_valid)
         self.assertLess(region.symmetric_difference(expected).area, 1e-8)
         self.assertLess(region.intersection(self.hole).area, 1e-8)
         self.assertGreater(raw.intersection(self.hole).area, 3000)
         self.assertTrue(self.flyable.contains(Point(project([34.1376, 113.9117]))))
         others = [Polygon(item["task"]["polygon_m"]) for uid, item in self.plan["planned_uavs"].items()
-                  if uid not in ("4", "1")]
-        self.assertLess(unary_union(others).symmetric_difference(self.flyable.difference(region.union(uav4))).area, 1e-5)
+                  if uid not in ("1", "4")]
+        self.assertLess(unary_union(others).symmetric_difference(self.flyable.difference(region.union(uav1))).area, 1e-5)
 
     def test_all_altitudes_dispatch_same_new_geometry_and_own_landing_routes(self):
         from competition_backend.adapter import RecordingAdapter
