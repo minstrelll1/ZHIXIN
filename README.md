@@ -160,15 +160,31 @@ roslaunch spirecv_ros uav_yolo26_botsort_geolocation.launch uav_id:=1
 
 ### 自动启动前的首次 SSH 配置
 
-新版在首次连接提示 `Permission denied` 时会自动弹出 SSH 授权窗口。输入一次机载 Ubuntu 密码，即可自动安装公钥并继续启动；密码不进入网页、不保存。取消后可点击网页“重新连接并启动”。每台地面电脑与每架无人机只需授权一次。
+程序先使用本机竞赛专用密钥，再尝试已有 SSH 公钥授权；均未授权时才提示输入机载 Ubuntu 密码，最多三次。密码不保存，不询问旧私钥口令。授权成功后继续启动；以后连接同一无人机无需再输入。原机载部署命令也会先完成这一步。
 
-也可在项目目录手动执行（UAV1 示例）：
+UAV4 首次授权（项目目录执行）：
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\setup_onboard_ssh.ps1 -UavAddress 192.168.1.202
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\setup_onboard_ssh.ps1 -UavAddress 192.168.1.217
 ```
 
-按提示输入机载 Ubuntu 密码；以后启动不用再输入。
+### 六台电脑任意换机：一次性公钥预授权
+
+1. 每台地面电脑在项目目录执行，将生成的 `ground_ssh_keys` 文件夹通过 U 盘汇集到一台电脑。同名文件是同一公钥，只保留一份；不要复制 `.ssh` 私钥。
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\setup_onboard_ssh.ps1 -ExportPublicKeyDirectory .\ground_ssh_keys
+```
+
+2. 汇集好六台电脑的 `.pub` 文件后，在该电脑上逐架连接无人机并运行以下命令。每架只执行一次，将地址替换为 `.202`、`.207`、`.212`、`.217`、`.222`、`.227` 对应的实际机载地址；SU17 使用其实际地址。
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\setup_onboard_ssh.ps1 -UavAddress 192.168.1.217 -PublicKeyDirectory .\ground_ssh_keys
+```
+
+如提示密码，输入该无人机 `amov` 用户的 Ubuntu 登录密码。脚本追加汇集的公钥，保留已有授权，并验证当前电脑的专用密钥登录。完成六架授权后，这六台电脑可互换无人机使用，无需再逐对输入密码。新增电脑、重装系统或更换密钥后，重新导出并预授权新增公钥；无需重新编译机载程序。
+
+若普通 `ssh amov@机载IP` 也无法登录，先解决用户名、密码或 SSH 服务配置；程序不能绕过服务器身份认证。授权脚本不会启动、停止或重启飞行程序。
 
 ### 双击启动
 

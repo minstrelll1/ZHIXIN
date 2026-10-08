@@ -36,3 +36,6 @@ devel_su17/
 .runtime/
 *.zip
 dist/
+
+# 地面电脑汇集的部署公钥，按本机机队单独维护
+ground_ssh_keys/

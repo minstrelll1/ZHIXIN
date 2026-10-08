@@ -7,7 +7,7 @@ try {
     try { $held=$guard.WaitOne(0) } catch [System.Threading.AbandonedMutexException] { $held=$true }
     if (-not $held) { throw '此无人机的授权窗口已经打开，请在原窗口完成输入。' }
     Write-Host "正在配置本机与 $UavUser@$UavAddress 的 SSH 免密码登录。" -ForegroundColor Cyan
-    Write-Host '若需要首次授权，请输入机载 Ubuntu 登录密码一次。密码不会显示，也不会保存到网页或日志。'
+    Write-Host '将先复用已有公钥授权；仍需首次授权时，请输入机载 Ubuntu 登录密码。密码不会显示，也不会保存到网页或日志。'
     & (Join-Path $PSScriptRoot 'setup_onboard_ssh.ps1') -UavAddress $UavAddress -UavUser $UavUser
     if ($LASTEXITCODE -ne 0) { throw 'SSH 授权未完成。' }
     Write-Host '授权成功，网页将继续启动竞赛相关程序。' -ForegroundColor Green

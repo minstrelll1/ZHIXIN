@@ -10,6 +10,8 @@ $ProjectRoot = Split-Path $PSScriptRoot -Parent
 if ($UavAddress -notmatch '^[A-Za-z0-9.-]+$' -or $UavAddress.StartsWith('-') -or $UavUser -notmatch '^[a-z_][a-z0-9_-]*$') { throw "SSH 地址或用户名无效。" }
 if ($RemoteWorkspace -notmatch '^/[A-Za-z0-9_/-]+/competition_development$' -or $RemoteWorkspace.Contains('..') -or $RemoteWorkspace -match '(su17|p600)_experiment') { throw "远端路径必须为独立的 competition_development 目录，不能指向厂商源码。" }
 $Remote = "${UavUser}@${UavAddress}"
+Write-Host "正在检查并配置机载 SSH 公钥授权。"
+& (Join-Path $PSScriptRoot 'setup_onboard_ssh.ps1') -UavAddress $UavAddress -UavUser $UavUser
 $competitionKey = Join-Path $env:USERPROFILE '.ssh\zhixin_competition_ed25519'
 $sshIdentityArgs = @()
 if (Test-Path -LiteralPath $competitionKey -PathType Leaf) {
