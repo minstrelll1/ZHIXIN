@@ -83,7 +83,7 @@ class XuchangSmallSceneTest(unittest.TestCase):
             self.assertLessEqual(requested.distance(Point(point)), 1e-7)
 
 
-    def test_uav4_is_requested_area_minus_new_exclusion_and_original_rectangle_is_removed(self):
+    def test_uav5_is_requested_area_minus_new_exclusion_and_original_rectangle_is_removed(self):
         exclusion = [
             [34.139176470619766, 113.90981948390986],
             [34.13911894613526, 113.91127900740348],
@@ -104,8 +104,8 @@ class XuchangSmallSceneTest(unittest.TestCase):
             return [(lat - projection["latitude"]) * projection["north_m_per_degree"],
                     -(lon - projection["longitude"]) * projection["west_m_per_degree"]]
         self.assertEqual(self.area["excluded_points"], exclusion)
-        self.assertEqual(self.area["requested_subregions_lon_lat"]["4"], [[lon, lat] for lat, lon in requested])
-        region = Polygon(self.plan["planned_uavs"]["4"]["task"]["polygon_m"])
+        self.assertEqual(self.area["requested_subregions_lon_lat"]["5"], [[lon, lat] for lat, lon in requested])
+        region = Polygon(self.plan["planned_uavs"]["5"]["task"]["polygon_m"])
         uav1 = Polygon(self.plan["planned_uavs"]["1"]["task"]["polygon_m"])
         raw = Polygon([project(point) for point in requested])
         expected = raw.intersection(self.flyable).difference(uav1)
@@ -115,7 +115,7 @@ class XuchangSmallSceneTest(unittest.TestCase):
         self.assertGreater(raw.intersection(self.hole).area, 3000)
         self.assertTrue(self.flyable.contains(Point(project([34.1376, 113.9117]))))
         others = [Polygon(item["task"]["polygon_m"]) for uid, item in self.plan["planned_uavs"].items()
-                  if uid not in ("1", "4")]
+                  if uid not in ("1", "5")]
         self.assertLess(unary_union(others).symmetric_difference(self.flyable.difference(region.union(uav1))).area, 1e-5)
 
     def test_all_altitudes_dispatch_same_new_geometry_and_own_landing_routes(self):
@@ -132,7 +132,8 @@ class XuchangSmallSceneTest(unittest.TestCase):
                     "around5m": [4.5, 5., 5.5, 4.5, 5., 5.5],
                     "around10m": [8., 10., 12., 8., 10., 12.],
                     "around45m": [40., 50., 40., 45., 50., 45.],
-                    "around54m": [61., 58., 55., 52., 49., 46.]}
+                    "around54m": [59., 56., 53., 50., 47., 44.],
+                    "subject2_50m": [50.] * 6}
         homes = {str(uid): {"latitude": 34.138282 + uid * .00001,
                            "longitude": 113.909077 + uid * .00001} for uid in range(1, 7)}
         for altitude, heights in expected.items():
@@ -248,10 +249,21 @@ class XuchangSmallSceneTest(unittest.TestCase):
                 self.assertTrue(all(item["task"]["reconnaissance_radius_m"] == 45.0 for item in assignments))
                 mission = response.json()["mission"]
                 self.assertEqual([mission["uavs"][str(i)]["target_altitude_m"] for i in range(1, 7)],
-                                 [61.0, 58.0, 55.0, 52.0, 49.0, 46.0])
+                                 [59.0, 56.0, 53.0, 50.0, 47.0, 44.0])
                 self.assertEqual([entry["payload"]["target_altitude_m"] for entry in app.state.adapter.snapshot()
                                   if entry["type"] == "assign_task"],
-                                 [61.0, 58.0, 55.0, 52.0, 49.0, 46.0])
+                                 [59.0, 56.0, 53.0, 50.0, 47.0, 44.0])
+                # 同高方案经过真实 API 校验及科目二分派，不回退到场景分层高度。
+                uniform_payload = {**payload, "subject": "subject2", "flight_altitude_plan": "subject2_50m"}
+                uniform_preview = client.post("/api/v1/planning/competition-coverage", json=uniform_payload)
+                self.assertEqual(uniform_preview.status_code, 200, uniform_preview.text)
+                uniform = client.post("/api/v1/plan", json=uniform_payload)
+                self.assertEqual(uniform.status_code, 200, uniform.text)
+                self.assertEqual([uniform.json()["mission"]["uavs"][str(i)]["target_altitude_m"]
+                                  for i in range(1, 7)], [50.0] * 6)
+                assigned = [entry["payload"] for entry in app.state.adapter.snapshot()
+                            if entry["type"] == "assign_task"][-6:]
+                self.assertEqual([entry["target_altitude_m"] for entry in assigned], [50.0] * 6)
                 invalid = client.post("/api/v1/planning/competition-coverage",
                                       json={**payload, "coordinate_mode": "xyz"})
                 self.assertEqual(invalid.status_code, 422)
@@ -259,6 +271,15 @@ class XuchangSmallSceneTest(unittest.TestCase):
                 app.state.audit.close()
 
     def test_new_altitude_choice_resolves_for_every_scene(self):
+        from competition_backend.config import load_config
+        root = Path(__file__).resolve().parents[2]
+        config = load_config(str(root / "competition_backend/config/competition.example.json"))
+        expected = {"around54m": [59., 56., 53., 50., 47., 44.], "subject2_50m": [50.] * 6}
         for profile in ("lab", "outdoor5", "lab10", "outdoor100", "outdoor200",
                         "competition", "dalian_nanshan", "xuchang_small"):
-            self.assertEqual(_altitude_profile_for(profile, "around54m"), "around54m")
+            for choice, heights in expected.items():
+                for subject, template in config.subjects.items():
+                    with self.subTest(scene=profile, altitude=choice, subject=subject):
+                        selected = _altitude_profile_for(profile, choice)
+                        actual = template["takeoff_altitudes_m_by_profile"][selected]
+                        self.assertEqual([actual[str(uid)] for uid in range(1, 7)], heights)

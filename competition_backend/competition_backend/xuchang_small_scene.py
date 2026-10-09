@@ -19,7 +19,7 @@ SPEED_MPS = 5.0
 HOVER_SECONDS = 10.0
 CLEARANCE_M = 5.0
 # 六个源子区按首次定义的顺序规划；只交换接收机编号，不交换高度配置。
-SOURCE_REGION_UAV_IDS = (4, 2, 3, 1, 5, 6)
+SOURCE_REGION_UAV_IDS = (5, 2, 3, 1, 4, 6)
 AREA_PATH = Path(__file__).with_name("xuchang_small_area.json")
 PLAN_PATH = Path(__file__).with_name("xuchang_small_prepared.json")
 
@@ -194,11 +194,11 @@ def prepare_xuchang_small_plan():
     coverage_info = {
         "objective": "cover_flyable_area_with_five_meter_clearance_and_short_routes",
         "algorithm": "fixed_uav1_uav4_partition_search_safe_disk_cover_visibility_graph_multistart_2opt",
-        "fixed_subregion_uav_ids": [1, 4], "partition_candidates": 19,
+        "fixed_subregion_uav_ids": sorted([SOURCE_REGION_UAV_IDS[0], SOURCE_REGION_UAV_IDS[3]]), "partition_candidates": 19,
         "source_region_by_uav": {str(uid): index for index, uid in enumerate(SOURCE_REGION_UAV_IDS, 1)},
         "north_south_split_fraction": split_fraction,
-        "uav4_requested_area_m2": requested_uav1.area,
-        "uav4_removed_area_m2": requested_uav1.difference(fixed_uav1).area,
+        "uav{}_requested_area_m2".format(SOURCE_REGION_UAV_IDS[0]): requested_uav1.area,
+        "uav{}_removed_area_m2".format(SOURCE_REGION_UAV_IDS[0]): requested_uav1.difference(fixed_uav1).area,
         "partition_objective": "minimize_maximum_completion_time_then_total_distance",
         "global_optimum_proven": False, "uav_count": 6,
         "reconnaissance_radius_m": RADIUS_M, "speed_mps": SPEED_MPS,
@@ -228,13 +228,13 @@ def prepare_xuchang_small_plan():
             "excluded_points": [[lat, lon] for lon, lat in data["excluded_lon_lat"]],
             "excluded_polygons_m": [hole_points],
             "requested_subregions_lon_lat": {
-                "4": copy.deepcopy(data["uav1_requested_boundary_lon_lat"]),
-                "1": copy.deepcopy(data["uav4_boundary_lon_lat"])},
+                str(SOURCE_REGION_UAV_IDS[0]): copy.deepcopy(data["uav1_requested_boundary_lon_lat"]),
+                str(SOURCE_REGION_UAV_IDS[3]): copy.deepcopy(data["uav4_boundary_lon_lat"])},
             "fixed_subregions_lon_lat": {
-                "4": [[projection["longitude"] - point[1] / projection["west_m_per_degree"],
+                str(SOURCE_REGION_UAV_IDS[0]): [[projection["longitude"] - point[1] / projection["west_m_per_degree"],
                        projection["latitude"] + point[0] / projection["north_m_per_degree"]]
                       for point in list(fixed_uav1.exterior.coords)[:-1]],
-                "1": copy.deepcopy(data["uav4_boundary_lon_lat"])},
+                str(SOURCE_REGION_UAV_IDS[3]): copy.deepcopy(data["uav4_boundary_lon_lat"])},
             "origin_x_m": minx, "origin_y_m": miny,
             "width_m": maxy - miny, "height_m": maxx - minx,
             "polygon_width_m": outer.bounds[3] - outer.bounds[1],
