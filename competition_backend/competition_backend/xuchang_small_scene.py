@@ -19,7 +19,7 @@ SPEED_MPS = 5.0
 HOVER_SECONDS = 10.0
 CLEARANCE_M = 5.0
 # 六个源子区按首次定义的顺序规划；只交换接收机编号，不交换高度配置。
-SOURCE_REGION_UAV_IDS = (5, 2, 3, 1, 4, 6)
+SOURCE_REGION_UAV_IDS = (6, 2, 3, 1, 4, 5)
 AREA_PATH = Path(__file__).with_name("xuchang_small_area.json")
 PLAN_PATH = Path(__file__).with_name("xuchang_small_prepared.json")
 
