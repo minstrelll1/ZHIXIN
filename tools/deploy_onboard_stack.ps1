@@ -30,7 +30,7 @@ foreach ($Package in @("su17_competition_executor", "su17_image_transfer", "su17
 Write-Host "正在上传统一配置模块。"
 & scp @sshConnectionArgs @sshIdentityArgs -r (Join-Path $ProjectRoot "competition_shared") "${Remote}:$RemoteWorkspace/"
 if ($LASTEXITCODE -ne 0) { throw "上传统一配置模块失败。" }
-foreach ($File in @("start_onboard_stack.sh", "build_onboard.sh", "onboard_preflight.py", "forward_groundstation_pointcloud.py", "local_tokens.env")) {
+foreach ($File in @("start_onboard_stack.sh", "build_onboard.sh", "check_onboard_messages.py", "onboard_preflight.py", "forward_groundstation_pointcloud.py", "local_tokens.env")) {
     $Source = Join-Path $PSScriptRoot $File
     if (Test-Path -LiteralPath $Source) {
         Write-Host "正在上传工具文件：$File"

@@ -113,6 +113,104 @@ class GroundEntryTest(unittest.TestCase):
                 with self.assertRaisesRegex(RuntimeError, '当前配置与本终端不一致'):
                     service.start_media()
 
+    def test_port_failure_identifies_the_tcp_port(self):
+        probe = Mock()
+        probe.bind.side_effect = OSError(10013, "访问被拒绝")
+        with patch('competition_backend.ground_entry.socket.socket') as socket_factory:
+            socket_factory.return_value.__enter__.return_value = probe
+            with self.assertRaisesRegex(RuntimeError, 'TCP 端口 8891'):
+                GroundServices.check_port(8891)
+
+    def test_video_start_retries_transient_failures_in_background(self):
+        service = GroundServices({'uav_id': 5, 'video_webrtc_port': 8891}, {})
+        service.MEDIA_RETRY_DELAYS = (.01, .02)
+        service.audit = Mock()
+        with patch.object(service, 'start_media', side_effect=[
+                RuntimeError('本机 TCP 端口 8554 暂时无法监听'),
+                RuntimeError('本机 TCP 端口 8891 暂时无法监听'), True]) as start:
+            service._start_media_background()
+            service.media_thread.join(timeout=1)
+            self.assertFalse(service.media_thread.is_alive())
+            self.assertEqual(3, start.call_count)
+            service.audit.record.assert_any_call('视频服务已启动', retry_count=2, webrtc_port=8891)
+        service.stop()
+
+    def test_stop_cancels_pending_video_retry_and_prevents_restart(self):
+        service = GroundServices({'uav_id': 5, 'video_webrtc_port': 8891}, {})
+        service.MEDIA_RETRY_DELAYS = (60,)
+        attempted = threading.Event()
+
+        def fail():
+            attempted.set()
+            raise RuntimeError('端口暂不可用')
+
+        with patch.object(service, 'start_media', side_effect=fail) as start:
+            service._start_media_background()
+            self.assertTrue(attempted.wait(1))
+            started = time.monotonic()
+            service.stop()
+            self.assertLess(time.monotonic() - started, 1)
+            self.assertFalse(service.media_thread.is_alive())
+            service._start_media_background()
+            self.assertEqual(1, start.call_count)
+
+    def test_concurrent_video_start_does_not_spawn_duplicate_processes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            media = root / 'media'
+            media.mkdir()
+            (media / 'mediamtx.template.yml').write_text('source: __RTSP_SOURCE__', encoding='utf-8')
+            (media / ('mediamtx.exe' if os.name == 'nt' else 'mediamtx')).touch()
+            service = GroundServices({'uav_id': 5, 'video_rtsp_source': 'rtsp://192.168.1.222:8554/live',
+                                      'video_webrtc_port': 8891}, {'COMPETITION_MEDIAMTX_DIRECTORY': str(media)})
+            process = Mock()
+            process.poll.return_value = None
+            with patch('competition_backend.ground_entry.ROOT', root), \
+                    patch.object(service, '_existing_media_pid', return_value=None), \
+                    patch.object(service, 'check_port'), \
+                    patch('competition_backend.ground_entry.subprocess.Popen', return_value=process) as spawn:
+                first = threading.Thread(target=service.start_media)
+                second = threading.Thread(target=service.start_media)
+                first.start()
+                second.start()
+                first.join(timeout=2)
+                second.join(timeout=2)
+                self.assertFalse(first.is_alive())
+                self.assertFalse(second.is_alive())
+                spawn.assert_called_once()
+                service.stop()
+                process.terminate.assert_called_once()
+
+    def test_stop_during_port_probe_prevents_late_video_spawn(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            media = root / 'media'
+            media.mkdir()
+            (media / 'mediamtx.template.yml').write_text('source: __RTSP_SOURCE__', encoding='utf-8')
+            (media / ('mediamtx.exe' if os.name == 'nt' else 'mediamtx')).touch()
+            service = GroundServices({'uav_id': 5, 'video_rtsp_source': 'rtsp://192.168.1.222:8554/live',
+                                      'video_webrtc_port': 8891}, {'COMPETITION_MEDIAMTX_DIRECTORY': str(media)})
+            probing, release = threading.Event(), threading.Event()
+
+            def probe(port):
+                probing.set()
+                release.wait(2)
+
+            with patch('competition_backend.ground_entry.ROOT', root), \
+                    patch.object(service, '_existing_media_pid', return_value=None), \
+                    patch.object(service, 'check_port', side_effect=probe), \
+                    patch('competition_backend.ground_entry.subprocess.Popen') as spawn:
+                service._start_media_background()
+                self.assertTrue(probing.wait(1))
+                stopping = threading.Thread(target=service.stop)
+                stopping.start()
+                self.assertTrue(service._media_stop.wait(1))
+                release.set()
+                stopping.join(timeout=2)
+                self.assertFalse(stopping.is_alive())
+                self.assertFalse(service.media_thread.is_alive())
+                spawn.assert_not_called()
+
     def test_no_terminal_or_services_before_web_selection_and_cleanup_on_exit(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / 'fleet.json'

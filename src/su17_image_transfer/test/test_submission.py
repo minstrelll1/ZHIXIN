@@ -8,10 +8,52 @@ from concurrent.futures import ThreadPoolExecutor
 import importlib.util
 from unittest.mock import patch
 
-from su17_image_transfer.submission import update_subject1_submission
+from su17_image_transfer.submission import update_subject1_submission, _iso_from_metadata
 
 
 class SubmissionTest(unittest.TestCase):
+    def test_source_timestamp_never_uses_reception_or_substitute_frame_time(self):
+        data = dict(image_stamp=dict(secs=1700000000,nsecs=123456789),
+                    localization_time=dict(secs=1700000003,nsecs=456789123),
+                    selected_image_stamp=dict(secs=1700000099,nsecs=0),
+                    requested_at_unix_ns=1800000000000000000)
+        self.assertEqual("2023-11-14T22:13:20.123Z", _iso_from_metadata(data))
+        self.assertEqual("2023-11-14T22:13:23.456Z", _iso_from_metadata(dict(data,is_moving=True)))
+        data["localization_time"] = dict(secs=0,nsecs=0)
+        self.assertEqual("2023-11-14T22:13:20.123Z", _iso_from_metadata(dict(data,is_moving=True)))
+        for stamp in (dict(secs=0,nsecs=0),dict(secs=1700000000,nsecs=1000000000),
+                      dict(secs=True,nsecs=0),dict(secs=-1,nsecs=0),None):
+            with self.subTest(stamp=stamp):
+                self.assertIsNone(_iso_from_metadata(dict(data,image_stamp=stamp,
+                                  source_stamp_sec=1700000099,source_stamp_nsec=0)))
+        self.assertIsNone(_iso_from_metadata(dict(requested_at_unix_ns=1800000000000000000)))
+        self.assertEqual("2023-11-14T22:13:20.000Z", _iso_from_metadata(
+            dict(source_stamp_sec=1700000000,source_stamp_nsec=0)))
+
+    def test_final_format_keeps_source_audit_and_excludes_missing_source_time(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory); mission = "subject1-format"
+            folder = root/"UAV5"/mission; folder.mkdir(parents=True)
+            for i in range(3):
+                metadata = dict(mission_id=mission,target_id="moving-person" if i<2 else "missing-time",
+                                category_id=18,is_moving=i<2,longitude_deg=113.+i*.0001,
+                                latitude_deg=34.,image_stamp=dict(secs=1700000000+i,nsecs=0) if i<2 else None,
+                                selected_image_stamp=dict(secs=1700000999,nsecs=0),
+                                requested_at_unix_ns=1800000000000000000)
+                (folder/(str(i)+".json")).write_text(json.dumps(metadata),encoding="utf-8")
+            output=update_subject1_submission(root,mission,publisher_dedup=True)
+            document=json.loads(output.read_text(encoding="utf-8")); feature,=document["features"]
+            self.assertEqual("target-001",feature["id"])
+            self.assertEqual("人员4",feature["properties"]["targetModel"])
+            self.assertEqual("移动",feature["properties"]["targetCategory"])
+            self.assertEqual("2023-11-14T22:13:20.000Z",feature["properties"]["trackStartTime"])
+            self.assertNotIn("indoorTargets",document["metadata"])
+            audit=json.loads(output.with_name("submission-format.json").read_text(encoding="utf-8"))
+            self.assertEqual([dict(source_id="moving-person",submission_id="target-001")],audit["id_mapping"])
+            self.assertEqual("missing-time",audit["excluded_targets"][0]["id"])
+            self.assertIn("源时间戳",audit["excluded_targets"][0]["reason"])
+            self.assertEqual(3,len(list(folder.glob("*.json"))))
+
     def test_publisher_receiver_does_not_overwrite_deduplicated_submission(self):
         package_root = Path(__file__).resolve().parents[1]
         spec = importlib.util.spec_from_file_location(
@@ -80,7 +122,7 @@ class SubmissionTest(unittest.TestCase):
             self.assertEqual(sorted((f["properties"]["confidence"] for f in features), reverse=True),
                              [f["properties"]["confidence"] for f in features])
             self.assertEqual(len({f["id"] for f in features}), 5)
-            self.assertEqual("other-id", features[0]["id"])
+            self.assertEqual("target-001", features[0]["id"])
             self.assertEqual(b"image-fixed-high", (path.parent / features[0]["properties"]["imagePath"]).read_bytes())
             self.assertEqual(3, len([f for f in features if f["properties"]["targetCategory"] == "固定"]))
             self.assertEqual(2, len([f for f in features if f["properties"]["targetCategory"] == "移动"]))
@@ -118,7 +160,7 @@ class SubmissionTest(unittest.TestCase):
             from competition_backend.subject1_reporting import validate_document
             self.assertEqual(1, validate_document(document)["target_count"])
             feature = document["features"][0]
-            self.assertEqual("moving-high", feature["id"])
+            self.assertEqual("target-001", feature["id"])
             self.assertEqual(11, len(feature["properties"]["trackPoints"]))
             self.assertEqual("2023-11-14T22:13:23.000Z", feature["properties"]["trackStartTime"])
             longitudes = [point[0] for point in feature["geometry"]["coordinates"]]
@@ -204,7 +246,7 @@ class SubmissionTest(unittest.TestCase):
             self.assertEqual("FeatureCollection", document["type"])
             self.assertEqual("测试队", document["name"])
             self.assertEqual(2, len(document["features"]))
-            moving = next(item for item in document["features"] if item["id"] == "move")
+            moving = next(item for item in document["features"] if item["properties"]["targetCategory"] == "移动")
             self.assertEqual("LineString", moving["geometry"]["type"])
             self.assertEqual(2, len(moving["properties"]["trackPoints"]))
             self.assertTrue(any((target.parent / "images").glob("*.jpg")))
@@ -221,10 +263,13 @@ class SubmissionTest(unittest.TestCase):
             }
             (mission / "lab.json").write_text(json.dumps(metadata), encoding="utf-8")
             (mission / "lab.jpg").write_bytes(b"jpeg")
-            document = json.loads(update_subject1_submission(root, "subject1-indoor").read_text(encoding="utf-8"))
+            output = update_subject1_submission(root, "subject1-indoor")
+            document = json.loads(output.read_text(encoding="utf-8"))
+            excluded = json.loads(output.with_name("submission-format.json").read_text(encoding="utf-8"))["excluded_targets"]
             self.assertEqual([], document["features"])
-            self.assertEqual(1.2, document["metadata"]["indoorTargets"][0]["localPosition"][0]["east_m"])
-            self.assertEqual("室内 XYZ 或无效 WGS84 坐标不能写入 EPSG:4326 几何", document["metadata"]["indoorTargets"][0]["reason"])
+            self.assertNotIn("indoorTargets", document["metadata"])
+            self.assertEqual(1.2, excluded[0]["localPosition"][0]["east_m"])
+            self.assertEqual("室内 XYZ 或无效 WGS84 坐标不能写入 EPSG:4326 几何", excluded[0]["reason"])
 
     def test_static_position_and_timestamp_come_from_same_latest_report(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -263,7 +308,7 @@ class SubmissionTest(unittest.TestCase):
                 (mission / (name + ".jpg")).write_bytes(name.encode())
             result = update_subject1_submission(root, mission_id, publisher_dedup=True)
             feature, = json.loads(result.read_text(encoding="utf-8"))["features"]
-            self.assertEqual("same-static-id", feature["id"])
+            self.assertEqual("target-001", feature["id"])
             self.assertEqual([113.702, 33.86], feature["geometry"]["coordinates"])
             self.assertEqual("2023-11-14T22:13:30.000Z", feature["properties"]["timestamp"])
             self.assertEqual("车辆2", feature["properties"]["targetModel"])
@@ -340,7 +385,7 @@ class SubmissionTest(unittest.TestCase):
             document = json.loads(update_subject1_submission(root, "subject1-correction").read_text(encoding="utf-8"))
             self.assertEqual(1, len(document["features"]))
             feature = document["features"][0]
-            self.assertEqual("one-global-id", feature["id"])
+            self.assertEqual("target-001", feature["id"])
             self.assertEqual("LineString", feature["geometry"]["type"])
             self.assertEqual("移动", feature["properties"]["targetCategory"])
             self.assertEqual("车辆", feature["properties"]["targetType"])

@@ -23,6 +23,83 @@ def sample():
 
 
 class SubmissionReportTest(unittest.TestCase):
+    def test_format_audit_mismatch_does_not_attach_new_source_ids_to_old_result(self):
+        from competition_shared.submission_format import format_submission
+        with tempfile.TemporaryDirectory() as tmp:
+            document,_=format_submission(sample())
+            folder=Path(tmp)/'subject1_submissions'/'subject1-audit';folder.mkdir(parents=True)
+            (folder/'target-submission.json').write_text(json.dumps(document),encoding='utf-8')
+            changed=json.loads(json.dumps(document));changed['features'][0]['properties']['confidence']=.01
+            _,audit=format_submission(changed)
+            audit['id_mapping'][0]['source_id']='WRONG-VERSION'
+            audit['excluded_targets']=[dict(id='WRONG-VERSION')]
+            (folder/'submission-format.json').write_text(json.dumps(audit),encoding='utf-8')
+            reporter=report.Subject1Reporter(tmp,publisher_dedup=True)
+            result=reporter.prepare(document)
+            saved=json.loads((reporter.root/(result['draft_id']+'.format.json')).read_text(encoding='utf-8'))
+            self.assertNotIn('WRONG-VERSION',json.dumps(saved))
+            self.assertEqual(0,result['skipped_count'])
+
+    def test_reimport_frozen_import_does_not_merge_distinct_dedup_groups(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            document=sample(); exemplar=document['features'][0]
+            # A-C < 10m, B-C > 10m: first pass keeps A representing A+B, plus C.
+            # Without local frozen-file recognition, a second pass would merge A+C.
+            document['features']=[]
+            for name,offset,score in (('A',0,.9),('B',-.00007,.8),('C',.00007,.7)):
+                feature=json.loads(json.dumps(exemplar));feature['id']=name
+                feature['geometry']['coordinates']=[113+offset,34]
+                feature['properties']['confidence']=score
+                document['features'].append(feature)
+            reporter=report.Subject1Reporter(tmp)
+            first=reporter.prepare(document)
+            self.assertEqual(2,first['target_count'])
+            frozen=json.loads(reporter.draft(first['draft_id']).read_text(encoding='utf-8'))
+            second=reporter.prepare(frozen)
+            self.assertEqual(2,second['target_count'])
+
+    def test_import_format_keeps_excluded_diagnostics_out_of_wire_file(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            document=sample()
+            for i,feature in enumerate(document['features']):
+                feature['id']='original-'+str(i)
+            moving=next(f for f in document['features'] if f['properties']['targetCategory']=='移动')
+            moving['properties'].update(targetType='人员',targetModel='运动的人员4')
+            excluded=[dict(id='indoor-1',reason='只有本地坐标')]
+            document['metadata']['indoorTargets']=excluded
+            reporter=report.Subject1Reporter(tmp)
+            prepared=reporter.prepare(document)
+            final=json.loads(reporter.draft(prepared['draft_id']).read_text(encoding='utf-8'))
+            self.assertEqual(['target-001','target-002','target-003'], [f['id'] for f in final['features']])
+            newmoving=next(f for f in final['features'] if f['properties']['targetCategory']=='移动')
+            self.assertEqual('人员4',newmoving['properties']['targetModel'])
+            for key in ('trackPoints','trackStartTime','trackEndTime','imagePath'):
+                self.assertEqual(moving['properties'].get(key),newmoving['properties'].get(key))
+            self.assertNotIn('indoorTargets',final['metadata'])
+            self.assertEqual(1,prepared['skipped_count'])
+            audit=json.loads((reporter.root/(prepared['draft_id']+'.format.json')).read_text(encoding='utf-8'))
+            self.assertEqual(excluded,audit['excluded_targets'])
+            self.assertEqual({'original-0','original-1','original-2'}, {entry['source_id'] for entry in audit['id_mapping']})
+            self.assertEqual('运动的人员4',moving['properties']['targetModel'])
+
+    def test_generated_exclusions_survive_prepare_without_entering_official_json(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            folder=Path(tmp)/'UAV5'/'subject1-excluded';folder.mkdir(parents=True)
+            for name,indoor in (('valid',False),('indoor',True)):
+                payload=dict(mission_id='subject1-excluded',target_id=name,indoor_position=indoor,
+                             longitude_deg=113.,latitude_deg=34.,target_type='vehicle1',
+                             image_stamp=dict(secs=1700000000,nsecs=0))
+                (folder/(name+'.json')).write_text(json.dumps(payload),encoding='utf-8')
+            reporter=report.Subject1Reporter(tmp,publisher_dedup=True)
+            built=reporter.build('subject1-excluded',report.TEAM_NAME)
+            prepared=reporter.prepare(built,already_deduplicated=True)
+            self.assertEqual(1,prepared['skipped_count'])
+            final=json.loads(reporter.draft(prepared['draft_id']).read_text(encoding='utf-8'))
+            self.assertNotIn('indoorTargets',final['metadata'])
+            audit=json.loads((reporter.root/(prepared['draft_id']+'.format.json')).read_text(encoding='utf-8'))
+            self.assertEqual('indoor',audit['excluded_targets'][0]['id'])
+            self.assertEqual('valid',audit['id_mapping'][0]['source_id'])
+
     def test_imported_detector_names_are_converted_before_submission(self):
         with tempfile.TemporaryDirectory() as tmp:
             document=sample()
@@ -31,7 +108,7 @@ class SubmissionReportTest(unittest.TestCase):
             reporter=report.Subject1Reporter(tmp)
             prepared=reporter.prepare(document)
             final=json.loads(reporter.draft(prepared['draft_id']).read_text(encoding='utf-8'))
-            converted=next(f['properties'] for f in final['features'] if f['id']==document['features'][0]['id'])
+            converted=next(f['properties'] for f in final['features'] if f['properties']['targetModel']=='人员3')
             self.assertEqual((converted['targetType'],converted['targetModel']),('人员','人员3'))
             self.assertEqual(props['targetType'],'solider3')
 
@@ -51,11 +128,16 @@ class SubmissionReportTest(unittest.TestCase):
                 (directory / (name + '.jpg')).write_bytes(b'jpeg')
             reporter = report.Subject1Reporter(tmp, publisher_dedup=True)
             built = reporter.build(mission_id, report.TEAM_NAME)
-            self.assertEqual(['two', 'one'], [feature['id'] for feature in built['features']])
+            self.assertEqual(['target-001', 'target-002'], [feature['id'] for feature in built['features']])
+            self.assertEqual([.9,.7], [feature['properties']['confidence'] for feature in built['features']])
             frozen = reporter.prepare(built, already_deduplicated=True)
             final = json.loads(reporter.draft(frozen['draft_id']).read_text(encoding='utf-8'))
-            self.assertEqual(['two', 'one'], [feature['id'] for feature in final['features']])
+            self.assertEqual(['target-001', 'target-002'], [feature['id'] for feature in final['features']])
+            mapping=json.loads((reporter.root/(frozen['draft_id']+'.format.json')).read_text(encoding='utf-8'))['id_mapping']
+            self.assertEqual(['two','one'], [entry['source_id'] for entry in mapping])
             self.assertEqual(2, report.validate_document(final)['target_count'])
+            refrozen=reporter.prepare(final)
+            self.assertEqual(2,refrozen['target_count'])
             app = FastAPI()
             app.include_router(report.reporting_router(tmp, Mock(), publisher_dedup=True))
             with TestClient(app) as client:
@@ -63,7 +145,7 @@ class SubmissionReportTest(unittest.TestCase):
                 self.assertEqual(200, response.status_code, response.text)
                 self.assertEqual(2, response.json()['target_count'])
                 downloaded = client.get(response.json()['download_url']).json()
-                self.assertEqual(['two', 'one'], [feature['id'] for feature in downloaded['features']])
+                self.assertEqual(['target-001', 'target-002'], [feature['id'] for feature in downloaded['features']])
                 # 仅重新生成时间不同，不能把已经去重的本机成果再次空间合并。
                 built['metadata']['createdAt'] = '2020-01-01T00:00:00Z'
                 imported = client.post('/api/v1/subject1/report/prepare', json={'document': built})
@@ -86,8 +168,11 @@ class SubmissionReportTest(unittest.TestCase):
             prepared = reporter.prepare(document)
             self.assertEqual(16, prepared['target_count'])
             final = json.loads(reporter.draft(prepared['draft_id']).read_text(encoding='utf-8'))
-            self.assertEqual(['target-17', 'target-16'], [item['id'] for item in final['features'][:2]])
-            self.assertEqual('target-02', final['features'][-1]['id'])
+            self.assertEqual(['target-001', 'target-002'], [item['id'] for item in final['features'][:2]])
+            self.assertEqual('target-016', final['features'][-1]['id'])
+            mapping=json.loads((reporter.root/(prepared['draft_id']+'.format.json')).read_text(encoding='utf-8'))['id_mapping']
+            self.assertEqual(['target-%02d'%i for i in range(17,1,-1)], [entry['source_id'] for entry in mapping])
+            self.assertEqual([i/20 for i in range(17,1,-1)], [f['properties']['confidence'] for f in final['features']])
             self.assertEqual(2, len(json.loads((reporter.root / (prepared['draft_id'] + '.dedup.json'))
                                          .read_text(encoding='utf-8'))['omitted']))
             self.assertEqual(16, report.validate_document(final)['target_count'])

@@ -128,7 +128,11 @@ class GroundImageReceiver:
                     result = update_subject1_submission(self.output, mission_id)
                 summary = json.loads(result.read_text(encoding="utf-8"))
                 feature_count = len(summary.get("features", []))
-                skipped_count = len(summary.get("metadata", {}).get("indoorTargets", []))
+                format_path = result.parent / "submission-format.json"
+                format_audit = (json.loads(format_path.read_text(encoding="utf-8"))
+                                if format_path.is_file() else {})
+                skipped_count = len(format_audit.get("excluded_targets",
+                                    summary.get("metadata", {}).get("indoorTargets", [])))
                 decisions = (json.loads((result.parent / "dedup-decisions.json").read_text(encoding="utf-8"))
                              if self.publisher_dedup else {})
                 self._diagnostic(

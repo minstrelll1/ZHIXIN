@@ -24,17 +24,25 @@ WEB = Path(__file__).parent / "web"
 
 class GroundServices:
     """只管理本次启动的图片接收器和 MediaMTX。"""
+    MEDIA_RETRY_DELAYS = (1, 2, 5, 10, 30)
+
     def __init__(self, local, environment):
         self.local, self.env = local, environment
         self.receiver = None
         self.thread = None
         self.process = None
         self.log = None
+        self.media_thread = None
+        self._media_stop = threading.Event()
+        self._media_lock = threading.Lock()
 
     @staticmethod
     def check_port(port):
-        with socket.socket() as probe:
-            probe.bind(("0.0.0.0", port))
+        try:
+            with socket.socket() as probe:
+                probe.bind(("0.0.0.0", port))
+        except OSError as error:
+            raise RuntimeError("本机 TCP 端口 %s 暂时无法监听：%s" % (port, error)) from error
 
     @staticmethod
     def _existing_media_pid(rtsp_port, webrtc_port):
@@ -104,15 +112,52 @@ class GroundServices:
         if errors or self.receiver.server is None:
             raise RuntimeError("图片接收器启动失败：" + str(errors[0] if errors else "监听超时"))
         if self.local["video_rtsp_source"]:
+            self._start_media_background()
+
+    def _start_media_background(self):
+        # 视频单独启动、重试，不拖住图片接收、遥测或任务服务。
+        with self._media_lock:
+            if self._media_stop.is_set() or (self.media_thread and self.media_thread.is_alive()):
+                return
+            self.media_thread = threading.Thread(
+                target=self._start_media_until_ready, name="ground-video-start", daemon=True)
+            self.media_thread.start()
+
+    def _start_media_until_ready(self):
+        attempt = 0
+        while not self._media_stop.is_set():
             try:
-                self.start_media()
-            except Exception as error:
-                # 视频转发异常不应阻止任务、遥测和图片回传服务上线。
+                if not self.start_media() or self._media_stop.is_set():
+                    return
                 if getattr(self, "audit", None):
-                    self.audit.record("视频服务启动失败", error=str(error))
-                print("视频转发未启动：%s；其他地面服务继续运行。" % error, flush=True)
+                    self.audit.record("视频服务已启动", retry_count=attempt,
+                                      webrtc_port=self.local["video_webrtc_port"])
+                print("视频转发服务已就绪：UAV%s，网页端口 %s。" %
+                      (self.local["uav_id"], self.local["video_webrtc_port"]), flush=True)
+                return
+            except Exception as error:
+                if self._media_stop.is_set():
+                    return
+                delay = self.MEDIA_RETRY_DELAYS[min(attempt, len(self.MEDIA_RETRY_DELAYS) - 1)]
+                attempt += 1
+                if getattr(self, "audit", None):
+                    self.audit.record("视频服务启动失败，将自动重试", error=str(error),
+                                      attempt=attempt, retry_after_seconds=delay)
+                print("视频转发未启动：%s；%s 秒后自动重试，其他地面服务继续运行。" %
+                      (error, delay), flush=True)
+                # Event.wait 可被停止请求立即打断，避免退出后再次拉起视频服务。
+                if self._media_stop.wait(delay):
+                    return
 
     def start_media(self):
+        with self._media_lock:
+            if self._media_stop.is_set():
+                return False
+            if self.process and self.process.poll() is None:
+                return True
+            return self._start_media_locked()
+
+    def _start_media_locked(self):
         media = Path(self.env.get("COMPETITION_MEDIAMTX_DIRECTORY", str(ROOT / "third_party/mediamtx")))
         executable = media / ("mediamtx.exe" if os.name == "nt" else "mediamtx")
         if not executable.exists():
@@ -130,12 +175,16 @@ class GroundServices:
             if not existing_matches:
                 raise RuntimeError("视频端口已被进程 %s 占用，且当前配置与本终端不一致；请先关闭旧视频服务" % existing_pid)
             print("复用已运行的 MediaMTX（PID %s），不重复启动视频服务。" % existing_pid, flush=True)
-            return
+            return True
         self.check_port(8554)
         self.check_port(self.local["video_webrtc_port"])
         target.write_text(desired, encoding="utf-8")
         logs = ROOT / "ground_logs"
         logs.mkdir(parents=True, exist_ok=True)
+        if self._media_stop.is_set():
+            return False
+        if self.log:
+            self.log.close()
         self.log = (logs / "mediamtx.log").open("ab")
         self.process = subprocess.Popen([str(executable), str(target)], cwd=str(media),
                                         stdout=self.log, stderr=self.log,
@@ -143,21 +192,27 @@ class GroundServices:
         time.sleep(.2)
         if self.process.poll() is not None:
             raise RuntimeError("MediaMTX 启动失败，请查看 ground_logs/mediamtx.log")
+        return True
 
     def stop(self):
+        self._media_stop.set()
+        if self.media_thread and self.media_thread is not threading.current_thread():
+            self.media_thread.join(timeout=4)
         if self.receiver:
             self.receiver.stop()
         if self.thread:
             self.thread.join(timeout=2)
-        if self.process and self.process.poll() is None:
-            self.process.terminate()
-            try:
-                self.process.wait(timeout=3)
-            except subprocess.TimeoutExpired:
-                self.process.kill()
-                self.process.wait(timeout=2)
-        if self.log:
-            self.log.close()
+        with self._media_lock:
+            if self.process and self.process.poll() is None:
+                self.process.terminate()
+                try:
+                    self.process.wait(timeout=3)
+                except subprocess.TimeoutExpired:
+                    self.process.kill()
+                    self.process.wait(timeout=2)
+            if self.log:
+                self.log.close()
+
 
 
 class GroundEntry:

@@ -33,7 +33,9 @@ class ResultQualityTest(unittest.TestCase):
             add(4,'e','separate',False,300,.3,113.001,2)
             p=update_subject1_submission(root,mission,publisher_dedup=True)
             d=json.loads(p.read_text(encoding='utf-8'));f=d['features']
-            self.assertEqual([v['id'] for v in f],['more-observations','separate'])
+            self.assertEqual([v['id'] for v in f],['target-001','target-002'])
+            mapping=json.loads(p.with_name('submission-format.json').read_text(encoding='utf-8'))['id_mapping']
+            self.assertEqual([v['source_id'] for v in mapping],['more-observations','separate'])
             self.assertEqual(f[1]['properties']['confidence'],.3)
             self.assertEqual(f[0]['properties']['targetType'],'人员')
             self.assertEqual(f[0]['properties']['targetModel'],'人员3')

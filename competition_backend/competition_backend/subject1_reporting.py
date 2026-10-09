@@ -19,6 +19,7 @@ from fastapi import APIRouter, Body, HTTPException, Request
 from fastapi.responses import FileResponse
 from competition_shared.subject1_dedup import consolidate
 from competition_shared.target_quality import category_fields
+from competition_shared.submission_format import format_submission, submission_content_hash
 
 ENDPOINT = 'http://192.168.1.199:8001/api/v1/public/recognition-results'
 TEAM_NAME = '北方自控智群队'
@@ -154,28 +155,31 @@ class Subject1Reporter:
                                               for f in document.get('features', [])))
         return document
 
-    def _is_local_consolidated_result(self, document):
+    def _local_result_path(self, document):
         # 操作员可能把本机生成的 target-submission.json 再从文件导入。
         # 它已按 UAV 来源去重，不能在缺少来源字段的副本上再次合并。
-        if not self.publisher_dedup:
-            return False
         def content(value):
             value = copy.deepcopy(value)
             if isinstance(value.get('metadata'), dict):
                 value['metadata'].pop('createdAt', None)
             return value
-        for path in self.image_root.glob('subject1_submissions/*/target-submission.json'):
+        paths = list(self.image_root.glob('subject1_submissions/*/target-submission.json'))
+        paths.extend(path for path in self.root.glob('*.json')
+                     if re.fullmatch('[a-f0-9]{64}\.json', path.name))
+        for path in paths:
             try:
                 if content(json.loads(path.read_text(encoding='utf-8'))) == content(document):
-                    return True
+                    return path
             except (OSError, ValueError):
                 continue
-        return False
+        return None
 
     def prepare(self, document, *, already_deduplicated=False):
         # 本机生成的结果已经按 UAV 来源去重；再次去重会误合并同机近邻目标。
         # 人工导入的原始赛事 JSON 则在此完成去重和置信度排序。
-        already_deduplicated = already_deduplicated or self._is_local_consolidated_result(document)
+        local_path = self._local_result_path(document)
+        already_deduplicated = already_deduplicated or (local_path is not None and
+                               (self.publisher_dedup or local_path.parent == self.root))
         validate_document(document, allow_excess=not already_deduplicated)
         original = copy.deepcopy(document)
         document = copy.deepcopy(original)
@@ -188,6 +192,22 @@ class Subject1Reporter:
                          'result_count': len(document['features']), 'merged': [], 'omitted': []}
         else:
             document, decisions = consolidate(document)
+        document, format_audit = format_submission(document)
+        if local_path is not None:
+            try:
+                audit_path = (local_path.with_suffix('.format.json') if local_path.parent == self.root
+                              else local_path.with_name('submission-format.json'))
+                local_audit = json.loads(audit_path.read_text(encoding='utf-8'))
+                if local_audit.get('document_sha256') != submission_content_hash(original):
+                    raise ValueError('审计文件与本次成果版本不一致')
+                # 本机成果再次冻结时，保留原始目标 ID 的映射及未纳入原因。
+                if (local_audit.get('id_mapping') and
+                        [entry['submission_id'] for entry in local_audit['id_mapping']] ==
+                        [entry['source_id'] for entry in format_audit['id_mapping']]):
+                    format_audit['id_mapping'] = local_audit['id_mapping']
+                format_audit['excluded_targets'] = local_audit.get('excluded_targets', format_audit['excluded_targets'])
+            except (OSError, ValueError, TypeError, KeyError):
+                pass
         summary = validate_document(document)
         try:
             raw = (json.dumps(document, ensure_ascii=False, indent=2, allow_nan=False) + '\n').encode('utf-8')
@@ -209,14 +229,16 @@ class Subject1Reporter:
                     temporary.replace(path)
                 finally:
                     temporary.unlink(missing_ok=True)
-            if decisions['merged'] or decisions['omitted']:
+            _write_intermediate(self.root / (digest + '.format.json'), format_audit)
+            if decisions['merged'] or decisions['omitted'] or original != document:
                 _write_intermediate(self.root / (digest + '.dedup.json'), decisions)
                 _write_intermediate(self.root / (digest + '.raw.json'), original)
         if self.audit:
             self.audit.record('赛事结果文件已整理', draft_id=digest, file=str(path),
-                              merged_count=len(decisions['merged']), omitted_count=len(decisions['omitted']), **summary)
-        metadata = document.get('metadata')
-        skipped = metadata.get('indoorTargets', []) if isinstance(metadata, dict) else []
+                              merged_count=len(decisions['merged']), omitted_count=len(decisions['omitted']),
+                              skipped_count=len(format_audit['excluded_targets']),
+                              format_audit_file=str(self.root / (digest + '.format.json')), **summary)
+        skipped = format_audit['excluded_targets']
         return dict(draft_id=digest, team_name=document['name'], filename='target-submission.json',
                     download_url='/api/v1/subject1/report/files/' + digest, endpoint=ENDPOINT,
                     skipped_count=len(skipped) if isinstance(skipped, list) else 0,

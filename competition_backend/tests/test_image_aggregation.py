@@ -225,7 +225,7 @@ class ImageAggregationTest(unittest.TestCase):
                 while time.monotonic() < deadline:
                     if output.exists():
                         ids = {item["id"] for item in json.loads(output.read_text(encoding="utf-8"))["features"]}
-                        if ids == {"target-2", "target-earlier"}:
+                        if ids == {"target-001", "target-002"}:
                             break
                     time.sleep(0.05)
                 self.assertTrue(output.exists(), collector.status())
@@ -235,8 +235,10 @@ class ImageAggregationTest(unittest.TestCase):
                 self.assertFalse((local_root / "UAV2/subject2-new").exists())
                 self.assertEqual([], list((local_root / "UAV2/subject1-live").glob("*.part-*")))
                 document = json.loads(output.read_text(encoding="utf-8"))
-                self.assertEqual({"target-2", "target-earlier"},
+                self.assertEqual({"target-001", "target-002"},
                                  {item["id"] for item in document["features"]})
+                format_audit=json.loads(output.with_name("submission-format.json").read_text(encoding="utf-8"))
+                self.assertEqual({"target-2","target-earlier"}, {entry["source_id"] for entry in format_audit["id_mapping"]})
                 self.assertTrue((output.parent / "images").exists())
                 status = collector.status()
                 self.assertTrue(status["active"])
@@ -250,10 +252,10 @@ class ImageAggregationTest(unittest.TestCase):
                 deadline = time.monotonic() + 5
                 while time.monotonic() < deadline:
                     document = json.loads(output.read_text(encoding="utf-8"))
-                    if {item["id"] for item in document["features"]} == {"target-2", "target-3", "target-earlier"}:
+                    if {item["id"] for item in document["features"]} == {"target-001", "target-002", "target-003"}:
                         break
                     time.sleep(0.05)
-                self.assertEqual({"target-2", "target-3", "target-earlier"},
+                self.assertEqual({"target-001", "target-002", "target-003"},
                                  {item["id"] for item in document["features"]})
                 self.assertEqual(6, collector.status()["downloaded_count"])
                 from competition_backend.subject1_reporting import Subject1Reporter, TEAM_NAME
@@ -320,7 +322,9 @@ class ImageAggregationTest(unittest.TestCase):
                 self.assertFalse((local_root / "UAV2/subject1-json-priority/target.jpg").exists())
                 result = collector._rebuild_subject1("subject1-json-priority")
                 document = json.loads(result.read_text(encoding="utf-8"))
-                self.assertEqual(["fixed-2"], [item["id"] for item in document["features"]])
+                self.assertEqual(["target-001"], [item["id"] for item in document["features"]])
+                format_audit=json.loads(result.with_name("submission-format.json").read_text(encoding="utf-8"))
+                self.assertEqual("fixed-2",format_audit["id_mapping"][0]["source_id"])
             finally:
                 server.shutdown()
                 server.server_close()
@@ -387,7 +391,9 @@ class ImageAggregationTest(unittest.TestCase):
                 result = collector._rebuild_subject1("subject1-multi-ground")
                 document = json.loads(result.read_text(encoding="utf-8"))
                 feature, = document["features"]
-                self.assertEqual("moving-3", feature["id"])
+                self.assertEqual("target-001", feature["id"])
+                format_audit=json.loads(result.with_name("submission-format.json").read_text(encoding="utf-8"))
+                self.assertEqual("moving-3",format_audit["id_mapping"][0]["source_id"])
                 self.assertEqual(40, len(feature["properties"]["trackPoints"]))
                 from competition_backend.subject1_reporting import Subject1Reporter, TEAM_NAME
                 reporter = Subject1Reporter(publisher, publisher_dedup=True)

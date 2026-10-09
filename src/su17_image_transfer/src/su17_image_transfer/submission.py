@@ -13,6 +13,7 @@ import shutil
 import tempfile
 from contextlib import contextmanager
 from competition_shared.target_quality import category_fields, quality_metadata, quality_rank
+from competition_shared.submission_format import format_submission
 
 
 _SAFE_MISSION_ID = re.compile(r"[A-Za-z0-9_.-]{1,120}\Z")
@@ -58,25 +59,32 @@ def _confidence(metadata):
 
 
 def _iso_from_metadata(metadata):
-    stamp = (metadata.get("localization_time") if metadata.get("is_moving") else None) or metadata.get("image_stamp") or {}
-    if isinstance(stamp, dict) and stamp.get("secs") == 0 and stamp.get("nsecs", 0) == 0:
-        stamp = metadata.get("image_stamp") or {}
-    try:
-        seconds = int(stamp["secs"])
-        nanoseconds = int(stamp["nsecs"])
-        instant = datetime.datetime.fromtimestamp(
-            seconds + nanoseconds / 1_000_000_000, datetime.timezone.utc
-        )
-        return instant.isoformat(timespec="milliseconds").replace("+00:00", "Z")
-    except (KeyError, TypeError, ValueError, OSError, OverflowError):
-        value = metadata.get("requested_at_unix_ns")
+    # 目标时间不能用接收/上传时间代替；替代图片也不能改写目标时间。
+    stamps = []
+    if metadata.get("is_moving"):
+        stamps.append(metadata.get("localization_time"))
+    stamps.extend((metadata.get("target_timestamp"), metadata.get("image_stamp")))
+    detection_fields = ("image_stamp", "target_timestamp", "localization_time",
+                        "detection_received_at_unix_ns", "selected_image_stamp", "requested_image_stamp")
+    if not any(key in metadata for key in detection_fields):
+        # 兼容旧 paired_topics/capture_request 保存的原始相机时间。
+        stamps.append(dict(secs=metadata.get("source_stamp_sec"),
+                           nsecs=metadata.get("source_stamp_nsec")))
+    for stamp in stamps:
+        if not isinstance(stamp, dict):
+            continue
+        seconds, nanoseconds = stamp.get("secs"), stamp.get("nsecs")
+        if (type(seconds) is not int or type(nanoseconds) is not int
+                or seconds < 0 or not 0 <= nanoseconds < 1_000_000_000
+                or (seconds == 0 and nanoseconds == 0)):
+            continue
         try:
-            instant = datetime.datetime.fromtimestamp(
-                int(value) / 1_000_000_000, datetime.timezone.utc
-            )
+            instant = (datetime.datetime.fromtimestamp(seconds, datetime.timezone.utc)
+                       + datetime.timedelta(microseconds=nanoseconds // 1000))
             return instant.isoformat(timespec="milliseconds").replace("+00:00", "Z")
-        except (TypeError, ValueError, OSError, OverflowError):
-            return None
+        except (ValueError, OSError, OverflowError):
+            continue
+    return None
 
 
 def _target_id(metadata):
@@ -290,7 +298,9 @@ def _update_subject1_submission_locked(output_root, mission_dir, mission_id, tea
             position = _position(metadata)
             timestamp = _iso_from_metadata(metadata)
             if not position or not timestamp:
-                skipped_indoor.append({"id": target_id, "reason": "室内 XYZ 或无效 WGS84 坐标不能写入 EPSG:4326 几何",
+                reason = ("缺少有效目标源时间戳，不能以接收时间代替发现时间" if not timestamp else
+                          "室内 XYZ 或无效 WGS84 坐标不能写入 EPSG:4326 几何")
+                skipped_indoor.append({"id": target_id, "reason": reason,
                                        "localPosition": item.get("local_positions", [])})
                 continue
             # 静目标的坐标、时间、类别、置信度及图片均来自同一条最后反馈。
@@ -324,6 +334,9 @@ def _update_subject1_submission_locked(output_root, mission_dir, mission_id, tea
         _atomic_json(mission_dir / "raw-targets.json", document)
         document, decisions = consolidate(document)
         _atomic_json(mission_dir / "dedup-decisions.json", decisions)
+    # 编号只作用于最终赛事文件；原始回传和去重记录继续保留源 ID。
+    document, format_audit = format_submission(document)
+    _atomic_json(mission_dir / "submission-format.json", format_audit)
     target = mission_dir / "target-submission.json"
     _atomic_json(target, document)
     return target
