@@ -13,7 +13,10 @@ from shapely.ops import unary_union
 from competition_backend import polygon_coverage as coverage
 from competition_backend.orchestrator import _altitude_profile_for
 from competition_backend.transit_routes import CACHE, attach_routes, clearance_region, rebase_gps_routes_for_takeoff, scene_plan
-from competition_backend.xuchang_small_scene import AREA_PATH, load_xuchang_small_plan
+from competition_backend.xuchang_small_scene import (
+    AREA_PATH, PARTITION_REFERENCE_PATH, EAST_TRANSFER_REFERENCE_PATH,
+    _partition_reference, _regions, load_xuchang_small_plan, prepare_xuchang_small_plan,
+)
 
 
 class XuchangSmallSceneTest(unittest.TestCase):
@@ -55,68 +58,87 @@ class XuchangSmallSceneTest(unittest.TestCase):
         self.assertLess(self.flyable.difference(unary_union(disks)).area, 1e-5)
 
 
-    def test_uav1_matches_requested_boundary_and_other_uavs_fill_remainder(self):
-        points_lat_lon = [
-            [34.13835116989908, 113.90969315353426],
-            [34.13835116989908, 113.90860191266768],
-            [34.1390373699571, 113.90861993970964],
-            [34.139028715001785, 113.90968131590746],
-        ]
-        self.assertEqual(self.area["fixed_subregions_lon_lat"]["1"],
-                         [[lon, lat] for lat, lon in points_lat_lon])
-        projection = self.area["coverage"]["projection"]
-        requested = Polygon([[(lat - projection["latitude"]) * projection["north_m_per_degree"],
-                              -(lon - projection["longitude"]) * projection["west_m_per_degree"]]
-                             for lat, lon in points_lat_lon])
+    def test_reference_limits_compact_subregions_and_complete_remainder(self):
+        reference = json.loads(PARTITION_REFERENCE_PATH.read_text(encoding="utf-8"))
+        previous = {uid: Polygon(points) for uid, points in reference["regions_m"].items()}
         regions = {uid: Polygon(item["task"]["polygon_m"])
                    for uid, item in self.plan["planned_uavs"].items()}
-        self.assertLess(regions["1"].symmetric_difference(requested).area, 1e-8)
-        self.assertLess(requested.difference(self.flyable).area, 1e-8)
+        self.assertLess(regions["2"].symmetric_difference(previous["1"]).area, 1e-5)
+        self.assertGreaterEqual(regions["1"].bounds[1], previous["1"].bounds[1] - 1e-7)
+        # UAV1主体沿用旧UAV3所在区；因边界浮点求交允许微小误差。
+        self.assertLess(regions["1"].difference(previous["3"]).area, 1e-5)
+        self.assertAlmostEqual(regions["5"].bounds[2], previous["5"].bounds[2] - 30.0, places=7)
+        self.assertGreaterEqual(regions["5"].bounds[0], previous["1"].bounds[0] - 1e-7)
+        self.assertGreaterEqual(regions["4"].bounds[0], regions["6"].bounds[2] - 1e-7)
+        self.assertEqual(len(regions["5"].exterior.coords), 5)  # 不再保留南界的细长尾巴。
         for uid, region in regions.items():
+            self.assertEqual(region.geom_type, "Polygon")
+            self.assertEqual(len(region.interiors), 0)
+            shape = coverage.shape_metrics(region)
+            self.assertLessEqual(shape["aspect_ratio"], 3.0)
+            self.assertGreaterEqual(shape["short_side_m"], 70.0)
+            if uid in ("4", "6"):
+                self.assertGreaterEqual(shape["rectangle_fill_ratio"], .65 if uid == "4" else .85)
             for other_uid, other in regions.items():
                 if uid != other_uid:
-                    self.assertLess(region.intersection(other).area, 1e-8)
-        remainder = unary_union([region for uid, region in regions.items() if uid != "1"])
-        self.assertLess(remainder.symmetric_difference(self.flyable.difference(requested)).area, 1e-5)
-        for point in self.plan["planned_uavs"]["1"]["task"]["waypoints_m"]:
-            # 分割线上的航点允许浮点几何误差；外边界和扣除区的 5 米间距另行严格校验。
-            self.assertLessEqual(requested.distance(Point(point)), 1e-7)
+                    self.assertLess(region.intersection(other).area, 1e-5)
+        self.assertLess(unary_union(list(regions.values())).symmetric_difference(self.flyable).area, 1e-5)
 
-
-    def test_uav6_is_requested_area_minus_new_exclusion_and_original_rectangle_is_removed(self):
-        exclusion = [
+    def test_reference_is_stable_and_exclusion_unchanged(self):
+        reference, saved = _partition_reference(self.area["points_m"], self.area["excluded_polygons_m"][0])
+        self.assertEqual(saved["excluded_polygons_m"], self.area["excluded_polygons_m"])
+        self.assertEqual(saved["boundary_m"], self.area["points_m"])
+        self.assertEqual(self.area["excluded_points"], [
             [34.139176470619766, 113.90981948390986],
             [34.13911894613526, 113.91127900740348],
             [34.13854369913638, 113.9112600525529],
             [34.13852278098991, 113.91014171636951],
             [34.13789000461156, 113.91004694211667],
-            [34.13776449468414, 113.90978789249225],
-        ]
-        requested = [
-            [34.13860949591008, 113.909810980447],
-            [34.13726810338073, 113.90976575305758],
-            [34.13723690795226, 113.91152208334715],
-            [34.13860325692433, 113.91171806870135],
-        ]
-        projection = self.area["coverage"]["projection"]
-        def project(point):
-            lat, lon = point
-            return [(lat - projection["latitude"]) * projection["north_m_per_degree"],
-                    -(lon - projection["longitude"]) * projection["west_m_per_degree"]]
-        self.assertEqual(self.area["excluded_points"], exclusion)
-        self.assertEqual(self.area["requested_subregions_lon_lat"]["6"], [[lon, lat] for lat, lon in requested])
-        region = Polygon(self.plan["planned_uavs"]["6"]["task"]["polygon_m"])
-        uav1 = Polygon(self.plan["planned_uavs"]["1"]["task"]["polygon_m"])
-        raw = Polygon([project(point) for point in requested])
-        expected = raw.intersection(self.flyable).difference(uav1)
-        self.assertTrue(region.is_valid)
-        self.assertLess(region.symmetric_difference(expected).area, 1e-8)
-        self.assertLess(region.intersection(self.hole).area, 1e-8)
-        self.assertGreater(raw.intersection(self.hole).area, 3000)
-        self.assertTrue(self.flyable.contains(Point(project([34.1376, 113.9117]))))
-        others = [Polygon(item["task"]["polygon_m"]) for uid, item in self.plan["planned_uavs"].items()
-                  if uid not in ("1", "6")]
-        self.assertLess(unary_union(others).symmetric_difference(self.flyable.difference(region.union(uav1))).area, 1e-5)
+            [34.13776449468414, 113.90978789249225]])
+        cuts = self.area["coverage"]["partition_cuts_m"]
+        base = json.loads(EAST_TRANSFER_REFERENCE_PATH.read_text(encoding="utf-8"))["base_plan"]
+        expected = [Polygon(base["planned_uavs"][str(uid)]["task"]["polygon_m"]) for uid in range(1, 7)]
+        for _ in range(2):
+            actual = _regions(self.flyable, reference, cuts["north_cap_m"], cuts["west_limit_m"], cuts["west_split_m"])
+            self.assertTrue(all(a.equals_exact(b, 1e-8) for a, b in zip(actual, expected)))
+        bad = [list(point) for point in self.area["points_m"]]
+        bad[0][0] += 1
+        with self.assertRaisesRegex(ValueError, "参考与外边界或禁飞区不一致"):
+            _partition_reference(bad, self.area["excluded_polygons_m"][0])
+
+    def test_eastern_six_transfer_keeps_other_four_tasks_and_uav4_ten_points(self):
+        reference = json.loads(EAST_TRANSFER_REFERENCE_PATH.read_text(encoding="utf-8"))
+        base = reference["base_plan"]
+        for uid in ("1", "2", "5", "6"):
+            actual, old = self.plan["planned_uavs"][uid]["task"], base["planned_uavs"][uid]["task"]
+            self.assertEqual(actual["polygon_m"], old["polygon_m"])
+            self.assertEqual(actual["waypoints_m"], list(reversed(old["waypoints_m"])) if uid == "1" else old["waypoints_m"])
+        old4 = base["planned_uavs"]["4"]["task"]
+        new4 = self.plan["planned_uavs"]["4"]["task"]
+        new3 = self.plan["planned_uavs"]["3"]["task"]
+        self.assertEqual(reference["transferred_waypoint_indices_1based"], [5, 6, 7, 8, 9, 10])
+        self.assertEqual(new4["waypoints_m"], list(reversed(old4["waypoints_m"][:4] + old4["waypoints_m"][10:])))
+        self.assertEqual(new4["scan_count"], 10)
+        self.assertLess(new4["mission_time_s"], old4["mission_time_s"])
+        self.assertLess(new4["route_distance_m"], old4["route_distance_m"])
+        self.assertEqual(new3["scan_count"], 36)
+        self.assertEqual(new3["coverage_added_scan_count"], 1)
+        for point in old4["waypoints_m"][4:10]:
+            self.assertIn(point, new3["waypoints_m"])
+        transfer = Polygon(old4["polygon_m"]).difference(Polygon(new4["polygon_m"]))
+        expected3 = Polygon(base["planned_uavs"]["3"]["task"]["polygon_m"]).union(transfer)
+        self.assertLess(Polygon(new3["polygon_m"]).symmetric_difference(expected3).area, 1e-5)
+        self.assertAlmostEqual(transfer.area, 15240.040305620947, places=5)
+        self.assertFalse(self.area["coverage"]["eastern_transfer"]["uav4_kept_original_order"])
+        self.assertTrue(self.area["coverage"]["eastern_transfer"]["uav4_kept_original_waypoint_coordinates"])
+
+    def test_east_transfer_regeneration_never_reruns_global_partition(self):
+        with patch("competition_backend.xuchang_small_scene._prepare_partition_plan",
+                   side_effect=AssertionError("局部转区不能重新优化其余四机")):
+            for _ in range(2):
+                rebuilt = prepare_xuchang_small_plan()
+                self.assertEqual(rebuilt["planned_uavs"], self.plan["planned_uavs"])
+                self.assertEqual(rebuilt["search_area"], self.plan["search_area"])
 
     def test_all_altitudes_dispatch_same_new_geometry_and_own_landing_routes(self):
         from competition_backend.adapter import RecordingAdapter

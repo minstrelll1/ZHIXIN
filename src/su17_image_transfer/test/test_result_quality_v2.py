@@ -23,7 +23,7 @@ class ResultQualityTest(unittest.TestCase):
                 p=root/('UAV%d'%uid)/mission;p.mkdir(parents=True,exist_ok=True)
                 data=dict(mission_id=mission,target_id=target,category_id=13,target_type='solider3',
                           tracking_success=success,detection_count=count,confidence=score,is_moving=False,
-                          target_latitude=34.,target_longitude=lon,image_stamp=dict(secs=1700000000,nsecs=0),
+                          target_latitude=34.,target_longitude=lon,localization_time=dict(secs=1700000000,nsecs=0),
                           sequence=sequence,requested_at_unix_ns=1700000000000000000+sequence)
                 (p/(name+'.json')).write_text(json.dumps(data),encoding='utf-8')
             add(1,'a','unsuccessful',False,999,.99,113.0)
@@ -50,13 +50,13 @@ class ResultQualityTest(unittest.TestCase):
             for i in range(42):
                 d=dict(mission_id=mission,target_id='car',target_type='vehicle7',category_id=6,
                        is_moving=True,tracking_success=i>=39,detection_count=i+1,confidence=.4,
-                       target_latitude=34.,target_longitude=113.+i*.00001,
+                       target_latitude=34.,target_longitude=113.+i*.00005,
                        image_stamp=dict(secs=1700000000,nsecs=0),
                        localization_time=dict(secs=1700000000+i*3,nsecs=0),sequence=i+1)
                 (p/('%03d.json'%i)).write_text(json.dumps(d),encoding='utf-8')
             output=update_subject1_submission(root,mission,publisher_dedup=True)
             d=json.loads(output.read_text(encoding='utf-8'));f=d['features'][0]
             self.assertEqual(len(f['properties']['trackPoints']),40)
-            self.assertEqual(f['geometry']['coordinates'][-1][0],113.+39*.00001)
+            self.assertEqual(f['geometry']['coordinates'][-1][0],113.+39*.00005)
             audit=json.loads((output.parent/'dedup-decisions.json').read_text(encoding='utf-8'))
             self.assertTrue(audit['quality_ranking'][0]['tracking_success'])

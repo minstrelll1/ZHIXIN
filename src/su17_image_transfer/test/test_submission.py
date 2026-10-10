@@ -12,23 +12,26 @@ from su17_image_transfer.submission import update_subject1_submission, _iso_from
 
 
 class SubmissionTest(unittest.TestCase):
-    def test_source_timestamp_never_uses_reception_or_substitute_frame_time(self):
+    def test_localization_time_for_both_static_and_moving_in_beijing(self):
+        import datetime
         data = dict(image_stamp=dict(secs=1700000000,nsecs=123456789),
+                    target_timestamp=dict(secs=1700000001,nsecs=0),
                     localization_time=dict(secs=1700000003,nsecs=456789123),
                     selected_image_stamp=dict(secs=1700000099,nsecs=0),
-                    requested_at_unix_ns=1800000000000000000)
-        self.assertEqual("2023-11-14T22:13:20.123Z", _iso_from_metadata(data))
-        self.assertEqual("2023-11-14T22:13:23.456Z", _iso_from_metadata(dict(data,is_moving=True)))
-        data["localization_time"] = dict(secs=0,nsecs=0)
-        self.assertEqual("2023-11-14T22:13:20.123Z", _iso_from_metadata(dict(data,is_moving=True)))
-        for stamp in (dict(secs=0,nsecs=0),dict(secs=1700000000,nsecs=1000000000),
-                      dict(secs=True,nsecs=0),dict(secs=-1,nsecs=0),None):
-            with self.subTest(stamp=stamp):
-                self.assertIsNone(_iso_from_metadata(dict(data,image_stamp=stamp,
-                                  source_stamp_sec=1700000099,source_stamp_nsec=0)))
-        self.assertIsNone(_iso_from_metadata(dict(requested_at_unix_ns=1800000000000000000)))
-        self.assertEqual("2023-11-14T22:13:20.000Z", _iso_from_metadata(
-            dict(source_stamp_sec=1700000000,source_stamp_nsec=0)))
+                    requested_at_unix_ns=1800000000000000000,
+                    source_stamp_sec=1700000099,source_stamp_nsec=0)
+        for moving in (False, True):
+            with self.subTest(moving=moving):
+                text = _iso_from_metadata(dict(data,is_moving=moving))
+                self.assertEqual("2023-11-15T06:13:23.456+08:00", text)
+                self.assertAlmostEqual(1700000003.456, datetime.datetime.fromisoformat(text).timestamp(), places=3)
+                for stamp in (dict(secs=0,nsecs=0),dict(secs=1700000000,nsecs=1000000000),
+                              dict(secs=True,nsecs=0),dict(secs=-1,nsecs=0),None,
+                              dict(secs=1400000,nsecs=0),dict(secs=4102444800,nsecs=0)):
+                    with self.subTest(stamp=stamp):
+                        self.assertIsNone(_iso_from_metadata(dict(data,is_moving=moving,localization_time=stamp)))
+        del data['localization_time']
+        self.assertIsNone(_iso_from_metadata(data))
 
     def test_final_format_keeps_source_audit_and_excludes_missing_source_time(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -37,7 +40,7 @@ class SubmissionTest(unittest.TestCase):
             for i in range(3):
                 metadata = dict(mission_id=mission,target_id="moving-person" if i<2 else "missing-time",
                                 category_id=18,is_moving=i<2,longitude_deg=113.+i*.0001,
-                                latitude_deg=34.,image_stamp=dict(secs=1700000000+i,nsecs=0) if i<2 else None,
+                                latitude_deg=34.,localization_time=dict(secs=1700000000+i,nsecs=0) if i<2 else None,
                                 selected_image_stamp=dict(secs=1700000999,nsecs=0),
                                 requested_at_unix_ns=1800000000000000000)
                 (folder/(str(i)+".json")).write_text(json.dumps(metadata),encoding="utf-8")
@@ -46,13 +49,15 @@ class SubmissionTest(unittest.TestCase):
             self.assertEqual("target-001",feature["id"])
             self.assertEqual("人员4",feature["properties"]["targetModel"])
             self.assertEqual("移动",feature["properties"]["targetCategory"])
-            self.assertEqual("2023-11-14T22:13:20.000Z",feature["properties"]["trackStartTime"])
+            self.assertEqual("2023-11-15T06:13:20.000+08:00",feature["properties"]["trackStartTime"])
             self.assertNotIn("indoorTargets",document["metadata"])
             audit=json.loads(output.with_name("submission-format.json").read_text(encoding="utf-8"))
             self.assertEqual([dict(source_id="moving-person",submission_id="target-001")],audit["id_mapping"])
             self.assertEqual("missing-time",audit["excluded_targets"][0]["id"])
             self.assertIn("源时间戳",audit["excluded_targets"][0]["reason"])
             self.assertEqual(3,len(list(folder.glob("*.json"))))
+            self.assertEqual("localization_time", audit["target_time"]["source"])
+            self.assertEqual("missing-time", audit["target_time"]["invalid_records"][0]["target_id"])
 
     def test_publisher_receiver_does_not_overwrite_deduplicated_submission(self):
         package_root = Path(__file__).resolve().parents[1]
@@ -71,7 +76,7 @@ class SubmissionTest(unittest.TestCase):
                                               target_type="车辆", target_model="车辆1",
                                               target_latitude=39.05, target_longitude=longitude,
                                               confidence=confidence,
-                                              image_stamp=dict(secs=1_700_000_000, nsecs=0)),
+                                              localization_time=dict(secs=1_700_000_000, nsecs=0)),
                                          b"image-%d" % uav_id)
                 result = Path(directory) / "subject1_submissions" / mission_id / "target-submission.json"
                 decisions = result.parent / "dedup-decisions.json"
@@ -86,7 +91,7 @@ class SubmissionTest(unittest.TestCase):
             finally:
                 receiver.stop()
 
-    def test_publisher_merges_only_matching_cross_uav_targets_and_keeps_raw_files(self):
+    def test_publisher_merges_confused_cross_uav_targets_and_keeps_raw_files(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             mission_id = "subject1-cross-uav"
@@ -101,7 +106,7 @@ class SubmissionTest(unittest.TestCase):
                                    target_type="车辆", target_model=model,
                                    is_moving=moving, target_latitude=39.05,
                                    target_longitude=longitude, confidence=confidence,
-                                   image_stamp=dict(secs=1_700_000_000 + index * 10, nsecs=0))
+                                   localization_time=dict(secs=1_700_000_000 + index * 10, nsecs=0))
                     stem = "%s-%d" % (name, index)
                     (folder / (stem + ".json")).write_text(json.dumps(payload), encoding="utf-8")
                     (folder / (stem + ".jpg")).write_bytes(("image-" + name).encode())
@@ -117,17 +122,17 @@ class SubmissionTest(unittest.TestCase):
             path = update_subject1_submission(root, mission_id, publisher_dedup=True)
             document = json.loads(path.read_text(encoding="utf-8"))
             from competition_backend.subject1_reporting import validate_document
-            self.assertEqual(5, validate_document(document)["target_count"])
+            self.assertEqual(4, validate_document(document)["target_count"])
             features = document["features"]
             self.assertEqual(sorted((f["properties"]["confidence"] for f in features), reverse=True),
                              [f["properties"]["confidence"] for f in features])
-            self.assertEqual(len({f["id"] for f in features}), 5)
+            self.assertEqual(len({f["id"] for f in features}), 4)
             self.assertEqual("target-001", features[0]["id"])
             self.assertEqual(b"image-fixed-high", (path.parent / features[0]["properties"]["imagePath"]).read_bytes())
-            self.assertEqual(3, len([f for f in features if f["properties"]["targetCategory"] == "固定"]))
+            self.assertEqual(2, len([f for f in features if f["properties"]["targetCategory"] == "固定"]))
             self.assertEqual(2, len([f for f in features if f["properties"]["targetCategory"] == "移动"]))
             decisions = json.loads((path.parent / "dedup-decisions.json").read_text(encoding="utf-8"))
-            self.assertEqual(2, len(decisions["merged"]))
+            self.assertEqual(3, len(decisions["merged"]))
             self.assertEqual(7, len(json.loads((path.parent / "raw-targets.json").read_text(encoding="utf-8"))["features"]))
             self.assertEqual(10, len(list(root.glob("UAV*/*/*.json"))))
 
@@ -149,7 +154,7 @@ class SubmissionTest(unittest.TestCase):
                         target_latitude=39.05,
                         target_longitude=121.66 + index * .000058,
                         confidence=confidence,
-                        image_stamp=dict(secs=start + index + offset, nsecs=0),
+                        localization_time=dict(secs=start + index + offset, nsecs=0),
                     )
                     stem = "frame-%02d" % index
                     (folder / (stem + ".json")).write_text(json.dumps(metadata), encoding="utf-8")
@@ -162,7 +167,7 @@ class SubmissionTest(unittest.TestCase):
             feature = document["features"][0]
             self.assertEqual("target-001", feature["id"])
             self.assertEqual(11, len(feature["properties"]["trackPoints"]))
-            self.assertEqual("2023-11-14T22:13:23.000Z", feature["properties"]["trackStartTime"])
+            self.assertEqual("2023-11-15T06:13:23.000+08:00", feature["properties"]["trackStartTime"])
             longitudes = [point[0] for point in feature["geometry"]["coordinates"]]
             self.assertEqual(sorted(longitudes), longitudes)
             decisions = json.loads((path.parent / "dedup-decisions.json").read_text(encoding="utf-8"))
@@ -181,9 +186,9 @@ class SubmissionTest(unittest.TestCase):
                     payload = dict(mission_id=mission_id, target_id="moving-1",
                                    target_type="车辆", target_model="车辆1", is_moving=True,
                                    target_latitude=34.1,
-                                   target_longitude=113.9 + index * .00001,
+                                   target_longitude=113.9 + index * .00005,
                                    confidence=confidence,
-                                   image_stamp=dict(secs=1_700_000_000 + index * 3, nsecs=0))
+                                   localization_time=dict(secs=1_700_000_000 + index * 3, nsecs=0))
                     (folder / ("point-%03d.json" % index)).write_text(
                         json.dumps(payload), encoding="utf-8")
             result = update_subject1_submission(root, mission_id, publisher_dedup=True)
@@ -207,9 +212,9 @@ class SubmissionTest(unittest.TestCase):
                     payload = dict(mission_id=mission_id, target_id="moving-1",
                                    target_type="车辆", target_model="车辆1", is_moving=True,
                                    target_latitude=34.1,
-                                   target_longitude=113.9 + index * .00001,
+                                   target_longitude=113.9 + index * .00005,
                                    confidence=confidence,
-                                   image_stamp=dict(secs=1_700_000_000 + index * 3, nsecs=0))
+                                   localization_time=dict(secs=1_700_000_000 + index * 3, nsecs=0))
                     (folder / ("point-%03d.json" % index)).write_text(
                         json.dumps(payload), encoding="utf-8")
             result = update_subject1_submission(root, mission_id, publisher_dedup=True)
@@ -219,7 +224,7 @@ class SubmissionTest(unittest.TestCase):
             self.assertEqual(40, len(points))
             self.assertEqual(.41, feature["properties"]["confidence"])
             self.assertEqual([113.9, 34.1], points[0]["coordinates"])
-            self.assertAlmostEqual(113.9 + 39 * .00001, points[-1]["coordinates"][0])
+            self.assertAlmostEqual(113.9 + 39 * .00005, points[-1]["coordinates"][0])
             self.assertEqual(points[-1]["timestamp"], feature["properties"]["trackEndTime"])
             decisions = json.loads((result.parent / "dedup-decisions.json").read_text(encoding="utf-8"))
             self.assertEqual(7, decisions["track_truncations"][0]["omitted_track_points"])
@@ -237,7 +242,7 @@ class SubmissionTest(unittest.TestCase):
                     "mission_id": "subject1-run", "target_id": "move" if moving else "fixed",
                     "target_type": "车辆", "target_model": "车辆2", "is_moving": moving,
                     "confidence": 0.9, "target_latitude": 33.86, "target_longitude": 113.70,
-                    "target_altitude": 100.0, "image_stamp": {"secs": 1_700_000_000 + index, "nsecs": 0},
+                    "target_altitude": 100.0, "localization_time": {"secs": 1_700_000_000 + index, "nsecs": 0},
                 }
                 (mission / (name + ".json")).write_text(json.dumps(metadata), encoding="utf-8")
                 (mission / (name + ".jpg")).write_bytes(b"jpeg")
@@ -259,7 +264,7 @@ class SubmissionTest(unittest.TestCase):
             metadata = {
                 "mission_id": "subject1-indoor", "target_id": "lab-1", "target_type": "人员",
                 "indoor_position": True, "east_m": 1.2, "north_m": 2.3, "up_m": 0.4,
-                "image_stamp": {"secs": 1_700_000_000, "nsecs": 0},
+                "localization_time": {"secs": 1_700_000_000, "nsecs": 0},
             }
             (mission / "lab.json").write_text(json.dumps(metadata), encoding="utf-8")
             (mission / "lab.jpg").write_bytes(b"jpeg")
@@ -280,14 +285,14 @@ class SubmissionTest(unittest.TestCase):
                 metadata = {
                     "mission_id": "subject1-static", "target_id": "fixed-1", "target_type": "工事",
                     "is_moving": False, "target_latitude": 33.86, "target_longitude": longitude,
-                    "image_stamp": {"secs": seconds, "nsecs": 0},
+                    "localization_time": {"secs": seconds, "nsecs": 0},
                 }
                 (mission / (name + ".json")).write_text(json.dumps(metadata), encoding="utf-8")
                 (mission / (name + ".jpg")).write_bytes(b"jpeg")
             document = json.loads(update_subject1_submission(root, "subject1-static").read_text(encoding="utf-8"))
             feature = document["features"][0]
             self.assertEqual([113.702, 33.86], feature["geometry"]["coordinates"])
-            self.assertEqual("2023-11-14T22:13:40.000Z", feature["properties"]["timestamp"])
+            self.assertEqual("2023-11-15T06:13:40.000+08:00", feature["properties"]["timestamp"])
 
     def test_repeated_static_id_uses_last_received_report_even_with_older_source_stamp(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -303,14 +308,14 @@ class SubmissionTest(unittest.TestCase):
                                 target_type="车辆", target_model=model, is_moving=False,
                                 target_latitude=33.86, target_longitude=longitude,
                                 confidence=confidence, detection_received_at_unix_ns=received_ns,
-                                image_stamp=dict(secs=source_seconds, nsecs=0))
+                                localization_time=dict(secs=source_seconds, nsecs=0))
                 (mission / (name + ".json")).write_text(json.dumps(metadata), encoding="utf-8")
                 (mission / (name + ".jpg")).write_bytes(name.encode())
             result = update_subject1_submission(root, mission_id, publisher_dedup=True)
             feature, = json.loads(result.read_text(encoding="utf-8"))["features"]
             self.assertEqual("target-001", feature["id"])
             self.assertEqual([113.702, 33.86], feature["geometry"]["coordinates"])
-            self.assertEqual("2023-11-14T22:13:30.000Z", feature["properties"]["timestamp"])
+            self.assertEqual("2023-11-15T06:13:30.000+08:00", feature["properties"]["timestamp"])
             self.assertEqual("车辆2", feature["properties"]["targetModel"])
             self.assertEqual(.21, feature["properties"]["confidence"])
             self.assertEqual(b"second", (result.parent / feature["properties"]["imagePath"]).read_bytes())
@@ -327,7 +332,7 @@ class SubmissionTest(unittest.TestCase):
                                 target_latitude=33.86, target_longitude=113.7 + index / 1000,
                                 confidence=index / 10,
                                 detection_received_at_unix_ns=1_800_000_000_000_000_000 + index,
-                                image_stamp=dict(secs=1_700_000_000 + index, nsecs=0))
+                                localization_time=dict(secs=1_700_000_000 + index, nsecs=0))
                 (mission / ("report-%d.json" % index)).write_text(json.dumps(metadata), encoding="utf-8")
             (mission / "report-1.jpg").write_bytes(b"old image")
             result = update_subject1_submission(root, mission_id)
@@ -345,7 +350,7 @@ class SubmissionTest(unittest.TestCase):
                     "mission_id": "subject1-concurrent", "target_id": "target-%d" % index,
                     "target_type": "车辆", "target_latitude": 33.86,
                     "target_longitude": 113.70 + index / 10000,
-                    "image_stamp": {"secs": 1_700_000_000 + index, "nsecs": 0},
+                    "localization_time": {"secs": 1_700_000_000 + index, "nsecs": 0},
                 }
                 (mission / ("image-%d.json" % index)).write_text(json.dumps(metadata), encoding="utf-8")
                 (mission / ("image-%d.jpg" % index)).write_bytes(b"jpeg-%d" % index)
@@ -364,7 +369,7 @@ class SubmissionTest(unittest.TestCase):
             self.assertEqual(12, len(list(image_dir.glob("*.jpg"))))
             self.assertEqual([], list(image_dir.glob("*.part")))
 
-    def test_latest_category_correction_and_static_to_moving_use_one_global_id(self):
+    def test_first_static_category_is_locked_while_last_report_corrects_model(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             mission = root / "UAV2" / "subject1-correction"
@@ -378,7 +383,7 @@ class SubmissionTest(unittest.TestCase):
                     "mission_id": "subject1-correction", "global_id": "one-global-id",
                     "target_type": target_type, "target_model": model, "is_moving": moving,
                     "target_latitude": 33.86, "target_longitude": longitude,
-                    "image_stamp": {"secs": seconds, "nsecs": 0},
+                    "localization_time": {"secs": seconds, "nsecs": 0},
                 }
                 (mission / (name + ".json")).write_text(json.dumps(metadata), encoding="utf-8")
                 (mission / (name + ".jpg")).write_bytes(b"jpeg")
@@ -386,11 +391,12 @@ class SubmissionTest(unittest.TestCase):
             self.assertEqual(1, len(document["features"]))
             feature = document["features"][0]
             self.assertEqual("target-001", feature["id"])
-            self.assertEqual("LineString", feature["geometry"]["type"])
-            self.assertEqual("移动", feature["properties"]["targetCategory"])
+            self.assertEqual("Point", feature["geometry"]["type"])
+            self.assertEqual("固定", feature["properties"]["targetCategory"])
             self.assertEqual("车辆", feature["properties"]["targetType"])
             self.assertEqual("车辆2", feature["properties"]["targetModel"])
-            self.assertEqual(2, len(feature["properties"]["trackPoints"]))
+            self.assertEqual([113.701, 33.86], feature["geometry"]["coordinates"])
+            self.assertNotIn("trackPoints", feature["properties"])
 
     def test_same_file_name_from_two_uavs_keeps_both_images(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -402,7 +408,7 @@ class SubmissionTest(unittest.TestCase):
                     "mission_id": "subject1-peers", "global_id": "same-target",
                     "target_type": "车辆", "is_moving": True,
                     "target_latitude": 33.86, "target_longitude": 113.70 + uav_id / 1000,
-                    "image_stamp": {"secs": 1_700_000_000 + uav_id, "nsecs": 0},
+                    "localization_time": {"secs": 1_700_000_000 + uav_id, "nsecs": 0},
                 }
                 (mission / "capture.json").write_text(json.dumps(metadata), encoding="utf-8")
                 (mission / "capture.jpg").write_bytes(("jpeg-%d" % uav_id).encode())
@@ -411,8 +417,10 @@ class SubmissionTest(unittest.TestCase):
             self.assertEqual(2, len(images))
             self.assertEqual({b"jpeg-1", b"jpeg-2"}, {path.read_bytes() for path in images})
             document = json.loads(target.read_text(encoding="utf-8"))
-            chosen = target.parent / document["features"][0]["properties"]["imagePath"]
-            self.assertEqual(b"jpeg-2", chosen.read_bytes())
+            # 同 ID 不代表跨机同一轨迹；各机仅一点时不可拼成虚假的动目标。
+            self.assertEqual([], document["features"])
+            audit = json.loads(target.with_name("submission-format.json").read_text(encoding="utf-8"))
+            self.assertEqual(2, len(audit["excluded_targets"]))
 
     def test_slow_submission_rebuild_does_not_block_new_image_save(self):
         package_root = Path(__file__).resolve().parents[1]

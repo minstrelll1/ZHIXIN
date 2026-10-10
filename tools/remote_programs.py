@@ -454,15 +454,18 @@ def rpc(payload):
     if not (root / 'tools/start_onboard_stack.sh').is_file():
         raise RuntimeError('请先部署竞赛机载代码到 ~/competition_development')
     runtime = root / 'ground_runtime' / ('programs_uav%d' % uid)
-    runtime.mkdir(parents=True, exist_ok=True)
-    result = {}
     action = payload.get('action', 'status')
     selected = payload.get('program')
-    if action not in ('start', 'auto_start', 'status', 'stop') or (selected is not None and selected not in NAMES):
+    if action not in ('start', 'auto_start', 'status', 'stop', 'clock_probe') or (selected is not None and selected not in NAMES):
         raise ValueError('程序操作无效')
     if action == 'stop' and selected not in NAMES:
         raise ValueError('停止时必须指定一个程序')
     current_boot = boot_id()
+    if action == 'clock_probe':
+        print(json.dumps(dict(boot_id=current_boot, remote_monotonic=time.monotonic(), remote_wall=time.time())))
+        return
+    runtime.mkdir(parents=True, exist_ok=True)
+    result = {}
     if action == 'auto_start' and (not current_boot or payload.get('expected_boot_id') != current_boot):
         raise RuntimeError('机载开机标识尚未确认或已改变，请重新查询；未启动程序')
     skip = payload.get('skip_programs', [])

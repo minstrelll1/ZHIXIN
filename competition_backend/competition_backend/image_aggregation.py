@@ -353,7 +353,12 @@ class PeerImageCollector:
                             decisions = json.loads((path.parent / "dedup-decisions.json").read_text(encoding="utf-8"))
                         self.audit.record("科目一跨终端结果已汇总", mission_id=mission_id, file=str(path),
                                           raw_count=decisions.get("raw_count"),
+                                          deduplicated_count=decisions.get("deduplicated_count"),
+                                          result_count=decisions.get("result_count"),
+                                          backfilled_count=decisions.get("backfilled_count", 0),
                                           merged_count=len(decisions.get("merged", [])),
+                                          same_uav_merged_count=sum(bool(row.get("same_uav")) for row in decisions.get("merged", [])),
+                                          reclassified_static_count=len(decisions.get("motion_reclassifications", [])),
                                           omitted_count=len(decisions.get("omitted", [])))
                 except Exception as error:
                     with self._state_lock:

@@ -29,6 +29,14 @@ def category_fields(metadata):
     return broad, model
 
 
+def dedup_category(metadata):
+    """判重优先采用程序 B 明确给出的大类，正式型号映射仍独立保留。"""
+    category = str(metadata.get("category") or "").strip()
+    explicit = {"人": "人员", "车": "车辆", "建筑物": "工事",
+                "人员": "人员", "车辆": "车辆", "工事": "工事"}
+    return explicit.get(category, category_fields(metadata)[0])
+
+
 def quality_metadata(metadata):
     count = metadata.get("detection_count", 0)
     if type(count) is not int or not 0 <= count <= 18446744073709551615:

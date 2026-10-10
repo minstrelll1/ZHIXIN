@@ -228,11 +228,35 @@ def rebase_gps_routes_for_takeoff(area, task, takeoff_gps):
         sources = [(None, i + 1, [point[1], point[0]]) for i, point in enumerate(gps_scans)]
         targets, first_index = scans, 0
     distance = BOUNDARY_CLEARANCE_M if area['flight_profile'] in SAFE_TRANSIT_PROFILES else 0.0
-    if distance:
-        paths = clearance_routes(saved_boundary, home, targets, distance,
-                                 holes=saved.get('excluded_polygons_m', []))
+    lane_vehicle = saved['vehicles'].get(str(fixed.get('recipient_uav_id')), {})
+    lane = lane_vehicle.get('transit_lane') if area['flight_profile'] == 'xuchang_small' else None
+    if lane:
+        # 实测home只接到各机固定通道门口，不再将固定通道重算为共用最短路。
+        entry_gate, return_gate = lane['entry_gate_m'], lane['return_gate_m']
+        entry_fixed = lane_vehicle['entry_path_m']
+        if math.dist(entry_fixed[1], entry_gate) > 1e-8:
+            raise ValueError('固定进场通道入口与缓存不一致')
+        connectors = clearance_routes(saved_boundary, home, [entry_gate, return_gate], distance,
+                                      holes=saved.get('excluded_polygons_m', []))
+        entry_path = _join_paths(connectors[0], entry_fixed[1:])
+        by_source = {(int(part['source_uav_id']), int(part['waypoint_index'])): part['path']
+                     for part in lane_vehicle['fleet_return_paths_m']}
+        if set(by_source) != {(uid, index) for uid, index, _ in sources}:
+            raise ValueError('固定分离返航通道未覆盖全部机队航点')
+        paths = []
+        for uid, index, _ in sources:
+            path = by_source[(uid, index)]
+            if (math.dist(path[-2], return_gate) > 1e-8
+                    or math.dist(path[0], saved['vehicles'][str(uid)]['waypoints_m'][index-1]) > 1e-8):
+                raise ValueError('固定返航通道端点与缓存不一致')
+            paths.append(list(reversed(_join_paths(path[:-1], list(reversed(connectors[1]))))))
     else:
-        paths = shortest_routes(saved_boundary, home, targets)
+        if distance:
+            paths = clearance_routes(saved_boundary, home, targets, distance,
+                                     holes=saved.get('excluded_polygons_m', []))
+        else:
+            paths = shortest_routes(saved_boundary, home, targets)
+        entry_path = paths[first_index]
     def convert_path(path, point, reverse=False):
         points = [convert(point) for point in (reversed(path) if reverse else path)]
         if reverse:
@@ -241,10 +265,19 @@ def rebase_gps_routes_for_takeoff(area, task, takeoff_gps):
             points[0], points[-1] = [lon, lat], list(point)
         return points
     return dict(fixed, departure=[lon, lat],
-                entry_path=convert_path(paths[first_index], sources[first_index][2]),
+                entry_path=convert_path(entry_path, sources[first_index][2]),
                 return_paths=[dict(waypoint_index=index, path=convert_path(path, point, True),
                                    **({'source_uav_id': uid} if uid is not None else {}))
                               for (uid, index, point), path in zip(sources, paths)])
+
+
+
+def _join_paths(left, right):
+    result = []
+    for point in [*left, *right]:
+        if not result or math.dist(result[-1], point) > 1e-9:
+            result.append(list(point))
+    return result if len(result) > 1 else result + copy.deepcopy(result)
 
 
 def prepare_routes(plan):
@@ -263,6 +296,20 @@ def prepare_routes(plan):
         routes = [next(paths) for _ in scans]
         vehicles[str(uid)] = dict(waypoints_m=scans, entry_path_m=routes[0],
                                  return_paths_m=[list(reversed(route)) for route in routes])
+    if area['flight_profile'] == 'xuchang_small':
+        from .xuchang_transit_lanes import build_recipient_routes
+        fleet_points = {str(uid): item['task']['waypoints_m'] for uid, item in wrappers.items()}
+        default_fleet_returns = [dict(source_uav_id=int(uid), waypoint_index=i + 1, path=copy.deepcopy(path))
+                                 for uid, vehicle in sorted(vehicles.items(), key=lambda item: int(item[0]))
+                                 for i, path in enumerate(vehicle['return_paths_m'])]
+        for uid, vehicle in vehicles.items():
+            separated = build_recipient_routes(boundary, holes, departure, fleet_points, int(uid))
+            if not separated:
+                vehicle['fleet_return_paths_m'] = copy.deepcopy(default_fleet_returns)
+                continue
+            vehicle.update(separated)
+            vehicle['return_paths_m'] = [part['path'] for part in separated['fleet_return_paths_m']
+                                         if int(part['source_uav_id']) == int(uid)]
     result = dict(boundary_m=boundary, departure_m=departure, vehicles=vehicles)
     if distance:
         result.update(boundary_clearance_m=distance,
@@ -358,7 +405,31 @@ def attach_routes(plan):
             fleet_returns.append(dict(copy.deepcopy(route), source_uav_id=int(uid)))
     for uid, item in plan['planned_uavs'].items():
         routes = item['task']['transit_routes']
-        returns = copy.deepcopy(fleet_returns)
+        vehicle = saved['vehicles'][str(uid)]
+        if area['flight_profile'] == 'xuchang_small' and vehicle.get('fleet_return_paths_m'):
+            # 同一个来源航点，为不同接收机保存各自的返航接近通道。
+            points = item['task']['waypoints_m']
+            gps = item['task']['waypoints_wgs84']
+            factors = [1 / area['coverage']['projection']['north_m_per_degree'],
+                       -1 / area['coverage']['projection']['west_m_per_degree']]
+            for axis in (0, 1):
+                low = min(range(len(points)), key=lambda i: points[i][axis])
+                high = max(range(len(points)), key=lambda i: points[i][axis])
+                span = points[high][axis] - points[low][axis]
+                if span > 1e-6:
+                    factors[axis] = (gps[high][axis] - gps[low][axis]) / span
+            def convert_recipient(point):
+                return [gps[0][1] + (point[1] - points[0][1]) * factors[1],
+                        gps[0][0] + (point[0] - points[0][0]) * factors[0]]
+            returns = [dict(source_uav_id=int(part['source_uav_id']), waypoint_index=part['waypoint_index'],
+                            path=[convert_recipient(point) for point in part['path']])
+                       for part in vehicle['fleet_return_paths_m']]
+            expected_sources = {(int(source_uid), i + 1) for source_uid, points in fleet_points.items()
+                                for i in range(len(points))}
+            if {(part['source_uav_id'], part['waypoint_index']) for part in returns} != expected_sources:
+                raise ValueError('分离返航航线的全机队航点索引不完整')
+        else:
+            returns = copy.deepcopy(fleet_returns)
         for route in returns:
             route['path'][0] = list(fleet_points[str(route['source_uav_id'])][route['waypoint_index'] - 1])
             route['path'][-1] = list(routes['departure'])

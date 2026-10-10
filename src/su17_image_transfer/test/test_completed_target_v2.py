@@ -50,3 +50,15 @@ class CompletedTargetV2Test(unittest.TestCase):
         self.assertEqual((x2,y1),(1279,0))
         self.assertGreater(x1,1000)
         self.assertGreater(y2,80)
+
+    def test_image_matching_keeps_image_time_and_submission_uses_localization(self):
+        from su17_image_transfer.submission import _iso_from_metadata
+        image_stamp = NS(secs=1800000000, nsecs=123456789)
+        localized = NS(secs=1800000003, nsecs=456789123)
+        for moving in (False, True):
+            key, metadata = completed_target_metadata(target(timestamp=image_stamp,
+                image_stamp=image_stamp, localization_time=localized, is_moving=moving))
+            self.assertEqual(key, 1800000000123456789)
+            self.assertEqual(metadata['image_stamp'],dict(secs=1800000000,nsecs=123456789))
+            self.assertEqual(metadata['localization_time'],dict(secs=1800000003,nsecs=456789123))
+            self.assertEqual(_iso_from_metadata(metadata),'2027-01-15T16:00:03.456+08:00')

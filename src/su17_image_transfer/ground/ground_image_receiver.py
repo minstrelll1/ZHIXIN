@@ -142,6 +142,9 @@ class GroundImageReceiver:
                     skipped_count=skipped_count,
                     raw_count=decisions.get("raw_count"),
                     merged_count=len(decisions.get("merged", [])),
+                    same_uav_merged_count=sum(bool(row.get("same_uav")) for row in decisions.get("merged", [])),
+                    reclassified_static_count=sum(bool(row.get("converted_to_static"))
+                                                  for row in format_audit.get("motion_classification", [])),
                     omitted_count=len(decisions.get("omitted", [])),
                 )
                 print(

@@ -15,6 +15,7 @@ import uuid
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 from competition_shared.return_events import matches_return_event, competition_elapsed
+from competition_shared.localization_clock import SourceClockTracker
 
 import cv2
 import message_filters
@@ -41,7 +42,11 @@ def safe_component(value, fallback):
 
 
 class OnboardImageSender:
+    _source_clock_creation_lock = threading.Lock()
+
     def __init__(self) -> None:
+        self._source_clock_tracker = SourceClockTracker()
+        self._observe_localization_clock()
         self.uav_id = int(rospy.get_param("~uav_id", 1))
         if not 1 <= self.uav_id <= 6:
             raise ValueError("~uav_id must be between 1 and 6")
@@ -320,7 +325,34 @@ class OnboardImageSender:
                 remaining.append((key, deadline, metadata))
         self.pending_detections = remaining
 
+    def _observe_localization_clock(self, localization_time=None):
+        """只读采样；证据失败也不能中断目标 JSON 回传。"""
+        try:
+            if not hasattr(self, '_source_clock_tracker'):
+                with self._source_clock_creation_lock:
+                    if not hasattr(self, '_source_clock_tracker'):
+                        self._source_clock_tracker = SourceClockTracker()
+            tracker = self._source_clock_tracker
+            getter = getattr(rospy, 'get_param_cached', rospy.get_param)
+            use_sim_time = bool(getter('/use_sim_time', False))
+            # 采样、记录和事件映射必须同锁，避免相机/目标回调交错后较早样本
+            # 后入队被误判为时钟回拨，或当前目标采用另一回调的新时间段。
+            with tracker.lock:
+                begin = time.monotonic_ns()
+                system_ns = time.time_ns()
+                stamp = rospy.Time.now()
+                ros_ns = int(stamp.secs) * 1_000_000_000 + int(stamp.nsecs)
+                end = time.monotonic_ns()
+                tracker.observe((begin + end) // 2, system_ns, ros_ns, use_sim_time,
+                                sampling_uncertainty_ns=(end - begin) // 2)
+                return tracker.context(localization_time)
+        except Exception as error:
+            return dict(schema_version=1, boot_id=getattr(getattr(self, '_source_clock_tracker', None), 'boot_id', ''),
+                        mapping_valid=False, event_monotonic_ns=None,
+                        reason='clock_observation_failed', detail='时间证据采集失败：%s' % error)
+
     def _camera_cache_callback(self, message):
+        self._observe_localization_clock()
         try:
             with self.frame_lock:
                 key = self.frame_cache.add(message)
@@ -364,6 +396,8 @@ class OnboardImageSender:
         if not mission_id:
             self._reject_detection(metadata, "mission_not_started", "尚未一键起飞，图片任务未开始")
             return
+        if "localization_clock" not in metadata:
+            metadata["localization_clock"] = self._observe_localization_clock(metadata.get("localization_time"))
         metadata["detection_received_at_unix_ns"] = time.time_ns()
         metadata["uav_id"] = self.uav_id
         metadata["message_type"] = "target_result"
@@ -529,6 +563,7 @@ class OnboardImageSender:
             )
 
     def _image_callback(self, message) -> None:
+        self._observe_localization_clock()
         with self.latest_lock:
             self.latest_message = message
             self.latest_received_monotonic = time.monotonic()

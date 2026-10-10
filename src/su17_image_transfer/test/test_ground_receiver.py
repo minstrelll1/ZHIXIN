@@ -43,6 +43,7 @@ class GroundReceiverTest(unittest.TestCase):
                 "auth_token": "test-token", "target_id": "global-7", "target_type": "车辆",
                 "target_latitude": 34.1, "target_longitude": 113.9,
                 "image_stamp": {"secs": 1_789_000_000, "nsecs": 100},
+                "localization_time": {"secs": 1_789_000_000, "nsecs": 100},
                 "confidence": 0.9, "is_moving": False,
             }
             try:
@@ -65,7 +66,9 @@ class GroundReceiverTest(unittest.TestCase):
                 while not draft.is_file() and time.monotonic() < deadline:
                     time.sleep(0.02)
                 self.assertTrue(draft.is_file())
-                self.assertEqual(json.loads(draft.read_text(encoding="utf-8"))["features"][0]["id"], "global-7")
+                self.assertEqual(json.loads(draft.read_text(encoding="utf-8"))["features"][0]["id"], "target-001")
+                audit = json.loads(draft.with_name("submission-format.json").read_text(encoding="utf-8"))
+                self.assertEqual(audit["id_mapping"][0]["source_id"], "global-7")
                 with socket.create_connection(("127.0.0.1", port), timeout=2) as client:
                     client.sendall(encode_frame(dict(metadata, message_type="image"), b"\xff\xd8good\xff\xd9"))
                     self.assertTrue(receive_ack(client))

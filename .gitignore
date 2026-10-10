@@ -39,3 +39,6 @@ dist/
 
 # 地面电脑汇集的部署公钥，按本机机队单独维护
 ground_ssh_keys/
+
+# 本地飞行复核报告含原始图片和定位数据
+docs/flight_reviews/

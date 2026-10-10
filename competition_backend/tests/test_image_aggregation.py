@@ -153,12 +153,12 @@ class ImageAggregationTest(unittest.TestCase):
                 "target_type": "车辆", "target_model": "车辆2",
                 "confidence": 0.91, "target_latitude": 39.05,
                 "target_longitude": 121.66,
-                "image_stamp": {"secs": 1_700_000_000, "nsecs": 0},
+                "localization_time": {"secs": 1_700_000_000, "nsecs": 0},
             }
             (peer_mission / "target.json").write_text(json.dumps(metadata), encoding="utf-8")
             (peer_mission / "target.jpg").write_bytes(b"test-jpeg")
             earlier = dict(metadata, target_id="target-earlier", target_longitude=121.662,
-                           image_stamp={"secs": 1_699_999_990, "nsecs": 0})
+                           localization_time={"secs": 1_699_999_990, "nsecs": 0})
             (peer_mission / "earlier.json").write_text(json.dumps(earlier), encoding="utf-8")
             (peer_mission / "earlier.jpg").write_bytes(b"earlier-jpeg")
             old_time = time.time() - 3600
@@ -246,7 +246,7 @@ class ImageAggregationTest(unittest.TestCase):
                 self.assertGreaterEqual(status["aggregated_count"], 1)
                 self.assertIsNotNone(status["peers"]["2"]["last_success_at"])
                 later = dict(metadata, target_id="target-3", target_longitude=121.661,
-                             image_stamp={"secs": 1_700_000_001, "nsecs": 0})
+                             localization_time={"secs": 1_700_000_001, "nsecs": 0})
                 (peer_mission / "later.json").write_text(json.dumps(later), encoding="utf-8")
                 (peer_mission / "later.jpg").write_bytes(b"second-jpeg")
                 deadline = time.monotonic() + 5
@@ -280,7 +280,7 @@ class ImageAggregationTest(unittest.TestCase):
             metadata = dict(mission_id="subject1-json-priority", target_id="fixed-2",
                             target_type="车辆", target_model="车辆1", is_moving=False,
                             target_latitude=34.1, target_longitude=113.9, confidence=.8,
-                            image_stamp=dict(secs=1_700_000_000, nsecs=0))
+                            localization_time=dict(secs=1_700_000_000, nsecs=0))
             (mission / "target.json").write_text(json.dumps(metadata), encoding="utf-8")
             (mission / "target.jpg").write_bytes(b"large-image-placeholder")
 
@@ -345,9 +345,9 @@ class ImageAggregationTest(unittest.TestCase):
                                   target_id="moving-%d" % uav_id, target_type="车辆",
                                   target_model="车辆1", is_moving=True,
                                   target_latitude=34.1,
-                                  target_longitude=113.9 + index * .00001,
+                                  target_longitude=113.9 + index * .00005,
                                   confidence=confidence,
-                                  image_stamp=dict(secs=1_700_000_000 + index * 3, nsecs=0))
+                                  localization_time=dict(secs=1_700_000_000 + index * 3, nsecs=0))
                     (mission / ("point-%03d.json" % index)).write_text(
                         json.dumps(record), encoding="utf-8")
 

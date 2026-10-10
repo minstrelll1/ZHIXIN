@@ -37,6 +37,13 @@ try {
             if (Test-Path -LiteralPath $errFile) { $details = Get-Content -LiteralPath $errFile -Raw }
             throw "地面程序未能启动。请检查是否已完成首次部署，以及端口 $WebPort 是否被占用。`n日志：$errFile`n$details"
         }
+    } else {
+        # 后台已运行时不会再次经过 start_ground，仍允许补配缺失的本机规则。
+        try {
+            & (Join-Path $PSScriptRoot 'configure_ground_firewall.ps1') -WebPort $WebPort
+        } catch {
+            Write-Warning ("地面互联防火墙检查失败，继续打开网页：{0}" -f $_.Exception.Message)
+        }
     }
     Start-Process $Url
 } catch {

@@ -88,7 +88,7 @@ class SubmissionReportTest(unittest.TestCase):
             for name,indoor in (('valid',False),('indoor',True)):
                 payload=dict(mission_id='subject1-excluded',target_id=name,indoor_position=indoor,
                              longitude_deg=113.,latitude_deg=34.,target_type='vehicle1',
-                             image_stamp=dict(secs=1700000000,nsecs=0))
+                             localization_time=dict(secs=1700000000,nsecs=0))
                 (folder/(name+'.json')).write_text(json.dumps(payload),encoding='utf-8')
             reporter=report.Subject1Reporter(tmp,publisher_dedup=True)
             built=reporter.build('subject1-excluded',report.TEAM_NAME)
@@ -112,7 +112,7 @@ class SubmissionReportTest(unittest.TestCase):
             self.assertEqual((converted['targetType'],converted['targetModel']),('人员','人员3'))
             self.assertEqual(props['targetType'],'solider3')
 
-    def test_publisher_freeze_keeps_two_nearby_targets_from_same_uav(self):
+    def test_publisher_freeze_keeps_same_uav_merge_and_original_id_mapping(self):
         with tempfile.TemporaryDirectory() as tmp:
             mission_id = 'subject1-same-uav-neighbors'
             directory = Path(tmp) / 'UAV1' / mission_id
@@ -123,34 +123,34 @@ class SubmissionReportTest(unittest.TestCase):
                                 target_type='车辆', target_model='车辆1', is_moving=False,
                                 target_latitude=39.05, target_longitude=longitude,
                                 confidence=confidence,
-                                image_stamp={'secs': 1700000000, 'nsecs': 0})
+                                localization_time={'secs': 1700000000, 'nsecs': 0})
                 (directory / (name + '.json')).write_text(json.dumps(metadata), encoding='utf-8')
                 (directory / (name + '.jpg')).write_bytes(b'jpeg')
             reporter = report.Subject1Reporter(tmp, publisher_dedup=True)
             built = reporter.build(mission_id, report.TEAM_NAME)
-            self.assertEqual(['target-001', 'target-002'], [feature['id'] for feature in built['features']])
-            self.assertEqual([.9,.7], [feature['properties']['confidence'] for feature in built['features']])
+            self.assertEqual(['target-001'], [feature['id'] for feature in built['features']])
+            self.assertEqual([.9], [feature['properties']['confidence'] for feature in built['features']])
             frozen = reporter.prepare(built, already_deduplicated=True)
             final = json.loads(reporter.draft(frozen['draft_id']).read_text(encoding='utf-8'))
-            self.assertEqual(['target-001', 'target-002'], [feature['id'] for feature in final['features']])
+            self.assertEqual(['target-001'], [feature['id'] for feature in final['features']])
             mapping=json.loads((reporter.root/(frozen['draft_id']+'.format.json')).read_text(encoding='utf-8'))['id_mapping']
-            self.assertEqual(['two','one'], [entry['source_id'] for entry in mapping])
-            self.assertEqual(2, report.validate_document(final)['target_count'])
+            self.assertEqual(['two'], [entry['source_id'] for entry in mapping])
+            self.assertEqual(1, report.validate_document(final)['target_count'])
             refrozen=reporter.prepare(final)
-            self.assertEqual(2,refrozen['target_count'])
+            self.assertEqual(1,refrozen['target_count'])
             app = FastAPI()
             app.include_router(report.reporting_router(tmp, Mock(), publisher_dedup=True))
             with TestClient(app) as client:
                 response = client.post('/api/v1/subject1/report/prepare', json={'mission_id': mission_id})
                 self.assertEqual(200, response.status_code, response.text)
-                self.assertEqual(2, response.json()['target_count'])
+                self.assertEqual(1, response.json()['target_count'])
                 downloaded = client.get(response.json()['download_url']).json()
-                self.assertEqual(['target-001', 'target-002'], [feature['id'] for feature in downloaded['features']])
+                self.assertEqual(['target-001'], [feature['id'] for feature in downloaded['features']])
                 # 仅重新生成时间不同，不能把已经去重的本机成果再次空间合并。
                 built['metadata']['createdAt'] = '2020-01-01T00:00:00Z'
                 imported = client.post('/api/v1/subject1/report/prepare', json={'document': built})
                 self.assertEqual(200, imported.status_code, imported.text)
-                self.assertEqual(2, imported.json()['target_count'])
+                self.assertEqual(1, imported.json()['target_count'])
 
     def test_imported_json_is_deduplicated_sorted_and_limited_to_sixteen(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -279,10 +279,10 @@ class SubmissionReportTest(unittest.TestCase):
     def test_aggregate_same_mission_2d_coordinates_and_sorted_tracks(self):
         with tempfile.TemporaryDirectory() as tmp:
             reporter=report.Subject1Reporter(tmp)
-            for uid,second in ((1,5),(3,1)):
-                directory=Path(tmp)/('UAV%d'%uid)/'subject1-common';directory.mkdir(parents=True)
-                metadata=dict(mission_id='subject1-common',global_id='move',target_type='车辆',target_model='车辆2',is_moving=True,target_latitude=33.86,target_longitude=113.70,target_altitude=42,image_stamp={'secs':1700000000+second,'nsecs':0})
-                (directory/'target.json').write_text(json.dumps(metadata),encoding='utf-8')
+            for uid,second in ((1,5),(1,1),(3,2)):
+                directory=Path(tmp)/('UAV%d'%uid)/'subject1-common';directory.mkdir(parents=True,exist_ok=True)
+                metadata=dict(mission_id='subject1-common',global_id='move',target_type='车辆',target_model='车辆2',is_moving=True,target_latitude=33.86,target_longitude=113.70,target_altitude=42,localization_time={'secs':1700000000+second,'nsecs':0})
+                (directory/('target-%d.json'%second)).write_text(json.dumps(metadata),encoding='utf-8')
             self.assertEqual(reporter.missions(),['subject1-common'])
             document=reporter.build('subject1-common',report.TEAM_NAME)
             draft=reporter.prepare(document)

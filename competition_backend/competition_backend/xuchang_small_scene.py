@@ -18,15 +18,17 @@ RADIUS_M = 45.0
 SPEED_MPS = 5.0
 HOVER_SECONDS = 10.0
 CLEARANCE_M = 5.0
-# 六个源子区按首次定义的顺序规划；只交换接收机编号，不交换高度配置。
-SOURCE_REGION_UAV_IDS = (6, 2, 3, 1, 4, 5)
 AREA_PATH = Path(__file__).with_name("xuchang_small_area.json")
 PLAN_PATH = Path(__file__).with_name("xuchang_small_prepared.json")
+PARTITION_REFERENCE_PATH = Path(__file__).with_name("xuchang_small_partition_reference.json")
+EAST_TRANSFER_REFERENCE_PATH = Path(__file__).with_name("xuchang_small_east_transfer_reference.json")
 
 
 def _source_digest():
     from . import clearance_plans
-    files = (Path(__file__), AREA_PATH, Path(coverage.__file__), Path(clearance_plans.__file__))
+    files = (Path(__file__), AREA_PATH, PARTITION_REFERENCE_PATH, EAST_TRANSFER_REFERENCE_PATH,
+             Path(coverage.__file__), Path(clearance_plans.__file__),
+             Path(__file__).with_name("xuchang_transit_lanes.py"))
     return hashlib.sha256(b"".join(path.read_bytes().replace(b"\r\n", b"\n") for path in files)).hexdigest()
 
 
@@ -56,40 +58,56 @@ def _area():
     return data, [project(point) for point in boundary], [project(point) for point in excluded], projection
 
 
-def _regions(flyable, hole, fixed_uav1, fixed_uav4, cut_fraction):
-    """按最初的子区编号计算几何；接收机编号由 SOURCE_REGION_UAV_IDS 统一分配。"""
+def _partition_reference(boundary, hole_points):
+    """固定本轮修改前的几何，避免反复生成使“南移30米”等约束累积漂移。"""
+    from shapely import set_precision
+    from shapely.geometry import Polygon
+    data = json.loads(PARTITION_REFERENCE_PATH.read_text(encoding="utf-8"))
+    if (data.get("schema_version") != 1 or data.get("boundary_m") != boundary
+            or data.get("excluded_polygons_m") != [hole_points]):
+        raise ValueError("许昌分区参考与外边界或禁飞区不一致，须重新核验离线约束")
+    return {int(uid): set_precision(Polygon(points), 1e-9)
+            for uid, points in data["regions_m"].items()}, data
+
+
+def _regions(flyable, reference, north_cap_m, west_limit_m, west_split_m):
+    """六个连通块：2继承旧1，4位于6北侧，5限制南北界，其余区域完整补齐。"""
+    from shapely import set_precision
     from shapely.geometry import box
     from shapely.ops import unary_union
 
-    for uid, region in ((1, fixed_uav1), (4, fixed_uav4)):
-        if (not region.is_valid or region.is_empty or region.geom_type != "Polygon"
-                or region.interiors or region.difference(flyable).area > 1e-5):
-            raise ValueError("UAV{} 子区必须是扣除禁飞区后连通的可飞区域".format(uid))
-    if fixed_uav1.intersection(fixed_uav4).area > 1e-5:
-        raise ValueError("UAV1 子区不能与保留的 UAV4 子区重叠")
-    joined = unary_union([hole, fixed_uav1])
-    remaining = flyable.difference(unary_union([fixed_uav1, fixed_uav4]))
-    minx, miny, maxx, maxy = flyable.bounds
-    # X 向北、Y 向西。东西分界位于两个保留区之间，南北分界同时穿过两个内环，
-    # 把剩余场地分成四个无孔洞的连通子区，避免填平禁飞区或遗漏细小边角。
-    y_cut = (fixed_uav4.bounds[1] + joined.bounds[3]) / 2
-    low_x = max(fixed_uav4.bounds[0], joined.bounds[0])
-    high_x = min(fixed_uav4.bounds[2], joined.bounds[2])
-    if joined.bounds[3] >= fixed_uav4.bounds[1] or low_x >= high_x:
-        raise ValueError("固定子区的位置不支持当前四向分区，请离线重新划分")
-    x_cut = low_x + cut_fraction * (high_x - low_x)
-    regions = [fixed_uav1,
-               remaining.intersection(box(minx - 1, miny - 1, x_cut, y_cut)),
-               remaining.intersection(box(x_cut, miny - 1, maxx + 1, y_cut)),
-               fixed_uav4,
-               remaining.intersection(box(x_cut, y_cut, maxx + 1, maxy + 1)),
-               remaining.intersection(box(minx - 1, y_cut, x_cut, maxy + 1))]
-    if (any(region.geom_type != "Polygon" or region.is_empty or not region.is_valid or region.interiors
-            for region in regions)
+    flyable = set_precision(flyable, 1e-9)
+    fixed_uav2 = reference[1]
+    north_uav5 = reference[5].bounds[2] - 30.0
+    # 取旧1西南角的北坐标：删去南界微小斜角形成的数米宽横向尾巴，交由UAV3覆盖。
+    south_uav5 = min(x for x, y in reference[1].exterior.coords
+                     if y >= reference[1].bounds[3] - 1e-7)
+    fixed_uav5 = flyable.intersection(box(south_uav5, -110, north_uav5, 1000)).difference(fixed_uav2)
+    remaining = flyable.difference(unary_union([fixed_uav2, fixed_uav5]))
+    uav6 = remaining.intersection(box(north_uav5, -west_limit_m, west_split_m, 1000))
+    uav4 = (remaining.difference(uav6).intersection(box(west_split_m, -1000, 1000, 1000))
+            .intersection(unary_union([box(-1000, -west_limit_m, 1000, 1000),
+                                       box(north_cap_m, -1000, 1000, 1000)])))
+    uav1 = (remaining.difference(unary_union([uav4, uav6]))
+            .intersection(box(reference[3].bounds[0], reference[1].bounds[1], 1000, 1000)))
+    if uav1.geom_type == "MultiPolygon":
+        # 东边旧子区斜边的孤立小角交给相邻UAV3，不能成为UAV1独立小岛。
+        uav1 = max(uav1.geoms, key=lambda region: region.area)
+    uav3 = remaining.difference(unary_union([uav1, uav4, uav6]))
+    regions = [uav1, fixed_uav2, uav3, uav4, fixed_uav5, uav6]
+    if (any(region.geom_type != "Polygon" or region.is_empty or not region.is_valid
+            or region.interiors or region.area < 7500 for region in regions)
             or flyable.symmetric_difference(unary_union(regions)).area > 1e-5
             or any(a.intersection(b).area > 1e-5
                    for i, a in enumerate(regions) for b in regions[i + 1:])):
         raise ValueError("许昌六机分区未能无重叠、完整且连通地覆盖可飞区域")
+    metrics = [coverage.shape_metrics(region) for region in regions]
+    if (max(item["aspect_ratio"] for item in metrics) > 3.0
+            or min(item["short_side_m"] for item in metrics) < 70
+            or min(item["rectangle_fill_ratio"] for item in metrics) < .40
+            or metrics[3]["rectangle_fill_ratio"] < .65
+            or metrics[5]["rectangle_fill_ratio"] < .85):
+        raise ValueError("许昌候选子区过于狭长或零碎，已排除")
     return regions
 
 
@@ -120,7 +138,7 @@ def _region_route(region, safe, boundary, hole_points):
     return route
 
 
-def prepare_xuchang_small_plan():
+def _prepare_partition_plan():
     """离线计算六机固定航点；运行时不得重新求解。"""
     from shapely.geometry import LineString, Point, Polygon, mapping
     from shapely.ops import unary_union
@@ -136,35 +154,34 @@ def prepare_xuchang_small_plan():
         raise ValueError("许昌固定起降点不在可飞区域")
     # 侦察航点比进返场路线多留 1 厘米，避免多边形编码的浮点舍入使边缘点失效。
     safe = clearance_region(boundary, CLEARANCE_M + .01, holes=[hole_points])
-    def project_polygon(points):
-        return Polygon([[(lat - projection["latitude"]) * projection["north_m_per_degree"],
-                         -(lon - projection["longitude"]) * projection["west_m_per_degree"]]
-                        for lon, lat in points])
-
-    # 配置中的 UAV1/UAV4 是源子区名称；当前接收机编号在生成任务时统一映射。
-    fixed_uav4 = project_polygon(data["uav4_boundary_lon_lat"])
-    requested_uav1 = project_polygon(data["uav1_requested_boundary_lon_lat"])
-    if not requested_uav1.is_valid:
-        raise ValueError("UAV1 大致子区边界无效")
-    # 禁飞区优先，UAV4 保持原边界；UAV1 仅取用户给定范围内的剩余可飞区域。
-    fixed_uav1 = requested_uav1.intersection(flyable).difference(fixed_uav4)
-    best, route_cache = None, {}
-    # 离线比较 19 个南北分割位置；先缩短最晚完成用时，再缩短六机总航程。
-    for step in range(1, 20):
-        candidate_regions = _regions(flyable, hole, fixed_uav1, fixed_uav4, step / 20)
-        candidate_routes = []
-        for region in candidate_regions:
-            if region.wkb not in route_cache:
-                route_cache[region.wkb] = _region_route(region, safe, boundary, hole_points)
-            candidate_routes.append(route_cache[region.wkb])
-        score = (max(route["mission_time_s"] for route in candidate_routes),
-                 sum(route["route_distance_m"] for route in candidate_routes),
-                 sum(route["mission_time_s"] for route in candidate_routes))
-        if best is None or score < best[0]:
-            best = (score, candidate_regions, candidate_routes, step / 20)
-    _, regions, selected_routes, split_fraction = best
+    reference, reference_data = _partition_reference(boundary, hole_points)
+    best, route_cache, candidate_count = None, {}, 0
+    # 先排除狭长、孔洞、孤岛和遗漏，再按实际进返场+扫描用时选择固定方案。
+    for north_cap in range(140, 221, 10):
+        for west_limit in range(65, 111, 5):
+            for west_split in range(80, 151, 10):
+                try:
+                    candidate_regions = _regions(flyable, reference, north_cap, west_limit, west_split)
+                except ValueError:
+                    continue
+                candidate_count += 1
+                candidate_routes = []
+                for region in candidate_regions:
+                    if region.wkb not in route_cache:
+                        route_cache[region.wkb] = _region_route(region, safe, boundary, hole_points)
+                    candidate_routes.append(route_cache[region.wkb])
+                score = (max(route["mission_time_s"] for route in candidate_routes),
+                         sum(route["route_distance_m"] for route in candidate_routes),
+                         sum(route["mission_time_s"] for route in candidate_routes))
+                if best is None or score < best[0]:
+                    best = (score, candidate_regions, candidate_routes,
+                            {"north_cap_m": north_cap, "west_limit_m": west_limit,
+                             "west_split_m": west_split})
+    if best is None:
+        raise ValueError("没有满足许昌分区范围与紧凑度约束的候选方案")
+    _, regions, selected_routes, partition_cuts = best
     planned, routes = {}, []
-    for uid, region, selected_route in zip(SOURCE_REGION_UAV_IDS, regions, selected_routes):
+    for uid, region, selected_route in zip(range(1, 7), regions, selected_routes):
         route = copy.deepcopy(selected_route)
         scans, flight = route["waypoints_m"], route["flight_path_m"]
         if (not flyable.buffer(1e-7).covers(LineString(flight))
@@ -193,12 +210,17 @@ def prepare_xuchang_small_plan():
     times = [task["mission_time_s"] for task in routes]
     coverage_info = {
         "objective": "cover_flyable_area_with_five_meter_clearance_and_short_routes",
-        "algorithm": "fixed_uav1_uav4_partition_search_safe_disk_cover_visibility_graph_multistart_2opt",
-        "fixed_subregion_uav_ids": sorted([SOURCE_REGION_UAV_IDS[0], SOURCE_REGION_UAV_IDS[3]]), "partition_candidates": 19,
-        "source_region_by_uav": {str(uid): index for index, uid in enumerate(SOURCE_REGION_UAV_IDS, 1)},
-        "north_south_split_fraction": split_fraction,
-        "uav{}_requested_area_m2".format(SOURCE_REGION_UAV_IDS[0]): requested_uav1.area,
-        "uav{}_removed_area_m2".format(SOURCE_REGION_UAV_IDS[0]): requested_uav1.difference(fixed_uav1).area,
+        "algorithm": "constrained_compact_partition_safe_disk_cover_visibility_graph_multistart_2opt",
+        "fixed_subregion_uav_ids": [2], "partition_candidates": candidate_count,
+        "partition_reference_sha256": reference_data["source_plan_sha256"],
+        "partition_cuts_m": partition_cuts,
+        "partition_constraints": {
+            "uav2_equals_previous_uav1": True,
+            "uav1_east_limit_m": -reference[1].bounds[1],
+            "uav5_north_limit_m": reference[5].bounds[2] - 30.0,
+            "uav5_south_limit_m": reference[1].bounds[0],
+            "uav4_north_of_uav6": True,
+            "maximum_aspect_ratio": 3.0, "minimum_short_side_m": 70.0},
         "partition_objective": "minimize_maximum_completion_time_then_total_distance",
         "global_optimum_proven": False, "uav_count": 6,
         "reconnaissance_radius_m": RADIUS_M, "speed_mps": SPEED_MPS,
@@ -227,14 +249,11 @@ def prepare_xuchang_small_plan():
             "points_m": boundary,
             "excluded_points": [[lat, lon] for lon, lat in data["excluded_lon_lat"]],
             "excluded_polygons_m": [hole_points],
-            "requested_subregions_lon_lat": {
-                str(SOURCE_REGION_UAV_IDS[0]): copy.deepcopy(data["uav1_requested_boundary_lon_lat"]),
-                str(SOURCE_REGION_UAV_IDS[3]): copy.deepcopy(data["uav4_boundary_lon_lat"])},
+            "requested_subregions_lon_lat": {},
             "fixed_subregions_lon_lat": {
-                str(SOURCE_REGION_UAV_IDS[0]): [[projection["longitude"] - point[1] / projection["west_m_per_degree"],
+                "2": [[projection["longitude"] - point[1] / projection["west_m_per_degree"],
                        projection["latitude"] + point[0] / projection["north_m_per_degree"]]
-                      for point in list(fixed_uav1.exterior.coords)[:-1]],
-                str(SOURCE_REGION_UAV_IDS[3]): copy.deepcopy(data["uav4_boundary_lon_lat"])},
+                      for point in list(regions[1].exterior.coords)[:-1]]},
             "origin_x_m": minx, "origin_y_m": miny,
             "width_m": maxy - miny, "height_m": maxx - minx,
             "polygon_width_m": outer.bounds[3] - outer.bounds[1],
@@ -260,6 +279,119 @@ def prepare_xuchang_small_plan():
             "flight_profile": PROFILE, "departure_point": DEPARTURE,
         },
     }
+
+
+def _prepare_east_transfer_plan():
+    """仅转移UAV4东侧六点及对应区域；其他四机和UAV4剩余点不重新优化。"""
+    from shapely.geometry import LineString, Point, Polygon
+    from shapely.ops import unary_union
+    from .transit_routes import clearance_region, clearance_routes
+
+    coverage._load_geometry()
+    reference = json.loads(EAST_TRANSFER_REFERENCE_PATH.read_text(encoding="utf-8"))
+    base = reference["base_plan"]
+    if reference.get("schema_version") != 1 or reference.get("base_plan_sha256") != coverage._plan_hash(base):
+        raise ValueError("许昌局部转区基准校验失败，请核对原固定方案")
+    data, boundary, hole_points, projection = _area()
+    area = base["search_area"]
+    if area["points_m"] != boundary or area["excluded_polygons_m"] != [hole_points]:
+        raise ValueError("许昌局部转区基准与现有场地边界或禁飞区不一致")
+    plan = copy.deepcopy(base)
+    task4 = base["planned_uavs"]["4"]["task"]
+    points4 = task4["waypoints_m"]
+    indices = reference["transferred_waypoint_indices_1based"]
+    actual = sorted(i + 1 for i, point in sorted(enumerate(points4), key=lambda pair: pair[1][1])[:6])
+    if indices != actual or len(points4) != 16:
+        raise ValueError("许昌局部调整必须对应基准UAV4最东侧六个航点")
+    moved_points = [copy.deepcopy(point) for i, point in enumerate(points4, 1) if i in indices]
+    kept_points = [copy.deepcopy(point) for i, point in enumerate(points4, 1) if i not in indices]
+    cut = reference["cut"]
+    def west_limit(north):
+        return -(cut["east_anchor_m"] + cut["east_change_per_north_m"] * (north - cut["north_anchor_m"]))
+    west_half = Polygon([[-1000, 1000], [-1000, west_limit(-1000)],
+                         [1000, west_limit(1000)], [1000, 1000]])
+    original4 = Polygon(task4["polygon_m"])
+    region4 = original4.intersection(west_half)
+    transferred = original4.difference(region4)
+    region3 = Polygon(base["planned_uavs"]["3"]["task"]["polygon_m"]).union(transferred)
+    for region in (region3, region4):
+        if region.geom_type != "Polygon" or not region.is_valid or region.interiors:
+            raise ValueError("许昌局部转区后必须保留连通且无孔洞的子区域")
+    if any(not region4.buffer(1e-7).covers(Point(point)) for point in kept_points):
+        raise ValueError("许昌UAV4剩余十点必须保持在西侧子区内")
+    if any(not transferred.buffer(1e-7).covers(Point(point)) for point in moved_points):
+        raise ValueError("许昌UAV4东侧六点必须全部转入UAV3子区")
+    flyable = Polygon(boundary, holes=[hole_points])
+    safe = clearance_region(boundary, CLEARANCE_M + .01, holes=[hole_points])
+    task3_input = dict(base["planned_uavs"]["3"]["task"],
+                       polygon_m=[list(p) for p in list(region3.exterior.coords)[:-1]],
+                       waypoints_m=[*base["planned_uavs"]["3"]["task"]["waypoints_m"], *moved_points])
+    route3 = _safe_route(task3_input, region3, safe, [0., 0.])
+    # 西侧十点保留原坐标与顺序，只更新进返场、时长和子区边界。
+    route4 = dict(copy.deepcopy(task4), waypoints_m=kept_points,
+                  scan_waypoints_m=copy.deepcopy(kept_points), scan_count=len(kept_points),
+                  original_scan_count=len(kept_points), coverage_added_scan_count=0,
+                  turning_point_count=0, hover_scan_time_s=len(kept_points) * HOVER_SECONDS,
+                  waypoint_actions=[{"index": i, "action": "hover_scan", "duration_s": HOVER_SECONDS}
+                                    for i in range(len(kept_points))])
+    for uid, region, route in ((3, region3, route3), (4, region4, route4)):
+        scans = route["waypoints_m"]
+        entry, to_last = clearance_routes(boundary, [0., 0.], [scans[0], scans[-1]], CLEARANCE_M, holes=[hole_points])
+        flight = [*entry, *scans[1:], *list(reversed(to_last))[1:]]
+        line = LineString(flight)
+        if (not flyable.buffer(1e-7).covers(line) or line.distance(flyable.boundary) < CLEARANCE_M):
+            raise ValueError("许昌局部转区航段未满足5米间距")
+        covered = unary_union([Point(point).buffer(RADIUS_M - .02, quad_segs=32) for point in scans])
+        if region.difference(covered).area > 1e-5:
+            raise ValueError("许昌局部转区航点未完整覆盖自身子区域")
+        length = sum(math.dist(a, b) for a, b in zip(flight, flight[1:]))
+        minx, miny, maxx, maxy = region.bounds
+        task = dict(copy.deepcopy(base["planned_uavs"][str(uid)]["task"]), **route)
+        task.update(polygon_m=[list(p) for p in list(region.exterior.coords)[:-1]],
+                    area_m2=region.area, required_area_m2=region.area,
+                    bounds_m={"x_min": minx, "x_max": maxx, "y_min": miny, "y_max": maxy},
+                    shape=coverage.shape_metrics(region), flight_path_m=flight,
+                    route_primitives=[{"kind": "line", "start": a, "end": b, "length_m": math.dist(a, b)}
+                                      for a, b in zip(flight, flight[1:])],
+                    route_distance_m=length, travel_time_s=length / SPEED_MPS,
+                    mission_time_s=length / SPEED_MPS + len(scans) * HOVER_SECONDS,
+                    waypoints_wgs84=[[
+                        round(projection["latitude"] + point[0] / projection["north_m_per_degree"], 10),
+                        round(projection["longitude"] - point[1] / projection["west_m_per_degree"], 10)
+                    ] for point in scans])
+        plan["planned_uavs"][str(uid)]["task"] = task
+    tasks = [plan["planned_uavs"][str(uid)]["task"] for uid in range(1, 7)]
+    regions = [Polygon(task["polygon_m"]) for task in tasks]
+    if (flyable.symmetric_difference(unary_union(regions)).area > 1e-5
+            or any(a.intersection(b).area > 1e-5 for i, a in enumerate(regions) for b in regions[i + 1:])):
+        raise ValueError("许昌局部转区发生遗漏或重叠")
+    info = plan["search_area"]["coverage"]
+    info.update(objective="transfer_eastern_six_points_keep_other_aircraft_unchanged",
+                algorithm="fixed_reference_diagonal_cut_safe_disk_cover_visibility_graph_multistart_2opt",
+                base_partition_candidates=info["partition_candidates"], partition_candidates=1,
+                partition_objective="reduce_uav4_workload_then_cover_uav3_with_safe_short_route",
+                fixed_subregion_uav_ids=[1, 2, 5, 6],
+                total_scan_count=sum(task["scan_count"] for task in tasks),
+                total_distance_m=sum(task["route_distance_m"] for task in tasks),
+                total_mission_time_s=sum(task["mission_time_s"] for task in tasks),
+                maximum_completion_time_s=max(task["mission_time_s"] for task in tasks),
+                maximum_aircraft_distance_m=max(task["route_distance_m"] for task in tasks),
+                eastern_transfer={"source_uav_id": 4, "destination_uav_id": 3,
+                                  "base_plan_sha256": reference["base_plan_sha256"],
+                                  "transferred_waypoint_indices_1based": indices,
+                                  "transferred_area_m2": transferred.area, "cut": cut,
+                                  "uav4_kept_original_order": True,
+                                  "uav3_added_coverage_points": route3["coverage_added_scan_count"]})
+    plan["prepared_plan"].update(
+        id=hashlib.sha256((_source_digest() + PROFILE).encode()).hexdigest()[:20],
+        source_digest=_source_digest(), generated_at=datetime.now(timezone.utc).isoformat())
+    return plan
+
+
+def prepare_xuchang_small_plan():
+    """许昌专用进返场方向：只调整固定路线与1/4点序，不改变高度或控制流程。"""
+    from .xuchang_transit_lanes import apply_transit_lanes
+    return apply_transit_lanes(_prepare_east_transfer_plan())
 
 
 def save_xuchang_small_plan(plan):

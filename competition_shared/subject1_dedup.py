@@ -11,6 +11,7 @@ from .target_quality import quality_rank
 
 STATIC_DISTANCE_M = 10.0
 MOVING_DISTANCE_M = 10.0
+OTHER_DISTANCE_M = 5.0
 MAX_MOVING_TRACK_POINTS = 40
 MAX_SUBMISSION_TARGETS = 16
 
@@ -28,11 +29,17 @@ def _quality(feature):
 
 def _kind(feature):
     props = feature.get("properties", {})
-    model = str(props.get("targetModel") or "").strip().casefold()
-    broad = str(props.get("targetType") or "").strip().casefold()
-    if model in ("", "未知", "其他"):
-        model = broad
-    return props.get("targetCategory"), model
+    raw = str(feature.get("_dedup_category") or props.get("targetType") or "").strip().casefold()
+    broad = {"人": "人员", "车": "车辆", "建筑物": "工事",
+             "person": "人员", "car": "车辆", "building": "工事"}.get(raw, raw)
+    return props.get("targetCategory"), broad
+
+
+def _pair_distance_limit(left, right):
+    a, b = _kind(left), _kind(right)
+    same_broad = a[1] == b[1] and a[1] in ("人员", "车辆", "工事")
+    moving_person_car = a[0] == b[0] == "移动" and {a[1], b[1]} == {"人员", "车辆"}
+    return STATIC_DISTANCE_M if same_broad or moving_person_car else OTHER_DISTANCE_M
 
 
 def _distance(a, b):
@@ -84,7 +91,8 @@ def _position_at(track, stamps, when):
     return [before[1][axis] + (after[1][axis] - before[1][axis]) * fraction for axis in (0, 1)]
 
 
-def _similar_tracks(left, right):
+def _similar_tracks(left, right, distance_m=None):
+    distance_m = _pair_distance_limit(left, right) if distance_m is None else distance_m
     a, b = _track(left), _track(right)
     if len(a) < 2 or len(b) < 2:
         return False, None
@@ -111,7 +119,7 @@ def _similar_tracks(left, right):
             if index == 8:
                 last_a, last_b = pos_a, pos_b
         samples_sorted = sorted(samples)
-        if samples_sorted[7] > MOVING_DISTANCE_M or samples_sorted[-1] > 2 * MOVING_DISTANCE_M:
+        if samples_sorted[7] > distance_m or samples_sorted[-1] > 2 * distance_m:
             continue
         # 相邻车道反向通行不能只凭靠得近而合并。
         travel_a, travel_b = _distance(first_a, last_a), _distance(first_b, last_b)
@@ -125,7 +133,8 @@ def _similar_tracks(left, right):
         mean = sum(samples) / len(samples)
         if best is None or mean < best["mean_distance_m"]:
             best = {"mean_distance_m": round(mean, 2), "max_distance_m": round(samples_sorted[-1], 2),
-                    "overlap_seconds": round(overlap, 2), "time_offset_seconds": lag}
+                    "overlap_seconds": round(overlap, 2), "time_offset_seconds": lag,
+                    "distance_limit_m": distance_m}
     return best is not None, best
 
 
@@ -143,99 +152,113 @@ def _limit_moving_track(feature):
     return original_count - len(selected)
 
 
+def _pair_match(left, right):
+    """对每一对候选分别应用混淆组距离，避免链式合并越过较小阈值。"""
+    a, b = _kind(left), _kind(right)
+    limit = _pair_distance_limit(left, right)
+    if a[0] != b[0]:
+        return False, None
+    if a[0] == "移动":
+        same, detail = _similar_tracks(left, right, limit)
+        return same, dict(detail, track_points_merged=False) if detail else None
+    if a[0] == "固定":
+        distance = _distance(left.get("geometry", {}).get("coordinates"),
+                             right.get("geometry", {}).get("coordinates"))
+        return distance <= limit, dict(max_distance_m=round(distance, 2), distance_limit_m=limit)
+    return False, None
+
+
+def _ordered(features):
+    return sorted(features, key=lambda f: (tuple(-v for v in _quality(f)),
+                                          str(f.get("id", "")), str(f.get("_source_uav", ""))))
+
+
 def consolidate(document, *, max_targets=MAX_SUBMISSION_TARGETS):
-    """返回去重并按成功标记、识别次数、检测分数排序的 GeoJSON 及审计记录。"""
+    """同机和跨机按混淆组判重；有效候选达到上限时从合并候选补足要求数量。"""
+    if type(max_targets) is not int or max_targets < 1:
+        raise ValueError("上报目标数量必须是正整数")
     result = copy.deepcopy(document)
     raw = result.get("features", [])
     if not isinstance(raw, list):
-        return result, {"merged": [], "omitted": [], "raw_count": 0, "result_count": 0}
-    ordered = sorted(raw, key=lambda f: (tuple(-v for v in _quality(f)), str(f.get("id", ""))))
+        return result, {"merged": [], "omitted": [], "backfilled": [], "raw_count": 0, "result_count": 0}
     groups, merged, track_truncations = [], [], []
-    for feature in ordered:
-        source = feature.pop("_source_uav", None)
-        kind = _kind(feature)
+    for feature in _ordered(raw):
         matched = None
         for group in groups:
-            if group["kind"] != kind or (source and source in group["sources"]):
-                continue
-            if kind[0] == "固定":
-                coords = feature.get("geometry", {}).get("coordinates")
-                distances = [_distance(coords, member.get("geometry", {}).get("coordinates"))
-                             for member in group["members"]]
-                if distances and max(distances) <= STATIC_DISTANCE_M:
-                    matched = (group, {"max_distance_m": round(max(distances), 2)})
-                    break
-            elif kind[0] == "移动":
-                comparisons = [_similar_tracks(feature, member) for member in group["members"]]
-                if comparisons and all(similar for similar, _ in comparisons):
-                    evidence = max((detail for _, detail in comparisons),
-                                   key=lambda detail: detail["mean_distance_m"])
-                    # 时间偏移只用于判断同一目标；最终选一条完整的机载轨迹，不拼接多机点。
-                    evidence = dict(evidence, track_points_merged=False)
-                    matched = (group, evidence)
-                    break
+            comparisons = [_pair_match(feature, member) for member in group["members"]]
+            if comparisons and all(same for same, _ in comparisons):
+                matched = group
+                break
         if matched is None:
-            groups.append({"feature": feature, "members": [feature], "sources": {source} if source else set(),
-                           "kind": kind, "member_sources": [source], "member_evidence": [None]})
-            continue
-        group, evidence = matched
-        group["members"].append(feature)
-        group["member_sources"].append(source)
-        group["member_evidence"].append(evidence)
-        if source:
-            group["sources"].add(source)
-    features = []
+            groups.append({"members": [feature]})
+        else:
+            matched["members"].append(feature)
+
+    winners, merged_candidates, represented_by = [], [], {}
     for group in groups:
-        kind = group["kind"]
-        if kind[0] == "移动":
-            # 不把不同飞机采集的轨迹拼成一条；有效点数优先（最多40），质量用于相同长度裁决。
-            group["feature"] = max(group["members"], key=lambda member: (
+        if all(_kind(member)[0] == "移动" for member in group["members"]):
+            winner = max(group["members"], key=lambda member: (
                 min(MAX_MOVING_TRACK_POINTS, len(_track(member))), _quality(member), str(member.get("id", ""))))
-        winner = group["feature"]
-        for member, source, evidence in zip(group["members"], group["member_sources"],
-                                            group["member_evidence"]):
+        else:
+            winner = _ordered(group["members"])[0]
+        winners.append(winner)
+        for member in group["members"]:
             if member is winner:
                 continue
-            if evidence is None:
-                if kind[0] == "移动":
-                    _, evidence = _similar_tracks(winner, member)
-                    evidence = dict(evidence or {}, track_points_merged=False)
-                else:
-                    evidence = {"max_distance_m": round(_distance(
-                        winner.get("geometry", {}).get("coordinates"),
-                        member.get("geometry", {}).get("coordinates")), 2)}
+            _, evidence = _pair_match(winner, member)
+            merged_candidates.append(member)
+            represented_by[id(member)] = winner
             merged.append({"kept_id": winner.get("id"), "merged_id": member.get("id"),
-                           "source_uav": source, "target_category": kind[0], "target_type": kind[1],
+                           "kept_source_uav": winner.get("_source_uav"),
+                           "source_uav": member.get("_source_uav"),
+                           "same_uav": bool(member.get("_source_uav")) and member.get("_source_uav") == winner.get("_source_uav"),
+                           "target_category": _kind(member)[0], "target_type": _kind(member)[1],
+                           "kept_target_type": _kind(winner)[1],
                            "kept_quality": winner.get("_quality", {}),
-                           "merged_quality": member.get("_quality", {}),
-                           **evidence})
-        if kind[0] == "移动":
-            original_count = len(winner["properties"].get("trackPoints", []))
-            omitted_points = _limit_moving_track(winner)
-            if omitted_points:
-                track_truncations.append({"id": winner.get("id"), "source_track_points": original_count,
-                                          "omitted_track_points": omitted_points})
-        features.append(winner)
-    features.sort(key=lambda f: (tuple(-v for v in _quality(f)), str(f.get("id", ""))))
-    omitted = [{"id": feature.get("id"), "reason": "超出赛事最多16个目标"}
-               for feature in features[max_targets:]]
-    features = features[:max_targets]
-    quality_ranking = [{"id": f.get("id"), **f.get("_quality", {}), "score": _confidence(f)} for f in features]
+                           "merged_quality": member.get("_quality", {}), **(evidence or {})})
+
+    selected = _ordered(winners)[:max_targets]
+    backfilled = []
+    if len(raw) >= max_targets and len(selected) < max_targets:
+        for candidate in _ordered(merged_candidates)[:max_targets-len(selected)]:
+            selected.append(candidate)
+            winner = represented_by[id(candidate)]
+            backfilled.append({"id": candidate.get("id"), "source_uav": candidate.get("_source_uav"),
+                               "represented_by": winner.get("id"),
+                               "representative_source_uav": winner.get("_source_uav"),
+                               "quality": candidate.get("_quality", {}), "score": _confidence(candidate),
+                               "reason": "有效候选达到要求数量，按质量从合并候选补足上报数量"})
+    features = _ordered(selected)
+    selected_ids = {id(feature) for feature in features}
+    omitted = [{"id": feature.get("id"), "source_uav": feature.get("_source_uav"),
+                "reason": "超出赛事最多16个目标"} for feature in _ordered(winners) if id(feature) not in selected_ids]
+    for feature in features:
+        if _kind(feature)[0] == "移动":
+            count = len(feature["properties"].get("trackPoints", []))
+            removed = _limit_moving_track(feature)
+            if removed:
+                track_truncations.append({"id": feature.get("id"), "source_uav": feature.get("_source_uav"),
+                                          "source_track_points": count, "omitted_track_points": removed})
+    quality_ranking = [{"id": f.get("id"), "source_uav": f.get("_source_uav"),
+                        **f.get("_quality", {}), "score": _confidence(f)} for f in features]
     seen = set()
     for feature in features:
         feature.pop("_quality", None)
+        feature.pop("_source_uav", None)
+        feature.pop("_dedup_category", None)
         original = str(feature.get("id", ""))
-        identifier = original
-        suffix = 2
+        identifier, suffix = original, 2
         while identifier in seen:
             identifier = "%s-%d" % (original, suffix)
             suffix += 1
         feature["id"] = identifier
         seen.add(identifier)
     result["features"] = features
-    return result, {"raw_count": len(raw), "result_count": len(features), "merged": merged,
+    return result, {"dedup_scope": "within_and_across_uavs",
+                    "raw_count": len(raw), "deduplicated_count": len(winners), "result_count": len(features),
+                    "merged": merged, "backfilled": backfilled, "backfilled_count": len(backfilled),
                     "omitted": omitted, "static_distance_m": STATIC_DISTANCE_M,
-                    "moving_distance_m": MOVING_DISTANCE_M,
+                    "moving_distance_m": MOVING_DISTANCE_M, "other_distance_m": OTHER_DISTANCE_M,
                     "moving_track_point_limit": MAX_MOVING_TRACK_POINTS,
                     "track_truncations": track_truncations, "quality_ranking": quality_ranking,
                     "quality_order": ["tracking_success", "detection_count", "score"]}

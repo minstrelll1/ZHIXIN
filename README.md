@@ -124,6 +124,8 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\start_ground.ps1
 http://127.0.0.1:8000/
 ```
 
+启动时自动检查本机地面互联防火墙规则，双击和命令行启动均适用。首次缺少规则时，在 Windows 管理员授权提示中选择“是”；已有正确规则时不再申请权限。仅允许 `config/fleet.json` 中六个地面互联 IP 访问本机网页端口（默认 TCP 8000）和 Ping，公用网络也适用。配置失败不阻断启动，详情见 `ground_logs/firewall.log`；六台电脑分别更新并启动即可，无需逐台粘贴规则命令。
+
 进入网页后选择本机地面终端编号和任务发布角色。
 
 ### 2. 机载竞赛程序

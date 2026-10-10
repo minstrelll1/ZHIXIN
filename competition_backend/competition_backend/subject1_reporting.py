@@ -175,7 +175,7 @@ class Subject1Reporter:
         return None
 
     def prepare(self, document, *, already_deduplicated=False):
-        # 本机生成的结果已经按 UAV 来源去重；再次去重会误合并同机近邻目标。
+        # 本机生成的结果已经按组内两两距离去重；重复整理会丢失被合并成员的约束。
         # 人工导入的原始赛事 JSON 则在此完成去重和置信度排序。
         local_path = self._local_result_path(document)
         already_deduplicated = already_deduplicated or (local_path is not None and
@@ -193,6 +193,9 @@ class Subject1Reporter:
         else:
             document, decisions = consolidate(document)
         document, format_audit = format_submission(document)
+        if not already_deduplicated:
+            format_audit['deduplication'] = {key: decisions.get(key) for key in
+                ('raw_count', 'deduplicated_count', 'result_count', 'backfilled_count', 'backfilled')}
         if local_path is not None:
             try:
                 audit_path = (local_path.with_suffix('.format.json') if local_path.parent == self.root
@@ -206,6 +209,9 @@ class Subject1Reporter:
                         [entry['source_id'] for entry in format_audit['id_mapping']]):
                     format_audit['id_mapping'] = local_audit['id_mapping']
                 format_audit['excluded_targets'] = local_audit.get('excluded_targets', format_audit['excluded_targets'])
+                for key in ('target_time', 'category_records', 'motion_classification', 'deduplication'):
+                    if isinstance(local_audit.get(key), (dict, list)):
+                        format_audit[key] = local_audit[key]
             except (OSError, ValueError, TypeError, KeyError):
                 pass
         summary = validate_document(document)
@@ -236,8 +242,14 @@ class Subject1Reporter:
         if self.audit:
             self.audit.record('赛事结果文件已整理', draft_id=digest, file=str(path),
                               merged_count=len(decisions['merged']), omitted_count=len(decisions['omitted']),
+                              backfilled_count=format_audit.get('deduplication', {}).get('backfilled_count', 0),
                               skipped_count=len(format_audit['excluded_targets']),
-                              format_audit_file=str(self.root / (digest + '.format.json')), **summary)
+                              reclassified_static_count=sum(bool(row.get('converted_to_static')) for row in format_audit.get('motion_classification', [])),
+                              format_audit_file=str(self.root / (digest + '.format.json')),
+                              time_corrected_count=format_audit.get('target_time', {}).get('corrected_count', 0),
+                              time_pending_count=format_audit.get('target_time', {}).get('pending_count', 0),
+                              time_unverified_legacy_count=format_audit.get('target_time', {}).get('unverified_legacy_count', 0),
+                              **summary)
         skipped = format_audit['excluded_targets']
         return dict(draft_id=digest, team_name=document['name'], filename='target-submission.json',
                     download_url='/api/v1/subject1/report/files/' + digest, endpoint=ENDPOINT,

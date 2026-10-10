@@ -28,12 +28,14 @@ def build_data():
                              for i, path in enumerate(vehicle['return_paths_m'])]
             for uid, item in plan["planned_uavs"].items():
                 route = saved["vehicles"][str(uid)]
+                recipient_returns = [(str(part['source_uav_id']) + ':' + str(part['waypoint_index']), part['path'])
+                                     for part in route.get('fleet_return_paths_m', [])] or fleet_returns
                 uavs[str(uid)] = {
                     "sector": item["task"]["polygon_m"],
                     "scans": item["task"]["waypoints_m"],
                     "entry": route["entry_path_m"],
-                    "returns": [path for _, path in fleet_returns],
-                    "return_keys": [key for key, _ in fleet_returns],
+                    "returns": [path for _, path in recipient_returns],
+                    "return_keys": [key for key, _ in recipient_returns],
                 }
             scenes[key] = {
                 "boundary": saved["boundary_m"],

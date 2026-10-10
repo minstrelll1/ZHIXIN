@@ -30,6 +30,13 @@ if (-not $AuthToken) { $AuthToken = $env:AUTH_TOKEN }
 if (-not $PeerToken) { $PeerToken = $env:PEER_TOKEN }
 if (-not $AuthToken -or -not $PeerToken) { throw "请在 tools\local_tokens.ps1 或环境变量中设置 AUTH_TOKEN 和 PEER_TOKEN。" }
 
+# 每台地面电脑自动检查本机互联规则；取消授权或配置失败不阻断地面服务。
+try {
+    & (Join-Path $PSScriptRoot 'configure_ground_firewall.ps1') -FleetConfig $FleetConfig -WebPort $WebPort
+} catch {
+    Write-Warning ("地面互联防火墙检查失败，继续启动地面服务：{0}" -f $_.Exception.Message)
+}
+
 function Test-ExistingCompetitionBackend {
     param([int]$Port)
     $urls = @(

@@ -12,8 +12,10 @@ import re
 import shutil
 import tempfile
 from contextlib import contextmanager
-from competition_shared.target_quality import category_fields, quality_metadata, quality_rank
+from competition_shared.target_quality import category_fields, dedup_category, quality_metadata, quality_rank
+from competition_shared.target_motion import classify_motion
 from competition_shared.submission_format import format_submission
+from competition_shared.target_time import load_time_references, map_localization_time
 
 
 _SAFE_MISSION_ID = re.compile(r"[A-Za-z0-9_.-]{1,120}\Z")
@@ -59,32 +61,23 @@ def _confidence(metadata):
 
 
 def _iso_from_metadata(metadata):
-    # 目标时间不能用接收/上传时间代替；替代图片也不能改写目标时间。
-    stamps = []
-    if metadata.get("is_moving"):
-        stamps.append(metadata.get("localization_time"))
-    stamps.extend((metadata.get("target_timestamp"), metadata.get("image_stamp")))
-    detection_fields = ("image_stamp", "target_timestamp", "localization_time",
-                        "detection_received_at_unix_ns", "selected_image_stamp", "requested_image_stamp")
-    if not any(key in metadata for key in detection_fields):
-        # 兼容旧 paired_topics/capture_request 保存的原始相机时间。
-        stamps.append(dict(secs=metadata.get("source_stamp_sec"),
-                           nsecs=metadata.get("source_stamp_nsec")))
-    for stamp in stamps:
-        if not isinstance(stamp, dict):
-            continue
-        seconds, nanoseconds = stamp.get("secs"), stamp.get("nsecs")
-        if (type(seconds) is not int or type(nanoseconds) is not int
-                or seconds < 0 or not 0 <= nanoseconds < 1_000_000_000
-                or (seconds == 0 and nanoseconds == 0)):
-            continue
-        try:
-            instant = (datetime.datetime.fromtimestamp(seconds, datetime.timezone.utc)
-                       + datetime.timedelta(microseconds=nanoseconds // 1000))
-            return instant.isoformat(timespec="milliseconds").replace("+00:00", "Z")
-        except (ValueError, OSError, OverflowError):
-            continue
-    return None
+    """坐标与时间取自同一定位结果；绝不以图片、接收或上传时间补值。"""
+    stamp = metadata.get("localization_time")
+    if not isinstance(stamp, dict):
+        return None
+    seconds, nanoseconds = stamp.get("secs"), stamp.get("nsecs")
+    if (type(seconds) is not int or type(nanoseconds) is not int
+            or not 1_577_836_800 <= seconds < 4_102_444_800
+            or not 0 <= nanoseconds < 1_000_000_000):
+        # 拦截未校时的 1970 年、零值和错误格式，不推测或修补历史定位时间。
+        return None
+    try:
+        beijing = datetime.timezone(datetime.timedelta(hours=8))
+        instant = (datetime.datetime.fromtimestamp(seconds, beijing)
+                   + datetime.timedelta(microseconds=nanoseconds // 1000))
+        return instant.isoformat(timespec="milliseconds")
+    except (ValueError, OSError, OverflowError):
+        return None
 
 
 def _target_id(metadata):
@@ -188,12 +181,27 @@ def _update_subject1_submission_locked(output_root, mission_dir, mission_id, tea
     image_dir = mission_dir / "images"
     image_dir.mkdir(parents=True, exist_ok=True)
     records = {}
+    invalid_localization_times = []
+    time_mappings = []
+    category_records = []
+    motion_classification = []
+    references, reference_error = load_time_references(output_root)
     for source_json, metadata in _all_metadata(output_root, mission_id):
         if str(metadata.get("mission_id", "")) != str(mission_id):
             continue
         target_id = _target_id(metadata)
+        source_uav = source_json.parent.parent.name
+        match = re.fullmatch(r"UAV([1-6])", source_uav)
+        metadata, time_audit = map_localization_time(
+            metadata, int(match.group(1)) if match else None, references, reference_error)
+        time_audit.update(source_json=str(source_json.relative_to(output_root)), target_id=target_id)
+        time_mappings.append(time_audit)
         timestamp = _iso_from_metadata(metadata)
-        position = _position(metadata)
+        if timestamp is None:
+            invalid_localization_times.append(dict(
+                source_json=str(source_json.relative_to(output_root)), target_id=target_id,
+                localization_time=time_audit["original_localization_time"],
+                reason=time_audit["reason"] or "缺少有效 localization_time，未以图片/接收时间补值"))
         local_position = _local_position(metadata)
         image_source = source_json.with_suffix(".jpg")
         image_name = "%s_%s_%s.jpg" % (
@@ -216,12 +224,14 @@ def _update_subject1_submission_locked(output_root, mission_dir, mission_id, tea
                         os.unlink(temporary)
         rank = _observation_rank(metadata, timestamp, source_json)
         source_uav = source_json.parent.parent.name
-        record_key = (source_uav, target_id) if publisher_dedup else target_id
+        # 各机的全局 ID 只在该机内唯一，先分别整理，再交由发布端进行同机和跨机判重。
+        record_key = (source_uav, target_id)
         item = records.setdefault(record_key, {
             "target_id": target_id, "source_uav": source_uav,
-            "points": [], "latest": metadata, "latest_rank": rank,
+            "latest": metadata, "latest_rank": rank,
             "category_metadata": None, "category_rank": (-1, -1, ""),
-            "moving": False, "image": None, "image_rank": (-1, -1, ""),
+            "moving": bool(metadata.get("is_moving", False)), "first_rank": rank,
+            "first": metadata, "image": None, "image_rank": (-1, -1, ""),
             "observations": [],
         })
         item["observations"].append((metadata, "./images/" + image_name if image_path else None, rank))
@@ -235,12 +245,12 @@ def _update_subject1_submission_locked(output_root, mission_dir, mission_id, tea
         )
         if has_category and rank >= item["category_rank"]:
             item["category_metadata"], item["category_rank"] = metadata, rank
-        item["moving"] = item["moving"] or bool(metadata.get("is_moving", False))
+        # 首次静/动属性按机载接收顺序确定；磁盘文件名及补传抵达顺序不改变它。
+        if rank < item["first_rank"]:
+            item["first"], item["first_rank"] = metadata, rank
+            item["moving"] = bool(metadata.get("is_moving", False))
         if image_path and rank >= item["image_rank"]:
             item["image"], item["image_rank"] = "./images/" + image_name, rank
-        point = {"coordinates": position, "timestamp": timestamp} if position and timestamp else None
-        if point and (not item["points"] or item["points"][-1] != point):
-            item["points"].append(point)
         if local_position:
             item.setdefault("local_positions", []).append(dict(local_position, timestamp=timestamp))
 
@@ -249,8 +259,26 @@ def _update_subject1_submission_locked(output_root, mission_dir, mission_id, tea
     for _, item in sorted(records.items()):
         target_id = item["target_id"]
         moving = item["moving"]
-        points = sorted({point["timestamp"]: point for point in item["points"]}.values(),
-                        key=lambda point: point["timestamp"])
+        # 先按收到先后归并，重复定位时间保留最后接收的点，再按定位时间排列。
+        # 首次为动目标时，后续 is_moving=False 的有效定位也纳入这一条轨迹。
+        unique_points = {}
+        for observation, _, observed_rank in sorted(item["observations"], key=lambda entry: entry[2]):
+            position, timestamp = _position(observation), _iso_from_metadata(observation)
+            if position and timestamp:
+                unique_points[timestamp] = {"coordinates": position, "timestamp": timestamp}
+        points = sorted(unique_points.values(), key=lambda point: point["timestamp"])
+        moving, motion_audit = classify_motion(item["first"], points)
+        motion_classification.append({
+            "source_uav": item["source_uav"], "target_id": target_id,
+            "locked_is_moving": item["moving"], **motion_audit,
+            "first_source_json": str(Path(item["first_rank"][2]).relative_to(output_root)),
+            "first_received_order_ns": item["first_rank"][0],
+            "last_source_json": str(Path(item["latest_rank"][2]).relative_to(output_root)),
+            "last_received_order_ns": item["latest_rank"][0],
+            "observation_count": len(item["observations"]),
+            "contradictory_report_count": sum(bool(o.get("is_moving", False)) != item["moving"]
+                                              for o, _, _ in item["observations"]),
+        })
         if moving:
             metadata = item["category_metadata"] or item["latest"]
             matching_observations = [
@@ -268,6 +296,15 @@ def _update_subject1_submission_locked(output_root, mission_dir, mission_id, tea
             # 同一静目标 ID 多次上报时，最终结果只采用最后收到的一整条记录。
             metadata = item["latest"]
             best_observation, best_image, _ = max(item["observations"], key=lambda entry: entry[2])
+        broad = dedup_category(metadata)
+        formal_type, formal_model = category_fields(metadata)
+        category_records.append({
+            "source_uav": item["source_uav"], "target_id": target_id,
+            "source_category": metadata.get("category"), "dedup_category": broad,
+            "target_type": metadata.get("target_type"), "category_id": metadata.get("category_id"),
+            "submission_target_type": formal_type, "submission_target_model": formal_model,
+            "category_conflict": broad != formal_type,
+        })
         confidence = _confidence(best_observation)
         properties = {
             "targetCategory": "移动" if moving else "固定",
@@ -298,7 +335,7 @@ def _update_subject1_submission_locked(output_root, mission_dir, mission_id, tea
             position = _position(metadata)
             timestamp = _iso_from_metadata(metadata)
             if not position or not timestamp:
-                reason = ("缺少有效目标源时间戳，不能以接收时间代替发现时间" if not timestamp else
+                reason = ("缺少有效 localization_time 定位源时间戳或对应的机地时间参考，不能以图像或接收时间代替" if not timestamp else
                           "室内 XYZ 或无效 WGS84 坐标不能写入 EPSG:4326 几何")
                 skipped_indoor.append({"id": target_id, "reason": reason,
                                        "localPosition": item.get("local_positions", [])})
@@ -310,6 +347,7 @@ def _update_subject1_submission_locked(output_root, mission_dir, mission_id, tea
         if publisher_dedup:
             feature["_quality"] = quality_metadata(best_observation)
             feature["_source_uav"] = item["source_uav"]
+            feature["_dedup_category"] = broad
         features.append(feature)
 
     document = {
@@ -333,9 +371,24 @@ def _update_subject1_submission_locked(output_root, mission_dir, mission_id, tea
 
         _atomic_json(mission_dir / "raw-targets.json", document)
         document, decisions = consolidate(document)
+        decisions["motion_reclassifications"] = [row for row in motion_classification if row["converted_to_static"]]
         _atomic_json(mission_dir / "dedup-decisions.json", decisions)
     # 编号只作用于最终赛事文件；原始回传和去重记录继续保留源 ID。
     document, format_audit = format_submission(document)
+    if publisher_dedup:
+        format_audit["deduplication"] = {
+            key: decisions[key] for key in ("raw_count", "deduplicated_count", "result_count",
+                                            "backfilled_count", "backfilled")
+        }
+    format_audit["category_records"] = category_records
+    format_audit["motion_classification"] = motion_classification
+    format_audit["target_time"] = dict(source="localization_time", timezone="Asia/Shanghai",
+                                     utc_offset="+08:00", invalid_records=invalid_localization_times,
+                                     mapping_method="publisher_epoch_from_onboard_monotonic",
+                                     reference_file="time_references.json", records=time_mappings,
+                                     corrected_count=sum(a["status"] == "corrected" for a in time_mappings),
+                                     pending_count=sum(a["status"] == "pending" for a in time_mappings),
+                                     unverified_legacy_count=sum(a["status"] == "unverified_legacy" for a in time_mappings))
     _atomic_json(mission_dir / "submission-format.json", format_audit)
     target = mission_dir / "target-submission.json"
     _atomic_json(target, document)

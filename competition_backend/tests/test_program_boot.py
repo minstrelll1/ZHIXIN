@@ -57,6 +57,34 @@ class RemoteBootTests(unittest.TestCase):
             remote.rpc(payload)
         return json.loads(output.getvalue())
 
+    def test_clock_probe_never_creates_directories_or_writes_program_state(self):
+        with patch.object(remote.Path,'mkdir') as mkdir, \
+                patch.object(remote,'write_json') as write, \
+                patch.object(remote.subprocess,'run') as run:
+            result=self.rpc('clock_probe')
+        self.assertEqual(result['boot_id'],self.boot)
+        self.assertIsInstance(result['remote_monotonic'],float)
+        self.assertIsInstance(result['remote_wall'],float)
+        mkdir.assert_not_called();write.assert_not_called();run.assert_not_called()
+        self.assertEqual(self.calls,[])
+
+    def test_start_and_reconnect_never_adjust_system_clock(self):
+        with patch.object(remote.subprocess, 'run') as clock:
+            self.rpc('clock_probe')
+            first = self.rpc('auto_start', clock_sync=dict(state='ready'))
+            self.assertNotIn('_clock_sync', first)
+            self.live.clear()
+            self.rpc('status'); self.rpc('auto_start'); self.rpc('start')
+            self.boot = 'boot-b'
+            self.rpc('auto_start', clock_sync=dict(state='ready'))
+            clock.assert_not_called()
+
+    def test_existing_session_never_attempts_clock_sync(self):
+        self.health['flight']['present']=['/uav2/trajectory_follower']
+        with patch.object(remote.subprocess,'run') as clock:
+            self.rpc('status'); self.rpc('auto_start'); self.rpc('start')
+            clock.assert_not_called()
+
     def test_cold_boot_starts_three_once_even_when_reply_lost(self):
         self.assertEqual(self.rpc()['_lifecycle']['auto_start_pending'], list(remote.NAMES))
         self.rpc('auto_start')

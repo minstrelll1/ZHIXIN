@@ -41,6 +41,7 @@ from competition_shared.recognition import optional_recognition_selection
 from .journal import EventJournal
 from .diagnostics import Diagnostics, DiagnosticMiddleware
 from .competition_clock import CompetitionClock
+from .time_reference import TimeReferenceCollector
 from .groundstation_capture import PassivePointCloudCapture
 from .models import ReturnReason, Telemetry
 from .pengfei_telemetry import sanitize_pengfei
@@ -619,8 +620,10 @@ def create_app(environment=None, audit=None) -> FastAPI:
             pointcloud_collector.start()
             traffic_monitor.start()
             auto_subject1_reporter.start()
+            time_reference_collector.start()
             yield
         finally:
+            time_reference_collector.stop()
             auto_subject1_reporter.stop()
             traffic_monitor.stop()
             pointcloud_collector.stop()
@@ -649,6 +652,56 @@ def create_app(environment=None, audit=None) -> FastAPI:
     app.state.image_collector = image_collector
     app.state.pointcloud_collector = pointcloud_collector
     app.state.traffic_monitor = traffic_monitor
+
+    clock_probe_lock = threading.Lock()
+
+    def _connected_time_reference_uavs():
+        now = time.time()
+        return [int(uid) for uid, item in orchestrator.snapshot().get('telemetry', {}).items()
+                if item.get('connected') and 0 <= now - float(item.get('received_at', 0)) <= 3.]
+
+    def _local_clock_probe():
+        manager = getattr(app.state, 'program_manager', None)
+        if manager is None or not getattr(manager, 'local', None):
+            raise RuntimeError('本地机载程序管理器尚未就绪')
+        if int(manager.local['uav_id']) != local_uav_id:
+            raise RuntimeError('机载程序管理器的无人机绑定不一致')
+        if local_uav_id not in _connected_time_reference_uavs():
+            raise RuntimeError('本机配对无人机尚未连接或遥测已超时')
+        if not clock_probe_lock.acquire(blocking=False):
+            raise RuntimeError('本机配对无人机正在采样时间，请稍后再试')
+        try:
+            # 只读动作；不占用程序启动/停止队列，也不调用任何调钟入口。
+            return manager._request('clock_probe', {})
+        finally:
+            clock_probe_lock.release()
+
+    def _time_reference_probe(uid):
+        if uid == local_uav_id:
+            return _local_clock_probe()
+        if not isinstance(adapter, DistributedFleetAdapter) or uid not in adapter.peers:
+            raise RuntimeError('没有该无人机的地面互联地址')
+        return adapter._request_json(adapter.peers[uid] + '/api/v1/peer/clock-probe/%d' % uid,
+                                     timeout=5.)
+
+    def _queue_time_reference_rebuild(uid, reference):
+        if not (operator_state['configured'] and operator_state['task_publisher']):
+            return
+        if image_collector is None:
+            return
+        directory = image_root / ('UAV%d' % uid)
+        if directory.is_dir():
+            # 只投递任务ID；原有成果整理线程完成读取、换算、去重与JSON生成。
+            for mission in directory.iterdir():
+                if mission.is_dir():
+                    image_collector._queue_mission(mission.name)
+
+    time_reference_collector = TimeReferenceCollector(
+        image_root / 'time_references.json', terminal_id,
+        lambda: bool(operator_state['configured'] and operator_state['task_publisher']),
+        _connected_time_reference_uavs, _time_reference_probe, audit=audit,
+        on_update=_queue_time_reference_rebuild)
+    app.state.target_time_reference_collector = time_reference_collector
 
     def operator_status() -> Dict[str, Any]:
         with operator_lock:
@@ -879,6 +932,7 @@ def create_app(environment=None, audit=None) -> FastAPI:
         result["peer_roles"] = {str(key): value for key, value in peer_roles.items()}
         result["synchronization"] = synchronization
         result["restart_required"] = revision(fleet_store.read()) != revision(fleet_config)
+        time_reference_collector.wake()
         audit.record("终端选择和配置同步完成", result=result)
         return result
 
@@ -1023,6 +1077,7 @@ def create_app(environment=None, audit=None) -> FastAPI:
         result["fleet"] = fleet_status()
         result["operator"] = operator_status()
         result["competition_clock"] = competition_clock.snapshot()
+        result["target_time_reference"] = time_reference_collector.snapshot()
         result["subject1_auto_report"] = auto_subject1_reporter.snapshot()
         result["pointcloud"] = pointcloud_collector.status()
         result["traffic"] = traffic_monitor.status()
@@ -1539,6 +1594,16 @@ def create_app(environment=None, audit=None) -> FastAPI:
     def _require_peer_token(supplied: str) -> None:
         if peer_token and not hmac.compare_digest(supplied, peer_token):
             raise HTTPException(status_code=403, detail="ground peer authentication failed")
+
+    @app.get('/api/v1/peer/clock-probe/{uav_id}', include_in_schema=False)
+    def peer_clock_probe(uav_id: int, x_competition_peer_token: str = Header(default='')):
+        _require_peer_token(x_competition_peer_token)
+        if not isinstance(adapter, DistributedFleetAdapter) or uav_id != local_uav_id:
+            raise HTTPException(status_code=404, detail='只能查询本地配对无人机的只读时钟')
+        try:
+            return _local_clock_probe()
+        except Exception as error:
+            raise HTTPException(status_code=503, detail=str(error)) from error
 
     @app.get("/api/v1/peer/operator", include_in_schema=False)
     def peer_operator(x_competition_peer_token: str = Header(default="")):

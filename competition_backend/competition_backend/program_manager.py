@@ -128,7 +128,7 @@ class ProgramManager:
         command = ['ssh', *ssh_identity_args(), '-T', '-o', 'BatchMode=yes', '-o', 'StrictHostKeyChecking=accept-new',
                    '-o', 'ConnectTimeout=4', '-o', 'ServerAliveInterval=4', '-o', 'ServerAliveCountMax=1',
                    '%s@%s' % (user, self.local['onboard_host']), 'python3 -']
-        result = subprocess.run(command, input=code.encode('ascii'), capture_output=True, timeout=25 if action == 'stop' else 16,
+        result = subprocess.run(command, input=code.encode('ascii'), capture_output=True, timeout=25 if action == 'stop' else (4 if action == 'clock_probe' else 16),
                                 creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
         if result.returncode:
             detail = (result.stderr or result.stdout).decode('utf-8', errors='replace').strip()

@@ -139,6 +139,7 @@ class ProgramsTest(unittest.TestCase):
                     self.assertEqual(automatic['commands']['flight'], command)
                     self.assertEqual(automatic['expected_boot_id'], 'boot-test')
                     self.assertEqual(automatic['skip_programs'], ['detection'])
+                    self.assertNotIn('clock_sync', automatic)
                 path.write_text('{broken', encoding='utf-8')
                 with self.assertRaisesRegex(RuntimeError, 'onboard_programs.json'):
                     manager._request('start', {})
@@ -179,6 +180,16 @@ class ProgramsTest(unittest.TestCase):
         self.assertEqual(remote.command_for('detection', 4, 'p600', {'detection': 'echo 自定义 {uav_id}'}), 'echo 自定义 4')
         with self.assertRaisesRegex(ValueError, '启动指令'):
             remote.command_for('flight', 1, 'p600', {'flight': ''})
+
+    def test_readonly_clock_probe_has_short_timeout_and_no_startup_config(self):
+        manager=ProgramManager(ROOT,{})
+        manager.local=dict(uav_id=2,model='p600',onboard_host='192.168.1.207')
+        response=dict(boot_id='boot',remote_monotonic=12.5,remote_wall=1700000000.)
+        with patch('competition_backend.program_manager.subprocess.run',
+                   return_value=SimpleNamespace(returncode=0,stdout=json.dumps(response).encode(),stderr=b'')) as run:
+            self.assertEqual(manager._request('clock_probe',{}),response)
+        self.assertEqual(run.call_args.kwargs['timeout'],4)
+        self.assertNotIn('clock_sync',manager.snapshot())
 
     def test_one_program_failure_does_not_hide_others(self):
         with tempfile.TemporaryDirectory() as tmp:
