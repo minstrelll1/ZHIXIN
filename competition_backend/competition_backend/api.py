@@ -68,21 +68,59 @@ PACKAGE_ROOT = Path(__file__).resolve().parent.parent
 FRONTEND_PATH = Path(__file__).resolve().parent / "web" / "index.html"
 
 
-def _fresh_onboard_gps_reference(item, now, max_age_seconds, uav_id, require_validity=True):
+def _fresh_onboard_gps_reference(item, now, max_age_seconds, uav_id, require_validity=True,
+                                 rejection_details=None):
     """Choose the same fresh WGS84 fix that the live map uses."""
-    if not item.get("connected"):
+    def reject(reason):
+        if rejection_details is not None:
+            def number(value):
+                try:
+                    result = float(value)
+                except (TypeError, ValueError, OverflowError):
+                    return None
+                return result if math.isfinite(result) else None
+
+            received_at = number(item.get("received_at"))
+            delay = now - received_at if received_at is not None else None
+            position_age = number(item.get("gps_telemetry_age_seconds") or 0)
+            precise = item.get("gps_position")
+            precise_age = number(precise.get("age_seconds")) if isinstance(precise, dict) else None
+            rejection_details.update(
+                reason=reason, connected=bool(item.get("connected")),
+                received_at=received_at, checked_at=now, telemetry_delay_seconds=delay,
+                gps_telemetry_age_seconds=item.get("gps_telemetry_age_seconds"),
+                gps_total_age_seconds=(position_age + delay
+                                       if position_age is not None and delay is not None else None),
+                precise_gps_age_seconds=precise_age,
+                precise_gps_total_age_seconds=(precise_age + delay
+                                               if precise_age is not None and delay is not None else None),
+                max_age_seconds=max_age_seconds, require_validity=require_validity,
+                gps_status=item.get("gps_status"), location_source=item.get("location_source"),
+                latitude=item.get("latitude"), longitude=item.get("longitude"),
+            )
         return None
+
+    if not item.get("connected"):
+        return reject("not_connected")
     try:
         delay = now - float(item["received_at"])
         position_age = float(item.get("gps_telemetry_age_seconds") or 0)
         gps_status = int(item.get("gps_status")) if require_validity else 3
         location_source = int(item.get("location_source")) if require_validity else 5
     except (KeyError, TypeError, ValueError, OverflowError):
-        return None
-    if (not math.isfinite(delay) or not math.isfinite(position_age)
-            or delay < 0 or position_age < 0 or position_age + delay > max_age_seconds
-            or gps_status < 3 or location_source not in (4, 5)):
-        return None
+        return reject("invalid_telemetry_fields")
+    if not math.isfinite(delay) or not math.isfinite(position_age):
+        return reject("invalid_gps_age")
+    if delay < 0:
+        return reject("future_telemetry_timestamp")
+    if position_age < 0:
+        return reject("negative_gps_age")
+    if position_age + delay > max_age_seconds:
+        return reject("stale_gps_telemetry")
+    if gps_status < 3:
+        return reject("invalid_gps_status")
+    if location_source not in (4, 5):
+        return reject("invalid_location_source")
 
     def coordinates(value):
         if not isinstance(value, dict):
@@ -111,7 +149,7 @@ def _fresh_onboard_gps_reference(item, now, max_age_seconds, uav_id, require_val
     if coarse:
         return {"latitude": coarse[0], "longitude": coarse[1],
                 "source": "prometheus_gps_low_precision"}
-    return None
+    return reject("no_valid_coordinates")
 
 
 def _parse_video_sources(raw: str) -> Dict[str, str]:
@@ -140,7 +178,9 @@ def _mission_call(function: Any, *args: Any, **kwargs: Any) -> Any:
     try:
         return function(*args, **kwargs)
     except RuntimeError as error:
-        raise HTTPException(status_code=409, detail=str(error)) from error
+        report = getattr(error, "preflight", None)
+        detail = {"message": str(error), "preflight": report} if report is not None else str(error)
+        raise HTTPException(status_code=409, detail=detail) from error
     except (KeyError, TypeError, ValueError) as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
 
@@ -313,19 +353,23 @@ def create_app(environment=None, audit=None) -> FastAPI:
 
     def onboard_gps_references(required_ids=None) -> Dict[str, Dict[str, Any]]:
         """读取规划前各架已连接无人机的有效 WGS84 经纬度。"""
-        snapshot = orchestrator.snapshot()
-        telemetry = snapshot.get("telemetry", {})
+        # Copy telemetry only: serializing the previous mission can consume
+        # the freshness window and hold up incoming telemetry on replanning.
+        telemetry = orchestrator.telemetry_snapshot()
         candidate_ids = list(active_uav_ids if required_ids is None else required_ids)
         now = time.time()
         references: Dict[str, Dict[str, Any]] = {}
         for uav_id in candidate_ids:
             item = telemetry.get(str(uav_id)) or {}
+            rejection_details = {}
             reference = _fresh_onboard_gps_reference(
                 item, now, config.safety.telemetry_max_age_seconds, uav_id,
-                require_validity=live_mode,
+                require_validity=live_mode, rejection_details=rejection_details,
             )
             if reference:
                 references[str(uav_id)] = reference
+            else:
+                audit.record("规划 GPS 校验未通过", uav_id=uav_id, **rejection_details)
         return references
 
     def onboard_gps_reference() -> Optional[Dict[str, Any]]:

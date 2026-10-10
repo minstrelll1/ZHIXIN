@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass, field
+from copy import deepcopy
+from dataclasses import dataclass, field, fields
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
@@ -105,19 +106,30 @@ class MissionRuntime:
     events: List[Dict[str, Any]] = field(default_factory=list)
 
     def to_dict(self) -> Dict[str, Any]:
-        result = asdict(self)
-        result["phase"] = self.phase.value
+        # Task/plan payloads are JSON data. Copy their containers directly instead
+        # of recursively checking every route coordinate for dataclass fields.
         def serialize_uavs(items: Dict[int, UavRuntime]) -> Dict[str, Any]:
             return {
                 str(uav_id): {
-                    **asdict(runtime),
+                    **{
+                        item.name: deepcopy(getattr(runtime, item.name))
+                        for item in fields(runtime)
+                    },
                     "phase": runtime.phase.value,
                 }
                 for uav_id, runtime in items.items()
             }
 
-        result["uavs"] = serialize_uavs(self.uavs)
-        result["planned_uavs"] = serialize_uavs(self.planned_uavs)
+        result = {}
+        for item in fields(self):
+            value = getattr(self, item.name)
+            if item.name in ("uavs", "planned_uavs"):
+                # Serialize each UAV once; keep active/planned copies isolated.
+                result[item.name] = serialize_uavs(value)
+            elif item.name == "phase":
+                result[item.name] = self.phase.value
+            else:
+                result[item.name] = deepcopy(value)
         return result
 
 

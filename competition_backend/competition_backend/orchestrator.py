@@ -32,7 +32,9 @@ from .search_planner import (
 
 
 class MissionError(RuntimeError):
-    pass
+    def __init__(self, message, preflight=None):
+        super().__init__(message)
+        self.preflight = preflight
 
 
 def _altitude_profile_for(flight_profile: str, flight_altitude_plan: str) -> str:
@@ -81,6 +83,8 @@ class CompetitionOrchestrator:
         if len(set(self.active_uav_ids)) != len(self.active_uav_ids):
             raise ValueError("active_uav_ids must not contain duplicates")
         self._lock = threading.RLock()
+        # 规划、持久化及大型航线快照不能堵住机载遥测接收线程。
+        self._telemetry_lock = threading.RLock()
         self._mission: Optional[MissionRuntime] = None
         self._telemetry: Dict[int, Telemetry] = {}
         self._confirmation_token: Optional[str] = None
@@ -439,11 +443,12 @@ class CompetitionOrchestrator:
                 search_area=area,
                 prepared_plan=copy.deepcopy(prepared_plan.get("prepared_plan")) if prepared_plan else None,
             )
-            for telemetry in self._telemetry.values():
-                telemetry.task_complete = False
-                telemetry.task_assignment_acked = False
-                telemetry.task_assignment_mission_id = ""
-                telemetry.task_assignment_checksum = ""
+            with self._telemetry_lock:
+                for telemetry in self._telemetry.values():
+                    telemetry.task_complete = False
+                    telemetry.task_assignment_acked = False
+                    telemetry.task_assignment_mission_id = ""
+                    telemetry.task_assignment_checksum = ""
             self._confirmation_token = None
             dispatched = []
             for uav_id, runtime in self._mission.uavs.items():
@@ -546,17 +551,18 @@ class CompetitionOrchestrator:
     def update_telemetry(self, telemetry: Telemetry) -> None:
         if telemetry.uav_id not in self.active_uav_ids:
             return
-        with self._lock:
+        with self._telemetry_lock:
             previous = self._telemetry.get(telemetry.uav_id)
             fields = ("connected", "armed", "failsafe", "odom_valid", "task_phase", "task_assignment_acked",
                       "task_assignment_mission_id", "task_assignment_checksum", "last_error")
             changes = {name: {"before": getattr(previous, name, None), "after": getattr(telemetry, name, None)}
                        for name in fields if getattr(previous, name, None) != getattr(telemetry, name, None)}
-            audit = getattr(self.journal, "audit", None)
-            if changes and audit:
-                audit.record("机载遥测关键状态变化", uav_id=telemetry.uav_id, changes=changes,
-                             mission_id=self._mission.mission_id if self._mission else None)
             self._telemetry[telemetry.uav_id] = telemetry
+        audit = getattr(self.journal, "audit", None)
+        mission = self._mission
+        if changes and audit:
+            audit.record("机载遥测关键状态变化", uav_id=telemetry.uav_id, changes=changes,
+                         mission_id=mission.mission_id if mission else None)
 
     def set_active_uav_ids(self, uav_ids: List[int]) -> None:
         """Select connected UAVs for this mission while retaining six-UAV planning."""
@@ -578,12 +584,15 @@ class CompetitionOrchestrator:
 
     def preflight_report(self) -> Dict[str, Any]:
         with self._lock:
+            with self._telemetry_lock:
+                latest = dict(self._telemetry)
             now = self.clock()
             battery_threshold_enforced = not (
                 self._mission is not None
                 and self._mission.flight_profile in ("lab", "lab10", "outdoor5", "outdoor100", "outdoor200", "xuchang_small")
             )
             per_uav: Dict[str, List[str]] = {}
+            telemetry_ages = {}
             if self.live_mode and not self.config.safety.production_config_confirmed:
                 per_uav["system"] = [
                     "production_config_confirmed is false; live takeoff is locked"
@@ -597,7 +606,10 @@ class CompetitionOrchestrator:
                 )
             for uav_id in self.active_uav_ids:
                 failures: List[str] = []
-                telemetry = self._telemetry.get(uav_id)
+                telemetry = latest.get(uav_id)
+                telemetry_ages[str(uav_id)] = (
+                    max(0.0, now - telemetry.received_at) if telemetry else None
+                )
                 if telemetry is None:
                     failures.append("no telemetry")
                 else:
@@ -658,14 +670,20 @@ class CompetitionOrchestrator:
                 "checked_at": now,
                 "battery_threshold_enforced": battery_threshold_enforced,
                 "failures": per_uav,
+                "telemetry_age_seconds": telemetry_ages,
             }
 
     def prepare_takeoff(self) -> Dict[str, Any]:
         with self._lock:
-            if not self._mission or self._mission.phase != MissionPhase.PLANNED:
+            if not self._mission or self._mission.phase not in (MissionPhase.PLANNED, MissionPhase.PREFLIGHT_READY):
                 raise MissionError("mission must be planned before takeoff preparation")
+            # 每次人工预检都消费旧确认，取消弹窗后可安全重新预检。
+            self._confirmation_token = None
+            self._mission.confirmation_expires_at = None
+            self._mission.phase = MissionPhase.PLANNED
             report = self.preflight_report()
             if not report["ok"]:
+                self._event("preflight_rejected", preflight=report)
                 return {"ready": False, "preflight": report}
             token = secrets.token_urlsafe(18)
             expires_at = self.clock() + self.config.safety.confirmation_ttl_seconds
@@ -694,12 +712,16 @@ class CompetitionOrchestrator:
             ):
                 self._mission.phase = MissionPhase.PLANNED
                 self._confirmation_token = None
+                self._mission.confirmation_expires_at = None
+                self._event("takeoff_confirmation_rejected", reason="confirmation_expired_or_invalid")
                 raise MissionError("takeoff confirmation token is invalid or expired")
             report = self.preflight_report()
             if not report["ok"]:
                 self._mission.phase = MissionPhase.PLANNED
                 self._confirmation_token = None
-                raise MissionError("preflight changed before confirmation")
+                self._mission.confirmation_expires_at = None
+                self._event("takeoff_confirmation_rejected", preflight=report)
+                raise MissionError("preflight changed before confirmation", preflight=report)
 
             self._mission.phase = MissionPhase.TAKING_OFF
             self._mission.started_at = now
@@ -798,10 +820,14 @@ class CompetitionOrchestrator:
                 MissionPhase.FAILED,
             ):
                 return
+            # Use one coherent set of published telemetry objects for this
+            # tick; incoming samples may replace the live map independently.
+            with self._telemetry_lock:
+                latest = dict(self._telemetry)
             now = self.clock()
 
             for uav_id, runtime in mission.uavs.items():
-                telemetry = self._telemetry.get(uav_id)
+                telemetry = latest.get(uav_id)
                 if telemetry is None:
                     continue
                 if (not telemetry.connected or now - telemetry.received_at > self.config.safety.telemetry_max_age_seconds
@@ -837,7 +863,7 @@ class CompetitionOrchestrator:
             if mission.phase in (MissionPhase.TAKING_OFF, MissionPhase.RUNNING):
                 started_now = []
                 for uav_id, runtime in mission.uavs.items():
-                    telemetry = self._telemetry.get(uav_id)
+                    telemetry = latest.get(uav_id)
                     if telemetry is None or runtime.phase != UavPhase.TAKEOFF_COMMANDED:
                         continue
                     altitude_error = abs(
@@ -875,7 +901,7 @@ class CompetitionOrchestrator:
 
             if mission.phase == MissionPhase.RUNNING:
                 for uav_id, runtime in mission.uavs.items():
-                    telemetry = self._telemetry.get(uav_id)
+                    telemetry = latest.get(uav_id)
                     if (
                         telemetry is not None
                         and telemetry.task_complete
@@ -892,10 +918,10 @@ class CompetitionOrchestrator:
 
             if (any(runtime.phase == UavPhase.ERROR for runtime in mission.uavs.values())
                     and all(runtime.phase in (UavPhase.ERROR, UavPhase.LANDED) for runtime in mission.uavs.values())
-                    and all((self._telemetry.get(uid) is not None
-                             and self._telemetry[uid].connected and not self._telemetry[uid].armed
-                             and now - self._telemetry[uid].received_at <= self.config.safety.telemetry_max_age_seconds)
-                            for uid in mission.uavs)):
+                    and all((telemetry is not None
+                             and telemetry.connected and not telemetry.armed
+                             and now - telemetry.received_at <= self.config.safety.telemetry_max_age_seconds)
+                            for telemetry in (latest.get(uid) for uid in mission.uavs))):
                 mission.phase = MissionPhase.FAILED
                 self._event("mission_stopped", reason="自动起飞失败或遥控器接管后，全部无人机已上锁")
                 self.adapter.release_coordination()
@@ -908,9 +934,10 @@ class CompetitionOrchestrator:
                 self.adapter.release_coordination()
             self._save()
 
-    def snapshot(self) -> Dict[str, Any]:
-        with self._lock:
-            telemetry = {
+    def telemetry_snapshot(self) -> Dict[str, Any]:
+        """只复制遥测，供 GPS 检查读取；不构建任何规划或返航路径。"""
+        with self._telemetry_lock:
+            return {
                 str(uav_id): {
                     "uav_id": item.uav_id,
                     "received_at": item.received_at,
@@ -944,17 +971,22 @@ class CompetitionOrchestrator:
                 }
                 for uav_id, item in self._telemetry.items()
             }
+
+    def snapshot(self) -> Dict[str, Any]:
+        with self._lock:
             mission = self._mission.to_dict() if self._mission else None
+            # 全量任务复制完成后再取遥测，避免复制耗时使结果中的遥测变旧。
+            telemetry = self.telemetry_snapshot()
             dispatch_status = None
             if self._mission is not None:
                 acknowledged = []
                 for uav_id, runtime in self._mission.uavs.items():
-                    item = self._telemetry.get(uav_id)
+                    item = telemetry.get(str(uav_id))
                     if (
                         item is not None
-                        and item.task_assignment_acked
-                        and item.task_assignment_mission_id == self._mission.mission_id
-                        and item.task_assignment_checksum == runtime.assignment_checksum
+                        and item["task_assignment_acked"]
+                        and item["task_assignment_mission_id"] == self._mission.mission_id
+                        and item["task_assignment_checksum"] == runtime.assignment_checksum
                     ):
                         acknowledged.append(uav_id)
                 dispatch_status = {
