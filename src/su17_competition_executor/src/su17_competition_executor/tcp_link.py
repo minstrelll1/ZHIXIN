@@ -6,6 +6,7 @@ import select
 import socket
 import threading
 import time
+from pathlib import Path
 from collections import deque
 from typing import Any, Callable, Deque, Dict, Optional
 
@@ -101,7 +102,19 @@ class OnboardTcpLink:
             "uav_id": self.uav_id,
             "auth_token": self.auth_token,
             "link_heartbeat": 1,
+            "clock_probe_version": 1,
         }
+
+    def _clock_probe_reply(self, message):
+        reply = dict(type='clock_probe_reply', uav_id=self.uav_id,
+                     request_id=message.get('request_id'))
+        try:
+            # 与图片JSON中的 localization_clock 使用同一个Linux开机标识和单调时间。
+            boot = Path('/proc/sys/kernel/random/boot_id').read_text().strip()
+            reply.update(boot_id=boot, remote_monotonic=time.monotonic(), remote_wall=time.time())
+        except OSError as error:
+            reply['error'] = str(error)
+        return reply
 
     def _next_outbound(self) -> Optional[Dict[str, Any]]:
         with self._lock:
@@ -195,6 +208,12 @@ class OnboardTcpLink:
                         last_pong = time.monotonic()
                         self._connected_event.set()
                         LOG.info("机地任务链路已连接；恢复状态回传，保留当前任务，不重发起飞或任务指令")
+                    elif message.get('type') == 'clock_probe':
+                        if (message.get('uav_id') == self.uav_id
+                                and isinstance(message.get('request_id'), str)
+                                and len(message['request_id']) == 32):
+                            # 本通信线程直接回复；不入可靠重发队列，避免旧样本重连后被采用。
+                            connection.sendall(self._encode(self._clock_probe_reply(message)))
                     elif message.get("type") == "link_pong":
                         seq = message.get("seq")
                         if (int(message.get("uav_id", -1)) == self.uav_id

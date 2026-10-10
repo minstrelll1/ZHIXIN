@@ -146,13 +146,13 @@ class LiveTelemetrySnapshotTest(unittest.TestCase):
     def test_changed_preflight_preserves_failure_details_and_sends_no_takeoff(self):
         prepared = self.backend.prepare_takeoff()
         self.assertTrue(prepared['ready'])
-        self.clock.advance(2.1)
+        self.clock.advance(5.1)
         with self.assertRaises(MissionError) as caught:
             self.backend.confirm_takeoff(prepared['confirmation_token'])
         report = caught.exception.preflight
         for uid in ('1','2','4','5'):
             self.assertIn('telemetry is stale', report['failures'][uid])
-            self.assertGreater(report['telemetry_age_seconds'][uid], 2)
+            self.assertGreater(report['telemetry_age_seconds'][uid], 5)
         self.assertIsNone(self.backend._confirmation_token)
         self.assertEqual(self.backend._mission.phase.value, 'planned')
         self.assertIsNone(self.backend._mission.confirmation_expires_at)
@@ -162,6 +162,61 @@ class LiveTelemetrySnapshotTest(unittest.TestCase):
         retry = self.backend.prepare_takeoff()
         self.assertTrue(retry['ready'])
         self.assertNotEqual(prepared['confirmation_token'], retry['confirmation_token'])
+
+    def test_preflight_accepts_up_to_five_seconds_but_keeps_disconnection_guard(self):
+        for uid, item in self.backend._telemetry.items():
+            item.position[2]=self.backend._mission.uavs[uid].target_altitude_m
+        self.clock.advance(5.0)
+        prepared=self.backend.prepare_takeoff()
+        self.assertTrue(prepared['ready'])
+        self.assertEqual(prepared['preflight']['preflight_telemetry_max_age_seconds'],5.)
+        self.backend.confirm_takeoff(prepared['confirmation_token'])
+        self.assertEqual([c['uav_id'] for c in self.adapter.commands if c['type']=='takeoff'],[1,2,4,5])
+        # 飞行监控的门槛仍为2秒；不能将此旧样本用于确认到达高度。
+        self.assertEqual(self.backend.config.safety.telemetry_max_age_seconds,2.)
+        self.backend.tick()
+        self.assertTrue(all(r.phase.value=='takeoff_commanded' for r in self.backend._mission.uavs.values()))
+        self.refresh()
+        self.backend._telemetry[5].connected=False
+        report=self.backend.preflight_report()
+        self.assertFalse(report['ok'])
+        self.assertIn('flight controller is disconnected',report['failures']['5'])
+
+    def test_confirm_after_deadline_rechecks_against_five_seconds(self):
+        self.clock.advance(4.9)
+        prepared=self.backend.prepare_takeoff()
+        self.assertTrue(prepared['ready'])
+        self.clock.advance(.2)
+        with self.assertRaises(MissionError):
+            self.backend.confirm_takeoff(prepared['confirmation_token'])
+        self.assertFalse(any(c['type']=='takeoff' for c in self.adapter.commands))
+
+    def test_all_scenes_use_same_five_second_preflight_window(self):
+        self.clock.advance(4.0)
+        for scene in ('lab','outdoor5','lab10','outdoor100','outdoor200','competition','dalian_nanshan','xuchang_small'):
+            with self.subTest(scene=scene):
+                self.backend._mission.flight_profile=scene
+                report=self.backend.preflight_report()
+                self.assertTrue(report['ok'],report)
+                self.assertEqual(report['preflight_telemetry_max_age_seconds'],5.)
+
+    def test_legacy_config_defaults_to_five_without_changing_flight_limit(self):
+        import json, tempfile
+        from pathlib import Path
+        from competition_backend.config import load_config
+        raw=json.loads((Path(__file__).resolve().parents[1]/'config/competition.example.json').read_text(encoding='utf-8'))
+        raw['safety'].pop('preflight_telemetry_max_age_seconds')
+        with tempfile.TemporaryDirectory() as tmp:
+            path=Path(tmp)/'config.json'
+            path.write_text(json.dumps(raw),encoding='utf-8')
+            config=load_config(str(path))
+            self.assertEqual(config.safety.preflight_telemetry_max_age_seconds,5.)
+            self.assertEqual(config.safety.telemetry_max_age_seconds,2.)
+            for value in (0,-1,float('inf'),float('nan')):
+                with self.subTest(value=value):
+                    raw['safety']['preflight_telemetry_max_age_seconds']=value
+                    path.write_text(json.dumps(raw),encoding='utf-8')
+                    with self.assertRaises(ValueError): load_config(str(path))
 
     def test_cancelled_confirmation_can_be_replaced_only_by_new_manual_preflight(self):
         first = self.backend.prepare_takeoff()

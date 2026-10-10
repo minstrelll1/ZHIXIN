@@ -17,6 +17,7 @@ from test_executor_autonomy import assignment_checksum
 class ReturnPipelineTest(unittest.TestCase):
     def test_six_real_bridge_events_feed_each_image_gate_and_one_reporting_plan(self):
         plan = ReturnReportSchedule()
+        plan.set_participants(range(1, 7))
         checksums = {}
         for uid in range(1, 7):
             case = bridge_tests.SuccessfulReturnTest()
@@ -68,9 +69,9 @@ class ReturnPipelineTest(unittest.TestCase):
                 self.assertFalse(plan.due(102.99, 1000))
 
         for index in range(10):
-            self.assertEqual(['six_returns'], plan.due(103 + 2 * index, 1000))
+            self.assertEqual(['all_participants_returned'], plan.due(103 + 2 * index, 1000))
         self.assertFalse(plan.due(500, 1440))
-        self.assertEqual('six_returns', plan.selected_strategy)
+        self.assertEqual('all_participants_returned', plan.selected_strategy)
 
 
 if __name__ == '__main__':

@@ -14,6 +14,7 @@ from .adapter import FleetAdapter
 from .assignment_protocol import assignment_checksum
 from .plan_jobs import plan_checkpoint
 from .journal import EventJournal
+from .return_receipts import ReturnReceiptTracker
 from .models import (
     BackendConfig,
     MissionPhase,
@@ -72,6 +73,7 @@ class CompetitionOrchestrator:
         self.config = config
         self.adapter = adapter
         self.journal = journal or EventJournal(None)
+        self.return_receipts = ReturnReceiptTracker(audit=getattr(self.journal, "audit", None))
         self.live_mode = live_mode
         self.clock = clock
         self.active_uav_ids = list(active_uav_ids or config.uav_ids)
@@ -631,7 +633,8 @@ class CompetitionOrchestrator:
                                 and not telemetry.capabilities.get("scan_available")
                             ):
                                 failures.append("尚未接入航点扫描确认节点")
-                    if now - telemetry.received_at > self.config.safety.telemetry_max_age_seconds:
+                    # 起飞预检单独容忍机地/多地面端短暂传输延迟，不放宽飞行中状态检查。
+                    if now - telemetry.received_at > self.config.safety.preflight_telemetry_max_age_seconds:
                         failures.append("telemetry is stale")
                     if not telemetry.connected:
                         failures.append("flight controller is disconnected")
@@ -671,6 +674,7 @@ class CompetitionOrchestrator:
                 "battery_threshold_enforced": battery_threshold_enforced,
                 "failures": per_uav,
                 "telemetry_age_seconds": telemetry_ages,
+                "preflight_telemetry_max_age_seconds": self.config.safety.preflight_telemetry_max_age_seconds,
             }
 
     def prepare_takeoff(self) -> Dict[str, Any]:
@@ -760,7 +764,7 @@ class CompetitionOrchestrator:
             for uav_id in uav_ids:
                 try:
                     sent = self._request_return_one(uav_id, reason, manual_retry=reason == ReturnReason.MANUAL)
-                    results[str(uav_id)] = {"ok": True, "detail": "返航请求已发送，等待机载状态确认" if sent else "已在返航/落地状态"}
+                    results[str(uav_id)] = {"ok": True, "detail": "返航请求已发送，等待对应机载回执" if sent else "已在返航/落地状态"}
                 except Exception as error:
                     results[str(uav_id)] = {"ok": False, "detail": str(error)}
                     self._event("return_send_failed", uav_id=uav_id, error=str(error))
@@ -775,23 +779,18 @@ class CompetitionOrchestrator:
         runtime = self._mission.uavs[uav_id]
         if runtime.phase == UavPhase.LANDED:
             return False
-        if runtime.phase == UavPhase.RETURN_COMMANDED:
-            telemetry = self._telemetry.get(uav_id)
-            confirmed = (telemetry is not None and telemetry.connected
-                         and 0 <= self.clock() - telemetry.received_at <= self.config.safety.telemetry_max_age_seconds
-                         and telemetry.task_assignment_mission_id == self._mission.mission_id
-                         and telemetry.task_phase in ("returning", "landing", "landed", "external_return_requested"))
-            if not manual_retry or confirmed:
-                return False
-            # TCP 写入成功不等于机载收到。失联前丢失的返航请求允许人工再次发送，
-            # 重连本身不触发重发；机载继续校验任务编号、遥控器接管与重复返航。
-        self.adapter.command_return(
+        if runtime.phase == UavPhase.RETURN_COMMANDED and not manual_retry:
+            return False
+        # 每次人工点击取得独立回执；已经返航的机载端只确认，不重复启动返航。
+        self.return_receipts.send(
             uav_id,
             {
                 "mission_id": self._mission.mission_id,
                 "reason": reason.value,
                 "land_after_return": True,
+                "assignment_checksum": runtime.assignment_checksum,
             },
+            self.adapter.command_return,
         )
         runtime.phase = UavPhase.RETURN_COMMANDED
         runtime.return_reason = reason.value
@@ -934,6 +933,14 @@ class CompetitionOrchestrator:
                 self.adapter.release_coordination()
             self._save()
 
+    def takeoff_participants_snapshot(self) -> Dict[str, Any]:
+        """读取预检通过后本次一键起飞名单；不复制大型航线、不控制飞行。"""
+        with self._lock:
+            mission = self._mission
+            if mission is None or mission.takeoff_commanded_at is None:
+                return {}
+            return {"mission_id": mission.mission_id, "uav_ids": sorted(mission.uavs)}
+
     def telemetry_snapshot(self) -> Dict[str, Any]:
         """只复制遥测，供 GPS 检查读取；不构建任何规划或返航路径。"""
         with self._telemetry_lock:
@@ -952,6 +959,7 @@ class CompetitionOrchestrator:
                     "task_complete": item.task_complete,
                     "task_phase": item.task_phase,
                     "successful_return": dict(item.successful_return),
+                    "return_ack": dict(item.return_ack),
                     "gps_status": item.gps_status,
                     "location_source": item.location_source,
                     "gps_num": item.gps_num,
@@ -1002,5 +1010,6 @@ class CompetitionOrchestrator:
                 "mission": mission,
                 "dispatch_status": dispatch_status,
                 "telemetry": telemetry,
+                "return_requests": self.return_receipts.snapshot(telemetry),
                 "server_time": self.clock(),
             }

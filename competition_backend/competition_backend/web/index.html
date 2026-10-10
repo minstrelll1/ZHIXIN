@@ -397,7 +397,7 @@
   <h2>选择返航无人机</h2><p id="returnModeNote"></p>
   <div id="returnChoices" class="operator-grid"></div>
   <p id="returnResults" role="status" style="white-space:pre-line"></p>
-  <div class="dialog-actions"><button id="returnCancel" class="secondary">关闭</button><button id="returnConfirm" class="danger">确认返航</button></div>
+  <div class="dialog-actions"><button id="returnSelectUnconfirmed" class="secondary">勾选未确认</button><button id="returnCancel" class="secondary">关闭</button><button id="returnConfirm" class="danger">确认返航</button></div>
 </div></dialog>
 <dialog id="operatorDialog">
   <div class="dialog-body"><h2>选择本地地面终端</h2><div class="operator-grid"><div class="field"><label for="operatorTerminal">地面终端编号</label><select id="operatorTerminal"><option value="">请选择终端编号</option><option value="1">地面终端 1 / UAV1</option><option value="2">地面终端 2 / UAV2</option><option value="3">地面终端 3 / UAV3</option><option value="4">地面终端 4 / UAV4</option><option value="5">地面终端 5 / UAV5</option><option value="6">地面终端 6 / UAV6</option></select></div><div class="field"><label for="operatorModel">固定机型</label><select id="operatorModel" disabled><option value="p600">P600</option><option value="su17">SU17</option></select></div><label class="operator-role"><input id="operatorPublisher" type="checkbox"><span><b>本机是任务发布端</b></span></label></div><div id="operatorMessage" class="area-note"></div><div class="dialog-actions"><button id="operatorEnter" class="primary">进入任务界面</button></div></div>
@@ -747,7 +747,7 @@ function 更新六机同步状态(snapshot){
   });
 }
 const 六机状态观察器=new MutationObserver(()=>{if(当前状态)更新六机同步状态(当前状态)});六机状态观察器.observe($('fleet'),{childList:true});
-function 渲染(snapshot){if(地面正在退出)return;当前状态=snapshot;当前角色=snapshot.operator||当前角色;更新任务按钮(snapshot);更新分派回执(snapshot);更新GPS参考();if(snapshot.local_uav_id&&snapshot.local_uav_id!==本机无人机ID)加载视频源();if(端口查看无人机ID&&$('trafficDialog').open)渲染端口通信(端口查看无人机ID);更新实际轨迹(snapshot);const mission=snapshot.mission;$('exportCoverage').disabled=!mission?.prepared_plan;const telemetry=snapshot.telemetry||{},active=snapshot.active_uav_ids||[1,2,3,4,5,6],planningOnly=snapshot.dispatch_status?.mode==='planning_only',publisher=当前角色?.task_publisher!==false;const roleText=publisher?'任务发布端，可向六台终端分派':'普通终端，只能向本机配对无人机分派';const nodeText=planningOnly?'当前没有可用无人机：仅展示规划，不下发任务。':snapshot.local_uav_id?`本机 ${snapshot.ground_node_id||''} 直连 UAV${snapshot.local_uav_id}；${roleText}。`:`启用无人机：${active.map(id=>'UAV'+id).join('、')}。`;$('modeBanner').textContent=snapshot.live_mode?`当前为真机模式：${nodeText} 所有操作可能下发真实命令。`:'当前为模拟模式：界面操作只记录模拟指令，不会控制真实无人机。';$('modeBanner').className='mode-banner'+(snapshot.live_mode?' live':'');$('simTools').className='sim-tools'+(snapshot.live_mode?'':' show');
+function 渲染(snapshot){if(地面正在退出)return;当前状态=snapshot;当前角色=snapshot.operator||当前角色;更新任务按钮(snapshot);更新分派回执(snapshot);更新返航回执(snapshot);更新GPS参考();if(snapshot.local_uav_id&&snapshot.local_uav_id!==本机无人机ID)加载视频源();if(端口查看无人机ID&&$('trafficDialog').open)渲染端口通信(端口查看无人机ID);更新实际轨迹(snapshot);const mission=snapshot.mission;$('exportCoverage').disabled=!mission?.prepared_plan;const telemetry=snapshot.telemetry||{},active=snapshot.active_uav_ids||[1,2,3,4,5,6],planningOnly=snapshot.dispatch_status?.mode==='planning_only',publisher=当前角色?.task_publisher!==false;const roleText=publisher?'任务发布端，可向六台终端分派':'普通终端，只能向本机配对无人机分派';const nodeText=planningOnly?'当前没有可用无人机：仅展示规划，不下发任务。':snapshot.local_uav_id?`本机 ${snapshot.ground_node_id||''} 直连 UAV${snapshot.local_uav_id}；${roleText}。`:`启用无人机：${active.map(id=>'UAV'+id).join('、')}。`;$('modeBanner').textContent=snapshot.live_mode?`当前为真机模式：${nodeText} 所有操作可能下发真实命令。`:'当前为模拟模式：界面操作只记录模拟指令，不会控制真实无人机。';$('modeBanner').className='mode-banner'+(snapshot.live_mode?' live':'');$('simTools').className='sim-tools'+(snapshot.live_mode?'':' show');
   const recordable=snapshot.recordable_uav_ids||active,recordingSelect=$('recordingUav'),selected=Number(recordingSelect.value)||recordable[0];recordingSelect.innerHTML=recordable.map(id=>`<option value="${id}">UAV${id}${snapshot.local_uav_id===id?' · 本机直连':''}</option>`).join('');recordingSelect.value=recordable.includes(selected)?String(selected):String(recordable[0]);
   渲染比赛计时(snapshot.competition_clock);
   绘制规划(mission);
@@ -801,22 +801,49 @@ $('confirmTakeoff').onclick=async()=>{
     }else 显示起飞确认失败(error);
   }finally{起飞确认提交中=false}
 };
+function 返航回执说明(record){
+  if(!record)return '尚未发送本次返航请求';
+  const labels={waiting:'等待机载回执',timeout:'回执超时 · 未确认',send_failed:'发送失败 · 未确认',accepted:'机载已接收 · 正在准备返航',forwarded:'机载已转交程序 B',executing:'机载自主返航已开始',already_returning:'机载确认已有返航流程',landed:'机载确认已落地',rejected:'机载已拒绝',failed:'机载返航处理失败'};
+  const remaining=Math.max(0,Math.ceil((record.timeout_seconds||8)-(record.age_seconds||0)));
+  return `${labels[record.state]||'回执状态未知'}${record.state==='waiting'?`（${remaining}秒）`:''}${record.detail?'：'+record.detail:''}`;
+}
+function 更新返航回执(snapshot){
+  const dialog=$('returnDialog');if(!dialog.open)return;
+  const mission=snapshot?.mission;
+  if(dialog.dataset.missionId!==mission?.mission_id){$('returnResults').textContent='任务已变化，请关闭后重新选择。';return}
+  const records=snapshot.return_requests||{},publisher=当前角色?.task_publisher!==false,local=Number(当前角色?.local_uav_id||当前角色?.ground_terminal_id);
+  const rows=[];
+  Object.keys(mission.uavs||{}).map(Number).filter(id=>publisher||id===local).forEach(id=>{
+    const raw=records[String(id)],record=raw?.mission_id===mission.mission_id?raw:null;
+    const el=$('returnAck'+id);if(el){el.textContent=返航回执说明(record);el.style.color=!record?'#64748b':['accepted','forwarded','executing','already_returning','landed'].includes(record.state)?'#15803d':record.state==='waiting'?'#b45309':'#b91c1c'}
+    if(record)rows.push(`UAV${id}：${返航回执说明(record)}`);
+  });
+  if(rows.length)$('returnResults').textContent=rows.join('\n');
+}
 function 打开返航选择(){
   const mission=当前状态?.mission;if(!mission)return;
   const publisher=当前角色?.task_publisher!==false,local=Number(当前角色?.local_uav_id||当前角色?.ground_terminal_id);
   const ids=Object.keys(mission.uavs||{}).map(Number).filter(id=>publisher||id===local);
-  $('returnChoices').innerHTML=ids.map(id=>{const u=mission.uavs[String(id)],t=当前状态?.telemetry?.[String(id)],done=u.phase==='landed';return `<label class="operator-role" style="grid-column:auto"><input type="checkbox" name="returnUav" value="${id}" ${done?'disabled':''}><span>UAV${id} · ${done?'已落地':t?.connected?'已连接':'未连接'}</span></label>`}).join('');
+  $('returnChoices').innerHTML=ids.map(id=>{const u=mission.uavs[String(id)],t=当前状态?.telemetry?.[String(id)],done=u.phase==='landed';return `<label class="operator-role" style="grid-column:auto"><input type="checkbox" name="returnUav" value="${id}" ${done?'disabled':''}><span>UAV${id} · ${done?'已落地':t?.connected?'已连接':'未连接'}<small id="returnAck${id}" style="display:block;font-weight:normal;white-space:normal"></small></span></label>`}).join('');
   $('returnModeNote').textContent=mission.controller_mode==='external'?'由程序 B 执行返航；发送各机 return_home 触发信号。':'由本工程执行返航并发送降落指令。';
-  $('returnResults').textContent='请选择需要返航的无人机。';$('returnConfirm').disabled=false;$('returnDialog').dataset.missionId=mission.mission_id;$('returnDialog').showModal();
+  $('returnResults').textContent='请选择需要返航的无人机。';$('returnConfirm').disabled=false;$('returnDialog').dataset.missionId=mission.mission_id;$('returnDialog').showModal();更新返航回执(当前状态);
 }
 $('returnButton').onclick=打开返航选择;
 $('returnCancel').onclick=()=>$('returnDialog').close();
+$('returnSelectUnconfirmed').onclick=()=>{
+  const mission=当前状态?.mission,records=当前状态?.return_requests||{};
+  if($('returnDialog').dataset.missionId!==mission?.mission_id)return;
+  $('returnChoices').querySelectorAll('input[name="returnUav"]').forEach(box=>{
+    const r=records[box.value],current=r?.mission_id===mission.mission_id?r:null;
+    box.checked=!box.disabled&&!!current&&['waiting','timeout','send_failed','rejected','failed'].includes(current.state);
+  });
+};
 $('returnConfirm').onclick=async()=>{
   const ids=Array.from($('returnChoices').querySelectorAll('input:checked')).map(input=>Number(input.value));
   if(!ids.length){$('returnResults').textContent='请至少选择一架无人机。';return}
   if($('returnDialog').dataset.missionId!==当前状态?.mission?.mission_id){$('returnResults').textContent='任务已变化，请关闭后重新选择。';return}
   $('returnConfirm').disabled=true;$('returnResults').textContent='正在逐机发送返航请求……';
-  try{const result=await 请求('/api/v1/return',{method:'POST',body:JSON.stringify({reason:'manual',uav_ids:ids,mission_id:当前状态.mission.mission_id}),timeoutMs:45000});渲染(result);$('returnResults').textContent=Object.entries(result.return_results||{}).map(([id,r])=>`UAV${id}：${r.ok?'已处理':'发送失败'} · ${r.detail}`).join('\n');}
+  try{const result=await 请求('/api/v1/return',{method:'POST',body:JSON.stringify({reason:'manual',uav_ids:ids,mission_id:当前状态.mission.mission_id}),timeoutMs:45000});渲染(result);$('returnResults').textContent=Object.entries(result.return_results||{}).map(([id,r])=>`UAV${id}：${r.ok?'发送已处理，尚需机载回执':'发送失败'} · ${r.detail}`).join('\n');更新返航回执(result);}
   catch(error){$('returnResults').textContent=error.message}
   finally{$('returnConfirm').disabled=false}
 };
@@ -1014,9 +1041,9 @@ let 成果草稿=null,成果操作中=false;
 function 更新科目一自动上报状态(automatic){
   if(!automatic){$('subject1AutoStatus').textContent='自动上报状态暂不可用。';return}
   if(!automatic.enabled){$('subject1AutoStatus').textContent='自动上报仅由任务发布端执行。';return}
-  if(!automatic.mission_id){$('subject1AutoStatus').textContent='等待本次科目一任务规划；先满足者生效：六机成功返航后每2秒上报10次，或24分至25分30秒每5秒上报。';return}
+  if(!automatic.mission_id){$('subject1AutoStatus').textContent='等待本次科目一任务规划；先满足者生效：本次起飞机全部成功返航3秒后每2秒上报10次，或24分至25分30秒每5秒上报。';return}
   const started=automatic.attempts_started||0,finished=automatic.attempts_finished||0;
-  $('subject1AutoStatus').textContent=`本次任务 ${automatic.mission_id}：成功返航 ${(automatic.returned_uav_ids||[]).length}/6 架；返航触发上报 ${automatic.return_attempts||0}/10 次，计时触发 ${automatic.clock_attempts||0} 次。实际请求 ${started} 次，已结束 ${finished} 次。只执行先触发的一套：六机到点下降3秒后每2秒10次，或24分至25分30秒每5秒一次。当前：${automatic.selected_strategy==='six_returns'?'返航触发':automatic.selected_strategy==='competition_time'?'计时触发':'等待触发'}。${automatic.last_result?.detail||''}`;
+  $('subject1AutoStatus').textContent=`本次任务 ${automatic.mission_id}：成功返航 ${(automatic.returned_uav_ids||[]).length}/${(automatic.participant_uav_ids||[]).length} 架；起飞参与机 ${(automatic.participant_uav_ids||[]).map(id=>'UAV'+id).join('、')||'等待一键起飞'}；返航触发上报 ${automatic.return_attempts||0}/10 次，计时触发 ${automatic.clock_attempts||0} 次。实际请求 ${started} 次，已结束 ${finished} 次。只执行先触发的一套：全部参与机到点下降3秒后每2秒10次，或24分至25分30秒每5秒一次。当前：${automatic.selected_strategy==='all_participants_returned'?'返航触发':automatic.selected_strategy==='competition_time'?'计时触发':'等待触发'}。${automatic.last_result?.detail||''}`;
 }
 setInterval(()=>{if($('subject1ReportDialog').open)更新科目一自动上报状态(当前状态?.subject1_auto_report)},1000);
 function 清除成果草稿(){成果草稿=null;$('sendSubject1Report').disabled=true;$('downloadSubject1Report').hidden=true;$('subject1ReportSummary').textContent='内容已改变，请重新生成并校验。'}

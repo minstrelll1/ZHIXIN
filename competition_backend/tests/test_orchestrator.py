@@ -116,7 +116,9 @@ class OrchestratorTest(unittest.TestCase):
         self.assertEqual(len([c for c in self.adapter.commands if c['type'] == 'return_home']), 2)
         self.telemetry(1, task_phase='returning')
         self.backend.request_return_selected([1])
-        self.assertEqual(len([c for c in self.adapter.commands if c['type'] == 'return_home']), 2)
+        commands=[c for c in self.adapter.commands if c['type']=='return_home']
+        self.assertEqual(len(commands),3)  # 每次人工请求独立回执；机载防止重复启动。
+        self.assertEqual(len({c['payload']['request_id'] for c in commands}),3)
 
     def test_old_mission_return_status_does_not_suppress_manual_return(self):
         self.launch_and_start_tasks()
@@ -172,6 +174,21 @@ class OrchestratorTest(unittest.TestCase):
                 velocity=[0.0, 0.0, 0.0],
             )
         self.backend.tick()
+
+    def test_report_participants_come_from_takeoff_not_full_planning_or_connectivity(self):
+        self.backend.set_active_uav_ids([1, 2, 4, 5])
+        self.backend.plan('subject1')
+        for uid in [1, 2, 4, 5]:
+            self.telemetry(uid)
+        prepared = self.backend.prepare_takeoff()
+        self.assertEqual({}, self.backend.takeoff_participants_snapshot())
+        self.backend.confirm_takeoff(prepared['confirmation_token'])
+        mission = self.backend.snapshot()['mission']
+        self.assertEqual(6, len(mission['planned_uavs']))
+        expected = dict(mission_id=mission['mission_id'], uav_ids=[1, 2, 4, 5])
+        self.assertEqual(expected, self.backend.takeoff_participants_snapshot())
+        self.telemetry(5, connected=False)
+        self.assertEqual(expected, self.backend.takeoff_participants_snapshot())
 
     def test_plan_assigns_six_unique_altitudes(self):
         snapshot = self.backend.plan("subject1")

@@ -116,7 +116,8 @@ class TimeReferenceCollector:
                 samples.append(dict(boot_id=boot, uav_id=uav_id, ground_epoch=ground_epoch,
                                     remote_monotonic=mono, uncertainty_sec=elapsed / 2.,
                                     sampled_at=wall_end, source='publisher_windows',
-                                    publisher_terminal_id=self.publisher_terminal_id))
+                                    publisher_terminal_id=self.publisher_terminal_id,
+                                    transport=str(remote.get('transport', 'legacy'))))
             except (ClockJump, BootChanged):
                 raise
             except Exception as error:
@@ -148,7 +149,15 @@ class TimeReferenceCollector:
                     stream.write('\n')
                     stream.flush()
                     os.fsync(stream.fileno())
-                os.replace(temporary, self.path)
+                # Windows索引/整理线程短暂占用文件时，保留临时文件并有界重试。
+                for attempt in range(4):
+                    try:
+                        os.replace(temporary, self.path)
+                        break
+                    except PermissionError:
+                        if attempt == 3:
+                            raise
+                        time.sleep(.05 * (attempt + 1))
                 self._references = updated
             finally:
                 if os.path.exists(temporary):
@@ -187,7 +196,9 @@ class TimeReferenceCollector:
                         self._last_attempt.pop(int(key), None)
                         self._states[key] = dict(state, state='disconnected', message='飞机未连接，保留历史时间参考')
                 if due_only:
-                    ids = [uid for uid in ids if self._mono() - self._last_attempt.get(uid, float('-inf')) >= self.interval_seconds]
+                    ids = [uid for uid in ids if self._mono() - self._last_attempt.get(uid, float('-inf')) >=
+                           (min(5., self.interval_seconds) if self._states.get(str(uid), {}).get('state') == 'unavailable'
+                            else self.interval_seconds)]
                 for uid in ids:
                     self._last_attempt[uid] = self._mono()
                     self._states[str(uid)] = dict(state='sampling', message='正在只读采样机地时差')

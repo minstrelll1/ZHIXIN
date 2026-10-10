@@ -106,8 +106,11 @@ class RosFleetAdapter(FleetAdapter):
     def _task_callback(self, message: Any, uav_id: int) -> None:
         assignment_mission_id = ""
         assignment_checksum = ""
+        return_ack = None
         try:
             payload = json.loads(message.data)
+            if payload.get("state") == "return_ack" and isinstance(payload.get("return_ack"), dict):
+                return_ack = dict(payload["return_ack"])
             complete = payload.get("state") in ("completed", "done")
             assignment_acked = bool(payload.get("task_assignment_acked")) or payload.get("state") in (
                 "task_received",
@@ -126,6 +129,8 @@ class RosFleetAdapter(FleetAdapter):
         with self._lock:
             telemetry = self._get(uav_id)
             telemetry.received_at = time.time()
+            if return_ack is not None:
+                telemetry.return_ack = return_ack
             telemetry.task_complete = telemetry.task_complete or complete
             telemetry.task_assignment_acked = (
                 telemetry.task_assignment_acked or assignment_acked

@@ -851,6 +851,7 @@ class OnboardTaskExecutor:
                 "timestamp_unix": time.time(),
                 "connected": bool(state.connected) and not self._identity_error and time.monotonic() - min(self._state_received, self._control_received) < 2.0,
                 "capabilities": {"motion_enabled": self.enable_motion, "max_speed_mps": self.max_speed,
+                    "return_ack_supported": True,
                     "auto_takeoff_supported": True, "auto_takeoff_ready": auto_ready,
                     "auto_takeoff_reason": auto_reason,
                     "flight_speed_limit_mps": self.flight_speed_limit,
@@ -869,6 +870,7 @@ class OnboardTaskExecutor:
                 "velocity": [float(value) for value in state.velocity],
                 "task_phase": self._progress.get("phase", "idle"),
                 "successful_return": self._successful_return_snapshot(),
+                "return_ack": self._return_ack_snapshot(),
                 "pengfei": self._pengfei_bridge.snapshot(),
                 "ego_exec_state": ego_state,
                 "ego_exec_state_age_seconds": ego_age,
@@ -1032,6 +1034,7 @@ class OnboardTaskExecutor:
             self._gps_home = None
             self._resume_pending = False
             self._progress = {"phase": "assigned", "next_waypoint": 0}
+            self._last_return_ack = {}
             self._checkpoint("assigned", next_waypoint=0, execution={})
         self._publish_competition_time()
         self._publish_successful_return()
@@ -1217,33 +1220,92 @@ class OnboardTaskExecutor:
                 if self._motion_thread is threading.current_thread():
                     self._motion_thread = None
 
+    def _return_ack_snapshot(self):
+        with self._lock:
+            ack = getattr(self, '_last_return_ack', None) or self._progress.get('return_ack') or {}
+            if ack.get('boot_id') != self._boot_id:
+                return {}
+            return {key: value for key, value in ack.items() if key != 'boot_id'}
+
+    def _return_receipt(self, payload, state, detail):
+        request_id = payload.get('request_id')
+        if not isinstance(request_id, str) or not request_id or len(request_id) > 128:
+            return  # 兼容没有请求编号的旧地面端及机载自主返航。
+        with self._lock:
+            previous = self._return_ack_snapshot()
+            seq = max(getattr(self, '_return_ack_seq', 0), previous.get('ack_seq', 0)) + 1
+            self._return_ack_seq = seq
+            pending_retry = None
+            if (previous.get('request_id') != request_id and previous.get('state') == 'accepted'
+                    and state in ('forwarded', 'executing', 'failed')
+                    and previous.get('mission_id') == payload.get('mission_id')
+                    and previous.get('assignment_checksum') == payload.get('assignment_checksum')):
+                pending_retry = previous
+            ack = dict(schema_version=1, request_id=request_id, uav_id=self.uav_id,
+                       mission_id=payload.get('mission_id', ''),
+                       assignment_checksum=payload.get('assignment_checksum', ''),
+                       state=state, detail=detail, ack_seq=seq,
+                       controller_mode=(self._assignment or {}).get('controller_mode', 'internal'))
+            # 后台旧请求的后续状态仍发送，但不能遮住更新的人工请求回执。
+            if (not previous or previous.get('request_id') == request_id
+                    or state in ('accepted', 'rejected', 'already_returning', 'landed')):
+                self._last_return_ack = dict(ack, boot_id=self._boot_id)
+                assignment = self._assignment or {}
+                if (payload.get('mission_id') == assignment.get('mission_id')
+                        and payload.get('assignment_checksum') == assignment.get('assignment_checksum')
+                        and state != 'rejected'):
+                    try:
+                        self._checkpoint(self._progress.get('phase', 'idle'), return_ack=self._last_return_ack)
+                    except OSError as error:
+                        rospy.logwarn('返航回执落盘失败，仍继续回传和返航处理：%s', error)
+        self._publish_status('return_ack', return_ack=ack)
+        if pending_retry:
+            self._return_receipt(pending_retry, state, detail)
+
     def _start_return(self, payload: Dict[str, Any]) -> None:
         if getattr(self, "_manual_override", False):
+            self._return_receipt(payload, 'rejected', '遥控器已接管，拒绝自动返航')
             self._publish_status("return_failed", error="遥控器已接管，不再启动自动返航")
             return
         if not self.enable_motion:
+            self._return_receipt(payload, 'rejected', '机载程序未启用飞行控制')
             self._publish_status("motion_disabled", command="return_home")
             return
         with self._lock:
             assignment = self._assignment
-        if assignment is None or payload.get("mission_id") != assignment["mission_id"]:
-            self._publish_status(
-                "command_rejected", command="return_home", error="mission is not assigned"
-            )
+        if (assignment is None or payload.get("mission_id") != assignment["mission_id"]
+                or (payload.get('request_id') and payload.get('assignment_checksum') != assignment.get('assignment_checksum'))):
+            self._return_receipt(payload, 'rejected', '任务编号或任务版本不一致，未执行返航')
+            self._publish_status("command_rejected", command="return_home", error="mission is not assigned or checksum differs")
             return
-        if self._progress.get("phase") in ("returning", "landing", "landed"):
+        previous_ack = self._return_ack_snapshot()
+        if payload.get('request_id') and previous_ack.get('request_id') == payload['request_id']:
+            self._publish_status('return_ack', return_ack=previous_ack)
+            return
+        phase = self._progress.get('phase')
+        if (phase in ("returning", "landing", "landed", "external_return_requested", "external_return_descent")
+                and previous_ack.get('state') != 'failed'):
+            state = 'landed' if phase == 'landed' else 'already_returning'
+            detail = '机载已确认落地，无需重复返航' if state == 'landed' else '机载已处于返航请求/返航/下降阶段，不重复启动'
+            self._return_receipt(payload, state, detail)
             return
         with self._lock:
             previous = self._motion_thread
             if previous is not None and previous.is_alive() and previous.name == "return_home":
+                self._return_receipt(payload, 'accepted', '机载已接收，上一返航请求仍在准备或执行')
                 return
+        self._return_receipt(payload, 'accepted', '机载已接收并通过校验，正在准备返航')
         self._abort_motion.set()
 
         def coordinator() -> None:
-            if previous is not None and previous is not threading.current_thread():
-                previous.join()
-            self._abort_motion.clear()
-            self._run_return(payload)
+            try:
+                if previous is not None and previous is not threading.current_thread():
+                    previous.join()
+                self._abort_motion.clear()
+                self._run_return(payload)
+            except Exception as error:
+                self._return_receipt(payload, 'failed', '机载返航处理异常：%s' % error)
+                self._publish_status('return_failed', error=str(error))
 
         thread = threading.Thread(target=coordinator, name="return_home")
         thread.daemon = True
@@ -1864,6 +1926,7 @@ class OnboardTaskExecutor:
 
     def _run_return(self, payload: Dict[str, Any]) -> None:
         if getattr(self, "_manual_override", False):
+            self._return_receipt(payload, 'failed', '准备返航期间遥控器接管，自动返航已停止')
             self._publish_status("return_failed", error="遥控器已接管，不再发布自动返航指令")
             return
         with self._lock:
@@ -1873,14 +1936,17 @@ class OnboardTaskExecutor:
             # 只在固定 ROS 话题发布一个 Bool=true，避免向程序 B 重复传递任务数据。
             self.external_return_pub.publish(Bool(data=True))
             self._checkpoint("external_return_requested", reason=payload.get("reason", "unknown"))
+            self._return_receipt(payload, 'forwarded', '机载已向程序B发布返航信号；此回执不代表已到达降落点')
             self._publish_status("returning", controller_mode="external", reason=payload.get("reason", "unknown"))
             rospy.loginfo("已在 %s 收到外部程序返航请求", self.external_return_topic)
             return
         if self._home is None:
+            self._return_receipt(payload, 'failed', '未记录起飞位置，不能执行返航')
             self._publish_status("return_failed", error="home position was not recorded")
             return
         state, _ = self._snapshot()
         if state is None:
+            self._return_receipt(payload, 'failed', '缺少飞控状态，不能执行返航')
             self._publish_status("return_failed", error="UAV state is missing")
             return
         target_z = max(float(state.position[2]), self._target_z(self._assignment))
@@ -1891,6 +1957,7 @@ class OnboardTaskExecutor:
                 return_task['waypoints_wgs84'] = [assignment['landing_point_wgs84']]
             destination = resolve_waypoints(return_task, self._home, self._gps_home, self.max_distance_from_home)[0]
         self._checkpoint("returning")
+        self._return_receipt(payload, 'executing', '机载自主返航程序已开始执行')
         self._publish_status("returning", reason=payload.get("reason", "unknown"))
         ok, reason = self._fly_to(
             destination[0],
@@ -1901,6 +1968,7 @@ class OnboardTaskExecutor:
             check_abort=False,
         )
         if not ok:
+            self._return_receipt(payload, 'failed', '自主返航执行失败：%s' % reason)
             self._publish_status("return_failed", error=reason)
             return
         if bool(payload.get("land_after_return", True)):

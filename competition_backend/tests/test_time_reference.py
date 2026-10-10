@@ -5,7 +5,7 @@ import time
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 from competition_backend.time_reference import TimeReferenceCollector
 from competition_backend.models import Telemetry
@@ -130,6 +130,33 @@ class TimeReferenceTest(unittest.TestCase):
         self.collector.collect_once(due_only=True)
         self.assertEqual(self.collector.probe.call_count, 6)
 
+    def test_failed_reference_retries_after_five_seconds(self):
+        probe=Mock(side_effect=TimeoutError('temporary'))
+        self.collector.probe=probe
+        self.collector.collect_once(due_only=True)
+        self.now+=4.99
+        self.collector.collect_once(due_only=True)
+        self.assertEqual(probe.call_count,3)
+        self.now+=.02
+        probe.side_effect=None
+        probe.return_value=dict(boot_id=BOOT1,remote_monotonic=300.,remote_wall=1.,transport='task_tcp')
+        self.collector.collect_once(due_only=True)
+        self.assertEqual(probe.call_count,6)
+        self.assertEqual(self.collector.snapshot()['by_uav']['1']['state'],'ready')
+
+    def test_windows_transient_replace_denied_retries_without_losing_reference(self):
+        import os
+        replace=os.replace
+        attempts=[]
+        def busy_once(src,dst):
+            attempts.append(1)
+            if len(attempts)==1: raise PermissionError('file busy')
+            return replace(src,dst)
+        with patch('competition_backend.time_reference.os.replace', side_effect=busy_once):
+            self.collector.collect_once()
+        self.assertEqual(len(attempts),2)
+        self.assertEqual(self.collector.snapshot()['by_uav']['1']['state'],'ready')
+
     def test_corrupt_history_is_not_overwritten(self):
         self.collector.path.write_text('broken', encoding='utf-8')
         collector = self.make_collector()
@@ -157,6 +184,7 @@ class TimeReferenceApiTest(unittest.TestCase):
         self.apps[uid].state.program_manager = manager
         self.apps[uid].state.orchestrator.update_telemetry(Telemetry(
             uav_id=uid, received_at=time.time(), connected=True))
+        self.apps[uid].state.adapter.local_adapter.clock_probe = Mock(side_effect=NotImplementedError())
         return manager
 
     def test_peer_probe_auth_binding_freshness_and_read_only_operation(self):
@@ -196,6 +224,25 @@ class TimeReferenceApiTest(unittest.TestCase):
         self.assertEqual(self.clients[1].get('/api/v1/status').json()['target_time_reference']['reference_count'], 2)
         self.apps[2].state.target_time_reference_collector.collect_once()
         self.assertFalse(self.apps[2].state.target_time_reference_collector.path.exists())
+
+    def test_new_tcp_probe_survives_ssh_timeout_and_never_uses_peer_wall_as_reference(self):
+        self.select(5)
+        self.select(1, True)
+        manager = self.attach(5, BOOT2)
+        manager._request.side_effect=TimeoutError('SSH超过4秒')
+        tcp = self.apps[5].state.adapter.local_adapter.clock_probe
+        tcp.side_effect=None
+        tcp.return_value=dict(boot_id=BOOT2, remote_monotonic=300., remote_wall=1., transport='task_tcp')
+        self.apps[1].state.orchestrator.update_telemetry(Telemetry(uav_id=5,received_at=time.time(),connected=True))
+        self.apps[1].state.orchestrator.snapshot=Mock(side_effect=AssertionError('不能复制大型任务'))
+        collector=self.apps[1].state.target_time_reference_collector
+        collector.collect_once()
+        ref=json.loads(collector.path.read_text())['references'][BOOT2]
+        self.assertEqual(ref['transport'],'task_tcp')
+        self.assertEqual(ref['uav_id'],5)
+        self.assertAlmostEqual(ref['ground_epoch'],time.time(),delta=1.)
+        self.assertEqual(tcp.call_count,3)
+        manager._request.assert_not_called()
 
     def test_reference_update_only_enqueues_rebuild_on_publisher(self):
         from competition_backend.api import create_app

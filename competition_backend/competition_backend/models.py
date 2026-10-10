@@ -51,6 +51,7 @@ class Telemetry:
     task_complete: bool = False
     task_phase: str = ""
     successful_return: Dict[str, Any] = field(default_factory=dict)
+    return_ack: Dict[str, Any] = field(default_factory=dict)
     gps_status: int = 0
     location_source: int = -1
     gps_num: int = 0
@@ -145,6 +146,7 @@ class SafetyConfig:
     vertical_speed_tolerance_mps: float
     takeoff_timeout_seconds: float
     confirmation_ttl_seconds: float
+    preflight_telemetry_max_age_seconds: float = 5.0
 
 
 @dataclass

@@ -405,7 +405,8 @@ def create_app(environment=None, audit=None) -> FastAPI:
         lambda: bool(operator_state["configured"] and operator_state["task_publisher"]),
         audit=audit,
         publisher_dedup=publisher_results,
-        telemetry_provider=lambda: orchestrator.snapshot()["telemetry"],
+        telemetry_provider=orchestrator.telemetry_snapshot,
+        takeoff_provider=orchestrator.takeoff_participants_snapshot,
     )
     image_collector = (
         PeerImageCollector(
@@ -701,7 +702,7 @@ def create_app(environment=None, audit=None) -> FastAPI:
 
     def _connected_time_reference_uavs():
         now = time.time()
-        return [int(uid) for uid, item in orchestrator.snapshot().get('telemetry', {}).items()
+        return [int(uid) for uid, item in orchestrator.telemetry_snapshot().items()
                 if item.get('connected') and 0 <= now - float(item.get('received_at', 0)) <= 3.]
 
     def _local_clock_probe():
@@ -715,8 +716,15 @@ def create_app(environment=None, audit=None) -> FastAPI:
         if not clock_probe_lock.acquire(blocking=False):
             raise RuntimeError('本机配对无人机正在采样时间，请稍后再试')
         try:
-            # 只读动作；不占用程序启动/停止队列，也不调用任何调钟入口。
-            return manager._request('clock_probe', {})
+            # 新版通过已认证的常驻机地链路采样，不建立SSH、不排入飞行动作队列。
+            local_link = adapter.local_adapter if isinstance(adapter, DistributedFleetAdapter) else adapter
+            try:
+                return local_link.clock_probe(local_uav_id)
+            except NotImplementedError:
+                # 老版机载端没有探针能力才退回短SSH探针；超时不能悄悄换时间源。
+                result = manager._request('clock_probe', {})
+                result['transport'] = 'ssh_legacy'
+                return result
         finally:
             clock_probe_lock.release()
 
@@ -1836,10 +1844,15 @@ def create_app(environment=None, audit=None) -> FastAPI:
                 raise HTTPException(status_code=409, detail="本机配对无人机没有已分派任务")
             if payload.get("mission_id") and payload["mission_id"] != mission["mission_id"]:
                 raise HTTPException(status_code=409, detail="任务已变化，请重新选择返航无人机")
-            _mission_call(adapter.command_return, local_uav_id, {
-                "mission_id": mission["mission_id"], "reason": reason.value, "land_after_return": True,
-            })
-            return dict(status(), return_results={str(local_uav_id): {"ok": True, "detail": "返航请求已发送"}})
+            try:
+                orchestrator.return_receipts.send(local_uav_id, {
+                    "mission_id": mission["mission_id"], "reason": reason.value, "land_after_return": True,
+                    "assignment_checksum": mission['uavs'][str(local_uav_id)].get('assignment_checksum', ''),
+                }, adapter.command_return)
+                outcome = dict(ok=True, detail='返航请求已发送，等待对应机载回执')
+            except Exception as error:
+                outcome = dict(ok=False, detail=str(error))
+            return dict(status(), return_results={str(local_uav_id): outcome})
         return _mission_call(orchestrator.request_return_selected, selected if selected is not None else list(orchestrator.active_uav_ids), reason, payload.get("mission_id"))
 
     @app.post("/api/v1/uavs/{uav_id}/restart-executor", tags=["机载维护"])

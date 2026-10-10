@@ -99,7 +99,14 @@ class ProgramManager:
                     stream.write(redact(text, self.secrets))
 
     def _request(self, action, offsets, program=None):
-        source = (self.root / 'tools' / 'remote_programs.py').read_text(encoding='utf-8-sig')
+        if action == 'clock_probe':
+            # 旧版节点的只读兼容探针只需数百字节，不再传输整个程序管理器。
+            source = ("import json, time\nfrom pathlib import Path\n"
+                      "def rpc(payload):\n"
+                      "    boot = Path('/proc/sys/kernel/random/boot_id').read_text().strip()\n"
+                      "    print(json.dumps(dict(boot_id=boot, remote_monotonic=time.monotonic(), remote_wall=time.time())))\n")
+        else:
+            source = (self.root / 'tools' / 'remote_programs.py').read_text(encoding='utf-8-sig')
         payload = dict(action=action, uav_id=self.local['uav_id'], model=self.local['model'], offsets=offsets, program=program, latest_log=True)
         if action == 'auto_start':
             payload['expected_boot_id'] = self.boot_id

@@ -8,6 +8,7 @@ import select
 import socket
 import threading
 import time
+import uuid
 from dataclasses import replace
 from typing import Any, Dict, Iterable, Optional, Tuple
 
@@ -65,7 +66,7 @@ class _ClientConnection:
         self.address = address
         self.send_lock = threading.Lock()
 
-    def send(self, payload: Dict[str, Any]) -> None:
+    def send(self, payload: Dict[str, Any], *, probe: bool = False) -> None:
         encoded = (
             json.dumps(payload, ensure_ascii=False, separators=(",", ":")) + "\n"
         ).encode("utf-8")
@@ -73,9 +74,10 @@ class _ClientConnection:
             raise RuntimeError("TCP message exceeds the size limit")
         # 接收线程持有同一个 TCP socket，不能临时更改其超时/阻塞模式。
         # sendall 在半开连接上可能无限等待，过去会把整个规划请求锁住。
-        if not self.send_lock.acquire(timeout=COMMAND_SEND_TIMEOUT_SECONDS):
-            self.close()
-            raise TimeoutError("机载任务发送队列超时")
+        if not self.send_lock.acquire(timeout=0.1 if probe else COMMAND_SEND_TIMEOUT_SECONDS):
+            if not probe:
+                self.close()
+            raise TimeoutError("机载发送队列忙，本次只读采样跳过" if probe else "机载任务发送队列超时")
         try:
             done = threading.Event()
             errors = []
@@ -142,6 +144,7 @@ class TcpFleetAdapter(FleetAdapter):
         self._telemetry_condition = threading.Condition()
         self._telemetry_pending = set()
         self._telemetry_thread = None
+        self._clock_probes = {}
 
     @property
     def bound_port(self) -> int:
@@ -317,6 +320,7 @@ class TcpFleetAdapter(FleetAdapter):
                 self._identities[uav_id] = identity
                 self.identity_errors.pop(uav_id, None)
                 self._get_telemetry_locked(uav_id).identity = identity
+                client.clock_probe_version = hello.get('clock_probe_version')
                 self._clients[uav_id] = client
             if previous is not None and previous is not client:
                 previous.close()
@@ -339,6 +343,15 @@ class TcpFleetAdapter(FleetAdapter):
                     break
                 if int(message.get("uav_id", -1)) != uav_id:
                     raise ValueError("message UAV ID changed after hello")
+                if message.get("type") == "clock_probe_reply":
+                    # 只读请求有独立应答，不更新飞控遥测新鲜度，不经过任务状态机。
+                    with self._lock:
+                        pending = self._clock_probes.get(message.get('request_id'))
+                        if (pending and pending['client'] is client
+                                and self._clients.get(uav_id) is client):
+                            pending['result'] = dict(message)
+                            pending['done'].set()
+                    continue
                 if message.get("type") == "link_ping":
                     with self._lock:
                         if self._clients.get(uav_id) is not client:
@@ -384,7 +397,37 @@ class TcpFleetAdapter(FleetAdapter):
                         snapshot = None
                 if snapshot is not None:
                     self._notify_telemetry(snapshot)
+            with self._lock:
+                for pending in self._clock_probes.values():
+                    if pending['client'] is client:
+                        pending['done'].set()
             client.close()
+
+    def clock_probe(self, uav_id: int, timeout: float = 1.5) -> Dict[str, Any]:
+        """只读采样机载启动标识/单调时钟；旧节点不会收到未知飞行指令。"""
+        request_id = uuid.uuid4().hex
+        with self._lock:
+            client = self._clients.get(int(uav_id))
+            if client is None:
+                raise RuntimeError('无人机任务链路未连接，无法采样时间')
+            if getattr(client, 'clock_probe_version', None) != 1:
+                raise NotImplementedError('机载端尚不支持TCP只读时间探针，请更新机载竞赛代码')
+            pending = dict(client=client, done=threading.Event(), result=None)
+            self._clock_probes[request_id] = pending
+        try:
+            client.send(dict(type='clock_probe', uav_id=int(uav_id), request_id=request_id), probe=True)
+            if not pending['done'].wait(timeout):
+                raise TimeoutError('机地TCP只读时间采样超时')
+            result = pending['result']
+            if not result:
+                raise RuntimeError('时间采样期间机地链路已断开')
+            if result.get('error'):
+                raise RuntimeError('机载时间采样失败：' + str(result['error']))
+            return dict(boot_id=result['boot_id'], remote_monotonic=result['remote_monotonic'],
+                        remote_wall=result['remote_wall'], transport='task_tcp')
+        finally:
+            with self._lock:
+                self._clock_probes.pop(request_id, None)
 
     def _get_telemetry_locked(self, uav_id: int) -> Telemetry:
         telemetry = self._telemetry.get(uav_id)
@@ -424,6 +467,9 @@ class TcpFleetAdapter(FleetAdapter):
                 telemetry.position = position
                 telemetry.velocity = velocity
                 telemetry.task_phase = str(message.get("task_phase", ""))
+                ack = message.get('return_ack')
+                if isinstance(ack, dict) and ack:
+                    telemetry.return_ack = dict(ack)
                 event = message.get("successful_return")
                 telemetry.successful_return = dict(event) if isinstance(event, dict) else {}
                 telemetry.gps_status = int(message.get("gps_status", 0))
@@ -499,6 +545,10 @@ class TcpFleetAdapter(FleetAdapter):
                         audit.record("收到机载任务回执", uav_id=uav_id, status=summary)
                         previous[uav_id] = summary
                         self._diagnostic_status = previous
+                if state == 'return_ack' and isinstance(status.get('return_ack'), dict):
+                    telemetry.return_ack = dict(status['return_ack'])
+                    if audit:
+                        audit.record('收到机载返航回执', uav_id=uav_id, receipt=telemetry.return_ack)
                 if state == "successful_return" and isinstance(status.get("event"), dict):
                     telemetry.successful_return = dict(status["event"])
                 if state in ("completed", "done"):

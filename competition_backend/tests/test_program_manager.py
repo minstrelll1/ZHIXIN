@@ -189,6 +189,7 @@ class ProgramsTest(unittest.TestCase):
                    return_value=SimpleNamespace(returncode=0,stdout=json.dumps(response).encode(),stderr=b'')) as run:
             self.assertEqual(manager._request('clock_probe',{}),response)
         self.assertEqual(run.call_args.kwargs['timeout'],4)
+        self.assertLess(len(run.call_args.kwargs['input']), 1500)
         self.assertNotIn('clock_sync',manager.snapshot())
 
     def test_one_program_failure_does_not_hide_others(self):

@@ -113,7 +113,7 @@ class OperatorRolesTest(unittest.TestCase):
         self.assertEqual(c.get('/api/v1/fleet/config').json()['config']['vehicles'][0]['video_rtsp_source'], 'rtsp://192.168.1.202:8554/custom')
 
     def test_peer_cannot_bypass_role_with_shared_token(self):
-        self.select(1)
+        # 地面1先保持未选发布角色，之后首次选择发布端；运行中不允许切换角色。
         self.select(2)
         c = self.clients[2]
         payload = {'coordinator_id': 'ground-1', 'uav_id': 2, 'command_type': 'takeoff', 'payload': {}}
@@ -146,8 +146,18 @@ class OperatorRolesTest(unittest.TestCase):
             'mission_id': 'remote-mission', 'phase': 'running', 'uavs': {'1': {}, '2': {}}}})
         response = self.clients[2].post('/api/v1/return', json={'reason': 'manual'})
         self.assertEqual(response.status_code, 200, response.text)
-        self.apps[2].state.adapter.local_adapter.forward_command.assert_called_once_with(2, 'return_home', {
-            'mission_id': 'remote-mission', 'reason': 'manual', 'land_after_return': True})
+        command=self.apps[2].state.adapter.local_adapter.forward_command.call_args.args
+        self.assertEqual(command[:2],(2,'return_home'))
+        self.assertEqual(command[2]['mission_id'],'remote-mission')
+        self.assertEqual(command[2]['reason'],'manual')
+        self.assertTrue(command[2]['land_after_return'])
+        request=response.json()['return_requests']['2']
+        self.assertEqual(request['request_id'],command[2]['request_id'])
+        self.assertEqual(request['state'],'waiting')
+        self.apps[2].state.orchestrator.update_telemetry(Telemetry(uav_id=2, received_at=time.time(), return_ack={
+            'uav_id':2,'request_id':request['request_id'],'mission_id':'remote-mission','assignment_checksum':'',
+            'state':'forwarded','ack_seq':2,'detail':'机载已向程序B发布'}))
+        self.assertEqual(self.clients[2].get('/api/v1/status').json()['return_requests']['2']['state'],'forwarded')
 
     def test_follower_cannot_return_other_uav_or_stale_mission(self):
         self.select(2)

@@ -326,6 +326,35 @@ class SubmissionReportTest(unittest.TestCase):
             self.assertIsNone(auto.snapshot()['mission_id'])
             self.assertEqual(auto.snapshot()['attempts_started'], 0)
 
+    def test_four_participant_report_connects_takeoff_list_and_preserves_it(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            state = dict(running=True, is_authority=True, session_id='session', elapsed_seconds=1000)
+            takeoff = {}
+            telemetry = {}
+            auto = report.AutoSubject1Reporter(tmp, Mock(snapshot=lambda: dict(state)), lambda: True,
+                telemetry_provider=lambda: telemetry, takeoff_provider=lambda: takeoff)
+            auto.note_mission('subject1-a', {str(i): {'assignment_checksum': 'checksum-'+str(i)} for i in range(1,7)})
+            self.assertFalse(auto.tick(now=0))
+            self.assertEqual([], auto.snapshot()['participant_uav_ids'])
+            takeoff.update(mission_id='subject1-a', uav_ids=[1, 2, 4, 5])
+            from test_return_report_schedule import telemetry as returned
+            telemetry.update({key: item for key, item in returned().items() if int(key) in [1,2,4]})
+            self.assertFalse(auto.tick(now=10))
+            self.assertEqual([5], auto.snapshot()['pending_return_uav_ids'])
+            telemetry.clear()  # 无线掉线不缩减参与名单或抹去已收标记。
+            self.assertFalse(auto.tick(now=20))
+            telemetry.update({'5': returned()['5']})
+            with patch.object(auto, '_submit_once') as submit:
+                self.assertFalse(auto.tick(now=30))
+                self.assertFalse(auto.tick(now=32.99))
+                self.assertTrue(auto.tick(now=33))
+                deadline=time.monotonic()+1
+                while not submit.called and time.monotonic()<deadline: time.sleep(.01)
+                self.assertEqual(submit.call_args.args[-1], ['all_participants_returned'])
+            state['session_id']='new-session'
+            auto.tick(now=40)
+            self.assertEqual([], auto.snapshot()['participant_uav_ids'])
+
     def test_auto_report_only_runs_on_publisher_and_reports_missing_results(self):
         with tempfile.TemporaryDirectory() as tmp:
             state = dict(running=True, is_authority=True, session_id='competition-a', elapsed_seconds=1440)

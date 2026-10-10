@@ -313,8 +313,9 @@ class AutoSubject1Reporter:
     INTERVAL_SECONDS = 5
 
     def __init__(self, image_root, competition_clock, is_publisher, audit=None,
-                 publisher_dedup=False, telemetry_provider=None):
+                 publisher_dedup=False, telemetry_provider=None, takeoff_provider=None):
         self.telemetry_provider = telemetry_provider or (lambda: {})
+        self.takeoff_provider = takeoff_provider or (lambda: {})
         self.image_root = image_root
         self.publisher_dedup = bool(publisher_dedup)
         self.clock = competition_clock
@@ -387,6 +388,7 @@ class AutoSubject1Reporter:
     def tick(self, now=None):
         state = self.clock.snapshot()
         telemetry = self.telemetry_provider()
+        takeoff = self.takeoff_provider()
         with self._lock:
             self._sync_session(state)
             if (not state.get('is_authority') or not self.is_publisher()
@@ -394,11 +396,18 @@ class AutoSubject1Reporter:
                 return False
             now = time.monotonic() if now is None else now
             mission_id = self._frozen_mission_id or self._mission_id
+            if takeoff.get('mission_id') == mission_id and takeoff.get('uav_ids'):
+                if self._schedule.set_participants(takeoff['uav_ids']) and self.audit:
+                    self.audit.record('科目一自动上报已固定起飞参与名单', mission_id=mission_id,
+                                      uav_ids=sorted(self._schedule.participants),
+                                      competition_session=self._session_id)
             added = self._schedule.observe(telemetry, mission_id, self._session_id,
                                            self._checksums, now)
             if added and self.audit:
                 self.audit.record('成功返航标记已汇集', mission_id=mission_id,
-                                  uav_ids=added, returned_uav_ids=sorted(self._schedule.returned))
+                                  uav_ids=added, returned_uav_ids=sorted(self._schedule.returned),
+                                  participant_uav_ids=sorted(self._schedule.participants),
+                                  pending_return_uav_ids=sorted(self._schedule.participants.difference(self._schedule.returned)))
             previous_strategy = self._schedule.selected_strategy
             reasons = self._schedule.due(now, float(state.get('elapsed_seconds', 0)))
             if self._schedule.selected_strategy != previous_strategy and self.audit:

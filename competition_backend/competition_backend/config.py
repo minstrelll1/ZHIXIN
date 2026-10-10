@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import math
 from pathlib import Path
 from typing import Any, Dict
 
@@ -31,11 +32,14 @@ def load_config(path: str) -> BackendConfig:
         preflight_battery_min=float(safety_raw["preflight_battery_min"]),
         return_battery_threshold=float(safety_raw["return_battery_threshold"]),
         telemetry_max_age_seconds=float(safety_raw["telemetry_max_age_seconds"]),
+        preflight_telemetry_max_age_seconds=float(safety_raw.get("preflight_telemetry_max_age_seconds", 5.0)),
         altitude_tolerance_m=float(safety_raw["altitude_tolerance_m"]),
         vertical_speed_tolerance_mps=float(safety_raw["vertical_speed_tolerance_mps"]),
         takeoff_timeout_seconds=float(safety_raw["takeoff_timeout_seconds"]),
         confirmation_ttl_seconds=float(safety_raw["confirmation_ttl_seconds"]),
     )
+    if not math.isfinite(safety.preflight_telemetry_max_age_seconds) or safety.preflight_telemetry_max_age_seconds <= 0:
+        raise ValueError("preflight_telemetry_max_age_seconds must be finite and positive")
     if not 0.0 < safety.return_battery_threshold < safety.preflight_battery_min <= 1.0:
         raise ValueError("battery thresholds must satisfy 0 < return < preflight <= 1")
 
