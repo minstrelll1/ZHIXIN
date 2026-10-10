@@ -2,9 +2,9 @@
   "schema_version": 1,
   "repository": "minstrelll1/ZHIXIN",
   "branch": "codex/portable-ground-deployment",
-  "commit": "dd7c12e9d5e6d280eb9d45f498136e66b2e0259c",
-  "tree_sha": "4cf33a215404e4dfa17d2a2fb4528fe22c341be4",
-  "file_count": 343,
+  "commit": "f923f5e870209871c7d3b0148cb3861671cd0725",
+  "tree_sha": "4c15d3775a391c5457f1fab7b7eec5f7ecdda1dc",
+  "file_count": 347,
   "files": [
     {
       "path": ".editorconfig",
@@ -136,8 +136,8 @@
       "path": "competition_backend/competition_backend/api.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "fdbd81708af9f7d262f9a1e76f77619c3f08889d",
-      "size": 107985
+      "sha": "c84dc25ba4b80fef9f6d2a50a0cb7bd4f75b22ed",
+      "size": 108779
     },
     {
       "path": "competition_backend/competition_backend/assignment_protocol.py",
@@ -248,8 +248,8 @@
       "path": "competition_backend/competition_backend/config.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "ea40e89ab5ade90a1bf16f4ab08b9e3e54cd6604",
-      "size": 2198
+      "sha": "70618f2388df38131cef132fa33a3914302dfd48",
+      "size": 2534
     },
     {
       "path": "competition_backend/competition_backend/dalian_nanshan_area.json",
@@ -325,15 +325,15 @@
       "path": "competition_backend/competition_backend/models.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "ce2f0b39a3317f31bb73176e6f5d9c3cc5e76d77",
-      "size": 4943
+      "sha": "209e27caf499de9d08ccbab4b6e8d45a54a9a829",
+      "size": 5057
     },
     {
       "path": "competition_backend/competition_backend/orchestrator.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "f4f1ca2c14d2ccc66d101fa75ee1bf1c94124151",
-      "size": 55305
+      "sha": "b03dfb659c661bba30f616799acd2bb0bd5a33ee",
+      "size": 55752
     },
     {
       "path": "competition_backend/competition_backend/pcl_octree.py",
@@ -381,8 +381,8 @@
       "path": "competition_backend/competition_backend/program_manager.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "29faf6c4000045dae20c498b49fa08516cfba836",
-      "size": 21196
+      "sha": "b9a62b67e980b55f0127082f035d7948baa670c2",
+      "size": 21695
     },
     {
       "path": "competition_backend/competition_backend/recognition_settings.py",
@@ -399,18 +399,25 @@
       "size": 14580
     },
     {
+      "path": "competition_backend/competition_backend/return_receipts.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "6c68f36740178cdc878ae0ac32350ded63f3df0d",
+      "size": 3728
+    },
+    {
       "path": "competition_backend/competition_backend/return_report_schedule.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "85f54748ba8f026f943813d844dfcbbe30c8ad94",
-      "size": 4271
+      "sha": "ad4dee2793b7084506260de578d38916d374b814",
+      "size": 5221
     },
     {
       "path": "competition_backend/competition_backend/ros_adapter.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "7c6eb05ed66b5d9862dd521993a52b1f1bac09dd",
-      "size": 6560
+      "sha": "ee4870145e65104cf49e054867bd6a7fd6b4baf3",
+      "size": 6833
     },
     {
       "path": "competition_backend/competition_backend/scaled_scene_plans.py",
@@ -444,8 +451,8 @@
       "path": "competition_backend/competition_backend/subject1_reporting.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "ee00ddde32d19413858426cf56ee4941795c0604",
-      "size": 29253
+      "sha": "1bd93a0899918f2917a8a6cb210f81c36de9f019",
+      "size": 30046
     },
     {
       "path": "competition_backend/competition_backend/task_region.py",
@@ -458,15 +465,15 @@
       "path": "competition_backend/competition_backend/tcp_adapter.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "498a81d2bcf05cf3509248052801f315b5e74ec2",
-      "size": 26755
+      "sha": "8d83c54972fc2b673c60848e2e5524f237f6884b",
+      "size": 29756
     },
     {
       "path": "competition_backend/competition_backend/time_reference.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "12b73f7e0f4218ae903a112a2a7e7c573c3307d1",
-      "size": 9858
+      "sha": "0e331889f5c8e52fbe45b1797407a7602938eaac",
+      "size": 10485
     },
     {
       "path": "competition_backend/competition_backend/traffic_monitor.py",
@@ -500,8 +507,8 @@
       "path": "competition_backend/competition_backend/web/index.html",
       "type": "blob",
       "mode": "100644",
-      "sha": "69fdfcbbb82645635ca931afea4fc2d482602966",
-      "size": 166152
+      "sha": "5fc1be26268327ef06cf354a2b1113f9fd63d25b",
+      "size": 168891
     },
     {
       "path": "competition_backend/competition_backend/web/military_preview.html",
@@ -563,8 +570,8 @@
       "path": "competition_backend/config/competition.example.json",
       "type": "blob",
       "mode": "100644",
-      "sha": "877c8baa7a6f5f107bac5e67d448feb53e774e81",
-      "size": 4776
+      "sha": "6c99e72f1d1fa0f7e1e37cc2dcabcbeb4c8fbba6",
+      "size": 4824
     },
     {
       "path": "competition_backend/pyproject.toml",
@@ -614,6 +621,13 @@
       "mode": "100644",
       "sha": "db254c70fcc91f7c53423936360fb0f0561c79e2",
       "size": 10615
+    },
+    {
+      "path": "competition_backend/tests/test_clock_probe_link.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "a80255b0bdc61a1ead15e1112abf2a135a075d7d",
+      "size": 6673
     },
     {
       "path": "competition_backend/tests/test_competition_clock.py",
@@ -724,8 +738,8 @@
       "path": "competition_backend/tests/test_live_telemetry_snapshot.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "93297c891628eabd8b137567a3cf2127cce3b118",
-      "size": 8987
+      "sha": "1d961346333cba04c9a516958c092ba61e89c28e",
+      "size": 12183
     },
     {
       "path": "competition_backend/tests/test_lq10_reconnect.py",
@@ -759,15 +773,15 @@
       "path": "competition_backend/tests/test_operator_roles.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "7d20387e47cd27501fa385aa9c4da2b559726d1f",
-      "size": 9920
+      "sha": "b9fd2ad8c409e51e42cc44bf5ea2de12f28622bb",
+      "size": 10743
     },
     {
       "path": "competition_backend/tests/test_orchestrator.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "0a1749c7b61f39392d540ad348911730c8de9c80",
-      "size": 35247
+      "sha": "bb2e9d66b80335e30a7b611c8c768edd0a97bc75",
+      "size": 36254
     },
     {
       "path": "competition_backend/tests/test_peer_polling.py",
@@ -829,8 +843,8 @@
       "path": "competition_backend/tests/test_program_manager.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "6576ce0fb6892bcdd3813f7fb8e6b30b4aff4996",
-      "size": 20478
+      "sha": "dce7b37747c49ed81c245aab1ace7364a48b81b4",
+      "size": 20544
     },
     {
       "path": "competition_backend/tests/test_program_stop.py",
@@ -854,11 +868,18 @@
       "size": 1406
     },
     {
+      "path": "competition_backend/tests/test_return_receipts.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "13203fedaf5ea7cd10e7f84b7d0cce79e0e5fd3f",
+      "size": 5843
+    },
+    {
       "path": "competition_backend/tests/test_return_report_schedule.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "473778eeda50041a09c028fc50b5971449d02693",
-      "size": 4158
+      "sha": "ebdb6e915523cdd2f066f7cceb15356d6188bc50",
+      "size": 6416
     },
     {
       "path": "competition_backend/tests/test_scaled_scene_plans.py",
@@ -892,8 +913,8 @@
       "path": "competition_backend/tests/test_subject1_reporting.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "0521afe0322bd7e9e448a4a4dd054c5c1233dcd5",
-      "size": 23418
+      "sha": "872ffdf154c4e54808b585d4bfe243888e73c8c0",
+      "size": 25294
     },
     {
       "path": "competition_backend/tests/test_task_region.py",
@@ -920,8 +941,8 @@
       "path": "competition_backend/tests/test_time_reference.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "0938c7b3c51c99221a4171c6c2b12660bc0ed7ac",
-      "size": 11232
+      "sha": "ff5b756ea27ee99ae4bc940ac6074610a2f194f3",
+      "size": 13702
     },
     {
       "path": "competition_backend/tests/test_traffic_monitor.py",
@@ -1221,8 +1242,8 @@
       "path": "docs/return_reporting.md",
       "type": "blob",
       "mode": "100644",
-      "sha": "daab8eaf1394c2449918ae4f36d3401fff1beb32",
-      "size": 5812
+      "sha": "5e742bb88bd031ec2652f65fccfd949f27ed76a0",
+      "size": 8589
     },
     {
       "path": "docs/six_ground_computers_setup.txt",
@@ -1340,8 +1361,8 @@
       "path": "docs/subject1_reporting.md",
       "type": "blob",
       "mode": "100644",
-      "sha": "53883515c86c71102c0b395fbf6a476d58c42533",
-      "size": 13224
+      "sha": "379c3c8d1609dadba7866025e8173cf5a5e14399",
+      "size": 13997
     },
     {
       "path": "docs/task_region_protocol.md",
@@ -1424,8 +1445,8 @@
       "path": "src/su17_competition_executor/scripts/onboard_task_executor.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "2bd247a85724e083e96a9bdec9a05193674ac8ba",
-      "size": 102574
+      "sha": "c42c9489c6f8aa3ba323c7b49c2750110cabc41f",
+      "size": 107589
     },
     {
       "path": "src/su17_competition_executor/setup.py",
@@ -1466,8 +1487,8 @@
       "path": "src/su17_competition_executor/src/su17_competition_executor/tcp_link.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "e392efd339eb3497201fe4d388b58cc0ad45e361",
-      "size": 9534
+      "sha": "00193a4d719c97e383d273e1dc7bf5c8777f95cd",
+      "size": 10653
     },
     {
       "path": "src/su17_competition_executor/src/su17_competition_executor/transit_protocol.py",
@@ -1498,6 +1519,13 @@
       "size": 38223
     },
     {
+      "path": "src/su17_competition_executor/test/test_onboard_return_receipts.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "149b8439f626812e3b009737a7e3754ce2d0ecb1",
+      "size": 5225
+    },
+    {
       "path": "src/su17_competition_executor/test/test_pengfei_bridge.py",
       "type": "blob",
       "mode": "100644",
@@ -1522,8 +1550,8 @@
       "path": "src/su17_competition_executor/test/test_successful_return_pipeline.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "8384bdc4f90e2a6be73d4ffbc02064a0382cf241",
-      "size": 3623
+      "sha": "83d2a3951ca37087c5404a60dd9cc09e990ae044",
+      "size": 3694
     },
     {
       "path": "src/su17_competition_executor/test/test_task_protocol.py",
@@ -2327,8 +2355,8 @@
       "path": "tools/tests/test_return_ui.js",
       "type": "blob",
       "mode": "100644",
-      "sha": "e3bc4f6100054f87b44ceb20219dd982655481a9",
-      "size": 2858
+      "sha": "294cb58a778f41f95816827c97be2dff0ad22b9d",
+      "size": 4338
     },
     {
       "path": "tools/tests/test_setup_onboard_ssh.ps1",
@@ -2408,5 +2436,5 @@
       "size": 804
     }
   ],
-  "generated_at": "2026-10-10T07:15:15+00:00"
+  "generated_at": "2026-10-10T09:19:45+00:00"
 }
