@@ -41,11 +41,13 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass `
   -SkipInstall
 ```
 
-旧版电脑首次启用增量更新时，改用以下命令一次；之后继续使用上面的本地命令：
+所有已部署电脑也可统一使用下面这一条在线更新命令；它每次加载最新版更新器，旧版电脑无需分两步升级：
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& ([scriptblock]::Create((Invoke-RestMethod 'https://raw.githubusercontent.com/minstrelll1/ZHIXIN/codex/portable-ground-deployment/tools/bootstrap_ground.ps1'))) -Destination (Join-Path (Get-Location) 'competition_development') -SkipInstall"
 ```
+
+每次上传代码后，等待 GitHub Actions 中“发布地面增量更新清单”成功，再让其他电脑更新。更新器优先读取独立发布清单，按固定提交与文件哈希只下载变化文件，正常更新不调用 GitHub API，也不需要 GitHub 令牌。清单发布有延迟时读取的是上一已发布版本，以终端显示的版本号为准。
 
 更新失败详情自动保存在 `competition_development\ground_logs\update_*.log`。下载并校验全部成功后才替换文件。完成后重新启动地面后端并刷新网页。
 

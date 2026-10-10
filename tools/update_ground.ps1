@@ -69,7 +69,7 @@ function Test-BlobMatch([string]$Path, [string]$Hash) {
 function Test-ProtectedPath([string]$Path) {
     return $Path -match '^(\.git|\.runtime|\.venv|ground_runtime|ground_logs|flight_records|received_images|image_cache|pointcloud_records|onboard_source_backup|position_tests|build[^/]*|devel[^/]*|logs|dist)(/|$)' -or
         $Path -match '^competition_backend/(\.venv|data)(/|$)' -or
-        $Path -match '^tools/local_tokens\.(ps1|env)$' -or $Path -match '(^|/)(__pycache__|auto\.key|auto\.crt)(/|$)'
+        $Path -match '^tools/local_tokens\.(ps1|env)$' -or $Path -match '^docs/flight_reviews(/|$)' -or $Path -match '(^|/)(__pycache__|auto\.key|auto\.crt)(/|$)'
 }
 
 function Test-PreservedFile([string]$Path, [string]$Local) {
@@ -90,10 +90,55 @@ function Request-UpdateFile([string]$Url, [string]$OutFile = '') {
                 return ($utf8.GetString($buffer.ToArray()).TrimStart([char]0xFEFF) | ConvertFrom-Json)
             } finally { $buffer.Dispose(); $response.RawContentStream.Dispose() }
         } catch {
+            $status = 0
+            if ($_.Exception.Response) { $status = [int]$_.Exception.Response.StatusCode }
+            # 403/429 需要等待服务端配额恢复；立即重试只会继续消耗请求。
+            if ($status -in @(401,403,404,429)) {
+                if ($status -in @(403,429)) {
+                    Write-UpdateLog "更新服务限制请求（HTTP $status），停止立即重试。"
+                }
+                throw
+            }
             if ($attempt -eq 3) { throw }
             Write-UpdateLog "网络请求失败，正在重试（$attempt/3）。"
             Start-Sleep -Seconds $attempt
         }
+    }
+}
+
+function Get-UpdateSnapshot([string]$Repo, [string]$Ref) {
+    # 由源码分支每次 push 后的工作流发布，指向不可变的源码提交。
+    # 普通客户端只读 raw 清单和变化文件，不调用 GitHub REST API。
+    $escapedRef = (($Ref.Split('/') | ForEach-Object { [Uri]::EscapeDataString($_) }) -join '/')
+    $url = "https://raw.githubusercontent.com/$Repo/codex/ground-update-manifests/manifests/$escapedRef.json"
+    $manifest = $null
+    try { $manifest = Request-UpdateFile $url }
+    catch {
+        Write-UpdateLog '发布清单暂不可用，尝试兼容旧仓库的版本查询。'
+    }
+    if ($null -ne $manifest) {
+        if ($manifest.schema_version -ne 1 -or $manifest.repository -ne $Repo -or
+            $manifest.branch -cne $Ref -or $manifest.commit -notmatch '^[a-f0-9]{40}$' -or
+            $manifest.tree_sha -notmatch '^[a-f0-9]{40}$' -or -not $manifest.files -or
+            $manifest.file_count -ne @($manifest.files).Count) {
+            throw '发布文件清单无效，已停止更新；尚未替换本机代码。'
+        }
+        Write-UpdateLog ('已读取增量发布清单：{0}（生成时间 {1}）；无需 GitHub API。' -f $manifest.commit.Substring(0,7), $manifest.generated_at)
+        return [pscustomobject]@{ Version=[string]$manifest.commit; Files=@($manifest.files); Source='published_manifest' }
+    }
+    try {
+        $commit = Request-UpdateFile "https://api.github.com/repos/$Repo/commits/$([Uri]::EscapeDataString($Ref))"
+        if ($commit.sha -notmatch '^[a-f0-9]{40}$' -or $commit.commit.tree.sha -notmatch '^[a-f0-9]{40}$') { throw 'GitHub 返回的版本信息无效。' }
+        $tree = Request-UpdateFile "https://api.github.com/repos/$Repo/git/trees/$($commit.commit.tree.sha)?recursive=1"
+        if ($tree.truncated -or -not $tree.tree) { throw 'GitHub 文件清单不完整，已停止更新。' }
+        return [pscustomobject]@{ Version=[string]$commit.sha; Files=@($tree.tree | Where-Object { $_.type -eq 'blob' }); Source='legacy_api' }
+    } catch {
+        $status = 0
+        if ($_.Exception.Response) { $status = [int]$_.Exception.Response.StatusCode }
+        if ($status -in @(403,429)) {
+            throw 'GitHub API 已限流，且增量发布清单尚不可用。请等待仓库 Actions 中“发布地面增量更新清单”成功后重试原命令；无需重装或修改 AuthToken/PeerToken。'
+        }
+        throw
     }
 }
 
@@ -108,7 +153,8 @@ try {
     Write-UpdateLog "增量更新日志：$script:updateLog"
     if (-not (Test-Path -LiteralPath (Resolve-UpdatePath $Destination 'tools/install_ground_station.ps1'))) { throw '未找到已部署的项目。首次部署请去掉 -SkipInstall。' }
     $Repository = $Repository -replace '^https?://github.com/', '' -replace '/$', ''
-    if ($Repository -notmatch '^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$' -or [string]::IsNullOrWhiteSpace($Branch)) { throw '仓库或分支名称无效。' }
+    if ($Repository -notmatch '^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$' -or [string]::IsNullOrWhiteSpace($Branch) -or
+        $Branch -match '\.\.' -or $Branch.Contains('\') -or $Branch.StartsWith('/') -or $Branch.EndsWith('/')) { throw '仓库或分支名称无效。' }
     $runtime = Resolve-UpdatePath $Destination '.runtime'
     New-Item -ItemType Directory -Path $runtime -Force | Out-Null
     $lockPath = Resolve-UpdatePath $Destination '.runtime/ground_update.lock'
@@ -122,12 +168,9 @@ try {
         try { $previous = [IO.File]::ReadAllText($statePath, $utf8) | ConvertFrom-Json } catch { Write-UpdateLog '旧更新记录无法读取，将按本地文件重新核对。' }
     }
     Write-UpdateLog '正在查询版本和文件清单；保留现有机队配置、令牌、数据及第三方软件。'
-    $commit = Request-UpdateFile "https://api.github.com/repos/$Repository/commits/$([Uri]::EscapeDataString($Branch))"
-    if ($commit.sha -notmatch '^[a-f0-9]{40}$' -or $commit.commit.tree.sha -notmatch '^[a-f0-9]{40}$') { throw 'GitHub 返回的版本信息无效。' }
-    $version = [string]$commit.sha
-    $tree = Request-UpdateFile "https://api.github.com/repos/$Repository/git/trees/$($commit.commit.tree.sha)?recursive=1"
-    if ($tree.truncated -or -not $tree.tree) { throw 'GitHub 文件清单不完整，已停止更新。' }
-    $files = @($tree.tree | Where-Object { $_.type -eq 'blob' })
+    $snapshot = Get-UpdateSnapshot $Repository $Branch
+    $version = $snapshot.Version
+    $files = $snapshot.Files
     $current = @{}
     $downloads = [Collections.Generic.List[object]]::new()
     $removals = [Collections.Generic.List[object]]::new()
@@ -136,7 +179,8 @@ try {
         $relative = [string]$file.path
         $local = Resolve-UpdatePath $Destination $relative
         if (Test-PreservedFile $relative $local) { continue }
-        if ($file.mode -notin @('100644','100755') -or $file.sha -notmatch '^[a-f0-9]{40}$') { throw "不支持的仓库文件：$relative" }
+        if ($file.type -ne 'blob' -or $file.mode -notin @('100644','100755') -or $file.sha -notmatch '^[a-f0-9]{40}$' -or
+            $null -eq $file.size -or [long]$file.size -lt 0) { throw "不支持的仓库文件：$relative" }
         if ($current.ContainsKey($relative)) { throw "Windows 文件路径重名：$relative" }
         $current[$relative] = [string]$file.sha
         if (Test-BlobMatch $local $file.sha) { continue }
@@ -181,7 +225,7 @@ try {
             Copy-Item -LiteralPath $file.Stage -Destination $file.Local -Force
         } else { Remove-Item -LiteralPath $file.Local -Force }
     }
-    $state = @{ schema_version=1; repository=$Repository; branch=$Branch; commit=$version; files=$current; updated_at=(Get-Date).ToUniversalTime().ToString('o') }
+    $state = @{ schema_version=1; repository=$Repository; branch=$Branch; commit=$version; files=$current; manifest_source=$snapshot.Source; updated_at=(Get-Date).ToUniversalTime().ToString('o') }
     $pendingState = Join-Path $runRoot 'state.json'
     [IO.File]::WriteAllText($pendingState, ($state | ConvertTo-Json -Depth 6), $utf8)
     if (Test-Path -LiteralPath $statePath) { [IO.File]::Replace($pendingState, $statePath, (Join-Path $runRoot 'previous-state.json')) }

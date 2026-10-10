@@ -1,0 +1,60 @@
+name: 发布地面增量更新清单
+
+on:
+  push:
+    branches: [codex/portable-ground-deployment]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ground-update-manifest
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.ref_name == 'codex/portable-ground-deployment'
+    runs-on: ubuntu-latest
+    steps:
+      # 每次读取分支当前版本；排队的旧作业也不会把清单退回旧提交。
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+      - name: 验证清单生成器
+        run: python3 tools/tests/test_ground_update_manifest.py
+      - name: 生成固定提交的文件哈希清单
+        env:
+          SOURCE_BRANCH: ${{ github.ref_name }}
+        run: |
+          python3 tools/build_ground_update_manifest.py \
+            --repository "$GITHUB_REPOSITORY" --branch "$SOURCE_BRANCH" \
+            --output "$RUNNER_TEMP/ground-update-manifest.json"
+      - name: 发布到独立清单分支
+        env:
+          SOURCE_BRANCH: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          metadata_branch=codex/ground-update-manifests
+          metadata_dir="$RUNNER_TEMP/ground-manifest-worktree"
+          source_commit=$(git rev-parse HEAD)
+          # 使用 Git 协议，不调用匿名 REST API。
+          ref=$(git ls-remote --heads origin "refs/heads/$metadata_branch")
+          if [ -n "$ref" ]; then
+            git fetch --depth=1 origin "refs/heads/$metadata_branch"
+            git worktree add --detach "$metadata_dir" FETCH_HEAD
+          else
+            git worktree add --detach "$metadata_dir" HEAD
+            git -C "$metadata_dir" checkout --orphan ground-manifest-initial
+            git -C "$metadata_dir" rm -rf -- . > /dev/null
+          fi
+          target="manifests/$SOURCE_BRANCH.json"
+          mkdir -p "$metadata_dir/$(dirname "$target")"
+          cp "$RUNNER_TEMP/ground-update-manifest.json" "$metadata_dir/$target"
+          git -C "$metadata_dir" config user.name github-actions[bot]
+          git -C "$metadata_dir" config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git -C "$metadata_dir" add -- "$target"
+          if ! git -C "$metadata_dir" diff --cached --quiet; then
+            git -C "$metadata_dir" commit -m "Publish ground manifest for $source_commit"
+            git -C "$metadata_dir" push origin "HEAD:refs/heads/$metadata_branch"
+          fi
