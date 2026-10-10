@@ -2,9 +2,9 @@
   "schema_version": 1,
   "repository": "minstrelll1/ZHIXIN",
   "branch": "codex/portable-ground-deployment",
-  "commit": "8b6356932cd552d593eae2674569bd3d448ef477",
-  "tree_sha": "e877583619a0dc8982ab1c3da850b38c7c1764d2",
-  "file_count": 338,
+  "commit": "dd7c12e9d5e6d280eb9d45f498136e66b2e0259c",
+  "tree_sha": "4cf33a215404e4dfa17d2a2fb4528fe22c341be4",
+  "file_count": 343,
   "files": [
     {
       "path": ".editorconfig",
@@ -136,8 +136,8 @@
       "path": "competition_backend/competition_backend/api.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "fd225a6aed3a68fff5b69a8bdfd26a08bf5d6e6e",
-      "size": 105515
+      "sha": "fdbd81708af9f7d262f9a1e76f77619c3f08889d",
+      "size": 107985
     },
     {
       "path": "competition_backend/competition_backend/assignment_protocol.py",
@@ -325,15 +325,15 @@
       "path": "competition_backend/competition_backend/models.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "77be7baef3ec12cc92888baf83bb7fa166627708",
-      "size": 4360
+      "sha": "ce2f0b39a3317f31bb73176e6f5d9c3cc5e76d77",
+      "size": 4943
     },
     {
       "path": "competition_backend/competition_backend/orchestrator.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "47173cdc9f74c7ea6558b5e4bd86379cc22987b7",
-      "size": 53458
+      "sha": "f4f1ca2c14d2ccc66d101fa75ee1bf1c94124151",
+      "size": 55305
     },
     {
       "path": "competition_backend/competition_backend/pcl_octree.py",
@@ -500,8 +500,8 @@
       "path": "competition_backend/competition_backend/web/index.html",
       "type": "blob",
       "mode": "100644",
-      "sha": "6aa11aed6c8939024b1f3295f54214cf46f49834",
-      "size": 164240
+      "sha": "69fdfcbbb82645635ca931afea4fc2d482602966",
+      "size": 166152
     },
     {
       "path": "competition_backend/competition_backend/web/military_preview.html",
@@ -693,6 +693,13 @@
       "size": 4911
     },
     {
+      "path": "competition_backend/tests/test_gps_planning_snapshot.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "31839d10405e6787c975524333157fc0f0cfac11",
+      "size": 5645
+    },
+    {
       "path": "competition_backend/tests/test_ground_entry.py",
       "type": "blob",
       "mode": "100644",
@@ -714,11 +721,25 @@
       "size": 24677
     },
     {
+      "path": "competition_backend/tests/test_live_telemetry_snapshot.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "93297c891628eabd8b137567a3cf2127cce3b118",
+      "size": 8987
+    },
+    {
       "path": "competition_backend/tests/test_lq10_reconnect.py",
       "type": "blob",
       "mode": "100644",
       "sha": "595f2d7bdb549148626ec222a6aead51ce435e0d",
       "size": 10323
+    },
+    {
+      "path": "competition_backend/tests/test_mission_serialization.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "404ce8a5c2b143cbd0aa53fda106ccaf86dbcd9c",
+      "size": 5121
     },
     {
       "path": "competition_backend/tests/test_offline_coverage_projection.py",
@@ -2226,6 +2247,13 @@
       "size": 2989
     },
     {
+      "path": "tools/tests/test_gps_sync_status_ui.js",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "40b4fbe48187977f4f6dc8f00ede53557ee9d21d",
+      "size": 3355
+    },
+    {
       "path": "tools/tests/test_ground_firewall.ps1",
       "type": "blob",
       "mode": "100644",
@@ -2324,6 +2352,13 @@
       "size": 6585
     },
     {
+      "path": "tools/tests/test_takeoff_confirm_ui.js",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "08176f81a03a5cfa8bc2958749212e2e97b6715b",
+      "size": 8702
+    },
+    {
       "path": "tools/tests/test_terrain_basemap.js",
       "type": "blob",
       "mode": "100644",
@@ -2373,5 +2408,5 @@
       "size": 804
     }
   ],
-  "generated_at": "2026-10-10T03:55:01+00:00"
+  "generated_at": "2026-10-10T07:15:15+00:00"
 }
