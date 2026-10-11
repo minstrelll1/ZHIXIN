@@ -2,9 +2,9 @@
   "schema_version": 1,
   "repository": "minstrelll1/ZHIXIN",
   "branch": "codex/portable-ground-deployment",
-  "commit": "0103f4ee4d3adf045423b7ee51fa82c38a512e8a",
-  "tree_sha": "64af7ae973e2c95bf5d1ee40ab8cea3cf6819bb1",
-  "file_count": 360,
+  "commit": "3dc5882eee2f09d3e8f5421f7d265c268c9c594c",
+  "tree_sha": "4bf09651ba82fcc1ae808c0eeacbedf18469c368",
+  "file_count": 371,
   "files": [
     {
       "path": ".editorconfig",
@@ -31,8 +31,8 @@
       "path": ".github/workflows/script-compatibility.yml",
       "type": "blob",
       "mode": "100644",
-      "sha": "dcbd51d29b9afdfafecf3bf13319ad301a4adb85",
-      "size": 872
+      "sha": "c1c360a245df6b82e4e348003112fbef4584baf6",
+      "size": 971
     },
     {
       "path": ".gitignore",
@@ -94,8 +94,8 @@
       "path": "README.md",
       "type": "blob",
       "mode": "100644",
-      "sha": "669caa3d3c0ff028a8248db05ab2fb60a504294a",
-      "size": 16923
+      "sha": "bc3cf5ecd3e1c35eb302e051379f80553b783f43",
+      "size": 17044
     },
     {
       "path": "SU17地面端与机载端启动指令.txt",
@@ -136,8 +136,8 @@
       "path": "competition_backend/competition_backend/api.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "04819578ba50e3028161895e8617085f1fb43e0d",
-      "size": 111251
+      "sha": "cf685741f3ee9fe245ac768c31d004737748a8ee",
+      "size": 111825
     },
     {
       "path": "competition_backend/competition_backend/assignment_protocol.py",
@@ -145,6 +145,13 @@
       "mode": "100644",
       "sha": "4f16ec16309b9e7f71979d8d31765cbac0cc3186",
       "size": 462
+    },
+    {
+      "path": "competition_backend/competition_backend/budgeted_coverage.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "2e33f6c8e30a05fb9cc28223b01ebdf9eb9514cf",
+      "size": 8857
     },
     {
       "path": "competition_backend/competition_backend/clearance_plans.py",
@@ -283,8 +290,8 @@
       "path": "competition_backend/competition_backend/external_transit_prepared.json",
       "type": "blob",
       "mode": "100644",
-      "sha": "240a1930a3897fe7a9dac69bb2767646bf9ca5de",
-      "size": 752980
+      "sha": "a34bed68d230439e646cc521ae60dead485e61f5",
+      "size": 703358
     },
     {
       "path": "competition_backend/competition_backend/fixed_gps_scene.py",
@@ -469,18 +476,25 @@
       "size": 1905
     },
     {
+      "path": "competition_backend/competition_backend/subject1_actual_partition_reference.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "30c407751030e2f21683bf95be32d32f8d55a8b1",
+      "size": 5303
+    },
+    {
       "path": "competition_backend/competition_backend/subject1_actual_prepared.json",
       "type": "blob",
       "mode": "100644",
-      "sha": "c773c81297ad406631be6de67f858fc8b2ef1809",
-      "size": 864966
+      "sha": "d35b9f9222c8559a5bbad6d28f25385546daffa7",
+      "size": 797043
     },
     {
       "path": "competition_backend/competition_backend/subject1_actual_scene.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "23c48454df3bb2607f070372d07c5c754dba4eac",
-      "size": 13316
+      "sha": "76f1f0ee55aa35ec9af7ceb3b586f9a831c6c2c4",
+      "size": 9448
     },
     {
       "path": "competition_backend/competition_backend/subject1_reporting.py",
@@ -542,8 +556,8 @@
       "path": "competition_backend/competition_backend/web/index.html",
       "type": "blob",
       "mode": "100644",
-      "sha": "65a0c729fc19fb222d72a348c695db218d452b9c",
-      "size": 169725
+      "sha": "09148a47e45835d85225ffa6970328c4e1a28f18",
+      "size": 170167
     },
     {
       "path": "competition_backend/competition_backend/web/military_preview.html",
@@ -637,6 +651,13 @@
       "size": 2217
     },
     {
+      "path": "competition_backend/tests/test_actual_dispatch_e2e.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "56fb06b6e88654ec71e1c16f66dccc67d0bb3ea9",
+      "size": 10874
+    },
+    {
       "path": "competition_backend/tests/test_api.py",
       "type": "blob",
       "mode": "100644",
@@ -682,15 +703,15 @@
       "path": "competition_backend/tests/test_coverage_api.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "bffe0c1c308ffee6a18036b71041ad454cece651",
-      "size": 15055
+      "sha": "8beeb263e51c7175e60f7977146c23f7aa02d2c1",
+      "size": 15086
     },
     {
       "path": "competition_backend/tests/test_dalian_live_dispatch.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "4c96541bbf251783bfac506eeba9b4fedd221e9e",
-      "size": 8592
+      "sha": "a8c9d6068aed5247cacb13f6da0fa4c84c98c09e",
+      "size": 9847
     },
     {
       "path": "competition_backend/tests/test_diagnostics.py",
@@ -794,8 +815,8 @@
       "path": "competition_backend/tests/test_offline_coverage_projection.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "e4727bb372215e9a39023048268f1b551b4ed57d",
-      "size": 10286
+      "sha": "f051f8f3fc1eb8b16d1c59e1f6e311cccdaece2d",
+      "size": 10449
     },
     {
       "path": "competition_backend/tests/test_onboard_identity.py",
@@ -815,8 +836,8 @@
       "path": "competition_backend/tests/test_orchestrator.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "bb2e9d66b80335e30a7b611c8c768edd0a97bc75",
-      "size": 36254
+      "sha": "112ebff367f8ae1433955fa89fc1650f6da83687",
+      "size": 36947
     },
     {
       "path": "competition_backend/tests/test_peer_polling.py",
@@ -934,15 +955,15 @@
       "path": "competition_backend/tests/test_stadium_departure.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "4c07db6490d051129265a4d40b9fb9f624bfa902",
-      "size": 9727
+      "sha": "d68781d7b3a4fa9170fbc1e24229742f0b05b109",
+      "size": 9777
     },
     {
       "path": "competition_backend/tests/test_subject1_actual_scene.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "c120b9db2fe71d37213faa35b1a00d16077dbbdf",
-      "size": 13091
+      "sha": "10f148d9c5675d81c06ec42d1622c73531712938",
+      "size": 15778
     },
     {
       "path": "competition_backend/tests/test_subject1_dedup_rules.py",
@@ -957,6 +978,13 @@
       "mode": "100644",
       "sha": "872ffdf154c4e54808b585d4bfe243888e73c8c0",
       "size": 25294
+    },
+    {
+      "path": "competition_backend/tests/test_submission_resilience.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "6030a9cc335afd60a4a90c3b5545cd92624a8a86",
+      "size": 5947
     },
     {
       "path": "competition_backend/tests/test_task_region.py",
@@ -1158,8 +1186,8 @@
       "path": "config/onboard_programs.json",
       "type": "blob",
       "mode": "100644",
-      "sha": "c31d1359de3cefd9106f1eeebb1bdfa64835c6f2",
-      "size": 1094
+      "sha": "cc2dc38de68ccb261893f3c5565506acadb06b29",
+      "size": 1155
     },
     {
       "path": "docs/autonomous_executor_update.md",
@@ -1186,8 +1214,8 @@
       "path": "docs/competition_plans_3d.html",
       "type": "blob",
       "mode": "100644",
-      "sha": "fa3eb1bd371e5e9b7b7dd25d9a5f7ad14636f4ed",
-      "size": 767495
+      "sha": "0645452ef156ab1d79848d2f59676b31550dde29",
+      "size": 672790
     },
     {
       "path": "docs/completed_targets_protocol.md",
@@ -1242,8 +1270,8 @@
       "path": "docs/latest_deployment_activation.md",
       "type": "blob",
       "mode": "100644",
-      "sha": "8029daba172f0101d5851bf7afcc993fb7d22bcc",
-      "size": 16169
+      "sha": "2cfe6d578db552b22795925869f1a30af36d83f7",
+      "size": 16228
     },
     {
       "path": "docs/lq10_reconnection.md",
@@ -1393,11 +1421,18 @@
       "size": 75208
     },
     {
+      "path": "docs/subject1_actual_coverage.png",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "c00fd66621eeac68f0fdd94a76193da51fbe5b2b",
+      "size": 494813
+    },
+    {
       "path": "docs/subject1_actual_plan.md",
       "type": "blob",
       "mode": "100644",
-      "sha": "5fa2d8951d87b019c23663877bc3a5ae378cf461",
-      "size": 4718
+      "sha": "7d103ac22144aff5b1950b8dbe8d50cbe07a309e",
+      "size": 6009
     },
     {
       "path": "docs/subject1_format/target-submission-template.README.md",
@@ -1426,6 +1461,41 @@
       "mode": "100644",
       "sha": "3bbd5a0c2d7424859392334ae5f36b1dac1df0e0",
       "size": 1852
+    },
+    {
+      "path": "docs/validation/subject1_actual_20261011/actual_dispatch_evidence.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "fe4681d863a7d63309407a6cc97b622c9f6ee308",
+      "size": 640495
+    },
+    {
+      "path": "docs/validation/subject1_actual_20261011/actual_ui_payload.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "aa8ee7a3326c42f3e5d36ea4e7e05e2e71a02cb4",
+      "size": 445
+    },
+    {
+      "path": "docs/validation/subject1_actual_20261011/files_sha256.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "aa45ee65e1710f473d2b0f478bef6b385609e1fd",
+      "size": 1925
+    },
+    {
+      "path": "docs/validation/subject1_actual_20261011/index.html",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "145a620b75c9ad5f6021b067d238cd31ef2b2c52",
+      "size": 5703
+    },
+    {
+      "path": "docs/validation/subject1_actual_20261011/summary.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "8977e87fd98a518683e58ec6edc489f0e2fb47cc",
+      "size": 20202
     },
     {
       "path": "docs/xuchang_boot_home_example.json",
@@ -1760,8 +1830,8 @@
       "path": "src/su17_image_transfer/src/su17_image_transfer/submission.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "28d2760f9cb936e7ad083fd15c174e10415d1a49",
-      "size": 19630
+      "sha": "c672350684c6d0ba831a476370018aa887f46410",
+      "size": 21830
     },
     {
       "path": "src/su17_image_transfer/test/test_completed_target_v2.py",
@@ -1991,8 +2061,8 @@
       "path": "tools/bootstrap_ground_impl.ps1",
       "type": "blob",
       "mode": "100644",
-      "sha": "fc3992cee3668a5d843eea3585cfdb948c3540f6",
-      "size": 17289
+      "sha": "8314efb13932bc3d14b81d42d8873f0b0d12c568",
+      "size": 17129
     },
     {
       "path": "tools/bsa_position_report.py",
@@ -2026,8 +2096,15 @@
       "path": "tools/build_plans_3d.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "d77b002a78fe77b4a30df089b62ad50174adaea3",
-      "size": 17848
+      "sha": "f6c88d0c9c8e185aba21884d65ecf585a55c4af5",
+      "size": 18397
+    },
+    {
+      "path": "tools/build_subject1_actual_overview.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "450ed752d579bc05eed16f2dae94ce4b86710db2",
+      "size": 4249
     },
     {
       "path": "tools/build_xuchang_home_example.py",
@@ -2299,8 +2376,8 @@
       "path": "tools/tests/test_bootstrap_copy.ps1",
       "type": "blob",
       "mode": "100644",
-      "sha": "521f825edfcfcba17b7de7c8d1314c3a1952cf9b",
-      "size": 4917
+      "sha": "a066f28e294606356598eceeeba259c7043897ae",
+      "size": 4949
     },
     {
       "path": "tools/tests/test_bootstrap_entry.ps1",
@@ -2327,8 +2404,8 @@
       "path": "tools/tests/test_bootstrap_usb.ps1",
       "type": "blob",
       "mode": "100644",
-      "sha": "6da5762a9061572d41410ae8acf02dbc2fc5f160",
-      "size": 4246
+      "sha": "36ae42ab830bd2ddf88fe2c5d3be50ca08dd59a4",
+      "size": 4674
     },
     {
       "path": "tools/tests/test_competition_clock_ui.js",
@@ -2383,8 +2460,8 @@
       "path": "tools/tests/test_ground_update_manifest.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "e600847ee77412655587062bb8fcc946f29cc674",
-      "size": 2732
+      "sha": "86199c6bfdeff9fafc7bf66d2bbc4bfeecd6dca5",
+      "size": 3761
     },
     {
       "path": "tools/tests/test_image_topic_alias.py",
@@ -2397,8 +2474,8 @@
       "path": "tools/tests/test_incremental_update.ps1",
       "type": "blob",
       "mode": "100644",
-      "sha": "b4904705e0d593a8b7108883d41466b03071ceaa",
-      "size": 12206
+      "sha": "955a08066aa6abcf3f0669bd0235ea9c38852c01",
+      "size": 15195
     },
     {
       "path": "tools/tests/test_onboard_messages.py",
@@ -2418,8 +2495,8 @@
       "path": "tools/tests/test_plan_dispatch_ui.js",
       "type": "blob",
       "mode": "100644",
-      "sha": "04a7d18138d7abfefc288bf7078988d2f67dec2a",
-      "size": 10151
+      "sha": "a1c40c6d45cfd42df6b09a3d8ce320bb19807c65",
+      "size": 11591
     },
     {
       "path": "tools/tests/test_powershell_encoding.ps1",
@@ -2488,8 +2565,8 @@
       "path": "tools/update_ground.ps1",
       "type": "blob",
       "mode": "100644",
-      "sha": "9efba18665442ab069687cf82c71f448e6fed3e4",
-      "size": 16436
+      "sha": "2c0c08d9c6998d69e9be42aec9db7cd2f3280839",
+      "size": 16832
     },
     {
       "path": "六机六地面端快速部署与启动.txt",
@@ -2527,5 +2604,5 @@
       "size": 804
     }
   ],
-  "generated_at": "2026-10-11T01:24:22+00:00"
+  "generated_at": "2026-10-11T04:21:10+00:00"
 }
