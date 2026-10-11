@@ -4,10 +4,10 @@ import copy
 import math
 
 # 本地坐标为 [北, 西] 米。先过固定门点，再沿各机绕障通道进入任务区。
-# 3、6没有本次专用通道，返回None，让原规划代码保持其既有路线。
+# UAV2/6交换子区后，东侧通道随原UAV2子区归UAV6；UAV2/3使用原最短路线。
 LANES = {
     1: {"name": "north", "label": "北侧绕行", "anchors_m": [[70.0, -45.0], [130.0, -65.0]]},
-    2: {"name": "east_then_south", "label": "东侧进入后南绕", "anchors_m": [[0.0, -50.0], [-90.0, -50.0]]},
+    6: {"name": "east_then_south", "label": "东侧进入后南绕", "anchors_m": [[0.0, -50.0], [-90.0, -50.0]]},
     4: {"name": "northwest", "label": "西北通道", "anchors_m": [[60.0, 35.0]]},
     5: {"name": "southwest", "label": "西南通道", "anchors_m": [[-15.0, 25.0]]},
 }

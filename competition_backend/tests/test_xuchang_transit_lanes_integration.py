@@ -22,7 +22,7 @@ from su17_competition_executor.transit_protocol import route_messages
 class XuchangTransitLanesIntegrationTest(unittest.TestCase):
     """仅验证规划通道保留，不将分离航线等同于全程防碰撞保证。"""
 
-    LANE_UIDS = (1, 2, 4, 5)
+    LANE_UIDS = (1, 6, 4, 5)
     HEIGHTS = {1: 59., 2: 56., 3: 53., 4: 50., 5: 47., 6: 44.}
     HOME_OFFSETS_M = {1: (10., 0.), 2: (0., -10.), 3: (6., 8.),
                       4: (-10., 0.), 5: (0., 10.), 6: (-6., -8.)}

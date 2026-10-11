@@ -391,7 +391,24 @@ def _prepare_east_transfer_plan():
 def prepare_xuchang_small_plan():
     """许昌专用进返场方向：只调整固定路线与1/4点序，不改变高度或控制流程。"""
     from .xuchang_transit_lanes import apply_transit_lanes
-    return apply_transit_lanes(_prepare_east_transfer_plan())
+    plan = _prepare_east_transfer_plan()
+    # 从不变的参考方案交换一次，重复离线生成不会再次交换回来。
+    planned = plan["planned_uavs"]
+    planned["2"], planned["6"] = planned["6"], planned["2"]
+    for uid in ("2", "6"):
+        planned[uid]["uav_id"] = int(uid)
+        planned[uid]["task"]["sector"] = int(uid)
+    area = plan["search_area"]
+    for field in ("fixed_subregions_lon_lat", "requested_subregions_lon_lat"):
+        area[field] = {str({2: 6, 6: 2}.get(int(uid), int(uid))): points
+                       for uid, points in area.get(field, {}).items()}
+    info = area["coverage"]
+    constraints = info["partition_constraints"]
+    constraints["uav6_equals_previous_uav1"] = constraints.pop("uav2_equals_previous_uav1")
+    constraints["uav4_north_of_uav2"] = constraints.pop("uav4_north_of_uav6")
+    info["assignment_swap"] = {"uav_ids": [2, 6], "height_by_uav_unchanged": True,
+                               "transit_lanes_follow_regions": True}
+    return apply_transit_lanes(plan)
 
 
 def save_xuchang_small_plan(plan):
