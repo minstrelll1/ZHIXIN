@@ -3,6 +3,6 @@
   "commands": {
     "onboard": "exec bash ./tools/start_onboard_stack.sh --model {model} --expect-uav-id {uav_id} --direct --enable-motion",
     "detection": "source ~/SpireCV_bj/src/spirecv-ros/devel/setup.bash\nroslaunch spirecv_ros uav_yolo26_botsort_geolocation.launch uav_id:={uav_id} runtime_mode:=debug debug_save_dir:=/home/amov/yolo_debug debug_save_dir_all:=/home/amov/yolo_debug_all camera_params:=/home/amov/SpireCV_bj/src/spirecv-ros/sv-rosapp/camera_params/calib_gx40_720.yaml detection_area_filter_enabled:=true",
-    "flight": "source ~/recon_ws/devel/setup.bash && exec roslaunch px4_north_camera p600_gx40_position_pid_reconnaissance.launch uav_id:={uav_id} flight_mode:=outdoor reconnaissance_mode:=2 solider3_as_dynamic:=true"
+    "flight": "source ~/recon_ws/devel/setup.bash && exec roslaunch px4_north_camera p600_gx40_position_pid_reconnaissance.launch uav_id:={uav_id} flight_mode:=outdoor reconnaissance_mode:=2"
   }
 }

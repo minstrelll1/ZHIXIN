@@ -141,3 +141,16 @@ near(markers[0].x,offsetX+(4.2-1.05)*scale,1e-4);
 near(markers[0].y,1000-offsetY-4.12*scale,1e-4);
 assert.equal(arrows.length,1); near(arrows[0][3],90); near(arrows[0][4],-180);
 process.stdout.write('GPS 地图坐标、速度、精度、无效定位、XYZ兼容和轨迹检查通过。\n');
+
+// 正式科目一按附件固定地理参考显示，开机落点不平移侦察区域。
+const actual = JSON.parse(fs.readFileSync(path.join(root,
+  'competition_backend/competition_backend/subject1_actual_prepared.json'),'utf8')).plan;
+const ap = actual.search_area.coverage.projection;
+const scan = actual.planned_uavs['1'].task.waypoints_m[0];
+const fix = {...item,latitude:ap.latitude+scan[0]/ap.north_m_per_degree,
+  longitude:ap.longitude-scan[1]/ap.west_m_per_degree};
+near(convert(actual,fix,100).position[0],scan[0]);
+near(convert(actual,fix,100).position[1],scan[1]);
+actual.search_area.takeoff_gps_by_uav={'1':{latitude:33.8645,longitude:113.7056}};
+near(convert(actual,fix,100).position[0],scan[0]);
+near(convert(actual,fix,100).position[1],scan[1]);

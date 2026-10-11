@@ -378,7 +378,7 @@ def _update_subject1_submission_locked(output_root, mission_dir, mission_id, tea
     if publisher_dedup:
         format_audit["deduplication"] = {
             key: decisions[key] for key in ("raw_count", "deduplicated_count", "result_count",
-                                            "backfilled_count", "backfilled")
+                                            "backfilled_count", "backfilled", "selection", "static_quality_order", "moving_quality_order")
         }
     format_audit["category_records"] = category_records
     format_audit["motion_classification"] = motion_classification

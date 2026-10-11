@@ -195,7 +195,8 @@ class Subject1Reporter:
         document, format_audit = format_submission(document)
         if not already_deduplicated:
             format_audit['deduplication'] = {key: decisions.get(key) for key in
-                ('raw_count', 'deduplicated_count', 'result_count', 'backfilled_count', 'backfilled')}
+                ('raw_count', 'deduplicated_count', 'result_count', 'backfilled_count', 'backfilled',
+                 'selection', 'static_quality_order', 'moving_quality_order')}
         if local_path is not None:
             try:
                 audit_path = (local_path.with_suffix('.format.json') if local_path.parent == self.root
@@ -243,6 +244,7 @@ class Subject1Reporter:
             self.audit.record('赛事结果文件已整理', draft_id=digest, file=str(path),
                               merged_count=len(decisions['merged']), omitted_count=len(decisions['omitted']),
                               backfilled_count=format_audit.get('deduplication', {}).get('backfilled_count', 0),
+                              selection=format_audit.get('deduplication', {}).get('selection', {}),
                               skipped_count=len(format_audit['excluded_targets']),
                               reclassified_static_count=sum(bool(row.get('converted_to_static')) for row in format_audit.get('motion_classification', [])),
                               format_audit_file=str(self.root / (digest + '.format.json')),

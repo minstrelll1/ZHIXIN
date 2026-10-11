@@ -356,6 +356,7 @@ class PeerImageCollector:
                                           deduplicated_count=decisions.get("deduplicated_count"),
                                           result_count=decisions.get("result_count"),
                                           backfilled_count=decisions.get("backfilled_count", 0),
+                                          selection=decisions.get("selection", {}),
                                           merged_count=len(decisions.get("merged", [])),
                                           same_uav_merged_count=sum(bool(row.get("same_uav")) for row in decisions.get("merged", [])),
                                           reclassified_static_count=len(decisions.get("motion_reclassifications", [])),

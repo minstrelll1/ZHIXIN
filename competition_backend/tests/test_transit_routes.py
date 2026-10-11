@@ -21,7 +21,9 @@ class TransitTest(unittest.TestCase):
     @staticmethod
     def _scene_cases():
         for profile in PROFILES:
-            if profile == 'dalian_nanshan':
+            if profile == 'subject1_actual':
+                yield profile, 'stadium_center', ('gps',)
+            elif profile == 'dalian_nanshan':
                 yield profile, 'fixed_dalian', ('gps',)
             elif profile == 'xuchang_small':
                 yield profile, 'fixed_xuchang', ('gps',)
@@ -31,7 +33,7 @@ class TransitTest(unittest.TestCase):
 
     def test_all_saved_routes_stay_inside_after_entry_and_reverse_to_departure(self):
         saved = json.loads(CACHE.read_text(encoding='utf-8'))['scenes']
-        self.assertEqual(len(saved), 14)
+        self.assertEqual(len(saved), 15)
         for key, scene in saved.items():
             with self.subTest(scene=key):
                 region = Polygon(scene['boundary_m']).buffer(2.1e-5)

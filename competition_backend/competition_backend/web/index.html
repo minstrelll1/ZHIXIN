@@ -321,7 +321,7 @@
      </div>
     <p id="gpsReferenceStatus" class="area-note">GPS 基准等待机载遥测。</p>
     <div class="area-controls">
-      <div class="field"><label for="flightProfile">飞行场景</label><select id="flightProfile"><option value="lab">实验室 3m×3m：GPS/XYZ，半径 1m，0.2m/s</option><option value="outdoor5">室外 5m×5m：GPS/XYZ，半径 1m，0.2m/s</option><option value="lab10">实验室 10m×10m：GPS/XYZ，半径 1m，0.5m/s</option><option value="outdoor100">100m×100m：GPS/XYZ，半径 75m，5m/s</option><option value="outdoor200">200m×200m：GPS/XYZ，半径 75m，5m/s</option><option value="competition" selected>竞赛 1km×1km：40～50m</option><option value="dalian_nanshan">大连南山坡外场：固定 GPS 区域，半径 75m，5m/s</option><option value="xuchang_small">许昌试飞场地（小）：固定 GPS、内部扣除区，半径 45m，5m/s</option></select></div>
+      <div class="field"><label for="flightProfile">飞行场景</label><select id="flightProfile"><option value="lab">实验室 3m×3m：GPS/XYZ，半径 1m，0.2m/s</option><option value="outdoor5">室外 5m×5m：GPS/XYZ，半径 1m，0.2m/s</option><option value="lab10">实验室 10m×10m：GPS/XYZ，半径 1m，0.5m/s</option><option value="outdoor100">100m×100m：GPS/XYZ，半径 75m，5m/s</option><option value="outdoor200">200m×200m：GPS/XYZ，半径 75m，5m/s</option><option value="competition" selected>竞赛 1km×1km：40～50m</option><option value="subject1_actual">科目一比赛使用场景：固定 GPS、操场中央，半径 50m（UAV6：45m），5m/s</option><option value="dalian_nanshan">大连南山坡外场：固定 GPS 区域，半径 75m，5m/s</option><option value="xuchang_small">许昌试飞场地（小）：固定 GPS、内部扣除区，半径 45m，5m/s</option></select></div>
       <div class="field"><label for="coordinateMode">坐标系</label><select id="coordinateMode"><option value="gps" selected>GPS（纬度、经度）</option><option value="xyz">XYZ / ENU（米）</option></select></div>
       <div class="field"><label for="flightAltitudePlan">飞行高度</label><select id="flightAltitudePlan"><option value="around1m">约 1 米：0.5/1/1.5 米</option><option value="around2m">约 2 米：1.5/2/2.5 米</option><option value="around5m">约 5 米：4.5/5/5.5 米</option><option value="around10m">约 10 米：8/10/12 米</option><option value="around45m">约 45 米：40/45/50 米</option><option value="around54m">六机不同：59/56/53/50/47/44 米（UAV1～6）</option><option value="subject2_50m">科目二高度：六机均为 50 米</option><option value="default">场景默认分层高度：40/45/50 米</option></select></div>
       <div class="field"><label for="departurePoint">出发点</label><select id="departurePoint"><option value="southeast" selected>区域右下角</option><option value="stadium_center">操场中央</option><option value="fixed_dalian" hidden>大连南山坡固定起飞点</option><option value="fixed_xuchang" hidden>许昌固定起飞点</option></select></div>
@@ -335,7 +335,7 @@
     </div>
     <div class="area-actions"><span><label><input id="terrainExclusions" type="checkbox" checked>使用地图地类免侦察范围</label> <label><input id="terrainDisplayToggle" type="checkbox" checked>显示 Esri 地形底图</label></span><button id="exportCoverage" class="secondary" disabled>导出六机方案 JSON</button></div>
     <p class="area-note">固定比赛区域 · 六机 · 林缘 5 米。区域右下角沿用原保存方案；操场中央读取对应的赛前方案。基准纬度、经度用于 GPS/XYZ 平面坐标换算；飞行高度相对起飞点，不叠加 GPS 海拔。</p>
-    <p id="coverageNote" class="area-note">操场中央方案以地图估算的球场中心优化总航程与六机用时，进场、返航及降落点统一使用选定出发点。每个航点悬停扫描一次后再前往下一航点；区域右下角方案保持原有规划结果。</p>
+    <p id="coverageNote" class="area-note">操场中央方案以地图估算的球场中心优化总航程与六机用时，GPS实飞的进场、返航及降落点使用各机自己的起降位置，所选出发点仅用于赛前规划参考。每个航点悬停扫描一次后再前往下一航点；区域右下角方案保持原有规划结果。</p>
   </details>
   <details id="recognitionSettings" class="panel area-settings">
     <summary>科目一识别类别 <span id="recognitionSummary"></span></summary>
@@ -603,7 +603,7 @@ function 准备地形底图(){
 }
 准备地形底图();
 function 绘制规划(mission){最近绘图任务=mission;const rawArea=mission&&mission.search_area,area=window.CompetitionTerrain?.displayArea(rawArea)||rawArea,tasks=mission&&(mission.planned_uavs||mission.uavs),active=mission?.preview_only?[]:(当前状态?.active_uav_ids||[1,2,3,4,5,6]);if(!area||!tasks){$('planResult').className='panel plan-result';$('missionWorkspace').classList.remove('has-plan');调整规划总览布局(null);固定规划绘制键='';return}$('missionWorkspace').classList.add('has-plan');$('planResult').className='panel plan-result show';document.documentElement.style.setProperty('--plan-aspect',String(area.width_m/area.height_m));调整规划总览布局(area);const r=$('routeCanvas').getBoundingClientRect(),renderKey=mission.preview_only?`${mission.prepared_plan?.id||''}:${rawArea?.departure_point||'southeast'}:${area.flight_profile}:${area.coordinate_mode}:${JSON.stringify(area.points_m)}:${r.width}:${r.height}:${window.devicePixelRatio||1}:${地形显示}:${window.CompetitionTerrain?.revision||0}`:'';if(renderKey&&renderKey===固定规划绘制键){同步详情规划图();return}固定规划绘制键=renderKey;const profile=area.flight_profile==='competition'?'竞赛高度':area.flight_profile==='outdoor100'?'100m×100m 高度':area.flight_profile==='outdoor200'?'200m×200m 高度':area.flight_profile==='lab10'?'实验室 10m 高度':'实验室高度';const mode=mission.controller_mode==='external'?'外部自主程序B（WGS84经纬高度航线）':'本工程自主控制（ENU）';const coverage=area.coverage||{},coordinateLabel=mission.preview_only?'25 点 WGS84 比赛区域':area.coordinate_mode==='gps'?'GPS 四边形（已换算本地 ENU）':'XYZ / ENU 四边形';const maxTime=Number(coverage.maximum_completion_time_s),totalDistance=Number(coverage.total_distance_m),departureLabel=rawArea?.departure_point==='stadium_center'?'操场中央':'区域右下角';$('planMeta').textContent=`${mission.prepared_plan?'比赛区域 · 已保存方案':coordinateLabel} · ${departureLabel}出发 · ${profile} · ${coverage.speed_mps||'—'}m/s · 扫描 ${coverage.hover_scan_seconds||'—'}s/点`;
-  if(['dalian_nanshan','xuchang_small'].includes(area.flight_profile)){const departure=rawArea.departure_point_wgs84,site=area.flight_profile==='xuchang_small'?'许昌试飞场地（小）':'大连南山坡外场';$('planMeta').textContent=`${site}固定 GPS 区域 · 固定起飞点（${departure.longitude}°E，${departure.latitude}°N） · 已保存六机方案 · ${coverage.speed_mps||'—'}m/s · 扫描 ${coverage.hover_scan_seconds||'—'}s/点`}
+  if(['dalian_nanshan','xuchang_small','subject1_actual'].includes(area.flight_profile)){const departure=rawArea.departure_point_wgs84,site=area.flight_profile==='subject1_actual'?'科目一比赛使用场景':area.flight_profile==='xuchang_small'?'许昌试飞场地（小）':'大连南山坡外场';$('planMeta').textContent=`${site}固定 GPS 区域 · 规划参考点（${departure.longitude}°E，${departure.latitude}°N） · 已保存六机方案 · ${coverage.speed_mps||'—'}m/s · 扫描 ${coverage.hover_scan_seconds||'—'}s/点`}
   const canvas=$('routeCanvas'),rect=canvas.getBoundingClientRect(),ratio=window.devicePixelRatio||1;canvas.width=Math.max(1,Math.round(rect.width*ratio));canvas.height=Math.max(1,Math.round(rect.height*ratio));const ctx=canvas.getContext('2d');ctx.scale(ratio,ratio);const w=rect.width,h=rect.height,pad=38,plotW=w-pad*2,plotH=h-pad*2;ctx.clearRect(0,0,w,h);ctx.fillStyle='#f8fafc';ctx.fillRect(0,0,w,h);ctx.font='12px Microsoft YaHei UI';ctx.textAlign='center';ctx.textBaseline='middle';
   const mapScale=Math.min(plotW/area.width_m,plotH/area.height_m),offsetX=(w-area.width_m*mapScale)/2,offsetY=(h-area.height_m*mapScale)/2;const px=y=>offsetX+(area.origin_y_m+area.width_m-y)*mapScale,py=x=>h-offsetY-(x-area.origin_x_m)*mapScale;const 底图已绘制=地形显示&&window.CompetitionTerrain?.draw(ctx,area,px,py,{x:pad,y:pad,width:plotW,height:plotH});ctx.strokeStyle='#94a3b8';ctx.lineWidth=1;ctx.strokeRect(pad,pad,plotW,plotH);ctx.fillStyle='#64748b';ctx.fillText(`Y ${(area.origin_y_m+area.width_m).toFixed(1)}m`,pad,h-13);ctx.fillText(`Y ${area.origin_y_m.toFixed(1)}m`,w-pad,h-13);ctx.save();ctx.translate(13,h/2);ctx.rotate(-Math.PI/2);ctx.fillText(area.coordinate_mode==='gps'?'X 北 ↑（米）':'X 正方向 ↑（米）',0,0);ctx.restore();ctx.fillText(area.coordinate_mode==='gps'?'← Y 西（米）':'← Y 正方向（米）',w/2,h-13);if(!mission.preview_only&&!mission.prepared_plan){ctx.fillStyle='#dc2626';ctx.beginPath();ctx.arc(px(area.origin_y_m),py(area.origin_x_m),4,0,Math.PI*2);ctx.fill();ctx.textAlign='right';ctx.fillText(`原点 (${area.origin_x_m}, ${area.origin_y_m})`,w-pad-7,h-pad-10);ctx.textAlign='center';}const polygon=area.points_m||coverage.polygon_m;if(Array.isArray(polygon)&&polygon.length>=3){ctx.save();ctx.beginPath();polygon.forEach((point,index)=>index?ctx.lineTo(px(point[1]),py(point[0])):ctx.moveTo(px(point[1]),py(point[0])));ctx.closePath();ctx.fillStyle='rgba(21,94,239,.08)';ctx.fill();ctx.strokeStyle='#155eef';ctx.lineWidth=2.5;ctx.setLineDash([7,4]);ctx.stroke();ctx.restore();ctx.setLineDash([]);}
   if(Array.isArray(area.excluded_polygons_m)&&area.excluded_polygons_m.length){for(const ring of area.excluded_polygons_m){ctx.save();ctx.beginPath();ring.forEach((p,i)=>i?ctx.lineTo(px(p[1]),py(p[0])):ctx.moveTo(px(p[1]),py(p[0])));ctx.closePath();ctx.fillStyle='rgba(35,41,52,.80)';ctx.strokeStyle='#dc2626';ctx.lineWidth=2.4;ctx.fill();ctx.stroke();ctx.restore()}}
@@ -872,7 +872,12 @@ $('simReady').onclick=()=>模拟遥测('ready').then(()=>提示('六机模拟就
   }
   function 读取机载GPS参考(){const refs=读取机载GPS参考组(),id=Object.keys(refs)[0];return id?{...refs[id],uav_id:Number(id)}:null}
    function 更新GPS参考(){
-     if(['dalian_nanshan','xuchang_small'].includes($('flightProfile').value)){
+     if(['dalian_nanshan','xuchang_small','subject1_actual'].includes($('flightProfile').value)){
+       if($('flightProfile').value==='subject1_actual'){
+         $('gpsLatitude').value='33.86446';$('gpsLongitude').value='113.70563';
+         $('gpsLatitude').readOnly=true;$('gpsLongitude').readOnly=true;
+         $('gpsReferenceStatus').textContent='固定比赛边界，操场中央仅为规划参考；按各机开机有效GPS生成进返场航线及降落点，避让其他降落点2.5米。';return;
+       }
        const xuchang=$('flightProfile').value==='xuchang_small';$('gpsLatitude').value=xuchang?'34.138282':'39.052820490783674';$('gpsLongitude').value=xuchang?'113.909077':'121.65960216424625';
        $('gpsLatitude').readOnly=true;$('gpsLongitude').readOnly=true;$('gpsAltitude').readOnly=false;
        $('gpsReferenceStatus').textContent=xuchang?'许昌试飞场地（小）使用固定 WGS84 边界、内部扣除区和起飞点（113.909077°E，34.138282°N）。':'大连南山坡外场使用固定 WGS84 边界和起飞点（121.65960216424625°E，39.052820490783674°N），不采用任务发布端无人机位置平移航点。';
@@ -883,16 +888,16 @@ $('simReady').onclick=()=>模拟遥测('ready').then(()=>提示('六机模拟就
    function 更新飞行高度选项(){const select=$('flightAltitudePlan');for(const option of select.options)option.disabled=false;const profile=$('flightProfile').value;select.querySelector('option[value="default"]').textContent='场景默认分层高度：'+(profile==='lab'||profile==='lab10'?'0.5/1/1.5 米':profile==='outdoor5'?'4.5/5/5.5 米':'40/45/50 米')}
    function 应用飞行环境默认值(){
      const profile=$('flightProfile').value,mode=$('coordinateMode'),departure=$('departurePoint');
-     if(['dalian_nanshan','xuchang_small'].includes(profile)){
+     if(['dalian_nanshan','xuchang_small','subject1_actual'].includes(profile)){
        if(!mode.disabled){mode.dataset.previousValue=mode.value;departure.dataset.previousValue=departure.value;$('gpsLatitude').dataset.previousValue=$('gpsLatitude').value;$('gpsLongitude').dataset.previousValue=$('gpsLongitude').value;}
-       mode.value='gps';mode.disabled=true;departure.value=profile==='xuchang_small'?'fixed_xuchang':'fixed_dalian';departure.disabled=true;
+       mode.value='gps';mode.disabled=true;departure.value=profile==='subject1_actual'?'stadium_center':profile==='xuchang_small'?'fixed_xuchang':'fixed_dalian';departure.disabled=true;
      }else if(mode.disabled){
        mode.disabled=false;mode.value=mode.dataset.previousValue||'gps';
        departure.disabled=false;departure.value=departure.dataset.previousValue||'southeast';
        $('gpsLatitude').value=$('gpsLatitude').dataset.previousValue||$('gpsLatitude').value;
        $('gpsLongitude').value=$('gpsLongitude').dataset.previousValue||$('gpsLongitude').value;
      }
-     更新飞行高度选项();$('scoutRadius').value=profile==='xuchang_small'?'45':['lab','lab10','outdoor5'].includes(profile)?'1':'75';$('flightSpeed').value=profile==='lab'||profile==='outdoor5'?'0.2':profile==='lab10'?'0.5':'5';$('hoverScanSeconds').value='10';更新GPS参考();
+     更新飞行高度选项();$('scoutRadius').value=profile==='subject1_actual'?'50':profile==='xuchang_small'?'45':['lab','lab10','outdoor5'].includes(profile)?'1':'75';$('flightSpeed').value=profile==='lab'||profile==='outdoor5'?'0.2':profile==='lab10'?'0.5':'5';$('hoverScanSeconds').value='10';更新GPS参考();
    }
   function 切换坐标系(){应用飞行环境默认值()}
  $('coordinateMode').onchange=切换坐标系;$('flightProfile').onchange=()=>{应用飞行环境默认值();更新规划模式()};$('flightAltitudePlan').onchange=()=>{比赛覆盖方案=null;更新规划模式()};切换坐标系();$('subject').onchange=()=>{更新规划模式();更新详情点云视图();刷新详情点云();更新规划模式()};window.addEventListener('resize',()=>{绘制规划(当前状态?.mission);if(详情显示点云())绘制详情点云();else 同步详情规划图()});
@@ -1006,7 +1011,7 @@ async function 生成比赛覆盖(){
     if(recognitionSelection)payload.recognition_selection=recognitionSelection;
     if(真实区域模式()){
       Object.assign(payload,{planning_mode:'competition',coordinate_mode:$('coordinateMode').value,reconnaissance_radius_m:Number($('scoutRadius').value),speed_mps:Number($('flightSpeed').value),hover_scan_seconds:Number($('hoverScanSeconds').value)});
-      if($('coordinateMode').value==='gps'&&!['dalian_nanshan','xuchang_small'].includes(payload.flight_profile)){const refs=读取机载GPS参考组();const latitude=Number($('gpsLatitude').value),longitude=Number($('gpsLongitude').value);if(Object.keys(refs).length){payload.gps_origins_by_uav=refs;const first=refs[Object.keys(refs)[0]];payload.gps_origin={latitude:first.latitude,longitude:first.longitude};}else if(Number.isFinite(latitude)&&Number.isFinite(longitude)){payload.gps_origin={latitude,longitude,source:'页面预览基准点'};}}
+      if($('coordinateMode').value==='gps'&&!['dalian_nanshan','xuchang_small','subject1_actual'].includes(payload.flight_profile)){const refs=读取机载GPS参考组();const latitude=Number($('gpsLatitude').value),longitude=Number($('gpsLongitude').value);if(Object.keys(refs).length){payload.gps_origins_by_uav=refs;const first=refs[Object.keys(refs)[0]];payload.gps_origin={latitude:first.latitude,longitude:first.longitude};}else if(Number.isFinite(latitude)&&Number.isFinite(longitude)){payload.gps_origin={latitude,longitude,source:'页面预览基准点'};}}
     }
     if($('duration').value)payload.duration_seconds=数值($('duration').value,'比赛时限');
     const result=await 提交并等待规划(payload,click);

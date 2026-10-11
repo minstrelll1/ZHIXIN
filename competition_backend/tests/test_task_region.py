@@ -9,7 +9,7 @@ from competition_backend.transit_routes import scene_plan, PROFILES
 class TaskRegionTest(unittest.TestCase):
     def test_fixed_scenes_match_plan_and_keep_exclusion(self):
         for profile in PROFILES:
-            departures = ['fixed_dalian'] if profile=='dalian_nanshan' else ['fixed_xuchang'] if profile=='xuchang_small' else ['southeast','stadium_center']
+            departures = ['stadium_center'] if profile=='subject1_actual' else ['fixed_dalian'] if profile=='dalian_nanshan' else ['fixed_xuchang'] if profile=='xuchang_small' else ['southeast','stadium_center']
             for departure in departures:
                 plan=scene_plan(profile,departure);area=plan['search_area']
                 for uid, wrapper in plan['planned_uavs'].items():

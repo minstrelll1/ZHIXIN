@@ -95,3 +95,12 @@ for(const dims of [[800,1000,1200,600],[800,1000,300,900]]){
 }
 assert.equal(api.fitRect(0,100,300,400),null);
 console.log('Esri 底图：旧场景与四份新增固定方案配准、地类缩放、投影分条、缓存/失败恢复、详情等比显示检查通过。');
+
+// 新正式场景保持原 WGS84 投影；主图和详情复用同一个地形映射。
+const actualScene=JSON.parse(fs.readFileSync(path.join(root,
+ 'competition_backend/competition_backend/subject1_actual_prepared.json'),'utf8')).plan.search_area;
+const actualTransform=api.mapping(actualScene);assert.ok(actualTransform);
+api.source.points.forEach(([lat,lon],i)=>{
+ const q=actualTransform.geo(lon,lat),p=actualScene.points_m[i];close(q[0],p[0]);close(q[1],p[1]);
+});
+assert.equal(api.displayArea(actualScene),actualScene);

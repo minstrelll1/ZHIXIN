@@ -153,6 +153,8 @@ class OnboardTaskExecutor:
         self._command_control_seen = False
         self._startup_initial_control = None
         self._boot_id = Path("/proc/sys/kernel/random/boot_id").read_text().strip()
+        from su17_competition_executor.boot_gps_home import BootGpsHome
+        self._boot_gps_home = BootGpsHome("/tmp/competition_uav{}_boot_gps.json".format(self.uav_id), self._boot_id)
         self._restore_progress()
 
         local_prefix = "/uav{}".format(self.local_ros_uav_id)
@@ -841,6 +843,16 @@ class OnboardTaskExecutor:
         with self._lock:
             gps_fix, gps_fix_received = self._gps_fix, self._gps_fix_received
         gps_position = self._gps_position_payload(gps_fix, gps_fix_received, time.monotonic())
+        boot_home = None
+        home_recorder = getattr(self, "_boot_gps_home", None)
+        if home_recorder is not None:
+            try:
+                boot_home = home_recorder.observe(
+                    connected=bool(state.connected) and time.monotonic() - self._state_received < 2,
+                    armed=bool(state.armed), gps_status=int(getattr(state, "gps_status", 0)),
+                    location_source=int(getattr(state, "location_source", -1)), gps=gps_position, now=time.time())
+            except OSError as error:
+                rospy.logwarn_throttle(10, "开机起降点保存失败：%s", error)
         auto_ready, auto_reason = self._takeoff_precheck()
         ego_bridge = getattr(self, "_ego_state_bridge", None)
         ego_state, ego_age = ego_bridge.snapshot() if ego_bridge is not None else (None, None)
@@ -852,6 +864,7 @@ class OnboardTaskExecutor:
                 "connected": bool(state.connected) and not self._identity_error and time.monotonic() - min(self._state_received, self._control_received) < 2.0,
                 "capabilities": {"motion_enabled": self.enable_motion, "max_speed_mps": self.max_speed,
                     "return_ack_supported": True,
+                    "boot_id": getattr(self, "_boot_id", ""), "boot_gps_home": boot_home,
                     "auto_takeoff_supported": True, "auto_takeoff_ready": auto_ready,
                     "auto_takeoff_reason": auto_reason,
                     "flight_speed_limit_mps": self.flight_speed_limit,

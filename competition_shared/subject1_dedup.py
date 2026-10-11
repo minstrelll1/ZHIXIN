@@ -14,6 +14,7 @@ MOVING_DISTANCE_M = 10.0
 OTHER_DISTANCE_M = 5.0
 MAX_MOVING_TRACK_POINTS = 40
 MAX_SUBMISSION_TARGETS = 16
+MOVING_CATEGORY_LIMITS = {"人员": 3, "车辆": 3}
 
 
 def _confidence(feature):
@@ -173,8 +174,26 @@ def _ordered(features):
                                           str(f.get("id", "")), str(f.get("_source_uav", ""))))
 
 
+def _submission_order(features):
+    """重排静目标为次数、成功、分数；动目标保持原质量顺序和穿插位置。"""
+    ordered = _ordered(features)
+    def static_rank(feature):
+        success, count, score = _quality(feature)
+        return (-count, -success, -score, str(feature.get("id", "")), str(feature.get("_source_uav", "")))
+    fixed = iter(sorted((f for f in ordered if _kind(f)[0] == "固定"), key=static_rank))
+    return [next(fixed) if _kind(f)[0] == "固定" else f for f in ordered]
+
+
+def _submission_moving_kind(feature):
+    # 名额按最终JSON的大类分配；_dedup_category只用于判重，可能与最终类别不同。
+    if _kind(feature)[0] != "移动":
+        return None
+    raw = str(feature.get("properties", {}).get("targetType", "")).strip()
+    return {"人": "人员", "车": "车辆"}.get(raw, raw)
+
+
 def consolidate(document, *, max_targets=MAX_SUBMISSION_TARGETS):
-    """同机和跨机按混淆组判重；有效候选达到上限时从合并候选补足要求数量。"""
+    """同机和跨机判重后，动人员/车辆各最多3个，其余名额给静目标。"""
     if type(max_targets) is not int or max_targets < 1:
         raise ValueError("上报目标数量必须是正整数")
     result = copy.deepcopy(document)
@@ -217,21 +236,47 @@ def consolidate(document, *, max_targets=MAX_SUBMISSION_TARGETS):
                            "kept_quality": winner.get("_quality", {}),
                            "merged_quality": member.get("_quality", {}), **(evidence or {})})
 
-    selected = _ordered(winners)[:max_targets]
+    # 动目标只从去重代表中选择，不能拿同一目标的多机副本凑满3个。
+    moving_selected, moving_counts = [], {kind: 0 for kind in MOVING_CATEGORY_LIMITS}
+    for candidate in _ordered(winners):
+        kind = _submission_moving_kind(candidate)
+        if (kind in MOVING_CATEGORY_LIMITS and moving_counts[kind] < MOVING_CATEGORY_LIMITS[kind]
+                and len(moving_selected) < max_targets):
+            moving_selected.append(candidate)
+            moving_counts[kind] += 1
+    static_slots = max_targets - len(moving_selected)
+    selected = _submission_order([f for f in winners if _kind(f)[0] == "固定"])[:static_slots]
+    selected.extend(moving_selected)
     backfilled = []
     if len(raw) >= max_targets and len(selected) < max_targets:
-        for candidate in _ordered(merged_candidates)[:max_targets-len(selected)]:
+        static_candidates = [f for f in merged_candidates if _kind(f)[0] == "固定"]
+        for candidate in _submission_order(static_candidates)[:max_targets-len(selected)]:
             selected.append(candidate)
             winner = represented_by[id(candidate)]
             backfilled.append({"id": candidate.get("id"), "source_uav": candidate.get("_source_uav"),
                                "represented_by": winner.get("id"),
                                "representative_source_uav": winner.get("_source_uav"),
                                "quality": candidate.get("_quality", {}), "score": _confidence(candidate),
-                               "reason": "有效候选达到要求数量，按质量从合并候选补足上报数量"})
-    features = _ordered(selected)
+                               "reason": "有效候选达到要求数量，按静目标最终排序从合并的静目标候选补足上报数量"})
+    features = _submission_order(selected)
     selected_ids = {id(feature) for feature in features}
-    omitted = [{"id": feature.get("id"), "source_uav": feature.get("_source_uav"),
-                "reason": "超出赛事最多16个目标"} for feature in _ordered(winners) if id(feature) not in selected_ids]
+    omitted = []
+    for feature in _submission_order(winners):
+        if id(feature) in selected_ids:
+            continue
+        kind = _submission_moving_kind(feature)
+        reason = ("超出动目标%s最多3个名额" % kind if kind in MOVING_CATEGORY_LIMITS else
+                  "动目标类别不属于人员或车辆，未占用静目标名额" if kind is not None else
+                  "超出本次静目标名额")
+        omitted.append({"id": feature.get("id"), "source_uav": feature.get("_source_uav"), "reason": reason})
+    selection = {"moving_category_limits": dict(MOVING_CATEGORY_LIMITS),
+                 "moving_selected_counts": moving_counts,
+                 "unused_moving_slots_to_static": sum(MOVING_CATEGORY_LIMITS.values()) - len(moving_selected),
+                 "static_slot_target": static_slots,
+                 "static_selected_count": sum(_kind(f)[0] == "固定" for f in features),
+                 "target_limit": max_targets, "shortfall": max_targets - len(features),
+                 "shortfall_reason": ("符合动目标名额及静目标补位规则的有效候选不足，不虚构目标"
+                                      if len(features) < max_targets else "")}
     for feature in features:
         if _kind(feature)[0] == "移动":
             count = len(feature["properties"].get("trackPoints", []))
@@ -240,7 +285,8 @@ def consolidate(document, *, max_targets=MAX_SUBMISSION_TARGETS):
                 track_truncations.append({"id": feature.get("id"), "source_uav": feature.get("_source_uav"),
                                           "source_track_points": count, "omitted_track_points": removed})
     quality_ranking = [{"id": f.get("id"), "source_uav": f.get("_source_uav"),
-                        **f.get("_quality", {}), "score": _confidence(f)} for f in features]
+                        **f.get("_quality", {}), "score": _confidence(f),
+                        "target_category": _kind(f)[0], "target_type": f["properties"].get("targetType")} for f in features]
     seen = set()
     for feature in features:
         feature.pop("_quality", None)
@@ -261,4 +307,8 @@ def consolidate(document, *, max_targets=MAX_SUBMISSION_TARGETS):
                     "moving_distance_m": MOVING_DISTANCE_M, "other_distance_m": OTHER_DISTANCE_M,
                     "moving_track_point_limit": MAX_MOVING_TRACK_POINTS,
                     "track_truncations": track_truncations, "quality_ranking": quality_ranking,
-                    "quality_order": ["tracking_success", "detection_count", "score"]}
+                    "quality_order": ["detection_count", "tracking_success", "confidence"],
+                    "static_quality_order": ["detection_count", "tracking_success", "confidence"],
+                    "moving_quality_order": ["tracking_success", "detection_count", "confidence"],
+                    "representative_quality_order": ["tracking_success", "detection_count", "confidence"],
+                    "selection": selection}

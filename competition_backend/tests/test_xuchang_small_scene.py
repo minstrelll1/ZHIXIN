@@ -156,8 +156,12 @@ class XuchangSmallSceneTest(unittest.TestCase):
                     "around45m": [40., 50., 40., 45., 50., 45.],
                     "around54m": [59., 56., 53., 50., 47., 44.],
                     "subject2_50m": [50.] * 6}
-        homes = {str(uid): {"latitude": 34.138282 + uid * .00001,
-                           "longitude": 113.909077 + uid * .00001} for uid in range(1, 7)}
+        # 旧样例各机相距约1.4米，不满足新增2.5米落点避让；改为10米网格。
+        projection = self.area["coverage"]["projection"]
+        offsets = ((-10,10),(0,10),(10,10),(-10,0),(0,0),(10,0))
+        homes = {str(uid): {"latitude": projection["latitude"] + north / projection["north_m_per_degree"],
+                           "longitude": projection["longitude"] - west / projection["west_m_per_degree"]}
+                 for uid, (north, west) in enumerate(offsets, 1)}
         for altitude, heights in expected.items():
             with self.subTest(altitude=altitude):
                 prepared = attach_routes(load_xuchang_small_plan())

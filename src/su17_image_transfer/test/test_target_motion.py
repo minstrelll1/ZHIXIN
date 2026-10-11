@@ -40,7 +40,7 @@ class TargetMotionTest(unittest.TestCase):
 
     def test_exact_duration_and_speed_thresholds(self):
         for seconds, speed, expected in ((14.999, 0., True), (15., 0., False),
-                                         (15., 1., False), (15., MIN_MOVING_SPEED_MPS, True),
+                                         (15., .8, False), (15., 1., True), (15., MIN_MOVING_SPEED_MPS, True),
                                          (30., 2., True)):
             with self.subTest(seconds=seconds, speed=speed):
                 moving, _ = self.moving([point(0), point(seconds, seconds * speed)])
@@ -52,7 +52,26 @@ class TargetMotionTest(unittest.TestCase):
         moving, audit = self.moving([point(0), point(3, 9), point(6, 9), point(18, 9)])
         self.assertFalse(moving)
         self.assertEqual(15., audit["low_speed_duration_seconds"])
-        self.assertTrue(self.moving([point(0), point(3, 9), point(6, 9), point(18, 9), point(21, 18)])[0])
+        self.assertTrue(self.moving([point(0), point(3, 9), point(6, 9), point(18, 9), point(22, 18)])[0])
+
+    def test_low_speed_fraction_is_strictly_greater_than_seventy_percent(self):
+        for low_seconds, expected in ((13.99, True), (14., True), (14.01, False)):
+            with self.subTest(low_seconds=low_seconds):
+                moving, audit = self.moving([point(0), point(low_seconds), point(20, 20)])
+                self.assertEqual(expected, moving)
+                self.assertAlmostEqual(low_seconds / 20, audit["low_speed_time_fraction"])
+                self.assertEqual(20., audit["valid_duration_seconds"])
+        # 至少15秒是总有效观测时间，不是要求低速本身满15秒。
+        self.assertFalse(self.moving([point(0), point(11), point(15, 20)])[0])
+
+    def test_time_weighted_fraction_is_not_point_count_or_average_speed(self):
+        # 一个长低速区间占75%，即便多数采样间隔高速、整体均速也较高，仍转静态。
+        points = [point(0), point(15)] + [point(15+i, i*10) for i in range(1, 6)]
+        moving, audit = self.moving(points)
+        self.assertFalse(moving)
+        self.assertEqual(.75, audit["low_speed_time_fraction"])
+        # 多个短低速区间只占25%，不能因低速点数多而转静态。
+        self.assertTrue(self.moving([point(i) for i in range(6)] + [point(20, 30)])[0])
 
     def test_sparse_observations_are_audited_as_observations_not_continuous_proof(self):
         moving, audit = self.moving([point(0), point(498, 1.4)])
@@ -101,7 +120,7 @@ class TargetMotionTest(unittest.TestCase):
             self.assertNotIn("imagePath", props)
             audit = json.loads(path.with_name("submission-format.json").read_text(encoding="utf-8"))
             row, = audit["motion_classification"]
-            self.assertEqual("sustained_low_speed", row["rule"])
+            self.assertEqual("majority_low_speed", row["rule"])
             self.assertFalse(row["reported_is_moving"])
             decisions = json.loads(path.with_name("dedup-decisions.json").read_text(encoding="utf-8"))
             self.assertEqual(1, len(decisions["motion_reclassifications"]))
@@ -109,21 +128,24 @@ class TargetMotionTest(unittest.TestCase):
             self.assertFalse(decisions["quality_ranking"][0]["tracking_success"])
             self.assertEqual(original, {p.name: p.read_bytes() for p in folder.iterdir()})
 
-    def test_recent_full_track_is_checked_before_earliest_forty_point_cap(self):
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory); mission = "subject1-forty-tail"
-            folder = root / "UAV1" / mission; folder.mkdir(parents=True)
-            for i in range(46):
-                p = point(i * 3, min(i, 40) * 6)
-                metadata = dict(mission_id=mission, target_id="car", target_type="vehicle1",
-                    is_moving=True, target_longitude=p["coordinates"][0], target_latitude=0.,
-                    localization_time=dict(secs=int(BASE.timestamp()) + i * 3, nsecs=0))
-                (folder / ("%02d.json" % i)).write_text(json.dumps(metadata), encoding="utf-8")
-            path = update_subject1_submission(root, mission, publisher_dedup=True)
-            feature, = json.loads(path.read_text(encoding="utf-8"))["features"]
-            self.assertEqual("固定", feature["properties"]["targetCategory"])
-            audit = json.loads(path.with_name("submission-format.json").read_text(encoding="utf-8"))
-            self.assertEqual(46, audit["motion_classification"][0]["valid_position_count"])
+    def test_full_track_is_checked_before_earliest_forty_point_cap(self):
+        for count, moving_intervals, expected in ((46, 40, "移动"), (90, 20, "固定")):
+            with self.subTest(count=count), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory); mission = "subject1-forty-tail"
+                folder = root / "UAV1" / mission; folder.mkdir(parents=True)
+                for i in range(count):
+                    p = point(i * 3, min(i, moving_intervals) * 6)
+                    metadata = dict(mission_id=mission, target_id="car", target_type="vehicle1",
+                        is_moving=True, target_longitude=p["coordinates"][0], target_latitude=0.,
+                        localization_time=dict(secs=int(BASE.timestamp()) + i * 3, nsecs=0))
+                    (folder / ("%02d.json" % i)).write_text(json.dumps(metadata), encoding="utf-8")
+                path = update_subject1_submission(root, mission, publisher_dedup=True)
+                feature, = json.loads(path.read_text(encoding="utf-8"))["features"]
+                self.assertEqual(expected, feature["properties"]["targetCategory"])
+                audit = json.loads(path.with_name("submission-format.json").read_text(encoding="utf-8"))
+                self.assertEqual(count, audit["motion_classification"][0]["valid_position_count"])
+                if expected == "移动":
+                    self.assertEqual(40, len(feature["properties"]["trackPoints"]))
 
 
 if __name__ == "__main__":

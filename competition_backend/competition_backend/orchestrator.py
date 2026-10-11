@@ -56,7 +56,7 @@ def _altitude_profile_for(flight_profile: str, flight_altitude_plan: str) -> str
         return "competition"
     if altitude_plan in ("around54m", "subject2_50m"):
         return altitude_plan
-    return "competition" if scene in ("competition", "outdoor100", "outdoor200", "dalian_nanshan", "xuchang_small") else ("lab5" if scene == "outdoor5" else "lab")
+    return "competition" if scene in ("competition", "outdoor100", "outdoor200", "dalian_nanshan", "xuchang_small", "subject1_actual") else ("lab5" if scene == "outdoor5" else "lab")
 
 
 class CompetitionOrchestrator:
@@ -430,6 +430,17 @@ class CompetitionOrchestrator:
             uavs = {
                 uav_id: planned_uavs[uav_id] for uav_id in self.active_uav_ids
             }
+            actual_routes = {}
+            if flight_profile in ("subject1_actual", "xuchang_small"):
+                from .transit_routes import rebase_gps_routes_for_takeoff
+                homes = (area or {}).get("takeoff_gps_by_uav") or {}
+                if self.live_mode and any(str(uid) not in homes for uid in uavs):
+                    raise MissionError("本场景缺少参与机本次开机起降点，不能下发任务")
+                # 任一飞机路线有冲突时，整次分派在发送前失败，避免只有部分飞机收到任务。
+                for uid, runtime in uavs.items():
+                    if str(uid) in homes:
+                        plan_checkpoint("校验 UAV{} 实际起降点与避让航线".format(uid))
+                        actual_routes[uid] = rebase_gps_routes_for_takeoff(area, runtime.task, homes[str(uid)])
             plan_checkpoint("保存本次规划")
             self._mission = MissionRuntime(
                 mission_id=mission_id,
@@ -490,7 +501,7 @@ class CompetitionOrchestrator:
                 if coordinate_mode == "gps" and takeoff_gps:
                     if routes:
                         from .transit_routes import rebase_gps_routes_for_takeoff
-                        routes = rebase_gps_routes_for_takeoff(area, task_for_onboard, takeoff_gps)
+                        routes = actual_routes.get(uav_id) or rebase_gps_routes_for_takeoff(area, task_for_onboard, takeoff_gps)
                         task_for_onboard["transit_routes"] = routes
                         runtime.task["transit_routes"] = copy.deepcopy(routes)
                     assignment_payload["task"] = task_for_onboard
@@ -960,6 +971,7 @@ class CompetitionOrchestrator:
                     "task_phase": item.task_phase,
                     "successful_return": dict(item.successful_return),
                     "return_ack": dict(item.return_ack),
+                    "capabilities": copy.deepcopy(item.capabilities),
                     "gps_status": item.gps_status,
                     "location_source": item.location_source,
                     "gps_num": item.gps_num,

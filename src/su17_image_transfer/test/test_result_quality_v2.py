@@ -16,7 +16,7 @@ class ResultQualityTest(unittest.TestCase):
         self.assertEqual(category_fields({"target_type":"building3"}), ("工事","工事3"))
         self.assertEqual(category_fields({"target_type":"dsolider4"}), ("人员","运动的人员4"))
 
-    def test_success_then_count_then_score_and_latest_same_id(self):
+    def test_representative_success_first_but_static_final_order_count_first(self):
         with tempfile.TemporaryDirectory() as directory:
             root=Path(directory); mission="subject1-quality"
             def add(uid, name, target, success, count, score, lon, sequence=1):
@@ -35,14 +35,14 @@ class ResultQualityTest(unittest.TestCase):
             d=json.loads(p.read_text(encoding='utf-8'));f=d['features']
             self.assertEqual([v['id'] for v in f],['target-001','target-002'])
             mapping=json.loads(p.with_name('submission-format.json').read_text(encoding='utf-8'))['id_mapping']
-            self.assertEqual([v['source_id'] for v in mapping],['more-observations','separate'])
-            self.assertEqual(f[1]['properties']['confidence'],.3)
+            self.assertEqual([v['source_id'] for v in mapping],['separate','more-observations'])
+            self.assertEqual(f[0]['properties']['confidence'],.3)
             self.assertEqual(f[0]['properties']['targetType'],'人员')
             self.assertEqual(f[0]['properties']['targetModel'],'人员3')
             self.assertTrue(all('_quality' not in v and '_source_uav' not in v for v in f))
             decisions=json.loads((p.parent/'dedup-decisions.json').read_text(encoding='utf-8'))
-            self.assertEqual(decisions['quality_ranking'][0]['detection_count'],20)
-            self.assertEqual(decisions['quality_ranking'][1]['detection_count'],300)
+            self.assertEqual(decisions['quality_ranking'][0]['detection_count'],300)
+            self.assertEqual(decisions['quality_ranking'][1]['detection_count'],20)
 
     def test_moving_fortieth_success_and_location_time(self):
         with tempfile.TemporaryDirectory() as directory:

@@ -7,10 +7,11 @@ import math
 from pathlib import Path
 
 CACHE = Path(__file__).with_name('external_transit_prepared.json')
-PROFILES = ('lab', 'outdoor5', 'lab10', 'outdoor100', 'outdoor200', 'competition', 'dalian_nanshan', 'xuchang_small')
+PROFILES = ('lab', 'outdoor5', 'lab10', 'outdoor100', 'outdoor200', 'competition', 'dalian_nanshan', 'xuchang_small', 'subject1_actual')
 CLEARANCE_PROFILES = ('outdoor100', 'outdoor200', 'competition')
-SAFE_TRANSIT_PROFILES = CLEARANCE_PROFILES + ('xuchang_small',)
+SAFE_TRANSIT_PROFILES = CLEARANCE_PROFILES + ('xuchang_small', 'subject1_actual')
 BOUNDARY_CLEARANCE_M = 5.0
+BOOT_HOME_PROFILES = ('subject1_actual', 'xuchang_small')
 
 
 def clearance_region(boundary, distance_m, holes=()):
@@ -107,6 +108,9 @@ def scene_plan(profile, departure, apply_clearance=True):
     from .polygon_coverage import plan_competition_coverage, adapt_competition_plan
     from .stadium_departure import load_prepared_stadium_plan, anchor_stadium_plan
     from .scaled_scene_plans import load_scaled_scene_plan
+    if profile == 'subject1_actual':
+        from .subject1_actual_scene import load_plan
+        return load_plan()
     if profile == 'dalian_nanshan':
         from .fixed_gps_scene import load_dalian_nanshan_plan
         return load_dalian_nanshan_plan()
@@ -228,6 +232,16 @@ def rebase_gps_routes_for_takeoff(area, task, takeoff_gps):
         sources = [(None, i + 1, [point[1], point[0]]) for i, point in enumerate(gps_scans)]
         targets, first_index = scans, 0
     distance = BOUNDARY_CLEARANCE_M if area['flight_profile'] in SAFE_TRANSIT_PROFILES else 0.0
+    others = []
+    if area['flight_profile'] in BOOT_HOME_PROFILES:
+        for uid, gps_home in area.get('takeoff_gps_by_uav', {}).items():
+            if int(uid) == int(fixed['recipient_uav_id']):
+                continue
+            others.append([scans[0][0] + (float(gps_home['latitude']) - gps_scans[0][0]) / factors[0],
+                           scans[0][1] + (float(gps_home['longitude']) - gps_scans[0][1]) / factors[1]])
+        fixed = dict(fixed, other_home_clearance_m=2.5, avoided_home_count=len(others),
+                     home_reference_source=takeoff_gps.get('source', ''),
+                     home_reference_boot_id=takeoff_gps.get('boot_id', ''))
     lane_vehicle = saved['vehicles'].get(str(fixed.get('recipient_uav_id')), {})
     lane = lane_vehicle.get('transit_lane') if area['flight_profile'] == 'xuchang_small' else None
     if lane:
@@ -250,6 +264,10 @@ def rebase_gps_routes_for_takeoff(area, task, takeoff_gps):
                     or math.dist(path[0], saved['vehicles'][str(uid)]['waypoints_m'][index-1]) > 1e-8):
                 raise ValueError('固定返航通道端点与缓存不一致')
             paths.append(list(reversed(_join_paths(path[:-1], list(reversed(connectors[1]))))))
+    elif area['flight_profile'] == 'subject1_actual':
+        from .landing_avoidance import routes_from_home
+        paths = routes_from_home(saved_boundary, home, targets, others)
+        entry_path = paths[first_index]
     else:
         if distance:
             paths = clearance_routes(saved_boundary, home, targets, distance,
@@ -257,6 +275,10 @@ def rebase_gps_routes_for_takeoff(area, task, takeoff_gps):
         else:
             paths = shortest_routes(saved_boundary, home, targets)
         entry_path = paths[first_index]
+    if area['flight_profile'] == 'xuchang_small':
+        from .landing_guided_avoidance import detour_guided_paths
+        entry_path, *paths = detour_guided_paths(saved_boundary, [entry_path, *paths], others,
+                                                holes=saved.get('excluded_polygons_m', []))
     def convert_path(path, point, reverse=False):
         points = [convert(point) for point in (reversed(path) if reverse else path)]
         if reverse:
@@ -327,7 +349,8 @@ def prepare_routes(plan):
 def save_all_routes():
     scenes = {}
     for profile in PROFILES:
-        for departure in (('fixed_dalian',) if profile == 'dalian_nanshan' else
+        for departure in (('stadium_center',) if profile == 'subject1_actual' else
+                          ('fixed_dalian',) if profile == 'dalian_nanshan' else
                           ('fixed_xuchang',) if profile == 'xuchang_small' else
                           ('southeast', 'stadium_center')):
             scenes[profile + '/' + departure] = prepare_routes(scene_plan(profile, departure))
@@ -437,7 +460,9 @@ def attach_routes(plan):
         routes.update(
             schema_version=2, recipient_uav_id=int(uid), route_scope='all_uav_waypoints',
             waypoints_by_uav=copy.deepcopy(fleet_points), return_paths=returns)
-    area['landing_mode'] = 'selected_departure'
+    area['landing_mode'] = 'onboard_home' if area['flight_profile'] in BOOT_HOME_PROFILES else 'selected_departure'
+    if area['flight_profile'] in BOOT_HOME_PROFILES:
+        area.update(home_reference_policy='first_valid_unarmed_gps_per_boot', other_home_clearance_m=2.5)
     area['departure_point_m'] = list(saved['departure_m'])
     plan['prepared_transit_sha256'] = data['sha256']
     return plan

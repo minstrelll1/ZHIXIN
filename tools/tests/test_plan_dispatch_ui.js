@@ -14,10 +14,16 @@ const sceneContext=vm.createContext({
 });
 const sceneStart=html.indexOf('function 应用飞行环境默认值()');
 vm.runInContext(html.slice(sceneStart,html.indexOf('function 切换坐标系()',sceneStart)),sceneContext);
-for(const [profile,radius] of [['xuchang_small','45'],['dalian_nanshan','75'],['competition','75'],['outdoor100','75'],['outdoor200','75'],['lab','1']]){
+for(const [profile,radius] of [['subject1_actual','50'],['xuchang_small','45'],['dalian_nanshan','75'],['competition','75'],['outdoor100','75'],['outdoor200','75'],['lab','1']]){
   sceneContext.$('flightProfile').value=profile;
   sceneContext.应用飞行环境默认值();
   assert.equal(sceneNodes.get('scoutRadius').value,radius);
+  if(profile==='subject1_actual'){
+    assert.equal(sceneNodes.get('coordinateMode').value,'gps');
+    assert.equal(sceneNodes.get('coordinateMode').disabled,true);
+    assert.equal(sceneNodes.get('departurePoint').value,'stadium_center');
+    assert.equal(sceneNodes.get('departurePoint').disabled,true);
+  }
   if(profile==='xuchang_small'){
     assert.equal(sceneNodes.get('coordinateMode').value,'gps');
     assert.equal(sceneNodes.get('departurePoint').value,'fixed_xuchang');
