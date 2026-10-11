@@ -2,8 +2,8 @@
   "schema_version": 1,
   "repository": "minstrelll1/ZHIXIN",
   "branch": "codex/portable-ground-deployment",
-  "commit": "43ab9276e5fa952594b810f5ef7ca5910399f47a",
-  "tree_sha": "f2f1e40ac17cf12945aa0e686898049bb4f3b781",
+  "commit": "0103f4ee4d3adf045423b7ee51fa82c38a512e8a",
+  "tree_sha": "64af7ae973e2c95bf5d1ee40ab8cea3cf6819bb1",
   "file_count": 360,
   "files": [
     {
@@ -283,7 +283,7 @@
       "path": "competition_backend/competition_backend/external_transit_prepared.json",
       "type": "blob",
       "mode": "100644",
-      "sha": "ca5ab653acb1844a486dc74ae7f63a227ff71baf",
+      "sha": "240a1930a3897fe7a9dac69bb2767646bf9ca5de",
       "size": 752980
     },
     {
@@ -584,22 +584,22 @@
       "path": "competition_backend/competition_backend/xuchang_small_prepared.json",
       "type": "blob",
       "mode": "100644",
-      "sha": "6b42c67fae36dc4e87c0328316895724d1b88fa3",
-      "size": 41565
+      "sha": "d4d89c7a9cbbd57562ec6cea5069d3d441e727a7",
+      "size": 41668
     },
     {
       "path": "competition_backend/competition_backend/xuchang_small_scene.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "eb519c2534d9b96fc9bb55aebb0d712d98dc7994",
-      "size": 26071
+      "sha": "3bbd6eb7c447b7421a9848532a5fa73a38c71709",
+      "size": 27044
     },
     {
       "path": "competition_backend/competition_backend/xuchang_transit_lanes.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "42e6909b4572cf411ebef8e1ad2b1e7d60e8b8aa",
-      "size": 7192
+      "sha": "9219cdb73a193673a9702b2c2998b53c5b7a2654",
+      "size": 7197
     },
     {
       "path": "competition_backend/config/competition.example.json",
@@ -1018,21 +1018,21 @@
       "path": "competition_backend/tests/test_xuchang_small_scene.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "79c38b14745f5f1220e15fd0fd558ca7003c31a2",
-      "size": 21131
+      "sha": "c408724dbf91becd8cf8f5a442d99895026952bb",
+      "size": 21162
     },
     {
       "path": "competition_backend/tests/test_xuchang_transit_lanes.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "b46736fddf893f800bc7cd43f909adeaea6f5a71",
-      "size": 7281
+      "sha": "6de5bcf6ab873dab1f9393a4ca62f1196bb676f0",
+      "size": 7381
     },
     {
       "path": "competition_backend/tests/test_xuchang_transit_lanes_integration.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "6380015707f4d34442ae524e5b7fa9fe223a5985",
+      "sha": "cc0dd696ccb28ca59bae9fb638e85cdb103f8d8e",
       "size": 10488
     },
     {
@@ -1186,7 +1186,7 @@
       "path": "docs/competition_plans_3d.html",
       "type": "blob",
       "mode": "100644",
-      "sha": "d2fe2b3c9d06b37534f68c55708aac36ec040e49",
+      "sha": "fa3eb1bd371e5e9b7b7dd25d9a5f7ad14636f4ed",
       "size": 767495
     },
     {
@@ -1431,36 +1431,36 @@
       "path": "docs/xuchang_boot_home_example.json",
       "type": "blob",
       "mode": "100644",
-      "sha": "d57ce8e7ab8d671ddbf013b37af79eb125cae008",
-      "size": 160284
+      "sha": "50d099e9b3cd826f61f32f0aaadfcd36f971f393",
+      "size": 159141
     },
     {
       "path": "docs/xuchang_boot_home_example.png",
       "type": "blob",
       "mode": "100644",
-      "sha": "b7f55b464efcbaee3ae2fe4c23c8a79f0da384b1",
-      "size": 376875
+      "sha": "82d1f3817ed7e0c09c0c8c468f049815baacc304",
+      "size": 376069
     },
     {
       "path": "docs/xuchang_small_plan.png",
       "type": "blob",
       "mode": "100644",
-      "sha": "70970219b634beb32b76928f3304dffb94e24bc7",
-      "size": 167149
+      "sha": "3bc37d2e9c1cdfd8cdf27cf8852dd97755e62b66",
+      "size": 213065
     },
     {
       "path": "docs/xuchang_small_scene.md",
       "type": "blob",
       "mode": "100644",
-      "sha": "c757cbf161b68fa80ad74f32489b891d188408b6",
-      "size": 9601
+      "sha": "53c794b216fb5a8269cf252aaef87af026c00958",
+      "size": 9851
     },
     {
       "path": "docs/xuchang_transit_lanes.png",
       "type": "blob",
       "mode": "100644",
-      "sha": "16fc7c2bcce1d5951baf19bcf04197fb008813de",
-      "size": 134295
+      "sha": "c82ffce8b9a91420cd1c6b05fda9412adeb154b9",
+      "size": 276543
     },
     {
       "path": "docs/科目一二_六机覆盖规划.md",
@@ -2527,5 +2527,5 @@
       "size": 804
     }
   ],
-  "generated_at": "2026-10-11T01:03:59+00:00"
+  "generated_at": "2026-10-11T01:24:22+00:00"
 }
