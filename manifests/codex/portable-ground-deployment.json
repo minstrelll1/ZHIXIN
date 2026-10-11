@@ -2,9 +2,9 @@
   "schema_version": 1,
   "repository": "minstrelll1/ZHIXIN",
   "branch": "codex/portable-ground-deployment",
-  "commit": "f923f5e870209871c7d3b0148cb3861671cd0725",
-  "tree_sha": "4c15d3775a391c5457f1fab7b7eec5f7ecdda1dc",
-  "file_count": 347,
+  "commit": "43ab9276e5fa952594b810f5ef7ca5910399f47a",
+  "tree_sha": "f2f1e40ac17cf12945aa0e686898049bb4f3b781",
+  "file_count": 360,
   "files": [
     {
       "path": ".editorconfig",
@@ -136,8 +136,8 @@
       "path": "competition_backend/competition_backend/api.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "c84dc25ba4b80fef9f6d2a50a0cb7bd4f75b22ed",
-      "size": 108779
+      "sha": "04819578ba50e3028161895e8617085f1fb43e0d",
+      "size": 111251
     },
     {
       "path": "competition_backend/competition_backend/assignment_protocol.py",
@@ -283,8 +283,8 @@
       "path": "competition_backend/competition_backend/external_transit_prepared.json",
       "type": "blob",
       "mode": "100644",
-      "sha": "2885a92d83a3af0088c7b28e92cc11dd80a00d39",
-      "size": 662543
+      "sha": "ca5ab653acb1844a486dc74ae7f63a227ff71baf",
+      "size": 752980
     },
     {
       "path": "competition_backend/competition_backend/fixed_gps_scene.py",
@@ -311,8 +311,8 @@
       "path": "competition_backend/competition_backend/image_aggregation.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "34da842e1b2800d8e2b40c0aeeabf5461a3a3d26",
-      "size": 18868
+      "sha": "3fae0bd064834d565adb55d7428ac740dca21eaa",
+      "size": 18952
     },
     {
       "path": "competition_backend/competition_backend/journal.py",
@@ -320,6 +320,20 @@
       "mode": "100644",
       "sha": "e8cf2e22624b303c3d8c01c4f3dcd50b4c17ed7f",
       "size": 1584
+    },
+    {
+      "path": "competition_backend/competition_backend/landing_avoidance.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "4a5f33e10a3e03d27051f8d53028b0769691b2f2",
+      "size": 3670
+    },
+    {
+      "path": "competition_backend/competition_backend/landing_guided_avoidance.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "150c16608f44e3687a8bd6dc9df7d5f76b83df44",
+      "size": 2385
     },
     {
       "path": "competition_backend/competition_backend/models.py",
@@ -332,8 +346,8 @@
       "path": "competition_backend/competition_backend/orchestrator.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "b03dfb659c661bba30f616799acd2bb0bd5a33ee",
-      "size": 55752
+      "sha": "066384d4b8ccbb4fa02dc52a846c73239eba5c94",
+      "size": 56733
     },
     {
       "path": "competition_backend/competition_backend/pcl_octree.py",
@@ -448,11 +462,32 @@
       "size": 23866
     },
     {
+      "path": "competition_backend/competition_backend/subject1_actual_area.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "1d9d78f071434522abe18c57f7a41344040d1276",
+      "size": 1905
+    },
+    {
+      "path": "competition_backend/competition_backend/subject1_actual_prepared.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "c773c81297ad406631be6de67f858fc8b2ef1809",
+      "size": 864966
+    },
+    {
+      "path": "competition_backend/competition_backend/subject1_actual_scene.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "23c48454df3bb2607f070372d07c5c754dba4eac",
+      "size": 13316
+    },
+    {
       "path": "competition_backend/competition_backend/subject1_reporting.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "1bd93a0899918f2917a8a6cb210f81c36de9f019",
-      "size": 30046
+      "sha": "8e0631d6793cf1f91580cc33b003c8a0dabc0b37",
+      "size": 30224
     },
     {
       "path": "competition_backend/competition_backend/task_region.py",
@@ -486,8 +521,8 @@
       "path": "competition_backend/competition_backend/transit_routes.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "f9fc4f102a8b2350666463a86f16eb8721109f8d",
-      "size": 25307
+      "sha": "0e3e2d24030522b32090a21d7ec290246874e26b",
+      "size": 27026
     },
     {
       "path": "competition_backend/competition_backend/web/competition_esri_20170724.jpg",
@@ -507,8 +542,8 @@
       "path": "competition_backend/competition_backend/web/index.html",
       "type": "blob",
       "mode": "100644",
-      "sha": "5fc1be26268327ef06cf354a2b1113f9fd63d25b",
-      "size": 168891
+      "sha": "65a0c729fc19fb222d72a348c695db218d452b9c",
+      "size": 169725
     },
     {
       "path": "competition_backend/competition_backend/web/military_preview.html",
@@ -903,11 +938,18 @@
       "size": 9727
     },
     {
+      "path": "competition_backend/tests/test_subject1_actual_scene.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "c120b9db2fe71d37213faa35b1a00d16077dbbdf",
+      "size": 13091
+    },
+    {
       "path": "competition_backend/tests/test_subject1_dedup_rules.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "c88497690f3650468237c3d77a066977f90108ff",
-      "size": 9426
+      "sha": "b597a248ff58da4bc41a53e052568637ad8f8ac0",
+      "size": 16897
     },
     {
       "path": "competition_backend/tests/test_subject1_reporting.py",
@@ -920,8 +962,8 @@
       "path": "competition_backend/tests/test_task_region.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "1808902a747665e90c51c6a9c2a0c14809b5bf85",
-      "size": 2755
+      "sha": "ba113ef36ce718b01422f8047ef549c315bd32bb",
+      "size": 2809
     },
     {
       "path": "competition_backend/tests/test_tcp_adapter.py",
@@ -962,15 +1004,22 @@
       "path": "competition_backend/tests/test_transit_routes.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "140a7fd76710edc34bdf264d0f8de519b5494254",
-      "size": 19031
+      "sha": "a866c3c3444b389570c9b6ac9ab688c86d58348a",
+      "size": 19136
+    },
+    {
+      "path": "competition_backend/tests/test_xuchang_boot_homes.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "7283ebb554ecaed60df303a8e890dde383be8238",
+      "size": 8493
     },
     {
       "path": "competition_backend/tests/test_xuchang_small_scene.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "c1f3fde2d5c099b301328f27f5be3e083ee7e62d",
-      "size": 20787
+      "sha": "79c38b14745f5f1220e15fd0fd558ca7003c31a2",
+      "size": 21131
     },
     {
       "path": "competition_backend/tests/test_xuchang_transit_lanes.py",
@@ -1060,8 +1109,8 @@
       "path": "competition_shared/subject1_dedup.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "34c88fdf227cf5cb76dcab8f826b2a85b8c3c2e1",
-      "size": 12179
+      "sha": "29df0e4d26421716e57766d33d51b3ca083f7419",
+      "size": 15335
     },
     {
       "path": "competition_shared/submission_format.py",
@@ -1074,8 +1123,8 @@
       "path": "competition_shared/target_motion.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "e238ea8f472ac01196b972b0ac11e69a6a688075",
-      "size": 3548
+      "sha": "9bcdb805342179dc4637b648ad1c91747575583d",
+      "size": 3997
     },
     {
       "path": "competition_shared/target_quality.py",
@@ -1109,8 +1158,8 @@
       "path": "config/onboard_programs.json",
       "type": "blob",
       "mode": "100644",
-      "sha": "702ff27f0c46bf4cc0326dfe0936d0f3fcfae29d",
-      "size": 1120
+      "sha": "c31d1359de3cefd9106f1eeebb1bdfa64835c6f2",
+      "size": 1094
     },
     {
       "path": "docs/autonomous_executor_update.md",
@@ -1137,15 +1186,15 @@
       "path": "docs/competition_plans_3d.html",
       "type": "blob",
       "mode": "100644",
-      "sha": "c642bd476a42d8a7367c49aa87bc3f933235f698",
-      "size": 600835
+      "sha": "d2fe2b3c9d06b37534f68c55708aac36ec040e49",
+      "size": 767495
     },
     {
       "path": "docs/completed_targets_protocol.md",
       "type": "blob",
       "mode": "100644",
-      "sha": "e6b9a787cc459d1bfa3da40a65816a5de60b1be5",
-      "size": 4071
+      "sha": "1e2073446f8fb29c754040976cd27bffe4955aa5",
+      "size": 4449
     },
     {
       "path": "docs/dual_platform_deployment.md",
@@ -1158,8 +1207,8 @@
       "path": "docs/external_transit_routes.md",
       "type": "blob",
       "mode": "100644",
-      "sha": "a0025cfdae2ca23f2f13abe0eab361658cb1cf27",
-      "size": 9132
+      "sha": "c0bb671d8409fd81ae9bbcb696bcb8aa5d6291da",
+      "size": 9479
     },
     {
       "path": "docs/files/satellite.jpg",
@@ -1344,6 +1393,13 @@
       "size": 75208
     },
     {
+      "path": "docs/subject1_actual_plan.md",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "5fa2d8951d87b019c23663877bc3a5ae378cf461",
+      "size": 4718
+    },
+    {
       "path": "docs/subject1_format/target-submission-template.README.md",
       "type": "blob",
       "mode": "100644",
@@ -1361,8 +1417,8 @@
       "path": "docs/subject1_reporting.md",
       "type": "blob",
       "mode": "100644",
-      "sha": "379c3c8d1609dadba7866025e8173cf5a5e14399",
-      "size": 13997
+      "sha": "49da5428e14e71ec7decbbe1a90b9dca6745ddfc",
+      "size": 15632
     },
     {
       "path": "docs/task_region_protocol.md",
@@ -1370,6 +1426,20 @@
       "mode": "100644",
       "sha": "3bbd5a0c2d7424859392334ae5f36b1dac1df0e0",
       "size": 1852
+    },
+    {
+      "path": "docs/xuchang_boot_home_example.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "d57ce8e7ab8d671ddbf013b37af79eb125cae008",
+      "size": 160284
+    },
+    {
+      "path": "docs/xuchang_boot_home_example.png",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "b7f55b464efcbaee3ae2fe4c23c8a79f0da384b1",
+      "size": 376875
     },
     {
       "path": "docs/xuchang_small_plan.png",
@@ -1382,8 +1452,8 @@
       "path": "docs/xuchang_small_scene.md",
       "type": "blob",
       "mode": "100644",
-      "sha": "6c8cf296efedebd2ace7f53e56651b1c048ae292",
-      "size": 7574
+      "sha": "c757cbf161b68fa80ad74f32489b891d188408b6",
+      "size": 9601
     },
     {
       "path": "docs/xuchang_transit_lanes.png",
@@ -1445,8 +1515,8 @@
       "path": "src/su17_competition_executor/scripts/onboard_task_executor.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "c42c9489c6f8aa3ba323c7b49c2750110cabc41f",
-      "size": 107589
+      "sha": "867532876af3d1b2ee9051fa734ddbe0a3ded0f1",
+      "size": 108494
     },
     {
       "path": "src/su17_competition_executor/setup.py",
@@ -1461,6 +1531,13 @@
       "mode": "100644",
       "sha": "13e58b822531fcb7c31f761c9f3a703cc134f43f",
       "size": 46
+    },
+    {
+      "path": "src/su17_competition_executor/src/su17_competition_executor/boot_gps_home.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "fb369065486c73d496e358be5e879cf7ca9c1f97",
+      "size": 2027
     },
     {
       "path": "src/su17_competition_executor/src/su17_competition_executor/ego_state_bridge.py",
@@ -1683,8 +1760,8 @@
       "path": "src/su17_image_transfer/src/su17_image_transfer/submission.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "35c6db04c82e88bb265a63d110c71f5119b933fe",
-      "size": 19569
+      "sha": "28d2760f9cb936e7ad083fd15c174e10415d1a49",
+      "size": 19630
     },
     {
       "path": "src/su17_image_transfer/test/test_completed_target_v2.py",
@@ -1732,8 +1809,8 @@
       "path": "src/su17_image_transfer/test/test_result_quality_v2.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "5a8f1c5435adb5c28430949bab912b017eae00b7",
-      "size": 4162
+      "sha": "e05adf79a991f6c357e53561b8c487309b658099",
+      "size": 4177
     },
     {
       "path": "src/su17_image_transfer/test/test_stamp_policy.py",
@@ -1760,8 +1837,8 @@
       "path": "src/su17_image_transfer/test/test_target_motion.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "f8b6911bcb599c5c7da50c2ae321e3e10ef39e19",
-      "size": 7738
+      "sha": "473c5969fbd07c4a01a001bbea81dda6b6eb005d",
+      "size": 9340
     },
     {
       "path": "src/su17_image_transfer/test/test_target_time.py",
@@ -1949,8 +2026,15 @@
       "path": "tools/build_plans_3d.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "4e0533f0c32de816a01a89e670e73962f2feb878",
-      "size": 17236
+      "sha": "d77b002a78fe77b4a30df089b62ad50174adaea3",
+      "size": 17848
+    },
+    {
+      "path": "tools/build_xuchang_home_example.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "7bcae6e479cba86d777db8c833ca7ba2f8368269",
+      "size": 9294
     },
     {
       "path": "tools/check_onboard_messages.py",
@@ -2091,6 +2175,13 @@
       "mode": "100644",
       "sha": "688644b03ff6ef60859e3e535e4078e903ab40fe",
       "size": 3382
+    },
+    {
+      "path": "tools/prepare_subject1_actual_plan.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "a984b5e1becb691fd95fe5061ba0d0a796e15f7d",
+      "size": 1111
     },
     {
       "path": "tools/prepare_transit_routes.py",
@@ -2264,8 +2355,8 @@
       "path": "tools/tests/test_gps_map_display.js",
       "type": "blob",
       "mode": "100644",
-      "sha": "95fcd8af902811fadc43bd866844d7ffc9872503",
-      "size": 8213
+      "sha": "e761024da1285cd24df63fbe5a18664813fd1060",
+      "size": 8979
     },
     {
       "path": "tools/tests/test_gps_reference_selection.js",
@@ -2327,8 +2418,8 @@
       "path": "tools/tests/test_plan_dispatch_ui.js",
       "type": "blob",
       "mode": "100644",
-      "sha": "42062ad257ac899f7fe316d14ae3611d2c456584",
-      "size": 9816
+      "sha": "04a7d18138d7abfefc288bf7078988d2f67dec2a",
+      "size": 10151
     },
     {
       "path": "tools/tests/test_powershell_encoding.ps1",
@@ -2390,8 +2481,8 @@
       "path": "tools/tests/test_terrain_basemap.js",
       "type": "blob",
       "mode": "100644",
-      "sha": "440eccb1a15f5adf8dc38d5f23b3345fce0a31ae",
-      "size": 6608
+      "sha": "28d9ce8232c6eb2e8c1150c1cb0d65e8940e9000",
+      "size": 7137
     },
     {
       "path": "tools/update_ground.ps1",
@@ -2436,5 +2527,5 @@
       "size": 804
     }
   ],
-  "generated_at": "2026-10-10T09:19:45+00:00"
+  "generated_at": "2026-10-11T01:03:59+00:00"
 }
