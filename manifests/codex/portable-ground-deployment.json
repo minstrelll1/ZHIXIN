@@ -2,9 +2,9 @@
   "schema_version": 1,
   "repository": "minstrelll1/ZHIXIN",
   "branch": "codex/portable-ground-deployment",
-  "commit": "e682dcb3eed1742c4e0a24a29661466de783b81e",
-  "tree_sha": "6cb819e8a5e5f5d94641a973e3015e94e52ee9f9",
-  "file_count": 371,
+  "commit": "e9d97c2543fbece43c2f42bed9e8dc65ee68b81c",
+  "tree_sha": "755e1b846dbbce5a48310763792336d18a4645c4",
+  "file_count": 372,
   "files": [
     {
       "path": ".editorconfig",
@@ -332,8 +332,8 @@
       "path": "competition_backend/competition_backend/landing_avoidance.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "4a5f33e10a3e03d27051f8d53028b0769691b2f2",
-      "size": 3670
+      "sha": "882d060484d21b4491b901b5790fc854fbac0a34",
+      "size": 4456
     },
     {
       "path": "competition_backend/competition_backend/landing_guided_avoidance.py",
@@ -486,7 +486,7 @@
       "path": "competition_backend/competition_backend/subject1_actual_prepared.json",
       "type": "blob",
       "mode": "100644",
-      "sha": "d35b9f9222c8559a5bbad6d28f25385546daffa7",
+      "sha": "8f94651ee008a7946b67d018263272dab6d413ca",
       "size": 797043
     },
     {
@@ -654,8 +654,8 @@
       "path": "competition_backend/tests/test_actual_dispatch_e2e.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "56fb06b6e88654ec71e1c16f66dccc67d0bb3ea9",
-      "size": 10874
+      "sha": "44acf1a207d21d433b586b23931cbd80d879280f",
+      "size": 14527
     },
     {
       "path": "competition_backend/tests/test_api.py",
@@ -733,6 +733,13 @@
       "mode": "100644",
       "sha": "c8f2d24af3902286b8386d0ea8c6182efc66ba8f",
       "size": 3689
+    },
+    {
+      "path": "competition_backend/tests/test_fast_landing_avoidance.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "0ab618f96b39b694f3fa256a56bb89628bb09e05",
+      "size": 1786
     },
     {
       "path": "competition_backend/tests/test_fixed_gps_scene.py",
@@ -1186,8 +1193,8 @@
       "path": "config/onboard_programs.json",
       "type": "blob",
       "mode": "100644",
-      "sha": "cc2dc38de68ccb261893f3c5565506acadb06b29",
-      "size": 1155
+      "sha": "9c1efde58c61ef94d2453aa7bea8fad7cf220472",
+      "size": 1162
     },
     {
       "path": "docs/autonomous_executor_update.md",
@@ -2604,5 +2611,5 @@
       "size": 804
     }
   ],
-  "generated_at": "2026-10-11T07:28:02+00:00"
+  "generated_at": "2026-10-11T07:52:23+00:00"
 }
