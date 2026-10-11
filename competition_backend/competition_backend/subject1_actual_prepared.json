@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "source_digest": "c91642c02bf162ed90ae9c3bba88ec5d64ec936dbd6936f89ed2f2e868238526",
-  "plan_sha256": "ab9027ced252f51e5f78e3b4a84b0754636941c67837cd781fc7b040be18c70b",
+  "source_digest": "8d6dd246d050281648170e6b60bb4edce606163c240763eeeacc682a0c5e9278",
+  "plan_sha256": "45a4cc6a5fe8793031cccdec82b7ce6fddbff355e1c8dcfc900f12d4b06f1f53",
   "plan": {
     "preview_only": true,
     "subject": "subject1",
@@ -28858,8 +28858,8 @@
       "turn_radius_m": 0.0
     },
     "prepared_plan": {
-      "id": "c91642c02bf162ed90ae",
-      "source_digest": "c91642c02bf162ed90ae9c3bba88ec5d64ec936dbd6936f89ed2f2e868238526",
+      "id": "8d6dd246d05028164817",
+      "source_digest": "8d6dd246d050281648170e6b60bb4edce606163c240763eeeacc682a0c5e9278",
       "flight_profile": "subject1_actual",
       "departure_point": "stadium_center",
       "runtime_mode": "load_prepared_only",

@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 import sys
 import tempfile
+import time
 from types import SimpleNamespace
 import unittest
 from unittest.mock import Mock, patch
@@ -34,7 +35,7 @@ class ActualDispatchE2ETest(unittest.TestCase):
         homes = {uid: dict(latitude=projection['latitude'] + (departure[0]+(uid-3.5)*10)/projection['north_m_per_degree'],
                            longitude=projection['longitude']-departure[1]/projection['west_m_per_degree'],
                            boot_id='offline-boot-'+str(uid), source='first_valid_unarmed_gps_per_boot') for uid in range(1,7)}
-        artifacts = []
+        artifacts, timings, nodes = [], [], {}
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory); clients, apps = {}, {}
             config = default_fleet()
@@ -54,7 +55,10 @@ class ActualDispatchE2ETest(unittest.TestCase):
                     app=create_app(dict(COMPETITION_ADAPTER='distributed',COMPETITION_FLEET_CONFIG=str(fleet),
                         COMPETITION_DATA_DIR=str(folder),COMPETITION_DIAGNOSTICS_DIR=str(folder/'logs'),
                         COMPETITION_IMAGE_ROOT=str(folder/'images'),COMPETITION_GROUND_TERMINAL_ID=str(uid),
-                        COMPETITION_PEER_TOKEN='offline-peer',COMPETITION_ASYNC_OPERATOR_SELECTION='0'))
+                        COMPETITION_PEER_TOKEN='offline-peer',COMPETITION_ASYNC_OPERATOR_SELECTION='0',
+                        COMPETITION_CONFIRM_LIVE_CONFIG='1'))
+                    app.state.program_manager=Mock()
+                    app.state.program_manager.snapshot.return_value={'programs':{'flight':{'state':'running','flight_mode':'outdoor'}}}
                     app.state.adapter._request_json=network
                     app.state.adapter.local_adapter.forward_command=Mock()
                     apps[uid]=app;clients[uid]=TestClient(app) # No lifespan/network workers.
@@ -62,11 +66,13 @@ class ActualDispatchE2ETest(unittest.TestCase):
                     response=clients[uid].post('/api/v1/operator',json=dict(ground_terminal_id=uid,model='p600',task_publisher=uid==1))
                     self.assertEqual(response.status_code,200,response.text)
                 publisher=apps[1]
+                publisher.state.adapter.peer_program_b_status=Mock(side_effect=lambda:{str(uid):{
+                    'state':'running','received_at':time.time(),'flight_mode':'outdoor'} for uid in range(2,7)})
                 publisher.state.adapter.connected_uav_ids_snapshot=Mock(return_value=list(range(1,7)))
                 for uid, home in homes.items():
                     publisher.state.orchestrator.update_telemetry(Telemetry(uav_id=uid,received_at=publisher.state.orchestrator.clock(),
                         connected=True,latitude=home['latitude']+.0001,longitude=home['longitude'],altitude=103.7,
-                        gps_status=3,location_source=4,gps_telemetry_age_seconds=.1,
+                        gps_status=3,location_source=4,gps_telemetry_age_seconds=60.,
                         capabilities=dict(boot_id=home['boot_id'],boot_gps_home=home)))
                 selection=dict(subject='subject1',planning_mode='competition',flight_profile=PROFILE,
                     coordinate_mode='gps',departure_point='stadium_center',controller_mode='external',
@@ -75,12 +81,28 @@ class ActualDispatchE2ETest(unittest.TestCase):
                 with patch('competition_backend.subject1_actual_scene.prepare_plan',side_effect=AssertionError('must use fixed plan')):
                     preview=clients[1].post('/api/v1/planning/competition-coverage',json=selection)
                     self.assertEqual(preview.status_code,200,preview.text)
-                    response=clients[1].post('/api/v1/plan',json=selection)
-                self.assertEqual(response.status_code,200,response.text)
-                self.assertEqual(response.json()['dispatch_status']['assigned_uav_ids'],list(range(1,7)))
+                    # Same asynchronous endpoint as the page, under the unchanged 45-second deadline.
+                    for attempt in (1,2):
+                        started=time.monotonic()
+                        response=clients[1].post('/api/v1/plan/jobs',json=dict(selection,request_id='offline-'+str(attempt)))
+                        self.assertEqual(response.status_code,200,response.text)
+                        job=response.json()
+                        while job['state'] in ('queued','running') and time.monotonic()-started<45:
+                            time.sleep(.02)
+                            job=clients[1].get('/api/v1/plan/jobs/'+job['job_id']).json()
+                        self.assertEqual(job['state'],'succeeded',job.get('error'))
+                        elapsed=time.monotonic()-started
+                        timings.append(elapsed)
+                        self.assertLess(elapsed,15.,'Six-aircraft planning must leave ample time for transport')
+                        self.assertEqual(job['result']['dispatch_status']['assigned_uav_ids'],list(range(1,7)))
+                        if attempt==1:first_mission_id=job['result']['mission']['mission_id']
+                self.assertNotEqual(first_mission_id,job['result']['mission']['mission_id'])
+                premature=clients[1].post('/api/v1/takeoff/prepare')
+                self.assertEqual(premature.status_code,200,premature.text)
+                self.assertFalse(premature.json()['ready'])
                 for uid,app in apps.items():
                     forward=app.state.adapter.local_adapter.forward_command
-                    forward.assert_called_once()
+                    self.assertEqual(forward.call_count,2)
                     actual_uid,kind,payload=forward.call_args.args
                     self.assertEqual((actual_uid,kind),(uid,'assign_task'))
                     # Exactly the JSON bytes that can cross the wire, with a verified complete checksum.
@@ -105,18 +127,40 @@ class ActualDispatchE2ETest(unittest.TestCase):
                     state=SimpleNamespace(armed=False,odom_valid=True,gps_status=3,location_source=4,
                         latitude=homes[uid]['latitude'],longitude=homes[uid]['longitude'],altitude=103.7,
                         position=[0.,0.,0.],velocity=[0.,0.,0.],attitude=[0.,0.,0.])
-                    node._state=state;node._snapshot=lambda:(state,None)
+                    node._state=state;node._snapshot=lambda state=state:(state,None)
                     node._accept_assignment(wire)
                     self.assertTrue(node._assignment_acked,str(node._publish_status.call_args_list))
                     self.assertEqual(load_assignment(node.cache_path),checked)
                     node.external_path_pub.publish.assert_not_called() # Assignment must not start B.
                     node.external_entry_path_pub.publish.assert_not_called()
                     self.assertEqual(node.recognition_categories_pub.publish.call_args.args[0].data,[])
+                    nodes[uid]=(node,checked,state,expected)
+                    # Accepted onboard assignment produces the current mission/checksum receipt.
+                    publisher.state.orchestrator.update_telemetry(Telemetry(uav_id=uid,
+                        received_at=time.time(),connected=True,armed=False,odom_valid=True,failsafe=False,
+                        control_state=0,battery_percentage=.95,latitude=state.latitude,longitude=state.longitude,
+                        gps_status=3,location_source=4,gps_telemetry_age_seconds=60.,
+                        identity={'identity_verified':True},capabilities={'motion_enabled':True,
+                        'auto_takeoff_supported':True,'auto_takeoff_ready':True},
+                        task_assignment_acked=node._assignment_acked,task_assignment_mission_id=checked['mission_id'],
+                        task_assignment_checksum=checked['assignment_checksum']))
+                prepared=clients[1].post('/api/v1/takeoff/prepare')
+                self.assertEqual(prepared.status_code,200,prepared.text)
+                self.assertTrue(prepared.json()['ready'],prepared.text)
+                confirmed=clients[1].post('/api/v1/takeoff/confirm',json={'token':prepared.json()['confirmation_token']})
+                self.assertEqual(confirmed.status_code,200,confirmed.text)
+                self.assertEqual(confirmed.json()['mission']['phase'],'taking_off')
+                for uid,(node,checked,state,expected) in nodes.items():
+                    calls=apps[uid].state.adapter.local_adapter.forward_command.call_args_list
+                    self.assertEqual([call.args[1] for call in calls],['assign_task','assign_task','takeoff'])
+                    takeoff=calls[-1].args[2]
+                    self.assertEqual(takeoff['mission_id'],checked['mission_id'])
+                    self.assertEqual(takeoff['target_altitude_m'],heights[uid-1])
                     # Exercise the actual post-takeoff handoff, while stubbing only flight itself.
-                    node._motion_entry('takeoff',lambda _:False,dict(mission_id=checked['mission_id']))
+                    node._motion_entry('takeoff',lambda _:False,takeoff)
                     node.external_path_pub.publish.assert_not_called()
                     node._gps_home=(state.latitude,state.longitude,state.altitude)
-                    node._motion_entry('takeoff',lambda _:True,dict(mission_id=checked['mission_id']))
+                    node._motion_entry('takeoff',lambda _:True,takeoff)
                     node.external_path_pub.publish.assert_called_once()
                     path=node.external_path_pub.publish.call_args.args[0].data
                     expected_path=[v for lat,lon in expected['waypoints_wgs84'] for v in (lon,lat,heights[uid-1])]
@@ -141,6 +185,6 @@ class ActualDispatchE2ETest(unittest.TestCase):
         output=os.environ.get('COMPETITION_OFFLINE_EVIDENCE')
         if output:
             Path(output).write_text(json.dumps(dict(offline_only=True,simulated_homes=True,profile=PROFILE,
-                altitude_plan='around54m',aircraft=artifacts),ensure_ascii=False,indent=2),encoding='utf-8')
+                altitude_plan='around54m',dispatch_seconds=timings,takeoff_api_confirmed=True,aircraft=artifacts),ensure_ascii=False,indent=2),encoding='utf-8')
 
 if __name__=='__main__':unittest.main()

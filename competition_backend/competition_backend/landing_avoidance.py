@@ -3,9 +3,23 @@ import heapq
 import math
 
 
+def _visible_pairs(region, starts, ends):
+    """批量执行同一安全区域的可见性判断；分块限制临时几何对象的内存。"""
+    import numpy as np
+    from shapely import covers, linestrings
+    result = np.empty(len(starts), dtype=bool)
+    for offset in range(0, len(starts), 4096):
+        a, b = starts[offset:offset+4096], ends[offset:offset+4096]
+        coincident = np.hypot(a[:, 0]-b[:, 0], a[:, 1]-b[:, 1]) < 1e-9
+        result[offset:offset+len(a)] = coincident | covers(region, linestrings(np.stack((a, b), axis=1)))
+    return result
+
+
 def routes_from_home(boundary, home, targets, other_homes, boundary_clearance=5.0, home_clearance=2.5, turning_points=None):
     from shapely.geometry import Point, Polygon, LineString
     from shapely.ops import unary_union
+    from shapely import prepare
+    import numpy as np
     polygon = Polygon(boundary)
     safe = polygon.buffer(-boundary_clearance - .02, join_style=2)
     if not safe.covers(Point(home)):
@@ -18,20 +32,22 @@ def routes_from_home(boundary, home, targets, other_homes, boundary_clearance=5.
     region = next((part for part in parts if part.geom_type == 'Polygon' and part.covers(Point(home))), None)
     if region is None:
         raise ValueError('实际起降点相距过近，无法满足其他降落点2.5米避让要求')
-    if any(not region.buffer(1e-8).covers(Point(p)) for p in targets):
+    expanded = region.buffer(1e-8)
+    prepare(expanded)
+    if any(not expanded.covers(Point(p)) for p in targets):
         raise ValueError('其他降落点避让区遮挡侦察航点或切断航路，请调整起降位置')
     vertices = [list(p) for ring in (region.exterior, *region.interiors) for p in list(ring.coords)[:-1]]
     if turning_points is not None:
-        vertices = [list(p) for p in turning_points if region.buffer(1e-8).covers(Point(p))]
+        vertices = [list(p) for p in turning_points if expanded.covers(Point(p))]
     nodes = [list(home), *vertices]
     graph = [[] for _ in nodes]
-    expanded = region.buffer(1e-8)
-    for i, a in enumerate(nodes):
-        for j in range(i+1, len(nodes)):
-            b = nodes[j]
-            length = math.dist(a, b)
-            if length < 1e-9 or expanded.covers(LineString([a, b])):
-                graph[i].append((j, length)); graph[j].append((i, length))
+    # 边的顺序、距离和最短路规则保持不变，仅批量计算可见性。
+    coordinates = np.asarray(nodes, dtype=float)
+    first, second = np.triu_indices(len(nodes), 1)
+    visible = _visible_pairs(expanded, coordinates[first], coordinates[second])
+    for i, j in zip(first[visible], second[visible]):
+        length = math.dist(nodes[i], nodes[j])
+        graph[i].append((j, length)); graph[j].append((i, length))
     distances, previous, queue = {0: 0.}, {}, [(0., 0)]
     while queue:
         distance, i = heapq.heappop(queue)
@@ -46,9 +62,9 @@ def routes_from_home(boundary, home, targets, other_homes, boundary_clearance=5.
     # 最短折线路径只需在障碍顶点转弯。所有目标复用同一张图，
     # 不把成百个侦察点两两连边，减少现场分派等待。
     for target in targets:
+        mask = _visible_pairs(expanded, coordinates, np.broadcast_to(target, coordinates.shape))
         visible = [(distances[i] + math.dist(point, target), i)
-                   for i, point in enumerate(nodes) if i in distances and
-                   (math.dist(point, target) < 1e-9 or expanded.covers(LineString([point, target])))]
+                   for i, point in enumerate(nodes) if i in distances and mask[i]]
         if not visible:
             raise ValueError('比赛进返场航线无法在安全区内连通')
         _, i = min(visible)
