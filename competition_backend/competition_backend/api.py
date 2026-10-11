@@ -74,7 +74,10 @@ FRONTEND_PATH = Path(__file__).resolve().parent / "web" / "index.html"
 
 def _fresh_onboard_gps_reference(item, now, max_age_seconds, uav_id, require_validity=True,
                                  rejection_details=None):
-    """Choose the same fresh WGS84 fix that the live map uses."""
+    """读取有效 WGS84 定位；兼容旧函数名，GPS 年龄仅诊断，不再作为准入门槛。
+
+    飞控连接/定位有效性仍检查，起飞的飞控遥测时效由 preflight_report 单独检查。
+    """
     def reject(reason):
         if rejection_details is not None:
             def number(value):
@@ -98,7 +101,7 @@ def _fresh_onboard_gps_reference(item, now, max_age_seconds, uav_id, require_val
                 precise_gps_age_seconds=precise_age,
                 precise_gps_total_age_seconds=(precise_age + delay
                                                if precise_age is not None and delay is not None else None),
-                max_age_seconds=max_age_seconds, require_validity=require_validity,
+                max_age_seconds=None, gps_age_gate_enabled=False, require_validity=require_validity,
                 gps_status=item.get("gps_status"), location_source=item.get("location_source"),
                 latitude=item.get("latitude"), longitude=item.get("longitude"),
             )
@@ -107,20 +110,10 @@ def _fresh_onboard_gps_reference(item, now, max_age_seconds, uav_id, require_val
     if not item.get("connected"):
         return reject("not_connected")
     try:
-        delay = now - float(item["received_at"])
-        position_age = float(item.get("gps_telemetry_age_seconds") or 0)
         gps_status = int(item.get("gps_status")) if require_validity else 3
         location_source = int(item.get("location_source")) if require_validity else 5
-    except (KeyError, TypeError, ValueError, OverflowError):
+    except (TypeError, ValueError, OverflowError):
         return reject("invalid_telemetry_fields")
-    if not math.isfinite(delay) or not math.isfinite(position_age):
-        return reject("invalid_gps_age")
-    if delay < 0:
-        return reject("future_telemetry_timestamp")
-    if position_age < 0:
-        return reject("negative_gps_age")
-    if position_age + delay > max_age_seconds:
-        return reject("stale_gps_telemetry")
     if gps_status < 3:
         return reject("invalid_gps_status")
     if location_source not in (4, 5):
@@ -140,15 +133,9 @@ def _fresh_onboard_gps_reference(item, now, max_age_seconds, uav_id, require_val
         return latitude, longitude
 
     precise = item.get("gps_position")
-    if isinstance(precise, dict):
-        try:
-            fix_age = float(precise["age_seconds"])
-        except (KeyError, TypeError, ValueError, OverflowError):
-            fix_age = math.inf
-        fix = coordinates(precise)
-        if fix and math.isfinite(fix_age) and 0 <= fix_age and fix_age + delay <= max_age_seconds:
-            return {"latitude": fix[0], "longitude": fix[1],
-                    "source": "mavros_global"}
+    fix = coordinates(precise)
+    if fix:
+        return {"latitude": fix[0], "longitude": fix[1], "source": "mavros_global"}
     coarse = coordinates(item)
     if coarse:
         return {"latitude": coarse[0], "longitude": coarse[1],
@@ -377,26 +364,37 @@ def create_app(environment=None, audit=None) -> FastAPI:
         return references
 
     def boot_scene_homes(required_ids):
-        # 当前有效GPS仍用于连接/定位检查；落点取本次开机首次未解锁定位，重连不改。
-        current = onboard_gps_references(required_ids)
+        # 同一帧核对开机记录与GPS有效性；GPS年龄不再阻断规划。
         telemetry = orchestrator.telemetry_snapshot()
-        homes = {}
+        now, homes, missing, rejected = time.time(), {}, [], {}
         for uid in required_ids:
             item = telemetry.get(str(uid)) or {}
             capabilities = item.get("capabilities") or {}
             home = capabilities.get("boot_gps_home") or {}
-            if (str(uid) in current and home.get("boot_id")
+            valid_home = False
+            if (isinstance(home, dict) and home.get("boot_id")
                     and home.get("boot_id") == capabilities.get("boot_id")
                     and home.get("source") == "first_valid_unarmed_gps_per_boot"):
                 try:
                     lat, lon = float(home["latitude"]), float(home["longitude"])
-                    if math.isfinite(lat) and math.isfinite(lon) and abs(lat) <= 90 and abs(lon) <= 180:
-                        homes[str(uid)] = dict(home)
-                except (KeyError, TypeError, ValueError):
+                    valid_home = math.isfinite(lat) and math.isfinite(lon) and abs(lat) <= 90 and abs(lon) <= 180
+                except (KeyError, TypeError, ValueError, OverflowError):
                     pass
-        missing = [uid for uid in required_ids if str(uid) not in homes]
+            if not valid_home:
+                missing.append(uid)
+                continue
+            details = {}
+            if _fresh_onboard_gps_reference(item, now, config.safety.telemetry_max_age_seconds,
+                                           uid, require_validity=live_mode, rejection_details=details):
+                homes[str(uid)] = dict(home)
+            else:
+                rejected[uid] = details
         if missing:
             raise HTTPException(status_code=409, detail="本场景尚缺 UAV{} 本次开机起降点；请更新机载竞赛程序，并在未解锁时等待有效GPS".format("、UAV".join(map(str, missing))))
+        if rejected:
+            for uid, details in rejected.items():
+                audit.record("规划 GPS 校验未通过", uav_id=uid, **details)
+            raise HTTPException(status_code=409, detail="UAV{} 本次开机起降点已记录，但当前GPS或定位状态无效；请检查通信及定位状态".format("、UAV".join(map(str, rejected))))
         return homes
 
     def onboard_gps_reference() -> Optional[Dict[str, Any]]:
@@ -1563,6 +1561,8 @@ def create_app(environment=None, audit=None) -> FastAPI:
                 orchestrator.set_active_uav_ids(selected_uav_ids)
                 if role["task_publisher"] and selected_uav_ids:
                     adapter.acquire_coordination(selected_uav_ids)
+            except HTTPException:
+                raise
             except Exception as error:
                 raise HTTPException(
                     status_code=409,

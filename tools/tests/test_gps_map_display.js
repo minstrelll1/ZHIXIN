@@ -39,7 +39,7 @@ const precise = {...item, latitude:lat0, longitude:lon0, gps_position:{
 mapped=convert(mission,precise,100);
 near(mapped.position[0],.005); near(mapped.position[1],.008);
 assert.equal(mapped.source,'mavros_global');
-assert.equal(convert(mission,{...precise,gps_position:{...precise.gps_position,age_seconds:2.1}},100).source,'prometheus_gps');
+assert.equal(convert(mission,{...precise,gps_position:{...precise.gps_position,age_seconds:2.1}},100).source,'mavros_global');
 
 const xyz = {search_area:{coordinate_mode:'xyz',coordinate_frame:'ENU'}};
 mapped=convert(xyz,item,100);
@@ -52,11 +52,12 @@ for (const latitude of [null,undefined,'',NaN,Infinity,91]) {
 assert.equal(convert(mission,{...item,longitude:181},100),null);
 assert.equal(convert(mission,{...item,gps_status:2},100),null);
 assert.equal(convert(mission,{...item,location_source:0},100),null);
-assert.equal(convert(mission,item,103),null);
-// 心跳或地面轮询仍正常，实际定位包却已停更时，两种 GPS 都不可显示。
-assert.equal(convert(mission,{...precise,gps_telemetry_age_seconds:2.1},100),null);
-assert.equal(convert(mission,{...item,gps_telemetry_age_seconds:2.1},100),null);
-assert.equal(convert(mission,{...item,gps_telemetry_age_seconds:1.9},100.2),null);
+assert.ok(convert(mission,item,103));
+// 与规划准入一致：GPS年龄不再单独隐藏已连接且有效的定位。
+assert.ok(convert(mission,{...precise,gps_telemetry_age_seconds:2.1},100));
+assert.ok(convert(mission,{...item,gps_telemetry_age_seconds:2.1},100));
+assert.ok(convert(mission,{...item,gps_telemetry_age_seconds:1.9},100.2));
+assert.equal(convert(mission,{...precise,gps_position:{...precise.gps_position,latitude:91}},100).source,'prometheus_gps');
 assert.ok(convert(mission,{...item,gps_telemetry_age_seconds:2},100));
 
 assert.equal(convert({search_area:{coordinate_mode:'gps'}},item,100),null);

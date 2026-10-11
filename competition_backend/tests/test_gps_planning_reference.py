@@ -38,20 +38,20 @@ class GpsPlanningReferenceTest(unittest.TestCase):
         self.assertEqual(reference["longitude"], 121.526884317)
         self.assertEqual(reference["source"], "mavros_global")
 
-    def test_stale_precise_fix_falls_back_to_fresh_low_precision_uav_state(self):
+    def test_delayed_precise_fix_retains_precision(self):
         item = self.telemetry()
         # GPS age at arrival plus time since telemetry arrival exceeds 2 s.
         item["gps_position"]["age_seconds"] = 1.8
         reference = _fresh_onboard_gps_reference(item, 1000.0, 2.0, 1)
         self.assertIsNotNone(reference)
-        self.assertEqual(reference["latitude"], item["latitude"])
-        self.assertEqual(reference["longitude"], item["longitude"])
-        self.assertEqual(reference["source"], "prometheus_gps_low_precision")
+        self.assertEqual(reference["latitude"], item["gps_position"]["latitude"])
+        self.assertEqual(reference["longitude"], item["gps_position"]["longitude"])
+        self.assertEqual(reference["source"], "mavros_global")
 
-    def test_stale_or_invalid_telemetry_is_not_a_planning_origin(self):
+    def test_delay_is_not_a_gate_but_invalid_position_is_rejected(self):
         item = self.telemetry()
         item["received_at"] = 997.9
-        self.assertIsNone(_fresh_onboard_gps_reference(item, 1000.0, 2.0, 1))
+        self.assertIsNotNone(_fresh_onboard_gps_reference(item, 1000.0, 2.0, 1))
 
         item = self.telemetry()
         item["gps_position"] = None

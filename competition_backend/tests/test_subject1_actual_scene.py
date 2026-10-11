@@ -189,7 +189,8 @@ class BootHomeTest(unittest.TestCase):
                       gps=dict(latitude=33.86446,longitude=113.70563,age_seconds=.1),now=100)
             self.assertIsNone(recorder.observe(**dict(args,armed=True)))
             self.assertIsNone(recorder.observe(**dict(args,gps_status=0)))
-            self.assertIsNone(recorder.observe(**dict(args,gps=dict(args['gps'],age_seconds=3))))
+            self.assertIsNone(recorder.observe(**dict(args,gps=dict(args['gps'],latitude=float('nan')))))
+            args['gps']['age_seconds'] = 60.0  # GPS年龄不再阻止未解锁时记录开机落点。
             home=recorder.observe(**args)
             self.assertEqual(recorder.observe(**dict(args,connected=False)),home)
             moved=dict(args,gps=dict(args['gps'],latitude=34))

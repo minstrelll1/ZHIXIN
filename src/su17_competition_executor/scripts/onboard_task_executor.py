@@ -500,7 +500,7 @@ class OnboardTaskExecutor:
         received_monotonic: Optional[float],
         now_monotonic: float,
     ) -> Optional[Dict[str, Any]]:
-        """生成地图专用的高精度 GPS 数据；无效或过期定位返回空值。"""
+        """生成高精度 GPS 数据；保留接收年龄供显示，无效定位返回空值。"""
         if message is None or received_monotonic is None:
             return None
         try:
@@ -510,7 +510,7 @@ class OnboardTaskExecutor:
             longitude = float(message.longitude)
         except (AttributeError, TypeError, ValueError, OverflowError):
             return None
-        if (not math.isfinite(age_seconds) or not 0.0 <= age_seconds <= 2.0
+        if (not math.isfinite(age_seconds) or age_seconds < 0.0
                 or not math.isfinite(status) or status < 0.0
                 or not math.isfinite(latitude) or not -90.0 <= latitude <= 90.0
                 or not math.isfinite(longitude) or not -180.0 <= longitude <= 180.0):

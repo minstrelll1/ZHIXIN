@@ -523,12 +523,12 @@ class PreciseGpsTelemetryTest(unittest.TestCase):
             quantized = struct.unpack("f", struct.pack("f", getattr(fix, coordinate)))[0]
             self.assertNotEqual(wire[coordinate], quantized)
 
-    def test_gps_payload_freshness_includes_two_seconds_boundary(self):
+    def test_gps_payload_keeps_delayed_fix_with_age_for_diagnostics(self):
         fix = self.fix()
-        for now in (100.0, 101.5, 102.0):
+        for now in (100.0, 101.5, 102.0, 102.000001, 160.0, 3700.0):
             with self.subTest(now=now):
                 self.assertIsNotNone(module.OnboardTaskExecutor._gps_position_payload(fix, 100.0, now))
-        for now in (99.9, 102.000001, float("nan"), float("inf")):
+        for now in (99.9, float("nan"), float("inf")):
             with self.subTest(now=now):
                 self.assertIsNone(module.OnboardTaskExecutor._gps_position_payload(fix, 100.0, now))
         self.assertIsNone(module.OnboardTaskExecutor._gps_position_payload(None, 100.0, 100.0))
@@ -638,7 +638,7 @@ class PreciseGpsTelemetryTest(unittest.TestCase):
         node._assignment_acked = False
         node._gps_fix = self.fix()
         node._gps_fix_received = 100.0
-        for now, has_gps in ((100.5, True), (102.000001, False)):
+        for now, has_gps in ((100.5, True), (102.000001, True), (160.0, True)):
             with self.subTest(now=now), patch.object(module.time, "monotonic", return_value=now):
                 node._tcp_telemetry_timer(None)
                 telemetry = node.tcp_link.update_telemetry.call_args.args[0]

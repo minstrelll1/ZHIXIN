@@ -564,15 +564,14 @@ function 规划图遥测(mission,item,serverTime){
   const vector=value=>Array.isArray(value)&&value.length>=2&&value.slice(0,2).every(v=>number(v)!==null)?[Number(value[0]),Number(value[1]),number(value[2])]:null;
   const area=mission?.search_area||{},gpsMode=area.coordinate_mode==='gps'||area.coordinate_frame==='WGS84';
   if(!gpsMode)return {position:vector(item.position),velocity:vector(item.velocity),frame:'ENU',source:'local_enu'};
-  const received=number(item.received_at),now=number(serverTime),delay=received!==null&&now!==null?Math.max(0,now-received):0;
   const gpsStatus=number(item.gps_status);
-  const positionAge=number(item.gps_telemetry_age_seconds)??0;
-  if(positionAge<0||positionAge+delay>2||![4,5].includes(Number(item.location_source))||gpsStatus===null||gpsStatus<3)return null;
+  // GPS年龄仅作诊断，与后台规划参考保持同源；连接和定位状态仍须有效。
+  if(![4,5].includes(Number(item.location_source))||gpsStatus===null||gpsStatus<3)return null;
   const projection=area.coverage?.projection||{},origin=area.gps_origin||projection;
   const lat0=number(origin.latitude),lon0=number(origin.longitude);
   if(lat0===null||lon0===null||Math.abs(lat0)>90||Math.abs(lon0)>180)return null;
-  const precise=item.gps_position,age=number(precise?.age_seconds);
-  const usePrecise=precise&&age!==null&&age>=0&&age+delay<=2&&number(precise.latitude)!==null&&number(precise.longitude)!==null;
+  const precise=item.gps_position;
+  const usePrecise=precise&&number(precise.latitude)!==null&&number(precise.longitude)!==null&&Math.abs(Number(precise.latitude))<=90&&Math.abs(Number(precise.longitude))<=180;
   const lat=number(usePrecise?precise.latitude:item.latitude),lon=number(usePrecise?precise.longitude:item.longitude);
   if(lat===null||lon===null||Math.abs(lat)>90||Math.abs(lon)>180)return null;
   const north=number(projection.north_m_per_degree)??111111,west=number(projection.west_m_per_degree)??(111111*Math.cos(lat0*Math.PI/180));
@@ -860,11 +859,9 @@ $('simReady').onclick=()=>模拟遥测('ready').then(()=>提示('六机模拟就
     const valid=value=>value!==null&&value!==undefined&&value!==''&&typeof value!=='boolean'&&Number.isFinite(Number(value))?Number(value):null;
     const coordinates=value=>{const latitude=valid(value?.latitude),longitude=valid(value?.longitude);return latitude!==null&&longitude!==null&&Math.abs(latitude)<=90&&Math.abs(longitude)<=180?{latitude,longitude}:null};
     for(const id of ids){
-      const item=snapshot?.telemetry?.[String(id)],now=valid(snapshot?.server_time),received=valid(item?.received_at),delay=now!==null&&received!==null?now-received:NaN;
-      const positionAge=valid(item?.gps_telemetry_age_seconds||0),gpsStatus=valid(item?.gps_status),requireValidity=snapshot?.live_mode!==false;
-      if(!item?.connected||!Number.isFinite(delay)||delay<0||positionAge===null||positionAge<0||positionAge+delay>2||(requireValidity&&(gpsStatus===null||gpsStatus<3||![4,5].includes(Number(item.location_source)))))continue;
-      const precise=item.gps_position,fixAge=valid(precise?.age_seconds),fix=coordinates(precise);
-      const usePrecise=fix&&fixAge!==null&&fixAge>=0&&fixAge+delay<=2;
+      const item=snapshot?.telemetry?.[String(id)],gpsStatus=valid(item?.gps_status),requireValidity=snapshot?.live_mode!==false;
+      if(!item?.connected||(requireValidity&&(gpsStatus===null||gpsStatus<3||![4,5].includes(Number(item.location_source)))))continue;
+      const fix=coordinates(item.gps_position),usePrecise=!!fix;
       const reference=usePrecise?fix:coordinates(item);
       if(reference)result[String(id)]={...reference,source:usePrecise?'mavros_global':'prometheus_gps_low_precision'};
     }

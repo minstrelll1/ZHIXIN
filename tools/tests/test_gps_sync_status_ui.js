@@ -21,15 +21,13 @@ const snapshot=item=>({server_time:1000,live_mode:true,active_uav_ids:[1,4],tele
 const status=item=>context.GPS状态文本(snapshot(item),1);
 assert.equal(status(fresh),'GPS：已获取');
 for(const invalid of [
-  {...fresh,connected:false},{...fresh,received_at:997.9},{...fresh,received_at:1000.1},
-  {...fresh,received_at:null},{...fresh,gps_telemetry_age_seconds:1.8},
-  {...fresh,gps_telemetry_age_seconds:-0.1},{...fresh,gps_telemetry_age_seconds:'invalid'},
+  {...fresh,connected:false},
   {...fresh,gps_status:undefined},{...fresh,gps_status:null},{...fresh,gps_status:2},
   {...fresh,location_source:2},{...fresh,latitude:null},{...fresh,longitude:181}
 ])assert.equal(status(invalid),'GPS：等待有效定位');
 const precise={...fresh,latitude:null,longitude:null,gps_position:{latitude:34.123,longitude:113.456,age_seconds:0.2}};
 assert.equal(status(precise),'GPS：已获取');
-assert.equal(status({...precise,gps_position:{...precise.gps_position,age_seconds:1.8}}),'GPS：等待有效定位');
+for(const age of [2.03,60,3600])assert.equal(status({...precise,received_at:1000-age,gps_telemetry_age_seconds:age,gps_position:{...precise.gps_position,age_seconds:age}}),'GPS：已获取');
 assert.equal(status({...fresh,gps_position:{latitude:91,longitude:113,age_seconds:0.1}}),'GPS：已获取');
 const simulated=snapshot({...fresh,gps_status:0,location_source:-1});simulated.live_mode=false;
 assert.equal(context.GPS状态文本(simulated,1),'GPS：已获取');
@@ -40,9 +38,9 @@ const original=cards[0].line;assert.match(original.textContent,/GPS：已获取/
 const stale=snapshot({...fresh,gps_telemetry_age_seconds:3});stale.syncText='配置同步失败';
 context.更新六机同步状态(stale);
 assert.equal(cards[0].line,original);assert.equal(cards[0].appendCount,1);
-assert.match(cards[0].line.textContent,/配置同步失败 · GPS：等待有效定位/);
+assert.match(cards[0].line.textContent,/配置同步失败 · GPS：已获取/);
 assert.match(cards[1].line.textContent,/GPS：已获取/);
 context.更新六机同步状态(snapshot(fresh));
 assert.match(cards[0].line.textContent,/配置已同步 · GPS：已获取/);
 assert.equal(cards[0].appendCount,1);
-console.log('GPS 同步状态：接收延迟与GPS年龄、定位标志、精度回退、模拟模式与已有状态行刷新检查通过。');
+console.log('GPS 同步状态：GPS年龄不阻断、定位标志、精度回退、模拟模式与已有状态行刷新检查通过。');

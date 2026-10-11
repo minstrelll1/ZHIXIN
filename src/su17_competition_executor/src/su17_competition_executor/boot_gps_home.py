@@ -25,11 +25,8 @@ class BootGpsHome:
 
     def observe(self, *, connected, armed, gps_status, location_source, gps, now):
         if self.home is None and connected and not armed and gps_status >= 3 and location_source in (4, 5):
-            try:
-                fresh = isinstance(gps, dict) and 0 <= float(gps['age_seconds']) <= 2 and self._valid(gps)
-            except (KeyError, TypeError, ValueError):
-                fresh = False
-            if fresh:
+            # GPS接收年龄只用于诊断；仍须飞控连接、未解锁且GPS状态有效。
+            if isinstance(gps, dict) and self._valid(gps):
                 self.home = dict(latitude=float(gps['latitude']), longitude=float(gps['longitude']),
                     boot_id=self.boot_id, captured_at=float(now), source='first_valid_unarmed_gps_per_boot')
                 # /tmp 文件以 boot_id 校验：断线或重启 ROS 节点不改落点，真正重启飞机才清空。

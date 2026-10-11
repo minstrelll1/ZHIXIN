@@ -47,17 +47,15 @@ nearZero(mapped.position);
 
 const staleFix = {...sample, gps_position: {...precise, age_seconds: 1.8}};
 reference = select(staleFix);
-assert.equal(reference.latitude, coarse.latitude);
-assert.equal(reference.longitude, coarse.longitude);
-assert.equal(reference.source, 'prometheus_gps_low_precision');
+assert.equal(reference.latitude, precise.latitude);
+assert.equal(reference.longitude, precise.longitude);
+assert.equal(reference.source, 'mavros_global');
 mapped = map(staleFix, reference);
-assert.equal(mapped.source, 'prometheus_gps');
+assert.equal(mapped.source, 'mavros_global');
 nearZero(mapped.position);
 
 for (const invalid of [
   {...sample, connected: false},
-  {...sample, received_at: 997.9},
-  {...sample, gps_telemetry_age_seconds: 2.0},
   {...sample, gps_status: 2},
   {...sample, location_source: 2},
   {...sample, gps_position: null, latitude: null},
@@ -67,4 +65,10 @@ for (const invalid of [
   assert.equal(map(invalid, coarse), null);
 }
 
-process.stdout.write('GPS 规划参考与地图定位同源、精度回退和无效数据检查通过。\n');
+for (const age of [2.03, 60, 3600]) {
+  const delayed={...sample,received_at:1000-age,gps_telemetry_age_seconds:age,gps_position:{...precise,age_seconds:age}};
+  const ref=select(delayed);
+  assert.equal(ref.source,'mavros_global');
+  nearZero(map(delayed,ref).position);
+}
+process.stdout.write('GPS 规划与地图同源、年龄不阻断、无效定位检查通过。\n');

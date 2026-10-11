@@ -1,4 +1,4 @@
-"""Planning GPS checks must not serialize an existing mission or reuse old fixes."""
+"""Planning GPS checks keep valid fixes without serializing an existing mission."""
 
 import tempfile
 import unittest
@@ -72,35 +72,27 @@ class GpsPlanningSnapshotTest(unittest.TestCase):
         self.assertIs(self.backend._mission, old_mission)
         self.adapter.assign_task.assert_not_called()
 
-    def test_second_preview_rejects_stale_fixes_and_logs_actual_ages(self):
-        first = self.preview()
-        self.assertEqual(first.status_code, 200, first.text)
+    def test_second_preview_accepts_delayed_gps_without_requiring_operator_retry(self):
+        self.assertEqual(self.preview().status_code, 200)
         for uid in (1, 4, 5):
-            self.update(uid, gps_telemetry_age_seconds=1.9)
+            self.update(uid, gps_telemetry_age_seconds=60.0)
         self.audit.record.reset_mock()
-
-        second = self.preview()
-
-        self.assertEqual(second.status_code, 409, second.text)
-        self.assertIn("UAV1、UAV4、UAV5", second.json()["detail"])
-        rejected = [call.kwargs for call in self.audit.record.call_args_list
-                    if call.args == ("规划 GPS 校验未通过",)]
-        self.assertEqual([item["uav_id"] for item in rejected], [1, 4, 5])
-        for item in rejected:
-            self.assertEqual(item["reason"], "stale_gps_telemetry")
-            self.assertTrue(item["connected"])
-            self.assertAlmostEqual(item["telemetry_delay_seconds"], 0.2)
-            self.assertAlmostEqual(item["gps_telemetry_age_seconds"], 1.9)
-            self.assertAlmostEqual(item["gps_total_age_seconds"], 2.1)
-            self.assertEqual(item["max_age_seconds"], 2.0)
-            self.assertEqual(item["gps_status"], 3)
-            self.assertEqual(item["location_source"], 4)
+        response = self.preview()
+        self.assertEqual(response.status_code, 200, response.text)
+        self.assertEqual(set(response.json()["search_area"]["takeoff_gps_by_uav"]), {"1", "2", "4", "5"})
+        self.assertFalse([c for c in self.audit.record.call_args_list if c.args == ("规划 GPS 校验未通过",)])
         self.adapter.assign_task.assert_not_called()
 
-    def test_rejection_diagnostics_preserve_validity_and_clock_guards(self):
+    def test_precise_gps_is_not_discarded_due_to_age(self):
+        for age in (2.03, 60, 3600):
+            self.update(1, gps_telemetry_age_seconds=age,
+                        gps_position={"latitude": 39.123456789, "longitude": 121.123456789, "age_seconds": age})
+            reference = _fresh_onboard_gps_reference(self.backend.telemetry_snapshot()["1"], 1000., 2., 1)
+            self.assertEqual(reference["source"], "mavros_global")
+            self.assertEqual(reference["latitude"], 39.123456789)
+
+    def test_rejection_diagnostics_preserve_validity_guards(self):
         cases = (
-            ({"received_at": 1000.1}, "future_telemetry_timestamp"),
-            ({"gps_telemetry_age_seconds": -0.1}, "negative_gps_age"),
             ({"gps_status": 2}, "invalid_gps_status"),
             ({"location_source": 2}, "invalid_location_source"),
             ({"latitude": None}, "no_valid_coordinates"),
@@ -114,7 +106,8 @@ class GpsPlanningSnapshotTest(unittest.TestCase):
                     item, 1000.0, 2.0, 1, rejection_details=details)
                 self.assertIsNone(reference)
                 self.assertEqual(details["reason"], expected_reason)
-                self.assertEqual(details["max_age_seconds"], 2.0)
+                self.assertIsNone(details["max_age_seconds"])
+                self.assertFalse(details["gps_age_gate_enabled"])
 
 
 if __name__ == "__main__":

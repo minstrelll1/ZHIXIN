@@ -84,6 +84,31 @@ class XuchangBootHomeTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             detour_guided_paths(boundary,[[[20,50],[80,50]]],[[80,50]])
 
+    def test_multiple_blocked_segments_build_only_one_visibility_graph(self):
+        from competition_backend.landing_guided_avoidance import _DetourGraph
+        boundary = [[0,0],[100,0],[100,100],[0,100]]
+        paths = [[[20,y],[80,100-y]] for y in range(20,81,5)]
+        build = _DetourGraph._build
+        with patch.object(_DetourGraph, '_build', autospec=True, side_effect=build) as calls:
+            routes = detour_guided_paths(boundary, paths, [[50,50]])
+        self.assertEqual(calls.call_count, 1)
+        for original, route in zip(paths, routes):
+            self.assertEqual(route[0], original[0])
+            self.assertEqual(route[-1], original[-1])
+            self.assertGreaterEqual(LineString(route).distance(Point(50,50)), 2.5)
+            self.assertGreaterEqual(LineString(route).distance(Polygon(boundary).boundary), 5)
+
+    def test_no_route_can_cross_hole_even_if_obstacles_disconnect_safe_space(self):
+        boundary = [[0,0],[100,0],[100,100],[0,100]]
+        hole = [[45,20],[55,20],[55,80],[45,80]]
+        route = detour_guided_paths(boundary, [[[20,50],[80,50]]], [], holes=[hole])[0]
+        polygon = Polygon(boundary, holes=[hole])
+        self.assertTrue(polygon.covers(LineString(route)))
+        self.assertGreaterEqual(LineString(route).distance(polygon.boundary), 5)
+        with self.assertRaises(ValueError):
+            detour_guided_paths(boundary, [[[20,50],[80,50]]], [],
+                                holes=[[[45,1],[55,1],[55,99],[45,99]]])
+
     def test_dispatch_checks_all_recipient_routes_before_sending_and_keeps_scan_points(self):
         with tempfile.TemporaryDirectory() as d:
             app=create_app({'COMPETITION_ADAPTER':'sim','COMPETITION_DATA_DIR':d,'COMPETITION_DIAGNOSTICS_DIR':d})
@@ -120,6 +145,10 @@ class XuchangBootHomeTest(unittest.TestCase):
                     gps_telemetry_age_seconds=.1,capabilities=cap if cap is not None else
                     dict(boot_id=h['boot_id'],boot_gps_home=h)))
             for uid in (1,2,4,5):update(uid)
+            # 开机记录已经有效，即使GPS经过多地面转发产生延迟也不再拒绝。
+            delayed=app.state.orchestrator.telemetry_snapshot()['2']
+            delayed['gps_telemetry_age_seconds']=60.
+            app.state.orchestrator.update_telemetry(Telemetry(**delayed))
             response=client.post('/api/v1/planning/competition-coverage',json=payload)
             self.assertEqual(response.status_code,200,response.text)
             self.assertEqual(response.json()['search_area']['takeoff_gps_by_uav']['2'],self.homes['2'])

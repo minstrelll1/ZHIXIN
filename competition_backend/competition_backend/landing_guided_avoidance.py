@@ -1,6 +1,72 @@
 """许昌固定通道按本次开机起降点避让；不会修改原科目一离线求解器。"""
+import heapq
 import math
-from .landing_avoidance import routes_from_home
+
+
+class _DetourGraph:
+    """同一架飞机的全部航段共用障碍可见图；不缓存到下一次规划。"""
+    def __init__(self, allowed):
+        from shapely.prepared import prep
+        self.allowed = prep(allowed.buffer(1e-8))
+        parts = [allowed] if allowed.geom_type == 'Polygon' else list(getattr(allowed, 'geoms', []))
+        self.vertices = [list(p) for part in parts if part.geom_type == 'Polygon'
+                         for ring in (part.exterior, *part.interiors) for p in list(ring.coords)[:-1]]
+        self.graph = None
+        self.sources = {}
+
+    def visible(self, a, b):
+        from shapely.geometry import LineString
+        return math.dist(a, b) < 1e-9 or self.allowed.covers(LineString([a, b]))
+
+    def _build(self):
+        graph = [[] for _ in self.vertices]
+        for i, a in enumerate(self.vertices):
+            for j in range(i + 1, len(self.vertices)):
+                b = self.vertices[j]
+                if self.visible(a, b):
+                    length = math.dist(a, b)
+                    graph[i].append((j, length))
+                    graph[j].append((i, length))
+        self.graph = graph
+
+    def route(self, start, target):
+        if self.visible(start, target):
+            return [list(start), list(target)]
+        if self.graph is None:
+            self._build()
+        key = tuple(start)
+        if key not in self.sources:
+            distances, previous, queue = {}, {}, []
+            for i, point in enumerate(self.vertices):
+                if self.visible(start, point):
+                    distances[i] = math.dist(start, point)
+                    previous[i] = None
+                    heapq.heappush(queue, (distances[i], i))
+            while queue:
+                distance, i = heapq.heappop(queue)
+                if distance != distances[i]:
+                    continue
+                for j, length in self.graph[i]:
+                    candidate = distance + length
+                    if candidate + 1e-10 < distances.get(j, math.inf):
+                        distances[j], previous[j] = candidate, i
+                        heapq.heappush(queue, (candidate, j))
+            self.sources[key] = distances, previous
+        distances, previous = self.sources[key]
+        visible = [(distances[i] + math.dist(point, target), i)
+                   for i, point in enumerate(self.vertices)
+                   if i in distances and self.visible(point, target)]
+        if not visible:
+            raise ValueError('许昌进返场航线无法在安全区内连通，请调整起降位置')
+        _, i = min(visible)
+        chain = [list(target)]
+        while i is not None:
+            if math.dist(chain[-1], self.vertices[i]) > 1e-9:
+                chain.append(list(self.vertices[i]))
+            i = previous[i]
+        if math.dist(chain[-1], start) > 1e-9:
+            chain.append(list(start))
+        return list(reversed(chain))
 
 
 def detour_guided_paths(boundary, paths, other_homes, *, holes=(),
@@ -13,6 +79,7 @@ def detour_guided_paths(boundary, paths, other_homes, *, holes=(),
     allowed = polygon.buffer(-boundary_clearance-.02, join_style=2).difference(
         unary_union([Point(p).buffer(radius, quad_segs=4) for p in other_homes]))
     expanded = allowed.buffer(1e-8)
+    planner = _DetourGraph(allowed)
     cache, result = {}, []
     for original in paths:
         if (len(original) < 2 or not expanded.covers(Point(original[0]))
@@ -26,9 +93,7 @@ def detour_guided_paths(boundary, paths, other_homes, *, holes=(),
                 continue
             key = (tuple(a), tuple(b))
             if key not in cache:
-                route = ([list(a), list(b)] if expanded.covers(LineString([a,b])) else
-                         routes_from_home(polygon, a, [b], other_homes,
-                                          boundary_clearance, home_clearance)[0])
+                route = planner.route(a, b)
                 cache[key] = route
                 cache[(tuple(b),tuple(a))] = list(reversed(route))
             routed.extend(cache[key][1:])

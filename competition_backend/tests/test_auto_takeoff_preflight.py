@@ -20,6 +20,17 @@ class AutoTakeoffPreflightTest(unittest.TestCase):
         self.backend.confirm_takeoff(prepared['confirmation_token'])
         self.assertEqual(len([c for c in self.fixture.adapter.commands if c['type']=='takeoff']), 6)
 
+    def test_delayed_gps_does_not_block_fresh_flight_controller_preflight(self):
+        for uid in range(1, 7):
+            self.fixture.telemetry(uid, armed=False, control_state=0,
+                gps_telemetry_age_seconds=60.,
+                gps_position={'latitude':34.1,'longitude':113.9,'age_seconds':60.},
+                capabilities={'auto_takeoff_supported':True,'auto_takeoff_ready':True})
+        prepared=self.backend.prepare_takeoff()
+        self.assertTrue(prepared['ready'],prepared)
+        self.backend.confirm_takeoff(prepared['confirmation_token'])
+        self.assertEqual(len([c for c in self.fixture.adapter.commands if c['type']=='takeoff']),6)
+
     def test_older_onboard_still_requires_manual_arming_and_mode(self):
         self.fixture.telemetry(1, armed=False, control_state=0, capabilities={})
         failures=self.backend.preflight_report()['failures']['1']
