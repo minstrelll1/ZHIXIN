@@ -1,0 +1,636 @@
+{
+  "created_at": "2026-10-11T11:51:49.203447",
+  "offline_only": true,
+  "modules": 87,
+  "tests": 677,
+  "failures": [],
+  "results": [
+    {
+      "file": "competition_backend\\tests\\test_auto_takeoff_preflight.py",
+      "exit_code": 0,
+      "tests": 7,
+      "seconds": 1.61,
+      "log": "competition_backend__tests__test_auto_takeoff_preflight.py.log"
+    },
+    {
+      "file": "competition_backend\\tests\\test_mission_serialization.py",
+      "exit_code": 0,
+      "tests": 4,
+      "seconds": 1.03,
+      "log": "competition_backend__tests__test_mission_serialization.py.log"
+    },
+    {
+      "file": "competition_backend\\tests\\test_return_report_schedule.py",
+      "exit_code": 0,
+      "tests": 10,
+      "seconds": 0.3,
+      "log": "competition_backend__tests__test_return_report_schedule.py.log"
+    },
+    {
+      "file": "competition_backend\\tests\\test_task_region.py",
+      "exit_code": 0,
+      "tests": 3,
+      "seconds": 2.61,
+      "log": "competition_backend__tests__test_task_region.py.log"
+    },
+    {
+      "file": "competition_backend\\tests\\test_tcp_adapter.py",
+      "exit_code": 0,
+      "tests": 4,
+      "seconds": 0.8,
+      "log": "competition_backend__tests__test_tcp_adapter.py.log"
+    },
+    {
+      "file": "competition_backend\\tests\\test_transit_clearance.py",
+      "exit_code": 0,
+      "tests": 5,
+      "seconds": 0.59,
+      "log": "competition_backend__tests__test_transit_clearance.py.log"
+    },
+    {
+      "file": "competition_backend\\tests\\test_xuchang_transit_lanes.py",
+      "exit_code": 0,
+      "tests": 6,
+      "seconds": 2.52,
+      "log": "competition_backend__tests__test_xuchang_transit_lanes.py.log"
+    },
+    {
+      "file": "src\\su17_competition_executor\\test\\test_task_protocol.py",
+      "exit_code": 0,
+      "tests": 4,
+      "seconds": 0.34,
+      "log": "src__su17_competition_executor__test__test_task_protocol.py.log"
+    },
+    {
+      "file": "src\\su17_competition_executor\\test\\test_tcp_link.py",
+      "exit_code": 0,
+      "tests": 1,
+      "seconds": 0.3,
+      "log": "src__su17_competition_executor__test__test_tcp_link.py.log"
+    },
+    {
+      "file": "src\\su17_image_transfer\\test\\test_protocol.py",
+      "exit_code": 0,
+      "tests": 3,
+      "seconds": 0.36,
+      "log": "src__su17_image_transfer__test__test_protocol.py.log"
+    },
+    {
+      "file": "src\\su17_image_transfer\\test\\test_result_quality_v2.py",
+      "exit_code": 0,
+      "tests": 3,
+      "seconds": 1.23,
+      "log": "src__su17_image_transfer__test__test_result_quality_v2.py.log"
+    },
+    {
+      "file": "src\\su17_image_transfer\\test\\test_stamp_policy.py",
+      "exit_code": 0,
+      "tests": 3,
+      "seconds": 0.33,
+      "log": "src__su17_image_transfer__test__test_stamp_policy.py.log"
+    },
+    {
+      "file": "src\\su17_image_transfer\\test\\test_target_first_kind.py",
+      "exit_code": 0,
+      "tests": 6,
+      "seconds": 1.23,
+      "log": "src__su17_image_transfer__test__test_target_first_kind.py.log"
+    },
+    {
+      "file": "src\\su17_image_transfer\\test\\test_target_motion.py",
+      "exit_code": 0,
+      "tests": 10,
+      "seconds": 2.55,
+      "log": "src__su17_image_transfer__test__test_target_motion.py.log"
+    },
+    {
+      "file": "tools\\tests\\test_image_topic_alias.py",
+      "exit_code": 0,
+      "tests": 3,
+      "seconds": 0.48,
+      "log": "tools__tests__test_image_topic_alias.py.log"
+    },
+    {
+      "file": "tools\\tests\\test_submission_format.py",
+      "exit_code": 0,
+      "tests": 9,
+      "seconds": 0.31,
+      "log": "tools__tests__test_submission_format.py.log"
+    },
+    {
+      "file": "competition_backend\\tests\\test_api.py",
+      "exit_code": 0,
+      "tests": 3,
+      "seconds": 2.5,
+      "log": "competition_backend__tests__test_api.py.log"
+    },
+    {
+      "file": "competition_backend\\tests\\test_clearance_plans.py",
+      "exit_code": 0,
+      "tests": 5,
+      "seconds": 11.59,
+      "log": "competition_backend__tests__test_clearance_plans.py.log"
+    },
+    {
+      "file": "competition_backend\\tests\\test_clock_probe_link.py",
+      "exit_code": 0,
+      "tests": 4,
+      "seconds": 1.0,
+      "log": "competition_backend__tests__test_clock_probe_link.py.log"
+    },
+    {
+      "file": "competition_backend\\tests\\test_competition_clock.py",
+      "exit_code": 0,
+      "tests": 6,
+      "seconds": 2.95,
+      "log": "competition_backend__tests__test_competition_clock.py.log"
+    },
+    {
+      "file": "competition_backend\\tests\\test_competition_dispatch.py",
+      "exit_code": 0,
+      "tests": 3,
+      "seconds": 6.44,
+      "log": "competition_backend__tests__test_competition_dispatch.py.log"
+    },
+    {
+      "file": "competition_backend\\tests\\test_diagnostics.py",
+      "exit_code": 0,
+      "tests": 7,
+      "seconds": 2.74,
+      "log": "competition_backend__tests__test_diagnostics.py.log"
+    },
+    {
+      "file": "competition_backend\\tests\\test_distributed_adapter.py",
+      "exit_code": 0,
+      "tests": 10,
+      "seconds": 0.56,
+      "log": "competition_backend__tests__test_distributed_adapter.py.log"
+    },
+    {
+      "file": "competition_backend\\tests\\test_ego_telemetry.py",
+      "exit_code": 0,
+      "tests": 3,
+      "seconds": 1.94,
+      "log": "competition_backend__tests__test_ego_telemetry.py.log"
+    },
+    {
+      "file": "competition_backend\\tests\\test_fixed_gps_scene.py",
+      "exit_code": 0,
+      "tests": 3,
+      "seconds": 2.62,
+      "log": "competition_backend__tests__test_fixed_gps_scene.py.log"
+    },
+    {
+      "file": "competition_backend\\tests\\test_fleet.py",
+      "exit_code": 0,
+      "tests": 16,
+      "seconds": 2.8,
+      "log": "competition_backend__tests__test_fleet.py.log"
+    },
+    {
+      "file": "competition_backend\\tests\\test_gps_display_telemetry.py",
+      "exit_code": 0,
+      "tests": 6,
+      "seconds": 0.64,
+      "log": "competition_backend__tests__test_gps_display_telemetry.py.log"
+    },
+    {
+      "file": "competition_backend\\tests\\test_gps_planning_reference.py",
+      "exit_code": 0,
+      "tests": 5,
+      "seconds": 2.3,
+      "log": "competition_backend__tests__test_gps_planning_reference.py.log"
+    },
+    {
+      "file": "competition_backend\\tests\\test_gps_planning_snapshot.py",
+      "exit_code": 0,
+      "tests": 3,
+      "seconds": 2.19,
+      "log": "competition_backend__tests__test_gps_planning_snapshot.py.log"
+    },
+    {
+      "file": "competition_backend\\tests\\test_ground_entry.py",
+      "exit_code": 0,
+      "tests": 12,
+      "seconds": 2.89,
+      "log": "competition_backend__tests__test_ground_entry.py.log"
+    },
+    {
+      "file": "competition_backend\\tests\\test_groundstation_capture.py",
+      "exit_code": 0,
+      "tests": 11,
+      "seconds": 2.48,
+      "log": "competition_backend__tests__test_groundstation_capture.py.log"
+    },
+    {
+      "file": "competition_backend\\tests\\test_live_telemetry_snapshot.py",
+      "exit_code": 0,
+      "tests": 12,
+      "seconds": 1.91,
+      "log": "competition_backend__tests__test_live_telemetry_snapshot.py.log"
+    },
+    {
+      "file": "competition_backend\\tests\\test_lq10_reconnect.py",
+      "exit_code": 0,
+      "tests": 4,
+      "seconds": 7.92,
+      "log": "competition_backend__tests__test_lq10_reconnect.py.log"
+    },
+    {
+      "file": "competition_backend\\tests\\test_onboard_identity.py",
+      "exit_code": 0,
+      "tests": 2,
+      "seconds": 0.42,
+      "log": "competition_backend__tests__test_onboard_identity.py.log"
+    },
+    {
+      "file": "competition_backend\\tests\\test_operator_roles.py",
+      "exit_code": 0,
+      "tests": 9,
+      "seconds": 3.28,
+      "log": "competition_backend__tests__test_operator_roles.py.log"
+    },
+    {
+      "file": "competition_backend\\tests\\test_peer_polling.py",
+      "exit_code": 0,
+      "tests": 3,
+      "seconds": 2.2,
+      "log": "competition_backend__tests__test_peer_polling.py.log"
+    },
+    {
+      "file": "competition_backend\\tests\\test_pengfei_telemetry.py",
+      "exit_code": 0,
+      "tests": 2,
+      "seconds": 0.61,
+      "log": "competition_backend__tests__test_pengfei_telemetry.py.log"
+    },
+    {
+      "file": "competition_backend\\tests\\test_plan_jobs.py",
+      "exit_code": 0,
+      "tests": 8,
+      "seconds": 2.27,
+      "log": "competition_backend__tests__test_plan_jobs.py.log"
+    },
+    {
+      "file": "competition_backend\\tests\\test_pointcloud.py",
+      "exit_code": 0,
+      "tests": 5,
+      "seconds": 0.62,
+      "log": "competition_backend__tests__test_pointcloud.py.log"
+    },
+    {
+      "file": "competition_backend\\tests\\test_polygon_coverage.py",
+      "exit_code": 0,
+      "tests": 14,
+      "seconds": 1.11,
+      "log": "competition_backend__tests__test_polygon_coverage.py.log"
+    },
+    {
+      "file": "competition_backend\\tests\\test_program_boot.py",
+      "exit_code": 0,
+      "tests": 18,
+      "seconds": 4.05,
+      "log": "competition_backend__tests__test_program_boot.py.log"
+    },
+    {
+      "file": "competition_backend\\tests\\test_program_controls.py",
+      "exit_code": 0,
+      "tests": 8,
+      "seconds": 5.88,
+      "log": "competition_backend__tests__test_program_controls.py.log"
+    },
+    {
+      "file": "competition_backend\\tests\\test_program_logs.py",
+      "exit_code": 0,
+      "tests": 14,
+      "seconds": 2.48,
+      "log": "competition_backend__tests__test_program_logs.py.log"
+    },
+    {
+      "file": "competition_backend\\tests\\test_program_manager.py",
+      "exit_code": 0,
+      "tests": 17,
+      "seconds": 5.06,
+      "log": "competition_backend__tests__test_program_manager.py.log"
+    },
+    {
+      "file": "competition_backend\\tests\\test_program_stop.py",
+      "exit_code": 0,
+      "tests": 8,
+      "seconds": 1.41,
+      "log": "competition_backend__tests__test_program_stop.py.log"
+    },
+    {
+      "file": "competition_backend\\tests\\test_recognition_categories.py",
+      "exit_code": 0,
+      "tests": 3,
+      "seconds": 2.08,
+      "log": "competition_backend__tests__test_recognition_categories.py.log"
+    },
+    {
+      "file": "competition_backend\\tests\\test_restart_executor.py",
+      "exit_code": 0,
+      "tests": 2,
+      "seconds": 1.61,
+      "log": "competition_backend__tests__test_restart_executor.py.log"
+    },
+    {
+      "file": "competition_backend\\tests\\test_return_receipts.py",
+      "exit_code": 0,
+      "tests": 10,
+      "seconds": 0.56,
+      "log": "competition_backend__tests__test_return_receipts.py.log"
+    },
+    {
+      "file": "competition_backend\\tests\\test_scaled_scene_plans.py",
+      "exit_code": 0,
+      "tests": 2,
+      "seconds": 1.64,
+      "log": "competition_backend__tests__test_scaled_scene_plans.py.log"
+    },
+    {
+      "file": "competition_backend\\tests\\test_source_digest_portability.py",
+      "exit_code": 0,
+      "tests": 1,
+      "seconds": 0.5,
+      "log": "competition_backend__tests__test_source_digest_portability.py.log"
+    },
+    {
+      "file": "competition_backend\\tests\\test_subject1_actual_scene.py",
+      "exit_code": 0,
+      "tests": 8,
+      "seconds": 21.67,
+      "log": "competition_backend__tests__test_subject1_actual_scene.py.log"
+    },
+    {
+      "file": "competition_backend\\tests\\test_subject1_dedup_rules.py",
+      "exit_code": 0,
+      "tests": 16,
+      "seconds": 3.05,
+      "log": "competition_backend__tests__test_subject1_dedup_rules.py.log"
+    },
+    {
+      "file": "competition_backend\\tests\\test_terrain_assets.py",
+      "exit_code": 0,
+      "tests": 1,
+      "seconds": 1.83,
+      "log": "competition_backend__tests__test_terrain_assets.py.log"
+    },
+    {
+      "file": "competition_backend\\tests\\test_time_reference.py",
+      "exit_code": 0,
+      "tests": 17,
+      "seconds": 5.52,
+      "log": "competition_backend__tests__test_time_reference.py.log"
+    },
+    {
+      "file": "competition_backend\\tests\\test_traffic_monitor.py",
+      "exit_code": 0,
+      "tests": 9,
+      "seconds": 0.5,
+      "log": "competition_backend__tests__test_traffic_monitor.py.log"
+    },
+    {
+      "file": "competition_backend\\tests\\test_transit_routes.py",
+      "exit_code": 0,
+      "tests": 10,
+      "seconds": 51.03,
+      "log": "competition_backend__tests__test_transit_routes.py.log"
+    },
+    {
+      "file": "competition_backend\\tests\\test_xuchang_boot_homes.py",
+      "exit_code": 0,
+      "tests": 5,
+      "seconds": 26.16,
+      "log": "competition_backend__tests__test_xuchang_boot_homes.py.log"
+    },
+    {
+      "file": "competition_backend\\tests\\test_xuchang_small_scene.py",
+      "exit_code": 0,
+      "tests": 10,
+      "seconds": 140.34,
+      "log": "competition_backend__tests__test_xuchang_small_scene.py.log"
+    },
+    {
+      "file": "competition_backend\\tests\\test_xuchang_transit_lanes_integration.py",
+      "exit_code": 0,
+      "tests": 5,
+      "seconds": 3.67,
+      "log": "competition_backend__tests__test_xuchang_transit_lanes_integration.py.log"
+    },
+    {
+      "file": "src\\su17_competition_executor\\test\\test_automatic_takeoff.py",
+      "exit_code": 0,
+      "tests": 14,
+      "seconds": 0.53,
+      "log": "src__su17_competition_executor__test__test_automatic_takeoff.py.log"
+    },
+    {
+      "file": "src\\su17_competition_executor\\test\\test_ego_state_bridge.py",
+      "exit_code": 0,
+      "tests": 1,
+      "seconds": 0.42,
+      "log": "src__su17_competition_executor__test__test_ego_state_bridge.py.log"
+    },
+    {
+      "file": "src\\su17_competition_executor\\test\\test_executor_autonomy.py",
+      "exit_code": 0,
+      "tests": 35,
+      "seconds": 0.95,
+      "log": "src__su17_competition_executor__test__test_executor_autonomy.py.log"
+    },
+    {
+      "file": "src\\su17_competition_executor\\test\\test_onboard_return_receipts.py",
+      "exit_code": 0,
+      "tests": 7,
+      "seconds": 0.64,
+      "log": "src__su17_competition_executor__test__test_onboard_return_receipts.py.log"
+    },
+    {
+      "file": "src\\su17_competition_executor\\test\\test_pengfei_bridge.py",
+      "exit_code": 0,
+      "tests": 2,
+      "seconds": 0.48,
+      "log": "src__su17_competition_executor__test__test_pengfei_bridge.py.log"
+    },
+    {
+      "file": "src\\su17_competition_executor\\test\\test_recognition_publisher.py",
+      "exit_code": 0,
+      "tests": 36,
+      "seconds": 0.92,
+      "log": "src__su17_competition_executor__test__test_recognition_publisher.py.log"
+    },
+    {
+      "file": "src\\su17_competition_executor\\test\\test_successful_return.py",
+      "exit_code": 0,
+      "tests": 13,
+      "seconds": 0.84,
+      "log": "src__su17_competition_executor__test__test_successful_return.py.log"
+    },
+    {
+      "file": "src\\su17_competition_executor\\test\\test_successful_return_pipeline.py",
+      "exit_code": 0,
+      "tests": 1,
+      "seconds": 0.83,
+      "log": "src__su17_competition_executor__test__test_successful_return_pipeline.py.log"
+    },
+    {
+      "file": "src\\su17_image_transfer\\test\\test_final_reconciliation.py",
+      "exit_code": 0,
+      "tests": 6,
+      "seconds": 0.76,
+      "log": "src__su17_image_transfer__test__test_final_reconciliation.py.log"
+    },
+    {
+      "file": "src\\su17_image_transfer\\test\\test_reconnection.py",
+      "exit_code": 0,
+      "tests": 2,
+      "seconds": 0.81,
+      "log": "src__su17_image_transfer__test__test_reconnection.py.log"
+    },
+    {
+      "file": "tools\\tests\\test_ground_update_manifest.py",
+      "exit_code": 0,
+      "tests": 2,
+      "seconds": 4.14,
+      "log": "tools__tests__test_ground_update_manifest.py.log"
+    },
+    {
+      "file": "tools\\tests\\test_onboard_messages.py",
+      "exit_code": 0,
+      "tests": 6,
+      "seconds": 0.52,
+      "log": "tools__tests__test_onboard_messages.py.log"
+    },
+    {
+      "file": "tools\\tests\\test_recording_transport.py",
+      "exit_code": 0,
+      "tests": 6,
+      "seconds": 0.69,
+      "log": "tools__tests__test_recording_transport.py.log"
+    },
+    {
+      "file": "competition_backend\\tests\\test_actual_dispatch_e2e.py",
+      "exit_code": 0,
+      "tests": 1,
+      "seconds": 10.58,
+      "log": "competition_backend__tests__test_actual_dispatch_e2e.py.log"
+    },
+    {
+      "file": "competition_backend\\tests\\test_coverage_api.py",
+      "exit_code": 0,
+      "tests": 8,
+      "seconds": 19.61,
+      "log": "competition_backend__tests__test_coverage_api.py.log"
+    },
+    {
+      "file": "competition_backend\\tests\\test_image_aggregation.py",
+      "exit_code": 0,
+      "tests": 9,
+      "seconds": 7.36,
+      "log": "competition_backend__tests__test_image_aggregation.py.log"
+    },
+    {
+      "file": "competition_backend\\tests\\test_orchestrator.py",
+      "exit_code": 0,
+      "tests": 37,
+      "seconds": 29.24,
+      "log": "competition_backend__tests__test_orchestrator.py.log"
+    },
+    {
+      "file": "competition_backend\\tests\\test_stadium_departure.py",
+      "exit_code": 0,
+      "tests": 6,
+      "seconds": 3.86,
+      "log": "competition_backend__tests__test_stadium_departure.py.log"
+    },
+    {
+      "file": "competition_backend\\tests\\test_subject1_reporting.py",
+      "exit_code": 0,
+      "tests": 16,
+      "seconds": 2.81,
+      "log": "competition_backend__tests__test_subject1_reporting.py.log"
+    },
+    {
+      "file": "src\\su17_image_transfer\\test\\test_completed_target_v2.py",
+      "exit_code": 0,
+      "tests": 4,
+      "seconds": 0.78,
+      "log": "src__su17_image_transfer__test__test_completed_target_v2.py.log"
+    },
+    {
+      "file": "src\\su17_image_transfer\\test\\test_ground_receiver.py",
+      "exit_code": 0,
+      "tests": 3,
+      "seconds": 1.3,
+      "log": "src__su17_image_transfer__test__test_ground_receiver.py.log"
+    },
+    {
+      "file": "src\\su17_image_transfer\\test\\test_localization_clock.py",
+      "exit_code": 0,
+      "tests": 10,
+      "seconds": 0.95,
+      "log": "src__su17_image_transfer__test__test_localization_clock.py.log"
+    },
+    {
+      "file": "src\\su17_image_transfer\\test\\test_submission.py",
+      "exit_code": 0,
+      "tests": 17,
+      "seconds": 5.7,
+      "log": "src__su17_image_transfer__test__test_submission.py.log"
+    },
+    {
+      "file": "src\\su17_image_transfer\\test\\test_target_time.py",
+      "exit_code": 0,
+      "tests": 7,
+      "seconds": 1.5,
+      "log": "src__su17_image_transfer__test__test_target_time.py.log"
+    },
+    {
+      "file": "src\\su17_image_transfer\\test\\test_timestamped_detection.py",
+      "exit_code": 0,
+      "tests": 17,
+      "seconds": 1.48,
+      "log": "src__su17_image_transfer__test__test_timestamped_detection.py.log"
+    },
+    {
+      "file": "competition_backend\\tests\\test_dalian_live_dispatch.py",
+      "exit_code": 0,
+      "tests": 4,
+      "seconds": 12.78,
+      "log": "competition_backend__tests__test_dalian_live_dispatch.py.log"
+    },
+    {
+      "file": "competition_backend\\tests\\test_offline_coverage_projection.py",
+      "exit_code": 0,
+      "tests": 3,
+      "seconds": 5.92,
+      "log": "competition_backend__tests__test_offline_coverage_projection.py.log"
+    },
+    {
+      "file": "competition_backend\\tests\\test_submission_resilience.py",
+      "exit_code": 0,
+      "tests": 3,
+      "seconds": 10.49,
+      "log": "competition_backend__tests__test_submission_resilience.py.log"
+    }
+  ],
+  "javascript_suites": 12,
+  "powershell_syntax": {
+    "errors": [],
+    "version": "5.1.26100.9444",
+    "count": 35
+  },
+  "syntax": {
+    "python_syntax_files": 129,
+    "ros_launch_xml_files": 3,
+    "errors": []
+  },
+  "plan_sha256": "ab9027ced252f51e5f78e3b4a84b0754636941c67837cd781fc7b040be18c70b",
+  "source_digest": "c91642c02bf162ed90ae9c3bba88ec5d64ec936dbd6936f89ed2f2e868238526",
+  "known_limits": [
+    "离线测试；飞行动作、ROS 发布器和地面间 HTTP 请求使用替身；TCP/图片协议测试仅使用回环网络。",
+    "起降点为间隔约10米的模拟开机坐标；实飞时按各机真实开机坐标重新连接进返场路线。",
+    "未连接无人机、程序B、飞控或赛事服务器；未验证实飞、实际射频网络、硬件视频和赛事方收件。"
+  ]
+}

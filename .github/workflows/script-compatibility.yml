@@ -19,6 +19,8 @@ jobs:
           & .\tools\tests\test_bootstrap_tokens.ps1
           & .\tools\tests\test_bootstrap_python.ps1
           & .\tools\tests\test_incremental_update.ps1
+          & .\tools\tests\test_bootstrap_copy.ps1
+          & .\tools\tests\test_bootstrap_usb.ps1
   onboard-bash:
     name: Ubuntu 机载启动脚本
     runs-on: ubuntu-latest

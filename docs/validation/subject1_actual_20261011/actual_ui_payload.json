@@ -1,0 +1,17 @@
+{
+  "subject": "subject1",
+  "controller_mode": "external",
+  "flight_profile": "subject1_actual",
+  "flight_altitude_plan": "around54m",
+  "departure_point": "stadium_center",
+  "recognition_selection": {
+    "category_count": 0,
+    "category_ids": []
+  },
+  "planning_mode": "competition",
+  "coordinate_mode": "gps",
+  "reconnaissance_radius_m": 61,
+  "speed_mps": 5,
+  "hover_scan_seconds": 40,
+  "request_id": "1791690817724-2decbfz6x7i"
+}

@@ -73,7 +73,7 @@ function Test-ProtectedPath([string]$Path) {
 }
 
 function Test-PreservedFile([string]$Path, [string]$Local) {
-    return (Test-ProtectedPath $Path) -or ($Path -in @('config/fleet.json', 'config/onboard_programs.json') -and (Test-Path -LiteralPath $Local)) -or
+    return (Test-ProtectedPath $Path) -or
         ($Path -match '^third_party/.*\.(exe|dll|zip|msi)$' -and (Test-Path -LiteralPath $Local))
 }
 
@@ -167,7 +167,7 @@ try {
     if (Test-Path -LiteralPath $statePath) {
         try { $previous = [IO.File]::ReadAllText($statePath, $utf8) | ConvertFrom-Json } catch { Write-UpdateLog '旧更新记录无法读取，将按本地文件重新核对。' }
     }
-    Write-UpdateLog '正在查询版本和文件清单；保留现有机队配置、令牌、数据及第三方软件。'
+    Write-UpdateLog '正在查询版本和文件清单；同步 fleet.json 和 onboard_programs.json，保留本机令牌、数据及第三方软件。'
     $snapshot = Get-UpdateSnapshot $Repository $Branch
     $version = $snapshot.Version
     $files = $snapshot.Files
@@ -204,6 +204,10 @@ try {
         $escapedPath = (($file.Path.Split('/') | ForEach-Object { [Uri]::EscapeDataString($_) }) -join '/')
         Request-UpdateFile "https://raw.githubusercontent.com/$Repository/$version/$escapedPath" $file.Stage
         if ((Get-Item -LiteralPath $file.Stage).Length -ne $file.Size -or (Get-BlobHash $file.Stage) -ne $file.Sha) { throw "文件校验失败：$($file.Path)，尚未替换本机代码。" }
+        if ($file.Path -in @('config/fleet.json', 'config/onboard_programs.json')) {
+            try { $null = [IO.File]::ReadAllText($file.Stage, $utf8) | ConvertFrom-Json -ErrorAction Stop }
+            catch { throw "配置 JSON 语法校验失败：$($file.Path)，尚未替换本机代码。" }
+        }
         if ($file.Path.EndsWith('.ps1')) {
             $tokens = $null; $parseErrors = $null
             [void][Management.Automation.Language.Parser]::ParseFile($file.Stage, [ref]$tokens, [ref]$parseErrors)
@@ -218,6 +222,9 @@ try {
         if ($existed) {
             New-Item -ItemType Directory -Path (Split-Path $backup -Parent) -Force | Out-Null
             Copy-Item -LiteralPath $file.Local -Destination $backup -Force
+            if ($file.Path -in @('config/fleet.json', 'config/onboard_programs.json')) {
+                Write-UpdateLog "原配置备份：$backup"
+            }
         }
         $applied.Add([pscustomobject]@{ Local=$file.Local; Backup=$backup; Existed=$existed; Path=$file.Path })
         if ($file.Stage) {

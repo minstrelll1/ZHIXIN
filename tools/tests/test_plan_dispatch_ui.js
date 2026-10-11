@@ -14,10 +14,12 @@ const sceneContext=vm.createContext({
 });
 const sceneStart=html.indexOf('function 应用飞行环境默认值()');
 vm.runInContext(html.slice(sceneStart,html.indexOf('function 切换坐标系()',sceneStart)),sceneContext);
-for(const [profile,radius] of [['subject1_actual','50'],['xuchang_small','45'],['dalian_nanshan','75'],['competition','75'],['outdoor100','75'],['outdoor200','75'],['lab','1']]){
+for(const [profile,radius] of [['subject1_actual','61'],['xuchang_small','45'],['dalian_nanshan','75'],['competition','75'],['outdoor100','75'],['outdoor200','75'],['lab','1']]){
   sceneContext.$('flightProfile').value=profile;
   sceneContext.应用飞行环境默认值();
   assert.equal(sceneNodes.get('scoutRadius').value,radius);
+  assert.equal(sceneNodes.get('hoverScanSeconds').value,profile==='subject1_actual'?'40':'10');
+  assert.equal(sceneNodes.get('actualRadiiNote').hidden,profile!=='subject1_actual');
   if(profile==='subject1_actual'){
     assert.equal(sceneNodes.get('coordinateMode').value,'gps');
     assert.equal(sceneNodes.get('coordinateMode').disabled,true);
@@ -55,7 +57,7 @@ function fixture(fetch,recognitionSelection={category_count:3,category_ids:[0,7,
     return result;
   };
   const context={fetch:jobFetch,AbortController,setTimeout,clearTimeout,console,当前状态:{mission:null},当前角色:{task_publisher:true},文本:{错误:{}},
-    $:id=>{if(!nodes.has(id))nodes.set(id,{value:defaults[id]??'',style:{},disabled:false});return nodes.get(id)},
+    $:id=>{if(!nodes.has(id))nodes.set(id,{value:defaults[id]??'',style:{},dataset:{},disabled:false});return nodes.get(id)},
     获取规划识别类别:()=>recognitionSelection,提示:message=>notes.push(message),读取机载GPS参考组:()=>({}),数值:Number,渲染:()=>{}};
   vm.createContext(context);
   vm.runInContext(html.slice(requestStart,requestEnd)+'\n'+html.slice(flowStart,flowEnd),context);
@@ -106,6 +108,20 @@ const watchdog=setTimeout(()=>{console.error('规划界面测试未能在限定�
   assert.deepEqual(zeroBody.recognition_selection.category_ids,[]);
   assert.equal(zeroBody.require_recognition_selection,undefined);
   assert.equal(zero.nodes.get('planButton').disabled,false);
+  // Real form selection for the competition scene must submit the same contract as the E2E test.
+  let actualPayload;
+  const actual=fixture(async(_url,options)=>{actualPayload=JSON.parse(options.body);return response(mission())},{category_count:0,category_ids:[]});
+  actual.context.更新飞行高度选项=()=>{};actual.context.更新GPS参考=()=>{};
+  vm.runInContext(html.slice(sceneStart,html.indexOf('function 切换坐标系()',sceneStart)),actual.context);
+  actual.context.$('flightProfile').value='subject1_actual';
+  actual.context.应用飞行环境默认值();
+  actual.context.$('flightAltitudePlan').value='around54m';
+  await actual.context.生成比赛覆盖();
+  for(const [key,value] of Object.entries({subject:'subject1',planning_mode:'competition',flight_profile:'subject1_actual',
+      coordinate_mode:'gps',departure_point:'stadium_center',flight_altitude_plan:'around54m',controller_mode:'external',
+      reconnaissance_radius_m:61,speed_mps:5,hover_scan_seconds:40}))assert.equal(actualPayload[key],value,key);
+  assert.deepEqual(actualPayload.recognition_selection.category_ids,[]);
+  if(process.env.COMPETITION_UI_EVIDENCE)fs.writeFileSync(process.env.COMPETITION_UI_EVIDENCE,JSON.stringify(actualPayload,null,2));
   // Subject 3 shares the same recoverable request lifecycle without adding competition parameters.
   let body;
   const subject3=fixture(async(_url,options)=>{body=JSON.parse(options.body);return response(mission([1]))});

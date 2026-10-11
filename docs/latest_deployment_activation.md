@@ -38,7 +38,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\competition_developme
 
 ### 2. 地面端仅更新代码
 
-先关闭地面后端，在项目父目录执行。仅下载变化的文件，不重新安装 Python、MediaMTX；保留本机令牌、机队配置和数据：
+先关闭地面后端，在项目父目录执行。仅下载变化的文件，不重新安装 Python、MediaMTX；保留本机令牌和数据，`config/fleet.json` 与 `config/onboard_programs.json` 随代码同步覆盖为已发布版本：
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass `
@@ -55,7 +55,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& ([scriptblock]::Cr
 
 每次上传代码后，等待 GitHub Actions 中“发布地面增量更新清单”成功，再让其他电脑更新。更新器优先读取独立发布清单，按固定提交与文件哈希只下载变化文件，正常更新不调用 GitHub API，也不需要 GitHub 令牌。清单发布有延迟时读取的是上一已发布版本，以终端显示的版本号为准。
 
-更新失败详情自动保存在 `competition_development\ground_logs\update_*.log`。下载并校验全部成功后才替换文件。完成后重新启动地面后端并刷新网页。
+更新失败详情自动保存在 `competition_development\ground_logs\update_*.log`。下载并校验全部成功后才替换文件，替换失败自动回滚；原配置备份在 `.runtime/ground_update_runs/<本次更新编号>/backup/config/`，具体路径见更新日志。完成后重新启动地面后端并刷新网页。
 
 #### 使用 U 盘更新代码
 
@@ -73,14 +73,12 @@ foreach ($projectPath in @($usbSource, $localProject)) {
 
 New-Item -ItemType Directory -Force -Path "$localProject\ground_logs" | Out-Null
 
-New-Item -ItemType Directory -Force -Path "$localProject\config" | Out-Null
-if (-not (Test-Path "$localProject\config\onboard_programs.json")) { Copy-Item "$usbSource\config\onboard_programs.json" "$localProject\config\onboard_programs.json" }
-robocopy "$usbSource" "$localProject" /E /XJ /R:1 /W:1 /XD .git .venv __pycache__ data .runtime ground_runtime ground_logs flight_records received_images pointcloud_records position_tests onboard_source_backup .codex_backup* /XF fleet.json onboard_programs.json local_tokens.ps1 local_tokens.env mediamtx.exe auto.key auto.crt *.pyc *.bag *.log /TEE /LOG:"$localProject\ground_logs\usb_update.log"
+robocopy "$usbSource" "$localProject" /E /XJ /R:1 /W:1 /XD .git .venv __pycache__ data .runtime ground_runtime ground_logs flight_records received_images pointcloud_records position_tests onboard_source_backup .codex_backup* /XF local_tokens.ps1 local_tokens.env mediamtx.exe auto.key auto.crt *.pyc *.bag *.log /TEE /LOG:"$localProject\ground_logs\usb_update.log"
 
 if ($LASTEXITCODE -ge 8) { throw "USB 更新失败，请查看 ground_logs\usb_update.log" }
 ```
 
-跳过未变化的文件，保留本机 Python 环境、MediaMTX、令牌、机队配置和采集数据。普通代码更新无需重复安装依赖；依赖清单发生变化时再运行安装命令。完成后重新启动地面后端并刷新网页。
+跳过未变化的文件，保留本机 Python 环境、MediaMTX、令牌和采集数据；两个 `config` 文件同步为 U 盘版本。普通代码更新无需重复安装依赖；依赖清单发生变化时再运行安装命令。完成后重新启动地面后端并刷新网页。
 
 ### 3. 机载端部署
 
@@ -216,7 +214,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\setup_onboard_ss
 
 三个机载程序的启动指令在本机 `config/onboard_programs.json` 的 `commands` 中配置：`onboard` 为竞赛机载端，`detection` 为目标检测，`flight` 为程序 B。`{uav_id}` 和 `{model}` 自动替换为所选编号和机型；指令在机载 `~/competition_development` 目录执行，所引用工作空间须已安装。
 
-每次开机自动启动或操作员主动启动时重新读取配置。修改后，在对应程序打印窗口点击“停止程序”，核验退出后点击“启动程序”；只启动该机载程序，其他程序不受影响。增量更新保留本机启动配置。全部场景的规划、分派和起飞均不匹配校验程序 B 的 `flight_mode`；外部模式的规划航速只用于估时，不下发为本工程飞行限速。一键起飞仍检查程序 B 是否正常运行。
+每次开机自动启动或操作员主动启动时重新读取配置。修改后，在对应程序打印窗口点击“停止程序”，核验退出后点击“启动程序”；只启动该机载程序，其他程序不受影响。代码更新会同步覆盖两个 `config` 文件；本机自行调整的启动指令也会被已发布版本覆盖。全部场景的规划、分派和起飞均不匹配校验程序 B 的 `flight_mode`；外部模式的规划航速只用于估时，不下发为本工程飞行限速。一键起飞仍检查程序 B 是否正常运行。
 
 启动管理脚本由地面端通过 SSH 自动传送；本次开机与断线区分功能只需更新地面端并重开，不需要为此重新编译机载代码。此次新增程序 B 的 `/uavN/target_scheduler/completed_targets` 话题兼容，需要按上面的机载更新命令同步竞赛机载代码；不修改目标检测、程序 B 或厂商工作空间。U 盘复制时同时复制根目录的 `智信竞赛.exe`。原有命令行启动方式仍可使用。
 

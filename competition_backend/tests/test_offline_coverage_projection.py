@@ -78,18 +78,19 @@ class OfflineCoverageProjectionTest(unittest.TestCase):
                                 self.assertLessEqual(max(area["width_m"], area["height_m"]), extent + 1e-6)
                                 self.assertEqual(area["departure_point"], departure)
                                 self.assertEqual(area["departure_point_m"], [0.0, 0.0])
-                                self.assertEqual(area["landing_mode"], "onboard_home")
+                                # No aircraft reference exists: preview uses the selected departure only.
+                                self.assertEqual(area["landing_mode"], "selected_departure")
                                 self.assertEqual(area["coordinate_mode"], coordinate)
                                 for uav_id, wrapper in mission["planned_uavs"].items():
                                     task = wrapper["task"]
                                     if task["scan_count"]:
-                                        self.assertEqual(task["flight_path_m"][0], [0.0, 0.0])
-                                        self.assertEqual(task["flight_path_m"][-1], [0.0, 0.0])
+                                        self.assertEqual(task["flight_path_m"][0], task["waypoints_m"][0])
+                                        self.assertEqual(task["flight_path_m"][-1], task["waypoints_m"][-1])
                                     else:
                                         self.assertEqual(task["flight_path_m"], [])
                                         self.assertEqual(task["mission_time_s"], 0.0)
                                     self.assertEqual(task["waypoints_m"], preview["planned_uavs"][uav_id]["task"]["waypoints_m"])
-                                    self.assertIsNone(wrapper["landing_point_m"])
+                                    self.assertEqual(wrapper["landing_point_m"], area["departure_point_m"])
                                     if coordinate == "gps":
                                         self.assertEqual(task["coordinate_frame"], "LOCAL_NORTH_WEST")
                                         self.assertEqual(len(task["waypoints_wgs84"]), task["scan_count"])

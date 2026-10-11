@@ -11,7 +11,7 @@ from fastapi import HTTPException
 from shapely.geometry import Polygon, Point, LineString, shape
 from shapely.ops import unary_union
 from competition_backend.api import create_app
-from competition_backend.subject1_actual_scene import load_plan, PROFILE, OTHER_HOME_CLEARANCE_M
+from competition_backend.subject1_actual_scene import load_plan, PROFILE, OTHER_HOME_CLEARANCE_M, RADII_BY_UAV
 from competition_backend.transit_routes import attach_routes, rebase_gps_routes_for_takeoff
 from competition_backend.landing_avoidance import routes_from_home
 from su17_competition_executor.transit_protocol import route_messages
@@ -31,7 +31,7 @@ class ActualSceneTest(unittest.TestCase):
     def setUpClass(cls):
         cls.plan = attach_routes(load_plan())
 
-    def test_fixed_boundary_full_coverage_and_five_metre_clearance(self):
+    def test_fixed_boundary_budgeted_coverage_and_five_metre_clearance(self):
         p = self.plan; a = p['search_area']; boundary = Polygon(a['points_m'])
         self.assertEqual(a['coordinate_mode'], 'gps')
         self.assertEqual(a['departure_point'], 'stadium_center')
@@ -45,21 +45,31 @@ class ActualSceneTest(unittest.TestCase):
             task = wrapper['task']; region = Polygon(task['polygon_m']); regions.append(region)
             route = LineString(task['flight_path_m'])
             self.assertTrue(boundary.covers(route)); self.assertGreaterEqual(route.distance(boundary.boundary), 5.)
-            self.assertEqual(task['reconnaissance_radius_m'],45. if uid=='6' else 50.)
+            self.assertEqual(task['reconnaissance_radius_m'],RADII_BY_UAV[int(uid)])
             scans = task['waypoints_m']
-            self.assertGreater(len(scans), 5)
+            self.assertGreater(len(scans), 0)
+            self.assertLessEqual(len(scans), 16)
+            self.assertEqual(task['scan_count'],len(scans))
+            self.assertEqual(task['hover_scan_seconds'],40.)
+            self.assertTrue(all(action['duration_s']==40. for action in task['waypoint_actions']))
             for point in scans:
                 self.assertFalse(excluded.buffer(-1e-7).contains(Point(point)), (uid, point))
-            coverage = unary_union([Point(point).buffer(task['reconnaissance_radius_m']-.02, quad_segs=32) for point in scans])
+            coverage = unary_union([Point(point).buffer(task['reconnaissance_radius_m']-.02, quad_segs=64) for point in scans])
             disks.append(coverage)
-            self.assertLess(required.intersection(region).difference(coverage).area, 1e-5)
-            self.assertAlmostEqual(task['mission_time_s'], route.length/5 + len(scans)*10, places=5)
+            self.assertAlmostEqual(required.intersection(region).difference(coverage).area,task['uncovered_area_m2'],places=4)
+            self.assertTrue(all(boundary.buffer(-5).buffer(1e-7).covers(LineString([a,b])) for a,b in zip(scans,scans[1:])))
+            self.assertAlmostEqual(task['mission_time_s'], route.length/5 + len(scans)*40, places=5)
         union = unary_union(regions)
         self.assertLess(boundary.symmetric_difference(union).area, 1e-5)
         self.assertLess(sum(r.area for r in regions)-union.area, 1e-5)
-        self.assertLess(required.difference(unary_union(disks)).area, 1e-5)
-        # 边缘5米是禁止航迹贴近，不是删除待侦察面积。
-        self.assertLess(required.difference(boundary.buffer(-5)).difference(unary_union(disks)).area, 1e-5)
+        missing=required.difference(unary_union(disks)).area
+        self.assertGreater(missing,0.)
+        self.assertAlmostEqual(missing,a['coverage']['uncovered_area_m2'],places=4)
+        self.assertAlmostEqual(a['coverage']['coverage_ratio'],1-missing/required.area,places=7)
+        self.assertGreater(a['coverage']['coverage_ratio'],.85)
+        self.assertFalse(a['coverage']['full_coverage_required'])
+        self.assertLessEqual(a['coverage']['total_scan_count'],96)
+        self.assertAlmostEqual(a['coverage']['required_area_m2'],required.area,places=4)
 
     def test_all_recipients_have_all_waypoint_returns_to_own_home_and_avoid_other_homes(self):
         p = copy.deepcopy(self.plan); a = p['search_area']; homes = homes_for(p); a['takeoff_gps_by_uav'] = homes
@@ -116,8 +126,32 @@ class ActualSceneTest(unittest.TestCase):
                         self.assertEqual(p['search_area']['points'],self.plan['search_area']['points'])
                         self.assertEqual(p['search_area']['gps_origin'],self.plan['search_area']['gps_origin'])
                         self.assertEqual(p['flight_altitude_plan'],height)
+                        self.assertEqual(p['planned_uavs'],self.plan['planned_uavs'])
+                        self.assertEqual(p['search_area']['coverage']['hover_scan_seconds'],40.)
+                for stale in (dict(hover_scan_seconds=10),dict(reconnaissance_radius_m=50)):
+                    with self.assertRaises(HTTPException) as rejected:endpoint(dict(payload,**stale))
+                    self.assertEqual(rejected.exception.status_code,409)
                 for changes in (dict(coordinate_mode='xyz'),dict(departure_point='southeast')):
                     with self.assertRaises(HTTPException):endpoint(dict(payload,**changes))
+            finally:app.state.audit.close()
+
+    def test_api_dispatch_defaults_use_per_aircraft_radii_and_40_seconds(self):
+        with tempfile.TemporaryDirectory() as d:
+            app=create_app({'COMPETITION_ADAPTER':'sim','COMPETITION_DATA_DIR':d,'COMPETITION_DIAGNOSTICS_DIR':d})
+            try:
+                client=TestClient(app)
+                payload=dict(subject='subject1',planning_mode='competition',flight_profile=PROFILE,
+                    coordinate_mode='gps',departure_point='stadium_center',controller_mode='external',
+                    flight_altitude_plan='around54m')
+                response=client.post('/api/v1/plan',json=payload)
+                self.assertEqual(response.status_code,200,response.text)
+                sent=[c for c in app.state.adapter.snapshot() if c['type']=='assign_task']
+                self.assertEqual(len(sent),6)
+                for command in sent:
+                    task=command['payload']['task']
+                    self.assertEqual(task['hover_scan_seconds'],40.)
+                    self.assertEqual(task['reconnaissance_radius_m'],RADII_BY_UAV[command['uav_id']])
+                    self.assertLessEqual(len(task['waypoints_m']),16)
             finally:app.state.audit.close()
 
     def test_dispatch_validates_whole_fleet_before_first_send(self):
@@ -134,6 +168,9 @@ class ActualSceneTest(unittest.TestCase):
                     checked=validate_assignment(payload,command['uav_id'])
                     entry,ret=route_messages(checked)
                     self.assertEqual(entry['path'][0],ret['landing_point'])
+                    self.assertLessEqual(len(checked['task']['waypoints_m']),16)
+                    self.assertEqual(checked['task']['hover_scan_seconds'],40.)
+                    self.assertEqual(checked['task']['reconnaissance_radius_m'],RADII_BY_UAV[command['uav_id']])
                     self.assertEqual(checked['target_altitude_m'],{1:59,2:56,3:53,4:50,5:47,6:44}[command['uav_id']])
                 app.state.adapter.commands.clear()
                 p['search_area']['takeoff_gps_by_uav']['6']=dict(p['search_area']['takeoff_gps_by_uav']['1'])

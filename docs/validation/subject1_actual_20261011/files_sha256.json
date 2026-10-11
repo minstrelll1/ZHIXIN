@@ -1,0 +1,17 @@
+{
+  "competition_backend/competition_backend/api.py": "3ffafca4a56d8b0a0c2a55076e448daf18f0d209270d4052fe62ddecae5e1f55",
+  "competition_backend/competition_backend/orchestrator.py": "b9398846071ed7ae7004eacf7a60e2c2a6611e938295f9e4b0227f3eaeb3e474",
+  "competition_backend/competition_backend/subject1_actual_prepared.json": "5acc8cea51820bffb7a90039b9477b7efe2c66060452e4a962a894b59ac1d577",
+  "competition_backend/competition_backend/external_transit_prepared.json": "58b15c5fd5c92424b22d286545ed8e20b89852a62b64d4ebc6a4a1f980499d9a",
+  "competition_backend/competition_backend/web/index.html": "08efa8271ab0c903bafc1b443d9da78ce30f152d005cad75fd249230022b2c8d",
+  "competition_backend/competition_backend/subject1_reporting.py": "569926ae2475e2e873ca0b7ac111b691bad3053544c7a2d1780e21088fbf6320",
+  "src/su17_competition_executor/scripts/onboard_task_executor.py": "1bda93e37b931f64aae357cc0ffa49cc5a56aabe67fee7af1530350eabd57103",
+  "src/su17_competition_executor/src/su17_competition_executor/task_protocol.py": "8ca87938ec095f630ea65f7354338510a92dcb2678858326d5da46925b42aa89",
+  "src/su17_competition_executor/src/su17_competition_executor/transit_protocol.py": "7250f8cc2955a57614486d3050b536987f4abad641b89700f19dc1639dfc0c9e",
+  "src/su17_image_transfer/src/su17_image_transfer/submission.py": "4a4fab428d3ac4ab28d20af9747592a0806b671f5a5ab566682aa04af7a24dc5",
+  "competition_shared/subject1_dedup.py": "6de94aac5b7c21140894fc99389d78e751a494357e63423d9d47a13f45731199",
+  "competition_shared/target_motion.py": "2299c6d371a5b364ccd898f045b36deb2ff0276aad2694a8dbec4629c6241b12",
+  "competition_shared/target_time.py": "5c7cc18dbea18f34eefaabca7d0f7bb27c2c8d2ddc4db8b58c58a1a47c29a4c2",
+  "competition_shared/target_quality.py": "b392f314bd005961da763711b943fd99fe15fae3cb99e5e22dc63d4134b66028",
+  "competition_shared/submission_format.py": "68bf962a70d2ae3fb753d01a2de2e878e7eec2dab9219d1acf81d24dbf1b3762"
+}

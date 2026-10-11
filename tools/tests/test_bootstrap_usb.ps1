@@ -42,13 +42,17 @@ try {
     if (([IO.File]::ReadAllText((Join-Path $target 'src\task.py'))) -ne 'fixture code' -or
         -not (Test-Path -LiteralPath (Join-Path $target 'tools\local_tokens.ps1')) -or
         -not (Test-Path -LiteralPath (Join-Path $target '智信竞赛.exe'))) { throw 'U 盘部署缺少代码、令牌或应用。' }
+    $originalTokens = [IO.File]::ReadAllText((Join-Path $target 'tools\local_tokens.ps1'))
+    Set-FixtureFile (Join-Path $target 'config\onboard_programs.json') 'local programs'
     Set-FixtureFile (Join-Path $target 'config\fleet.json') 'local fleet'
     Set-FixtureFile (Join-Path $target 'ground_logs\local.log') 'local log'
     & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $usb 'tools\bootstrap_ground_impl.ps1') -FromUsb -SkipInstall -Destination $target
     if ($LASTEXITCODE -ne 0 -or
-        ([IO.File]::ReadAllText((Join-Path $target 'config\fleet.json'))) -ne 'local fleet' -or
-        -not (Test-Path -LiteralPath (Join-Path $target 'ground_logs\local.log'))) { throw '重复部署覆盖了本机配置或数据。' }
-    Write-Host 'U 盘准备、首次部署与本机配置保留检查通过。'
+        ([IO.File]::ReadAllText((Join-Path $target 'config\fleet.json'))) -ne 'usb fleet' -or
+        ([IO.File]::ReadAllText((Join-Path $target 'config\onboard_programs.json'))) -ne 'usb programs' -or
+        ([IO.File]::ReadAllText((Join-Path $target 'tools\local_tokens.ps1'))) -ne $originalTokens -or
+        -not (Test-Path -LiteralPath (Join-Path $target 'ground_logs\local.log'))) { throw 'U盘更新未同步双配置，或覆盖了令牌及数据。' }
+    Write-Host 'U 盘准备、首次部署、双配置同步与本机令牌数据保留检查通过。'
 }
 finally {
     $resolved = [IO.Path]::GetFullPath($fixtureRoot)

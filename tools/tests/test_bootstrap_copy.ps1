@@ -54,9 +54,9 @@ try {
     if (Test-Path -LiteralPath (Join-Path $target 'tools\tools')) { throw '意外生成了嵌套 tools 目录。' }
     if ([IO.File]::ReadAllText((Join-Path $target 'tools\local_tokens.ps1')) -ne 'local secret' -or
         [IO.File]::ReadAllText((Join-Path $target 'tools\local_tokens.env')) -ne 'local secret' -or
-        [IO.File]::ReadAllText((Join-Path $target 'config\fleet.json')) -ne 'local fleet' -or
-        [IO.File]::ReadAllText((Join-Path $target 'config\onboard_programs.json')) -ne 'local commands') {
-        throw '部署时覆盖了本机配置。'
+        [IO.File]::ReadAllText((Join-Path $target 'config\fleet.json')) -ne 'remote fleet' -or
+        [IO.File]::ReadAllText((Join-Path $target 'config\onboard_programs.json')) -ne 'remote commands') {
+        throw '部署未同步双配置或覆盖了本机令牌。'
     }
 
     $script:denyCopies = $true
@@ -71,7 +71,7 @@ try {
             throw "持续拒绝访问未报告源、目标和原因：$message"
         }
     }
-    Write-Host '首次部署逐文件复制、临时占用重试、本机配置保留与拒绝访问诊断检查通过。'
+    Write-Host '首次部署逐文件复制、临时占用重试、双配置同步、令牌保留与拒绝访问诊断检查通过。'
 }
 finally {
     Remove-Item Function:\Copy-Item -ErrorAction SilentlyContinue

@@ -475,7 +475,16 @@ class OrchestratorTest(unittest.TestCase):
             for mode in ("internal", "external"):
                 with self.subTest(profile=profile, mode=mode):
                     self.setUp()
-                    self.backend.plan("subject1", flight_profile=profile, controller_mode=mode)
+                    if profile == "xuchang_small":
+                        from competition_backend.xuchang_small_scene import load_xuchang_small_plan
+                        from competition_backend.transit_routes import attach_routes
+                        from test_xuchang_boot_homes import example_homes
+                        prepared = attach_routes(load_xuchang_small_plan())
+                        prepared['search_area']['takeoff_gps_by_uav'] = example_homes(prepared['search_area'])
+                        self.backend.plan("subject1", flight_profile=profile, controller_mode=mode,
+                                          prepared_plan=prepared)
+                    else:
+                        self.backend.plan("subject1", flight_profile=profile, controller_mode=mode)
                     for uid in self.config.uav_ids:
                         self.telemetry(uid, battery_percentage=0.1)
                     self.assertTrue(self.backend.prepare_takeoff()["ready"])

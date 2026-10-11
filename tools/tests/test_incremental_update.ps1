@@ -92,16 +92,50 @@ try {
     Set-Local 'private.txt' 'untracked-data'
     Run-Update
     Assert-True (@($global:UpdateFixture_requests | Where-Object { $_ -match '^https://api.github.com/' }).Count -eq 0) '正常更新仍调用匿名 API'
-    Assert-True ($global:UpdateFixture_downloads.Count -eq 1 -and $global:UpdateFixture_downloads[0] -eq 'a.txt') '首次增量更新重复下载了未变化文件或本机配置'
+    Assert-True (($global:UpdateFixture_downloads -join ',') -eq 'a.txt,config/fleet.json,config/onboard_programs.json') '首次更新应只下载变化代码和两个配置'
     Assert-True ((Read-Local 'a.txt') -eq 'new') '变化文件未更新'
-    Assert-True ((Read-Local 'config/fleet.json') -eq '{"local":true}') '本机机队配置被覆盖'
-    Assert-True ((Read-Local 'config/onboard_programs.json') -eq '{"commands":{"flight":"local-command"}}') '本机启动指令被覆盖'
+    Assert-True ((Read-Local 'config/fleet.json') -eq '{"local":false}') '机队配置没有同步'
+    Assert-True ((Read-Local 'config/onboard_programs.json') -eq '{"commands":{}}') '机载启动指令没有同步'
     Assert-True ((Read-Local 'tools/local_tokens.ps1') -eq 'private-token') '令牌被覆盖'
     Assert-True ((Read-Local 'received_images/example.txt') -eq 'private-image') '图片被覆盖'
     Assert-True ((Read-Local 'third_party/mediamtx/mediamtx.exe') -eq 'existing-binary') '重复更新了现有第三方程序'
     $global:UpdateFixture_downloads.Clear(); $global:UpdateFixture_requests.Clear()
     Run-Update
     Assert-True ($global:UpdateFixture_downloads.Count -eq 0 -and $global:UpdateFixture_requests.Count -eq 1) '无变化时应只读一个发布清单'
+
+    # 老版本更新记录曾跳过配置；即使不在旧清单中，也必须覆盖到发布版本。
+    $oldState = Read-Local '.runtime/ground_update_state.json' | ConvertFrom-Json
+    $oldState.files.PSObject.Properties.Remove('config/fleet.json')
+    $oldState.files.PSObject.Properties.Remove('config/onboard_programs.json')
+    Set-Local '.runtime/ground_update_state.json' ($oldState | ConvertTo-Json -Depth 6)
+    Set-Local 'config/fleet.json' '{"local":true}'
+    Set-Local 'config/onboard_programs.json' '{"commands":{"flight":"local-command"}}'
+    $global:UpdateFixture_downloads.Clear()
+    Run-Update
+    Assert-True (($global:UpdateFixture_downloads -join ',') -eq 'config/fleet.json,config/onboard_programs.json') '旧版升级未同步双配置，或重新下载了代码'
+    Assert-True ((Read-Local 'config/fleet.json') -eq '{"local":false}' -and (Read-Local 'config/onboard_programs.json') -eq '{"commands":{}}') '旧版配置仍被保留'
+    $backups = @(Get-ChildItem -LiteralPath (Join-Path $destination '.runtime/ground_update_runs') -Recurse -File | Where-Object { $_.FullName -match '[\\/]backup[\\/]config[\\/]fleet.json$' })
+    Assert-True ($backups.Count -eq 2 -and [IO.File]::ReadAllText($backups[0].FullName) -eq '{"local":true}') '更新前的配置没有保留备份'
+
+    # 第二个配置替换失败，前一个配置也须恢复，版本记录不得提前提交。
+    Set-Remote 'config/fleet.json' '{"version":2}'
+    Set-Remote 'config/onboard_programs.json' '{"commands":{"flight":"new-command"}}'
+    $previousState = Read-Local '.runtime/ground_update_state.json'
+    $global:UpdateFixture_copyFailure = Join-Path $destination 'config/onboard_programs.json'
+    Expect-Failure
+    Assert-True ((Read-Local 'config/fleet.json') -eq '{"local":false}' -and (Read-Local 'config/onboard_programs.json') -eq '{"commands":{}}') '配置替换失败没有整体回滚'
+    Assert-True ((Read-Local '.runtime/ground_update_state.json') -eq $previousState) '失败更新写入了新版本记录'
+    Run-Update
+    Assert-True ((Read-Local 'config/fleet.json') -eq '{"version":2}' -and (Read-Local 'config/onboard_programs.json') -eq '{"commands":{"flight":"new-command"}}') '配置更新失败后不能重试'
+
+    # 清单哈希正确但 JSON 错误也不应安装，其他已下载配置不提前替换。
+    Set-Remote 'config/fleet.json' '{"version":3}'
+    Set-Remote 'config/onboard_programs.json' '{broken'
+    Expect-Failure
+    Assert-True ((Read-Local 'config/fleet.json') -eq '{"version":2}' -and (Read-Local 'config/onboard_programs.json') -eq '{"commands":{"flight":"new-command"}}') '损坏 JSON 破坏了本机配置'
+    Set-Remote 'config/fleet.json' '{"version":2}'
+    Set-Remote 'config/onboard_programs.json' '{"commands":{"flight":"new-command"}}'
+    Assert-True ((Read-Local 'tools/local_tokens.ps1') -eq 'private-token' -and (Read-Local 'received_images/example.txt') -eq 'private-image') '双配置更新影响了令牌或数据'
 
     $global:UpdateFixture_invalidManifest=$true
     Expect-Failure
@@ -159,7 +193,7 @@ try {
     $requestCount = $global:UpdateFixture_requests.Count
     $routed = & (Join-Path $root 'tools/bootstrap_ground.ps1') -Repository 'fixture/repo' -Branch 'test/incremental' -Destination $destination -SkipInstall
     Assert-True ($routed -eq 'FRESH_INCREMENTAL_ROUTE' -and $global:UpdateFixture_requests.Count -eq ($requestCount + 1)) '原更新命令没有下载并执行最新更新器'
-    Write-Host '发布清单无需API、403/429停止重试、旧仓库兼容、最新更新器、增量下载、零变化、配置保留、校验与回滚检查通过。'
+    Write-Host '发布清单无需API、403/429停止重试、旧仓库兼容、最新更新器、增量下载、零变化、双配置同步、令牌保留、校验与回滚检查通过。'
 } finally {
     Remove-Item Function:\Invoke-WebRequest,Function:\Copy-Item -ErrorAction SilentlyContinue
     $absolute = [IO.Path]::GetFullPath($fixtureRoot)

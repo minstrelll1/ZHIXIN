@@ -45,6 +45,24 @@ class GroundUpdateManifestTest(unittest.TestCase):
             self.assertEqual(len(raw), f["size"])
             self.assertEqual(hashlib.sha1(b"blob " + str(len(raw)).encode() + b"\0" + raw).hexdigest(), f["sha"])
 
+    def test_both_configs_are_published_from_the_same_commit(self):
+        configs = {"config/fleet.json": b'{"version": 2}\n',
+                   "config/onboard_programs.json": b'{"commands": {"flight": "published"}}\n'}
+        (self.root / "config").mkdir()
+        for name, data in configs.items():
+            (self.root / name).write_bytes(data)
+        self.git("add", "config")
+        self.git("commit", "-qm", "sync both configs")
+        for name in configs:
+            (self.root / name).write_text("uncommitted local changes")
+        manifest = builder.build_manifest("fixture/repo", "feature/a")
+        files = {f["path"]: f for f in manifest["files"]}
+        for name, data in configs.items():
+            self.assertIn(name, files)
+            self.assertEqual(len(data), files[name]["size"])
+            self.assertEqual(data, self.git("show", manifest["commit"] + ":" + name))
+            self.assertEqual(hashlib.sha1(b"blob " + str(len(data)).encode() + b"\0" + data).hexdigest(), files[name]["sha"])
+
     def test_rejects_invalid_identity_and_link_objects(self):
         for repo, branch in (("bad", "main"), ("fixture/repo", "../main"), ("fixture/repo", "a\\b")):
             with self.assertRaises(ValueError):

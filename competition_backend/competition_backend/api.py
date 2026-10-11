@@ -29,6 +29,10 @@ from competition_shared.runtime import ground_environment
 from .adapter import RecordingAdapter
 from .config import load_config
 from .xuchang_small_scene import RADIUS_M as XUCHANG_RADIUS_M
+from .subject1_actual_scene import (
+    RADIUS_M as ACTUAL_RADIUS_M, RADII_BY_UAV as ACTUAL_RADII_BY_UAV,
+    HOVER_SECONDS as ACTUAL_HOVER_SECONDS,
+)
 from .distributed_adapter import DistributedFleetAdapter, parse_ground_peers
 from .image_aggregation import (
     PeerImageCollector,
@@ -853,7 +857,7 @@ def create_app(environment=None, audit=None) -> FastAPI:
         if str(controller_mode).lower() != "external":
             return []
         requested = (XUCHANG_RADIUS_M if flight_profile == "xuchang_small" else
-                     50.0 if flight_profile == "subject1_actual" else
+                     ACTUAL_RADIUS_M if flight_profile == "subject1_actual" else
                      75.0 if flight_profile in ("competition", "outdoor100", "outdoor200", "dalian_nanshan") else 1.0)
         manager = getattr(app.state, "program_manager", None)
         peer_states = (adapter.peer_program_b_status()
@@ -870,7 +874,7 @@ def create_app(environment=None, audit=None) -> FastAPI:
                 radius = float(state.get("reconnaissance_radius_m"))
             except (TypeError, ValueError):
                 radius = float("nan")
-            expected_radius = 45.0 if flight_profile == "subject1_actual" and int(uid) == 6 else requested
+            expected_radius = ACTUAL_RADII_BY_UAV[int(uid)] if flight_profile == "subject1_actual" else requested
             if math.isfinite(radius) and radius < expected_radius:
                 warnings.append(
                     "UAV{} 程序 B 定位器当前半径 {}m，小于规划侦察半径 {}m；两者用途不同，目标覆盖效果需实地核验。".format(
@@ -1333,11 +1337,13 @@ def create_app(environment=None, audit=None) -> FastAPI:
                 if (departure_point != required_departure if flight_profile == "subject1_actual" else departure_point not in (required_departure, "southeast")):
                     raise HTTPException(status_code=422, detail=fixed_name + "使用固定起飞点")
                 fixed_radius = (XUCHANG_RADIUS_M if flight_profile == "xuchang_small" else
-                                50.0 if flight_profile == "subject1_actual" else 75.0)
+                                ACTUAL_RADIUS_M if flight_profile == "subject1_actual" else 75.0)
+                fixed_hover = ACTUAL_HOVER_SECONDS if flight_profile == "subject1_actual" else 10.0
                 if (float(payload.get("reconnaissance_radius_m", fixed_radius)) != fixed_radius
                         or float(payload.get("speed_mps", 5.0)) != 5.0
-                        or float(payload.get("hover_scan_seconds", 10.0)) != 10.0):
-                    raise HTTPException(status_code=409, detail=fixed_name + "仅支持已保存的半径 {:g}m、航速 5m/s、扫描 10s 方案".format(fixed_radius))
+                        or float(payload.get("hover_scan_seconds", fixed_hover)) != fixed_hover):
+                    radii_label = "61/58/55/52/50/45" if flight_profile == "subject1_actual" else "{:g}".format(fixed_radius)
+                    raise HTTPException(status_code=409, detail=fixed_name + "仅支持已保存的半径 {}m、航速 5m/s、扫描 {:g}s 方案".format(radii_label, fixed_hover))
                 if flight_profile == "subject1_actual":
                     from .subject1_actual_scene import load_plan
                     result = load_plan()
@@ -1512,9 +1518,9 @@ def create_app(environment=None, audit=None) -> FastAPI:
                 "coordinate_mode": payload.get("coordinate_mode", "gps"),
                 "flight_profile": requested_profile,
                 "flight_altitude_plan": requested_altitude_plan,
-                "reconnaissance_radius_m": payload.get("reconnaissance_radius_m", 1.0 if requested_profile in ("lab", "lab10", "outdoor5") else 50.0 if requested_profile == "subject1_actual" else 75.0),
+                "reconnaissance_radius_m": payload.get("reconnaissance_radius_m", 1.0 if requested_profile in ("lab", "lab10", "outdoor5") else ACTUAL_RADIUS_M if requested_profile == "subject1_actual" else XUCHANG_RADIUS_M if requested_profile == "xuchang_small" else 75.0),
                 "speed_mps": payload.get("speed_mps", 0.2 if requested_profile in ("lab", "outdoor5") else (0.5 if requested_profile == "lab10" else 5.0)),
-                "hover_scan_seconds": payload.get("hover_scan_seconds", 10.0),
+                "hover_scan_seconds": payload.get("hover_scan_seconds", ACTUAL_HOVER_SECONDS if requested_profile == "subject1_actual" else 10.0),
                 "max_region_aspect_ratio": payload.get("max_region_aspect_ratio", 2.0),
                 "forest_edge_m": payload.get("forest_edge_m", 5.0),
                 "terrain_exclusions_enabled": payload.get("terrain_exclusions_enabled", True),

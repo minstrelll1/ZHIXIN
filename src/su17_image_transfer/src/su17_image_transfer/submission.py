@@ -3,14 +3,19 @@
 from __future__ import annotations
 
 import datetime
+import errno
 import hashlib
 import json
+import logging
 import math
 import os
 from pathlib import Path
 import re
 import shutil
 import tempfile
+import threading
+import time
+import weakref
 from contextlib import contextmanager
 from competition_shared.target_quality import category_fields, dedup_category, quality_metadata, quality_rank
 from competition_shared.target_motion import classify_motion
@@ -21,8 +26,24 @@ from competition_shared.target_time import load_time_references, map_localizatio
 _SAFE_MISSION_ID = re.compile(r"[A-Za-z0-9_.-]{1,120}\Z")
 
 
+_THREAD_LOCKS = weakref.WeakValueDictionary()
+_THREAD_LOCKS_GUARD = threading.Lock()
+
+
 @contextmanager
 def _submission_lock(mission_dir):
+    # 同进程线程先排队，避免 Windows 字节锁等待十秒后报 EDEADLK。
+    # 弱引用仅保留正在使用/等待的任务锁，不随历史任务数量增长。
+    key = os.path.normcase(str(mission_dir.resolve()))
+    with _THREAD_LOCKS_GUARD:
+        lock = _THREAD_LOCKS.setdefault(key, threading.RLock())
+    with lock:
+        with _submission_file_lock(mission_dir):
+            yield
+
+
+@contextmanager
+def _submission_file_lock(mission_dir):
     """跨线程及进程串行化同一任务的 JSON/图片重建。"""
     lock_path = mission_dir / ".submission.lock"
     with lock_path.open("a+b") as stream:
@@ -31,7 +52,18 @@ def _submission_lock(mission_dir):
             import msvcrt
 
             # msvcrt.locking 从当前文件位置锁定一个字节。
-            msvcrt.locking(stream.fileno(), msvcrt.LK_LOCK, 1)
+            # 图片接收进程和发布端都可能重建；仅对锁竞争重试。
+            deadline = time.monotonic() + 120.0
+            while True:
+                try:
+                    msvcrt.locking(stream.fileno(), msvcrt.LK_NBLCK, 1)
+                    break
+                except OSError as error:
+                    if error.errno not in (errno.EACCES, errno.EAGAIN, errno.EDEADLK):
+                        raise
+                    if time.monotonic() >= deadline:
+                        raise TimeoutError("等待赛事 JSON 整理文件锁超过120秒：%s" % lock_path) from error
+                    time.sleep(0.05)
             try:
                 yield
             finally:
@@ -179,7 +211,7 @@ def _atomic_json(path, document):
 def _update_subject1_submission_locked(output_root, mission_dir, mission_id, team_name,
                                        publisher_dedup=False):
     image_dir = mission_dir / "images"
-    image_dir.mkdir(parents=True, exist_ok=True)
+    image_copy_errors = []
     records = {}
     invalid_localization_times = []
     time_mappings = []
@@ -209,19 +241,35 @@ def _update_subject1_submission_locked(output_root, mission_dir, mission_id, tea
             source_json.parent.parent.name, source_json.stem,
         )
         image_path = None
-        if image_source.is_file():
-            image_path = image_dir / image_name
-            source_stat = image_source.stat()
-            if (not image_path.is_file() or image_path.stat().st_size != source_stat.st_size
-                    or image_path.stat().st_mtime_ns != source_stat.st_mtime_ns):
-                fd, temporary = tempfile.mkstemp(prefix=image_name + "-", suffix=".jpg.part", dir=str(image_dir))
-                os.close(fd)
-                try:
+        # 图片不可读取/被占用时仍整理目标 JSON；下一次重建会重试图片。
+        # 不沿用此前版本的图片冒充本次定位记录对应的图片。
+        temporary = None
+        try:
+            if image_source.is_file():
+                image_dir.mkdir(parents=True, exist_ok=True)
+                candidate = image_dir / image_name
+                source_stat = image_source.stat()
+                if (not candidate.is_file() or candidate.stat().st_size != source_stat.st_size
+                        or candidate.stat().st_mtime_ns != source_stat.st_mtime_ns):
+                    fd, temporary = tempfile.mkstemp(prefix=image_name + "-", suffix=".jpg.part", dir=str(image_dir))
+                    os.close(fd)
                     shutil.copy2(image_source, temporary)
-                    os.replace(temporary, image_path)
-                finally:
-                    if os.path.exists(temporary):
-                        os.unlink(temporary)
+                    os.replace(temporary, candidate)
+                image_path = candidate
+        except OSError as error:
+            detail = dict(source_image=str(image_source.relative_to(output_root)),
+                          target_id=target_id, error=str(error))
+            image_copy_errors.append(detail)
+            logging.getLogger(__name__).warning("图片整理失败，继续整理目标 JSON：%s；%s",
+                                               detail["source_image"], error)
+        finally:
+            if temporary is not None:
+                try:
+                    os.unlink(temporary)
+                except FileNotFoundError:
+                    pass
+                except OSError as error:
+                    logging.getLogger(__name__).warning("图片临时文件清理失败：%s；%s", temporary, error)
         rank = _observation_rank(metadata, timestamp, source_json)
         source_uav = source_json.parent.parent.name
         # 各机的全局 ID 只在该机内唯一，先分别整理，再交由发布端进行同机和跨机判重。
@@ -380,6 +428,7 @@ def _update_subject1_submission_locked(output_root, mission_dir, mission_id, tea
             key: decisions[key] for key in ("raw_count", "deduplicated_count", "result_count",
                                             "backfilled_count", "backfilled", "selection", "static_quality_order", "moving_quality_order")
         }
+    format_audit["image_copy_errors"] = image_copy_errors
     format_audit["category_records"] = category_records
     format_audit["motion_classification"] = motion_classification
     format_audit["target_time"] = dict(source="localization_time", timezone="Asia/Shanghai",

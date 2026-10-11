@@ -160,11 +160,11 @@ class StadiumDepartureTest(unittest.TestCase):
             self.assertEqual(dispatch.status_code, 200, dispatch.text)
             mission = dispatch.json()["mission"]
             self.assertEqual(mission["search_area"]["departure_point"], "stadium_center")
-            self.assertEqual(mission["search_area"]["landing_mode"], "onboard_home")
+            self.assertEqual(mission["search_area"]["landing_mode"], "selected_departure")
             self.assertEqual(mission["prepared_plan"]["id"], preview.json()["prepared_plan"]["id"])
             self.assertEqual(mission["planned_uavs"]["1"]["task"]["waypoints_m"],
                              preview.json()["planned_uavs"]["1"]["task"]["waypoints_m"])
-            self.assertIsNone(mission["planned_uavs"]["1"]["landing_point_m"])
+            self.assertEqual(mission["planned_uavs"]["1"]["landing_point_m"], mission["search_area"]["departure_point_m"])
 
 
 if __name__ == "__main__":

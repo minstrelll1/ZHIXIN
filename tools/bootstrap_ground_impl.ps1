@@ -206,8 +206,6 @@ function Copy-GroundProjectFiles([string]$SourceRoot, [string]$TargetRoot) {
         if (-not $target.StartsWith($targetPrefix, [StringComparison]::OrdinalIgnoreCase)) {
             throw "下载包中的文件路径越界：$relative"
         }
-        if ($relative -in @('config\fleet.json', 'config\onboard_programs.json') -and
-            (Test-Path -LiteralPath $target -PathType Leaf)) { continue }
         $targetDirectory = Split-Path $target -Parent
         if (-not (Test-Path -LiteralPath $targetDirectory -PathType Container)) {
             New-Item -ItemType Directory -Path $targetDirectory -Force | Out-Null

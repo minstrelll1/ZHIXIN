@@ -24,7 +24,7 @@ class CoverageApiTest(unittest.TestCase):
                 self.assertEqual(result.json()['subject'],subject)
                 self.assertEqual(len(result.json()['planned_uavs']),6)
                 self.assertEqual(result.json()['search_area']['coverage']['hover_scan_seconds'],10)
-                self.assertEqual(result.json()['search_area']['coverage']['objective'],'minimize_total_mission_time')
+                self.assertEqual(result.json()['search_area']['coverage']['objective'],'preserve_scan_density_full_cover_then_shortest_safe_routes')
             self.assertEqual(app.state.adapter.snapshot(),commands)
             self.assertEqual(client.get('/api/v1/status').json()['mission'],mission)
             for payload in ({'subject':'subject3'},{'speed_mps':0},{'hover_scan_seconds':0},{'max_region_aspect_ratio':0},{'terrain_exclusions_enabled':'false'}):

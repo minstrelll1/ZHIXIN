@@ -39,9 +39,14 @@ class DalianLiveDispatchTest(unittest.TestCase):
             "ground_terminal_id": terminal_id, "model": "p600", "task_publisher": publisher,
         })
         self.assertEqual(selected.status_code, 200, selected.text)
+        self.addCleanup(app.state.audit.close)
+        app.state.orchestrator.update_telemetry(Telemetry(
+            uav_id=terminal_id, received_at=app.state.orchestrator.clock(), connected=True,
+            latitude=39.05282049, longitude=121.65960216, altitude=103.7,
+            gps_status=3, location_source=4, gps_telemetry_age_seconds=.1))
         return app, client
 
-    def test_publisher_uses_fixed_wgs84_even_with_connected_drone_without_valid_gps(self):
+    def test_publisher_requires_valid_landing_gps_but_keeps_fixed_area(self):
         with tempfile.TemporaryDirectory() as data:
             app, client = self._terminal(data, 1, True)
             app.state.orchestrator.update_telemetry(Telemetry(
@@ -58,6 +63,12 @@ class DalianLiveDispatchTest(unittest.TestCase):
                        "departure_point": "fixed_dalian", "controller_mode": "external",
                        "flight_altitude_plan": "around10m",
                        "gps_origin": {"latitude": 1.0, "longitude": 2.0}}
+            preview = client.post("/api/v1/planning/competition-coverage", json=payload)
+            self.assertEqual(preview.status_code, 409, preview.text)
+            app.state.orchestrator.update_telemetry(Telemetry(
+                uav_id=1, received_at=app.state.orchestrator.clock(), connected=True,
+                latitude=39.05282049, longitude=121.65960216, altitude=103.7,
+                gps_status=3, location_source=4, gps_telemetry_age_seconds=.1))
             preview = client.post("/api/v1/planning/competition-coverage", json=payload)
             self.assertEqual(preview.status_code, 200, preview.text)
             self.assertEqual(preview.json()["search_area"]["gps_origin"]["latitude"], 39.052820490783674)
@@ -128,6 +139,11 @@ class DalianLiveDispatchTest(unittest.TestCase):
                     with self.subTest(profile=profile, mode=mode):
                         app.state.program_manager.snapshot.return_value = {"programs": {"flight": {
                             "state": "running", "flight_mode": mode}}}
+                        # Simulate continuously received GPS, not a ten-second-old initial fixture.
+                        app.state.orchestrator.update_telemetry(Telemetry(
+                            uav_id=1, received_at=app.state.orchestrator.clock(), connected=True,
+                            latitude=39.05282049, longitude=121.65960216, altitude=103.7,
+                            gps_status=3, location_source=4, gps_telemetry_age_seconds=.1))
                         planned = client.post("/api/v1/plan", json={
                             "subject": "subject2", "planning_mode": "competition",
                             "flight_profile": profile,

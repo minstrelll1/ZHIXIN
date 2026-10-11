@@ -1,0 +1,30 @@
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>科目一比赛方案离线核验 · 2026-10-11</title><style>
+body{font:16px/1.65 system-ui,"Microsoft YaHei",sans-serif;background:#edf2f7;color:#162b42;margin:0}
+main{max-width:1040px;margin:32px auto;background:white;padding:32px 40px;border-radius:14px}
+h1{font-size:27px;margin:0}h2{font-size:20px;margin:28px 0 10px}p{margin:12px 0}.ok{color:#127549;font-weight:700}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}th,td{padding:10px 12px;border-bottom:1px solid #d8e2ed;text-align:left}th{background:#edf5fb}
+code{background:#eef3f7;border-radius:4px;padding:2px 5px;overflow-wrap:anywhere}a{color:#075cb0}.note{padding:12px 18px;background:#f5f8fc;border-left:4px solid #537aa2}.hash{font-size:12px;word-break:break-all}
+@media(max-width:700px){main{margin:0;padding:20px}table{font-size:13px}th,td{padding:7px 4px}}
+</style><main><h1>科目一比赛使用场景 · 离线核验</h1><p>2026-10-11｜六机不同高度｜GPS｜操场中央｜外部程序 B</p>
+<p class="ok">固定方案 → 网页请求 → 六个地面端分派 → 机载接收与缓存 → 程序 B 话题：核对通过。</p>
+<div class="note">本报告证明被测代码与固定规划的数据一致性，不是实飞认证。没有连接无人机，也没有向赛事服务器提交测试目标。实际起降点、硬件与程序 B 执行仍需现场预检。</div>
+<h2>逐机结果</h2><table><thead><tr><th>无人机</th><th>相对高度/m</th><th>参考半径/m</th><th>侦察航点数</th><th>收到返航路线数</th><th>结果</th></tr></thead><tbody><tr><td>UAV1</td><td>59.0</td><td>61.0</td><td>8</td><td>67</td><td>逐点一致</td></tr><tr><td>UAV2</td><td>56.0</td><td>58.0</td><td>11</td><td>67</td><td>逐点一致</td></tr><tr><td>UAV3</td><td>53.0</td><td>55.0</td><td>8</td><td>67</td><td>逐点一致</td></tr><tr><td>UAV4</td><td>50.0</td><td>52.0</td><td>12</td><td>67</td><td>逐点一致</td></tr><tr><td>UAV5</td><td>47.0</td><td>50.0</td><td>16</td><td>67</td><td>逐点一致</td></tr><tr><td>UAV6</td><td>44.0</td><td>45.0</td><td>12</td><td>67</td><td>逐点一致</td></tr></tbody></table>
+<p>共67个侦察点，每点规划扫描40秒。参考高度下几何有效区域覆盖率约94.27%；其他高度沿用航点，不能据此保证相同覆盖率。</p>
+<ul><li>全部经纬度、顺序和所属子区域与已保存方案一致，分派时没有重新求解扫描规划。</li>
+<li><code>path_stage_1</code>、<code>jiangluodian</code>均为经度、纬度、相对起飞高度；没有叠加GPS海拔。</li>
+<li>每机接收全部六机67个航点各自的返航路线；所有路线终点为接收机自己的模拟开机起降点，高度为接收机任务高度。</li>
+<li>独立几何测试校验边界间距≥5米、实际进返場路线避让其他机起降点≥2.5米。现场的起降点冲突仍可能使分派校验拒绝，不能以模拟点替代实机点。</li>
+<li>分派后发布识别类别和子区域，但不提前启动程序B；起飞失败不发布航点，起飞成功后才执行交接。飞行动作使用测试替身。</li></ul>
+<h2>去重与完整流程</h2><p>通过 677 项 Python 测试（87 个模块）、12组网页测试、35个Windows PowerShell 5.1脚本语法检查、129个Python文件和3个ROS launch文件语法检查。</p>
+<p>覆盖：角色选择、GPS基准、分派超时与回执、确认起飞、遥测、返航与回执、通信重连、识别与图片协议、缺失补传、多地面端汇集、定位时间换算、去重、赛事格式和自动上报触发。</p>
+<p>持续整理测试使用六机目标、45点轨迹、后续静目标更新、损坏JSON和无效坐标，30次三线程并发重建，加10轮追加更新重建；每轮均生成可校验的16目标JSON、6个动目标及每动目标最早40点。既有低速转静态、10米/5米距离、轨迹相似、名额及质量排序规则均保留。</p>
+<h2>本次修复</h2><ol><li>图片复制被占用或失败时，继续整理目标JSON；错误写入日志及<code>submission-format.json → image_copy_errors</code>，后续重建重试图片，不用旧图片代替新定位记录。</li>
+<li>同一任务先以线程锁排队，再获取跨进程文件锁。Windows锁竞争重试，防止原十秒等待导致<code>Resource deadlock avoided</code>；非锁竞争错误仍报告，跨进程等待上限120秒。</li>
+<li>本机自定义程序B指令仅修正参数语法：<code>sweep_yaw_speed_deg_s:=-20</code>；数值保留，未改B源码。参数是否由机载B版本声明须以该版本启动结果为准。</li></ol>
+<p>同步更新了过期的测试夹具：有效GPS、模拟起降点和扫描/进返场路径分离。没有为通过测试放松生产校验。</p>
+<h2>可复核记录</h2><ul><li><a href="actual_ui_payload.json">网页实际生成的规划请求</a></li><li><a href="actual_dispatch_evidence.json">六机完整分派数据、航点/降落点/进返场话题输出（模拟）</a></li>
+<li><a href="summary.json">全部模块测试结果</a></li><li><a href="files_sha256.json">本次关键文件SHA-256</a></li></ul>
+<p>本机逐模块日志：<code>ground_logs/offline_validation/20261011/</code>。测试输入均与真实飞行记录分开。</p>
+<p class="hash">固定方案 SHA-256：ab9027ced252f51e5f78e3b4a84b0754636941c67837cd781fc7b040be18c70b<br>规划源摘要：c91642c02bf162ed90ae9c3bba88ec5d64ec936dbd6936f89ed2f2e868238526</p>
+<p>本报告记录离线核验时的文件版本；后续代码变化应重新运行对应回归。</p></main></html>
