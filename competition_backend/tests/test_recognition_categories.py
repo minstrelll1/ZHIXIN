@@ -43,40 +43,42 @@ class RecognitionTest(unittest.TestCase):
             self.assertEqual(response.json()['selection']['category_ids'], [])
             self.assertEqual(len(response.json()['catalog']), 19)
             self.assertEqual(client.put('/api/v1/recognition-categories', json=SELECTION).status_code, 405)
-            for payload, expected in [({'subject': 'subject1', 'require_recognition_selection': True}, []),
-                                      ({'subject': 'subject1', 'recognition_selection': SELECTION}, [0, 7, 15]),
-                                      ({'subject': 'subject1', 'recognition_selection': {'category_ids': 'bad'}}, [])]:
-                plan = client.post('/api/v1/plan', json=payload)
-                self.assertEqual(plan.status_code, 200, plan.text)
-                for task in plan.json()['mission']['planned_uavs'].values():
-                    self.assertEqual(task['task']['recognition_selection']['category_ids'], expected)
+            for subject in ('subject1', 'subject2'):
+                for extras, expected in [({}, []), ({'recognition_selection': SELECTION}, [0, 7, 15]),
+                        ({'recognition_selection': {'category_ids': 'bad'}}, []),
+                        ({'recognition_selection': {'category_ids': list(range(19))}}, list(range(19))),
+                        ({'recognition_selection': {'category_ids': []}}, [])]:
+                    with self.subTest(subject=subject, expected=expected):
+                        plan = client.post('/api/v1/plan', json=dict(subject=subject, **extras))
+                        self.assertEqual(plan.status_code, 200, plan.text)
+                        for task in plan.json()['mission']['planned_uavs'].values():
+                            self.assertEqual(task['task']['recognition_selection']['category_ids'], expected)
             self.assertEqual(TestClient(create_app(env)).get('/api/v1/recognition-categories').json()['selection']['category_ids'], [])
-            plan = client.post('/api/v1/plan', json={'subject': 'subject2'})
-            self.assertEqual(plan.status_code, 200, plan.text)
-            self.assertTrue(all('recognition_selection' not in task['task'] for task in plan.json()['mission']['planned_uavs'].values()))
 
     def test_assignment_checksum_and_running_task_protection(self):
-        adapter = RecordingAdapter()
-        backend = CompetitionOrchestrator(make_config(), adapter)
-        tasks = {i: {'type': 'lawnmower_search', 'coordinate_frame': 'ENU', 'waypoints_m': [[0, 0], [1, 0]]} for i in range(1, 7)}
-        before = copy.deepcopy(tasks)
-        backend.plan('subject1', tasks_by_uav=tasks, recognition_selection=SELECTION)
-        self.assertEqual(tasks, before)
-        self.assertEqual(len(adapter.commands), 6)
-        for command in adapter.commands:
-            message = dict(command['payload'], type='assign_task', uav_id=command['uav_id'])
-            self.assertEqual(validate_assignment(message, command['uav_id'])['task']['recognition_selection']['category_ids'], [0, 7, 15])
-            corrupted = copy.deepcopy(message)
-            corrupted['task']['recognition_selection']['category_ids'] = [0, 7, 18]
-            with self.assertRaises(TaskValidationError):
-                validate_assignment(corrupted, command['uav_id'])
-            corrupted['assignment_checksum'] = assignment_checksum(corrupted)
-            self.assertEqual(validate_assignment(corrupted, command['uav_id'])['task']['recognition_selection']['category_ids'], [0, 7, 18])
-        backend._mission.phase = MissionPhase.RUNNING
-        with self.assertRaises(MissionError):
-            backend.plan('subject1', tasks_by_uav=tasks, recognition_selection={'category_count': 0, 'category_ids': []})
-        self.assertEqual(len(adapter.commands), 6)
-
+        for subject in ('subject1', 'subject2'):
+            adapter = RecordingAdapter()
+            config = make_config()
+            config.subjects['subject2'] = copy.deepcopy(config.subjects['subject1'])
+            backend = CompetitionOrchestrator(config, adapter)
+            tasks = {i: {'type': 'lawnmower_search', 'coordinate_frame': 'ENU', 'waypoints_m': [[0, 0], [1, 0]]} for i in range(1, 7)}
+            before = copy.deepcopy(tasks)
+            backend.plan(subject, tasks_by_uav=tasks, recognition_selection=SELECTION)
+            self.assertEqual(tasks, before)
+            self.assertEqual(len(adapter.commands), 6)
+            for command in adapter.commands:
+                message = dict(command['payload'], type='assign_task', uav_id=command['uav_id'])
+                self.assertEqual(validate_assignment(message, command['uav_id'])['task']['recognition_selection']['category_ids'], [0, 7, 15])
+                corrupted = copy.deepcopy(message)
+                corrupted['task']['recognition_selection']['category_ids'] = [0, 7, 18]
+                with self.assertRaises(TaskValidationError):
+                    validate_assignment(corrupted, command['uav_id'])
+                corrupted['assignment_checksum'] = assignment_checksum(corrupted)
+                self.assertEqual(validate_assignment(corrupted, command['uav_id'])['task']['recognition_selection']['category_ids'], [0, 7, 18])
+            backend._mission.phase = MissionPhase.RUNNING
+            with self.assertRaises(MissionError):
+                backend.plan(subject, tasks_by_uav=tasks, recognition_selection={'category_count': 0, 'category_ids': []})
+            self.assertEqual(len(adapter.commands), 6)
 
 if __name__ == '__main__':
     unittest.main()

@@ -374,11 +374,13 @@ class OrchestratorTest(unittest.TestCase):
                         self.assertGreaterEqual(landing_point[1], 121.4740)
                         self.assertLessEqual(landing_point[1], 121.4747)
 
-    def test_preflight_rejects_missing_telemetry(self):
+    def test_missing_telemetry_is_warning_but_missing_task_ack_still_blocks(self):
         self.backend.plan("subject1")
         result = self.backend.prepare_takeoff()
         self.assertFalse(result["ready"])
-        self.assertIn("no telemetry", result["preflight"]["failures"]["1"])
+        self.assertNotIn("no telemetry", result["preflight"]["failures"]["1"])
+        self.assertTrue(result["preflight"]["warnings"]["1"])
+        self.assertIn("task assignment is not acknowledged", result["preflight"]["failures"]["1"])
 
     def test_lab_internal_hover_scan_does_not_require_external_scan_node(self):
         tasks = {
@@ -458,17 +460,14 @@ class OrchestratorTest(unittest.TestCase):
         self.assertTrue(result["ready"])
         self.assertFalse(result["preflight"]["battery_threshold_enforced"])
 
-    def test_competition_profile_keeps_preflight_battery_threshold(self):
+    def test_competition_profile_skips_preflight_battery_threshold(self):
         self.backend.plan("subject1", flight_profile="competition")
         for uav_id in self.config.uav_ids:
             self.telemetry(uav_id, battery_percentage=0.59)
         result = self.backend.prepare_takeoff()
-        self.assertFalse(result["ready"])
-        self.assertTrue(result["preflight"]["battery_threshold_enforced"])
-        self.assertIn(
-            "battery is below preflight threshold",
-            result["preflight"]["failures"]["1"],
-        )
+        self.assertTrue(result["ready"])
+        self.assertFalse(result["preflight"]["battery_threshold_enforced"])
+        self.assertTrue(result["preflight"]["warnings"]["1"])
 
     def test_selected_profiles_skip_only_battery_percentage_in_both_control_modes(self):
         for profile in ("lab", "outdoor5", "lab10", "outdoor100", "outdoor200", "xuchang_small"):
@@ -492,17 +491,23 @@ class OrchestratorTest(unittest.TestCase):
                     self.telemetry(1, battery_percentage=0.1, failsafe=True)
                     self.assertIn("failsafe is active", self.backend.preflight_report()["failures"]["1"])
 
-    def test_full_size_profiles_retain_sixty_percent_boundary(self):
-        for profile in ("competition", "dalian_nanshan"):
-            with self.subTest(profile=profile):
-                self.setUp()
-                self.backend.plan("subject1", flight_profile=profile)
-                for uid in self.config.uav_ids:
-                    self.telemetry(uid, battery_percentage=0.6)
-                self.assertTrue(self.backend.prepare_takeoff()["ready"])
-                self.telemetry(1, battery_percentage=0.59)
-                self.assertIn("battery is below preflight threshold",
-                              self.backend.preflight_report()["failures"]["1"])
+    def test_all_profiles_remove_battery_and_ground_age_gates_but_keep_faults(self):
+        self.backend.plan("subject1")
+        for profile in ("lab", "outdoor5", "lab10", "outdoor100", "outdoor200", "competition",
+                        "dalian_nanshan", "xuchang_small", "subject1_actual"):
+            for mode in ("internal", "external"):
+                with self.subTest(profile=profile, mode=mode):
+                    self.backend._mission.flight_profile = profile
+                    self.backend._mission.controller_mode = mode
+                    for uid in self.config.uav_ids:
+                        self.telemetry(uid, battery_percentage=0.0, received_at=self.clock()-600)
+                    result = self.backend.prepare_takeoff()
+                    self.assertTrue(result['ready'], result)
+                    self.assertFalse(result['preflight']['battery_threshold_enforced'])
+                    self.assertFalse(result['preflight']['telemetry_age_enforced'])
+                    self.assertEqual(len(result['preflight']['warnings']['1']), 2)
+                    self.telemetry(1, failsafe=True, received_at=self.clock()-600)
+                    self.assertIn('failsafe is active', self.backend.preflight_report()['failures']['1'])
 
     def test_each_uav_starts_immediately_after_reaching_altitude(self):
         prepared = self.plan_and_prepare()

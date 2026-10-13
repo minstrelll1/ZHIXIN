@@ -300,6 +300,7 @@
     <button type="button" data-program="onboard"><i></i>竞赛程序机载端</button>
     <button type="button" data-program="detection"><i></i>目标检测程序</button>
     <button type="button" data-program="flight"><i></i>自主飞行指令程序</button>
+    <button type="button" data-program="drop"><i></i>抛投程序</button>
   </div></div>
   <div id="sshAuthNotice" hidden><span id="sshAuthText"></span> <button id="sshReconnect" class="secondary" type="button">重新连接并启动</button></div>
   <div id="modeBanner" class="mode-banner">正在读取运行模式……</div>
@@ -338,7 +339,7 @@
     <p id="coverageNote" class="area-note">操场中央方案以地图估算的球场中心优化总航程与六机用时，GPS实飞的进场、返航及降落点使用各机自己的起降位置，所选出发点仅用于赛前规划参考。每个航点悬停扫描一次后再前往下一航点；区域右下角方案保持原有规划结果。</p>
   </details>
   <details id="recognitionSettings" class="panel area-settings">
-    <summary>科目一识别类别 <span id="recognitionSummary"></span></summary>
+    <summary>科目一／二识别类别 <span id="recognitionSummary"></span></summary>
     <div class="recognition-toolbar">
       <button id="recognitionSelectAll" type="button" class="secondary">全选</button>
       <span id="recognitionCounter" class="recognition-count" role="status" aria-live="polite">已选择 0 类</span>
@@ -754,7 +755,7 @@ function 渲染(snapshot){if(地面正在退出)return;当前状态=snapshot;当
   $('planButton').textContent=publisher?'规划并分派':'规划并分派本机';$('returnButton').textContent='返航';const roleBlocked=当前角色?.selection_required&&(!当前角色?.configured||!当前角色?.profile_matches||当前角色?.selection_pending||!!当前角色?.selection_error),pendingRestart=!!snapshot.fleet?.restart_required;更新任务按钮(snapshot);if(pendingRestart)$('modeBanner').textContent+=' 配置待重启生效，任务分派已锁定。';else if(当前角色?.selection_error)$('modeBanner').textContent+=' '+当前角色.selection_error+'；请点击终端设置重试。';else if(当前角色?.selection_pending)$('modeBanner').textContent+=' 正在后台启动本机服务、核验角色，暂不可下发任务。';else if(roleBlocked)$('modeBanner').textContent+=' 请完成终端选择并与发布端配置保持一致。';const syncFailed=Object.entries(snapshot.fleet?.synchronization?.peers||{}).filter(([,v])=>!v.ok).map(([id])=>'UAV'+id);if(publisher&&!当前角色?.selection_pending&&syncFailed.length)$('modeBanner').textContent+=' 配置同步未完成：'+syncFailed.join('、')+'，请在机队配置页重试。';
 const planned=mission?(mission.planned_uavs||uavs):{};$('fleet').innerHTML=Array.from({length:6},(_,index)=>{const id=index+1,isActive=active.includes(id),t=telemetry[String(id)],u=uavs[String(id)],p=planned[String(id)],model=snapshot.fleet?.config?.vehicles?.find(v=>v.uav_id===id)?.model?.toUpperCase()||t?.identity?.model?.toUpperCase()||"待配置";if(!isActive||!t){const status=isActive?'等待遥测':'未启用',assignment=p?'已生成规划':'未参与本次规划';return `<article class="panel uav-card inactive compact-card" data-uav-id="${id}" tabindex="0" role="button" aria-label="打开无人机 ${id} 实时详情"><div class="uav-head"><h3>无人机 ${id} · ${转义(model)}</h3><span class="badge">${status}</span></div><div class="compact-status"><span>${assignment}${p?` · 目标高度 ${Number(p.target_altitude_m).toFixed(1)}m`:''}</span><button type="button" class="compact-link" data-traffic-uav-id="${id}" aria-label="查看 UAV${id} 端口实时通信">通信 ${转义(机地通信(snapshot.traffic,id))}</button></div></article>`};const battery=电量显示(t,snapshot.server_time);const altitudeInfo=机载高度显示(t),altitude=altitudeInfo.text;const target=u?`${Number(u.target_altitude_m).toFixed(2)} m`:'—';const connected=t&&t.connected?'已连接':'未连接';const onboardPhase={takeoff_failed:'自动起飞失败',preparing_takeoff:'准备自动起飞',arming:'正在解锁',entering_command_control:'正在切换指令控制',manual_override:'遥控器已接管'}[t?.task_phase];return `<article class="panel uav-card ${卡片等级(t,u)}" data-uav-id="${id}" tabindex="0" role="button" aria-label="打开无人机 ${id} 实时详情"><div class="uav-head"><h3>无人机 ${id} · ${转义(model)}</h3><span class="badge">${转义(onboardPhase||(u?(文本.单机[u.phase]||u.phase):'等待遥测'))}</span></div><div class="telemetry"><div class="metric"><span>通信状态</span><strong>${connected}</strong></div><div class="metric"><span>当前电量</span><strong>${battery}</strong></div><div class="metric"><span>${altitudeInfo.label}</span><strong>${altitude}</strong></div><div class="metric"><span>目标高度</span><strong>${target}</strong></div><div class="metric"><span>定位状态</span><strong>${t?(t.odom_valid?'有效':'无效'):'—'}</strong></div><div class="metric"><span>任务分派</span><strong>${任务回执文字(mission,u,t,isActive)}</strong></div><button type="button" class="metric traffic-metric" data-traffic-uav-id="${id}" aria-label="查看 UAV${id} 端口实时通信"><span>机地 TCP 速度</span><strong>${转义(机地通信(snapshot.traffic,id))}</strong></button></div><div class="task"><b>分配任务：</b>${转义(任务文字(u&&u.task))}${u&&u.return_reason?`<br><b>返航原因：</b>${转义(文本.原因[u.return_reason]||u.return_reason)}`:''}</div></article>`}).join('');渲染详情();  const events=mission?(mission.events||[]).slice().reverse().slice(0,20):[];$('eventList').innerHTML=events.length?events.map(event=>`<li><time>${new Date(event.time*1000).toLocaleTimeString('zh-CN',{hour12:false})}</time>${转义(文本.事件[event.kind]||event.kind)}${event.uav_id?` · 无人机 ${event.uav_id}`:''}${event.reason?` · ${转义(文本.原因[event.reason]||event.reason)}`:''}</li>`).join(''):'<li class="empty">暂无任务事件</li>';
 }
-function 渲染预检(report){const failures=report&&report.failures?report.failures:{};const rows=[];if(report&&report.battery_threshold_enforced===false)rows.push('<li class="ok">当前场景：已跳过起飞电量百分比检查；飞控保护与低电量返航规则仍保留</li>');Object.entries(failures).forEach(([id,items])=>{if(id==='system'){items.forEach(item=>rows.push(`<li class="bad">系统：${转义(文本.预检[item]||item)}</li>`));return}if(!items.length)rows.push(`<li class="ok">无人机 ${id}：检查通过</li>`);else items.forEach(item=>rows.push(`<li class="bad">无人机 ${id}：${转义(文本.预检[item]||item)}</li>`))});$('checkList').innerHTML=rows.join('')||'<li class="empty">没有预检结果</li>'}
+function 渲染预检(report){const failures=report&&report.failures?report.failures:{};const rows=[];if(report&&report.battery_threshold_enforced===false)rows.push('<li class="ok">所有场景已取消地面电量百分比拦截；飞控保护与低电量返航规则仍保留</li>');Object.entries(failures).forEach(([id,items])=>{if(id==='system'){items.forEach(item=>rows.push(`<li class="bad">系统：${转义(文本.预检[item]||item)}</li>`));return}if(!items.length)rows.push(`<li class="ok">无人机 ${id}：检查通过</li>`);else items.forEach(item=>rows.push(`<li class="bad">无人机 ${id}：${转义(文本.预检[item]||item)}</li>`))});Object.entries(report?.warnings||{}).forEach(([id,items])=>items.forEach(item=>rows.push(`<li style="color:#a65a00">${id==='system'?'提示':'无人机 '+转义(id)}：${转义(item)}</li>`)));$('checkList').innerHTML=rows.join('')||'<li class="empty">没有预检结果</li>'}
 async function 刷新(){try{渲染(await 请求('/api/v1/status'));连接正常()}catch(error){连接异常();提示(error.message,true)}}
 async function 刷新采集(){if(地面正在退出)return;try{渲染采集(await 请求('/api/v1/recording/status'))}catch(error){提示(error.message,true)}}
 function 连接正常(){$('connectionDot').className='dot online';$('connectionText').textContent='后端连接正常'}function 连接异常(){$('connectionDot').className='dot';$('connectionText').textContent='后端连接中断'}
@@ -938,9 +939,9 @@ for(const [title,start,end] of [['车辆',0,6],['工事',7,10],['人员',11,14],
 }
 $('recognitionSelectAll').onclick=()=>{for(const el of document.querySelectorAll('#recognitionGroups input'))el.checked=true;修改类别选择()};更新类别计数();
 
-let 比赛覆盖方案=null,覆盖规划中=false,规划点击序号=0,固定规划绘制键='',分派反馈任务ID='',规划结果待核对=false,本次规划告警={missionId:'',messages:[]};
+let 比赛覆盖方案=null,覆盖规划中=false,当前规划作业状态='',规划点击序号=0,固定规划绘制键='',分派反馈任务ID='',规划结果待核对=false,本次规划告警={missionId:'',messages:[]};
   function 真实区域模式(){return ['subject1','subject2'].includes($('subject').value)&&$('planningAreaMode').value==='competition'}
-  function 更新规划模式(){const selected=['subject1','subject2'].includes($('subject').value);$('coverageSettings').style.display=selected?'block':'none';$('recognitionSettings').style.display=$('subject').value==='subject1'?'block':'none';for(const id of ['scoutRadius','flightSpeed','hoverScanSeconds','terrainExclusions','coverageUavCount'])$(id).disabled=true;$('planButton').textContent='规划并分派';$('exportCoverage').disabled=!当前状态?.mission?.prepared_plan;更新任务按钮()}
+  function 更新规划模式(){const selected=['subject1','subject2'].includes($('subject').value);$('coverageSettings').style.display=selected?'block':'none';$('recognitionSettings').style.display=selected?'block':'none';for(const id of ['scoutRadius','flightSpeed','hoverScanSeconds','terrainExclusions','coverageUavCount'])$(id).disabled=true;$('planButton').textContent='规划并分派';$('exportCoverage').disabled=!当前状态?.mission?.prepared_plan;更新任务按钮()}
 function 更新任务按钮(snapshot=当前状态){
   const role=snapshot?.operator||当前角色,mission=snapshot?.mission;
   const roleBlocked=role?.selection_required&&(!role.configured||!role.profile_matches||role.selection_pending||!!role.selection_error);
@@ -950,8 +951,9 @@ function 更新任务按钮(snapshot=当前状态){
   $('planButton').disabled=!!(roleBlocked||pendingRestart||active);
   $('planButton').textContent=覆盖规划中?'再次规划并分派':role?.task_publisher===false?'规划并分派本机':'规划并分派';
   $('planButton').title=reason;
-  $('prepareButton').disabled=!!(roleBlocked||pendingRestart||覆盖规划中||规划结果待核对||snapshot?.mission_read_only||!mission||!['planned','preflight_ready'].includes(mission.phase));
-  $('prepareButton').title=reason||(规划结果待核对?'最近一次规划未确认成功，请检查结果后重新规划':snapshot?.mission_read_only?'此任务由发布端控制':!mission?'请先完成规划并分派':!['planned','preflight_ready'].includes(mission.phase)?'当前任务阶段不能发起起飞预检':'');
+  const planningBlocked=(覆盖规划中||规划结果待核对)&&当前规划作业状态!=='queued';
+  $('prepareButton').disabled=!!(roleBlocked||pendingRestart||planningBlocked||snapshot?.mission_read_only||!mission||!['planned','preflight_ready'].includes(mission.phase));
+  $('prepareButton').title=(当前规划作业状态==='queued'&&!roleBlocked&&!pendingRestart&&!active?'使用当前已确认任务起飞；尚未执行的排队规划会取消':reason)||(规划结果待核对?'最近一次规划未确认成功，请检查结果后重新规划':snapshot?.mission_read_only?'此任务由发布端控制':!mission?'请先完成规划并分派':!['planned','preflight_ready'].includes(mission.phase)?'当前任务阶段不能发起起飞预检':'');
   $('returnButton').disabled=!!(roleBlocked||!mission||!['taking_off','running','returning'].includes(mission.phase));
   $('subject').disabled=false;
 }
@@ -989,6 +991,8 @@ async function 提交并等待规划(payload, click){
       await new Promise(resolve=>setTimeout(resolve,1000));continue;
     }
     if(click!==规划点击序号)return null;
+    当前规划作业状态=job.state;更新任务按钮();
+    if(job.cancelled_for_takeoff)return {cancelled_for_takeoff:true};
     if(job.state==='succeeded')return job.result;
     if(job.state==='failed'||job.state==='superseded')throw new Error(job.error||'规划分派失败，请核对任务状态');
     显示分派反馈(job.state==='queued'?`已保留最新方案，等待旧作业在安全边界退出；当前阶段：${job.waiting_for_stage||'处理上一操作'}。`:`${job.stage||'后台正在规划并分派'}（已用时 ${Number(job.elapsed_seconds||0).toFixed(1)} 秒，作业 ${job.job_id.slice(0,8)}）。`);
@@ -998,8 +1002,8 @@ async function 提交并等待规划(payload, click){
 }
 async function 生成比赛覆盖(){
   const click=++规划点击序号;
-  const recognitionSelection=$('subject').value==='subject1'?获取规划识别类别():null;
-  覆盖规划中=true;分派反馈任务ID='';本次规划告警={missionId:'',messages:[]};更新任务按钮();if(typeof 准备地形底图==='function'){底图脚本尝试=0;准备地形底图();}
+  const recognitionSelection=['subject1','subject2'].includes($('subject').value)?获取规划识别类别():null;
+  覆盖规划中=true;当前规划作业状态='';分派反馈任务ID='';本次规划告警={missionId:'',messages:[]};更新任务按钮();if(typeof 准备地形底图==='function'){底图脚本尝试=0;准备地形底图();}
   显示分派反馈('正在读取保存方案并分派任务……');
   let requestSucceeded=false;
   const oldMissionId=当前状态?.mission?.mission_id;
@@ -1013,6 +1017,7 @@ async function 生成比赛覆盖(){
     if($('duration').value)payload.duration_seconds=数值($('duration').value,'比赛时限');
     const result=await 提交并等待规划(payload,click);
     if(click!==规划点击序号)return;
+    if(result?.cancelled_for_takeoff){规划结果待核对=false;显示分派反馈('已取消尚未执行的排队规划，起飞使用当前任务。');return;}
     if(!result?.mission?.mission_id)throw new Error('后端没有返回有效任务，请核对任务状态后重试');
     requestSucceeded=true;规划结果待核对=false;当前状态=result;比赛覆盖方案=result.mission;固定规划绘制键='';分派反馈任务ID=result.mission.mission_id;本次规划告警={missionId:分派反馈任务ID,messages:result.planning_warnings||[]};
     const ids=result.dispatch_status?.assigned_uav_ids||Object.keys(result.mission.uavs||{}).map(Number);

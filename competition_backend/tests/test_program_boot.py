@@ -85,11 +85,11 @@ class RemoteBootTests(unittest.TestCase):
             self.rpc('status'); self.rpc('auto_start'); self.rpc('start')
             clock.assert_not_called()
 
-    def test_cold_boot_starts_three_once_even_when_reply_lost(self):
+    def test_cold_boot_starts_all_once_even_when_reply_lost(self):
         self.assertEqual(self.rpc()['_lifecycle']['auto_start_pending'], list(remote.NAMES))
         self.rpc('auto_start')
         self.rpc('auto_start')  # 自动启动响应丢失后的重试也不得再次运行启动命令。
-        self.assertEqual(len(self.calls), 3)
+        self.assertEqual(len(self.calls), len(remote.NAMES))
         self.assertEqual(self.rpc()['_lifecycle']['auto_start_pending'], [])
 
     def test_same_boot_crash_or_ground_restart_never_auto_relaunches(self):
@@ -98,16 +98,16 @@ class RemoteBootTests(unittest.TestCase):
         for _ in range(3):
             self.assertEqual(self.rpc()['_lifecycle']['auto_start_pending'], [])
             self.rpc('auto_start')
-        self.assertEqual(len(self.calls), 3)
+        self.assertEqual(len(self.calls), len(remote.NAMES))
         self.rpc('start')  # 仅操作员主动启动可以再试。
-        self.assertEqual(len(self.calls), 6)
+        self.assertEqual(len(self.calls), 2 * len(remote.NAMES))
 
     def test_reboot_allows_new_batch_even_if_pid_and_stamp_repeat(self):
         self.rpc('auto_start')
         self.boot = 'boot-b'
         self.assertEqual(self.rpc()['_lifecycle']['auto_start_pending'], list(remote.NAMES))
         self.rpc('auto_start')
-        self.assertEqual(len(self.calls), 6)
+        self.assertEqual(len(self.calls), 2 * len(remote.NAMES))
         self.assertEqual(self.rpc()['_lifecycle']['auto_start_pending'], [])
 
     def test_partial_start_interruption_does_not_fill_missing_programs_on_reconnect(self):
@@ -158,9 +158,9 @@ class RemoteBootTests(unittest.TestCase):
 
     def test_failed_start_does_not_block_other_programs_or_repeat(self):
         self.rpc('auto_start', commands={'detection': ''})
-        self.assertEqual(len(self.calls), 2)
+        self.assertEqual(len(self.calls), len(remote.NAMES) - 1)
         self.rpc('auto_start')
-        self.assertEqual(len(self.calls), 2)
+        self.assertEqual(len(self.calls), len(remote.NAMES) - 1)
 
     def test_explicit_stop_intent_survives_failure_and_new_ground_process(self):
         with patch.object(remote, 'stop_program', side_effect=RuntimeError('停止回执丢失')):
@@ -169,7 +169,54 @@ class RemoteBootTests(unittest.TestCase):
         self.assertEqual(self.calls, [])
         self.boot = 'boot-b'
         self.rpc('auto_start')
-        self.assertEqual(len(self.calls), 3)
+        self.assertEqual(len(self.calls), len(remote.NAMES))
+
+
+    def test_four_configured_programs_survive_ground_reopen_and_manual_restart_uses_new_command(self):
+        commands = {key: 'echo first_' + key + ' {uav_id} {model}' for key in remote.NAMES}
+        with patch.object(remote.subprocess, 'Popen', side_effect=self.spawn) as launch:
+            self.rpc('auto_start', commands=commands)
+            self.assertEqual(len(self.calls), 4)
+            for call in launch.call_args_list:
+                argv = call.args[0]
+                key = Path(argv[3]).name
+                self.assertEqual(argv[-1], 'echo first_%s 2 p600' % key)
+                self.assertTrue(call.kwargs['start_new_session'])
+                self.assertTrue(call.kwargs['close_fds'])
+                self.assertEqual(call.kwargs['stdin'], remote.subprocess.DEVNULL)
+                self.assertIsNotNone(call.kwargs['stdout'])
+                self.assertEqual(call.kwargs['stderr'], call.kwargs['stdout'])
+        running = dict(self.live)
+        ground = ProgramManager(self.home / 'ground', {})
+        with patch.object(ground, '_request') as request:
+            ground.stop()
+            self.assertTrue(ground.stop_event.is_set())
+            request.assert_not_called()
+        self.assertEqual(self.live, running)
+        updated = {key: 'echo next_' + key + ' {uav_id}' for key in remote.NAMES}
+        self.assertEqual(self.rpc()['_lifecycle']['auto_start_pending'], [])
+        self.rpc('auto_start', commands=updated)
+        self.assertEqual(len(self.calls), 4)
+        def stop(directory, key, uid):
+            for name in ('process.json', 'worker.json'):
+                meta = remote.read_json(directory / name)
+                self.live.pop(meta.get('pid'), None)
+                remote.write_json(directory / name, {})
+            return dict(state='stopped', stop_verified=True)
+        for key in remote.NAMES:
+            count = len(self.calls)
+            self.rpc('start', program=key, commands=updated)
+            self.assertEqual(len(self.calls), count)  # 已运行时不能应用配置或重复启动
+            with patch.object(remote, 'stop_program', side_effect=stop):
+                self.assertTrue(self.rpc('stop', program=key)[key]['stop_verified'])
+            self.rpc('status')
+            self.rpc('auto_start', commands=updated)
+            self.assertEqual(len(self.calls), count)
+            self.rpc('start', program=key, commands=updated)
+            self.assertEqual(len(self.calls), count + 1)
+            self.assertEqual(Path(self.calls[-1][3]).name, key)
+            self.assertEqual(self.calls[-1][-1], 'echo next_%s 2' % key)
+            self.assertEqual(len(self.live), 8)  # 其他三程序及 worker 仍保持运行
 
 
 def snapshot(boot='boot-a', pending=False):

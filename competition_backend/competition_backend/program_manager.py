@@ -12,7 +12,7 @@ from .ssh_identity import ssh_identity_args
 from .program_logs import LatestProgramLog
 
 NAMES = {'ground': '竞赛程序地面端', 'onboard': '竞赛程序机载端',
-         'detection': '目标检测程序', 'flight': '自主飞行指令程序'}
+         'detection': '目标检测程序', 'flight': '自主飞行指令程序', 'drop': '抛投程序'}
 
 
 def redact(text, secrets=()):
@@ -117,8 +117,8 @@ class ProgramManager:
                 try:
                     config = json.loads(config_path.read_text(encoding='utf-8-sig'))
                     commands = config.get('commands') if isinstance(config, dict) else None
-                    if not isinstance(commands, dict) or set(commands) - {'onboard', 'detection', 'flight'}:
-                        raise ValueError('commands 必须为仅包含 onboard、detection、flight 的对象')
+                    if not isinstance(commands, dict) or set(commands) - (set(NAMES) - {'ground'}):
+                        raise ValueError('commands 必须为仅包含 onboard、detection、flight、drop 的对象')
                     payload['commands'] = commands
                 except (OSError, ValueError) as error:
                     raise RuntimeError('读取机载启动配置 config/onboard_programs.json 失败：%s' % error) from error
@@ -381,5 +381,5 @@ class ProgramManager:
                         offset=offset + len(raw), size=size, generation=current, reset=reset)
 
     def stop(self):
-        # 关闭网页后端不终止机载竞赛、检测或程序 B。
+        # 关闭网页后端只停止地面监控，不终止四个机载程序。
         self.stop_event.set()

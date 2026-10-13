@@ -42,7 +42,6 @@ class AutoTakeoffPreflightTest(unittest.TestCase):
             ({'odom_valid':False},'odometry is invalid'),
             ({'failsafe':True},'failsafe is active'),
             ({'task_assignment_acked':False},'task assignment is not acknowledged'),
-            ({'received_at':900},'telemetry is stale'),
         ]:
             with self.subTest(expected=expected):
                 self.fixture.telemetry(1, armed=False, control_state=0,

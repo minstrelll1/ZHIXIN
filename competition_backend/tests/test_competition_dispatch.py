@@ -19,6 +19,12 @@ from su17_competition_executor.transit_protocol import route_messages
 
 class CompetitionDispatchTest(unittest.TestCase):
     def test_saved_plan_traverses_six_ground_nodes_without_recomputing_or_takeoff(self):
+        self._check_saved_plan_dispatch('subject1')
+
+    def test_subject_two_categories_traverse_six_ground_nodes_without_takeoff(self):
+        self._check_saved_plan_dispatch('subject2')
+
+    def _check_saved_plan_dispatch(self, subject):
         with tempfile.TemporaryDirectory() as tmp:
             config = default_fleet()
             for i in range(1, 7):
@@ -63,7 +69,7 @@ class CompetitionDispatchTest(unittest.TestCase):
                     altitude=44.098, gps_status=3, location_source=4,
                 ))
             with patch.object(polygon_coverage, '_compute', side_effect=AssertionError('不得临场重算')):
-                response = clients[1].post('/api/v1/plan', json={'subject': 'subject1', 'planning_mode': 'competition', 'controller_mode': 'external', 'recognition_selection': {'category_count': 3, 'category_ids': [1, 8, 12]}})
+                response = clients[1].post('/api/v1/plan', json={'subject': subject, 'planning_mode': 'competition', 'controller_mode': 'external', 'recognition_selection': {'category_count': 3, 'category_ids': [1, 8, 12]}})
             self.assertEqual(response.status_code, 200, response.text)
             result = response.json()
             self.assertEqual(result['dispatch_status']['assigned_uav_ids'], list(range(1, 7)))
@@ -74,6 +80,7 @@ class CompetitionDispatchTest(unittest.TestCase):
                 self.assertEqual(len(calls), 1)
                 actual_uid, kind, payload = calls[0].args
                 self.assertEqual((actual_uid, kind), (uid, 'assign_task'))
+                self.assertEqual(payload['subject'], subject)
                 self.assertEqual(payload['task']['recognition_selection']['category_ids'], [1, 8, 12])
                 self.assertEqual(payload['task']['sector'], uid)
                 self.assertEqual(payload['task']['hover_scan_seconds'], 10)

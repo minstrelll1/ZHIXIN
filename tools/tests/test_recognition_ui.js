@@ -14,7 +14,7 @@ assert.match(html, /id="recognitionSelectAll"[^>]*>全选<\/button>/);
 function openPage(){
  const nodes=new Map();
  const inputs=[];
- const makeNode=()=>({append(){},textContent:'',disabled:false});
+ const makeNode=()=>({append(){},textContent:'',disabled:false,style:{}});
  const get=id=>{if(!nodes.has(id))nodes.set(id,makeNode());return nodes.get(id)};
  const context={
   $:get,
@@ -69,4 +69,23 @@ assert.deepEqual(JSON.parse(JSON.stringify(first.run('获取规划识别类别()
 const reopened=openPage();
 assert.equal(reopened.inputs.filter(item=>item.checked).length,0);
 assert.deepEqual(JSON.parse(JSON.stringify(reopened.run('获取规划识别类别()'))),{category_count:0,category_ids:[]});
-console.log('19 类编号、自由勾选、全选、取消、实时计数及重新打开重置通过。');
+// 执行页面实际的科目切换与类别取值逻辑，确认科目二不会被隐藏或漏带类别。
+assert.match(html, /<summary>科目一／二识别类别/);
+const modeStart=html.indexOf('function 更新规划模式()');
+const modeEnd=html.indexOf('function 更新任务按钮',modeStart);
+reopened.context.当前状态=null;
+reopened.context.更新任务按钮=()=>{};
+reopened.run(html.slice(modeStart,modeEnd));
+const selectionExpr=html.match(/const recognitionSelection=(.+);/)[1];
+for(const subject of ['subject1','subject2','subject3']){
+ reopened.get('subject').value=subject;
+ reopened.run('更新规划模式()');
+ assert.equal(reopened.get('recognitionSettings').style.display,subject==='subject3'?'none':'block');
+ for(const input of reopened.inputs)input.checked=false;
+ assert.deepEqual(JSON.parse(JSON.stringify(reopened.run(selectionExpr))),
+   subject==='subject3'?null:{category_count:0,category_ids:[]});
+ reopened.get('recognitionSelectAll').onclick();
+ assert.deepEqual(JSON.parse(JSON.stringify(reopened.run(selectionExpr))),
+   subject==='subject3'?null:{category_count:19,category_ids:Array.from({length:19},(_,i)=>i)});
+}
+console.log('19 类勾选、全选、清空、重新打开重置，科目一／二显示与规划类别取值通过。');

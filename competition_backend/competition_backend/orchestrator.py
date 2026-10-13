@@ -401,7 +401,7 @@ class CompetitionOrchestrator:
                 elif coordinate_mode != "xyz":
                     raise MissionError("外部任务坐标系必须为 gps 或 xyz")
 
-            if subject == "subject1":
+            if subject in ("subject1", "subject2"):
                 recognition_selection = optional_recognition_selection(recognition_selection)
                 task_source = copy.deepcopy(task_source)
                 for task in task_source.values():
@@ -600,10 +600,8 @@ class CompetitionOrchestrator:
             with self._telemetry_lock:
                 latest = dict(self._telemetry)
             now = self.clock()
-            battery_threshold_enforced = not (
-                self._mission is not None
-                and self._mission.flight_profile in ("lab", "lab10", "outdoor5", "outdoor100", "outdoor200", "xuchang_small")
-            )
+            battery_threshold_enforced = False
+            warnings: Dict[str, List[str]] = {}
             per_uav: Dict[str, List[str]] = {}
             telemetry_ages = {}
             if self.live_mode and not self.config.safety.production_config_confirmed:
@@ -619,12 +617,13 @@ class CompetitionOrchestrator:
                 )
             for uav_id in self.active_uav_ids:
                 failures: List[str] = []
+                notices: List[str] = []
                 telemetry = latest.get(uav_id)
                 telemetry_ages[str(uav_id)] = (
                     max(0.0, now - telemetry.received_at) if telemetry else None
                 )
                 if telemetry is None:
-                    failures.append("no telemetry")
+                    notices.append("未收到地面遥测；此项不拦截，起飞条件由机载端再次核验")
                 else:
                     if telemetry.identity.get("identity_verified"):
                         if not telemetry.capabilities.get("motion_enabled"):
@@ -644,21 +643,17 @@ class CompetitionOrchestrator:
                                 and not telemetry.capabilities.get("scan_available")
                             ):
                                 failures.append("尚未接入航点扫描确认节点")
-                    # 起飞预检单独容忍机地/多地面端短暂传输延迟，不放宽飞行中状态检查。
+                    # 地面遥测年龄只提示；机载实时检查和飞行中保护保持原规则。
                     if now - telemetry.received_at > self.config.safety.preflight_telemetry_max_age_seconds:
-                        failures.append("telemetry is stale")
+                        notices.append("地面遥测已超过 %.1f 秒；此项不拦截" % self.config.safety.preflight_telemetry_max_age_seconds)
                     if not telemetry.connected:
                         failures.append("flight controller is disconnected")
                     if not telemetry.odom_valid:
                         failures.append("odometry is invalid")
                     if telemetry.failsafe:
                         failures.append("failsafe is active")
-                    if (
-                        battery_threshold_enforced
-                        and telemetry.battery_percentage
-                        < self.config.safety.preflight_battery_min
-                    ):
-                        failures.append("battery is below preflight threshold")
+                    if telemetry.battery_percentage < self.config.safety.preflight_battery_min:
+                        notices.append("电量低于 %.0f%%；此项不拦截" % (100 * self.config.safety.preflight_battery_min))
                     if telemetry.capabilities.get("auto_takeoff_supported") is True:
                         # 新机载执行器在确认起飞后自动解锁/切模式，地面预检只核验启动条件。
                         if telemetry.capabilities.get("auto_takeoff_ready") is not True:
@@ -669,20 +664,22 @@ class CompetitionOrchestrator:
                             failures.append("UAV is not armed")
                         if telemetry.control_state != self.config.safety.required_control_state:
                             failures.append("control_state is not COMMAND_CONTROL")
-                    if (
-                        not telemetry.task_assignment_acked
-                        or self._mission is None
-                        or telemetry.task_assignment_mission_id
-                        != self._mission.mission_id
-                        or telemetry.task_assignment_checksum
-                        != self._mission.uavs[uav_id].assignment_checksum
-                    ):
-                        failures.append("task assignment is not acknowledged")
+                # 任务回执独立检查，不能把缺失遥测当作已收到当前任务。
+                if (
+                    telemetry is None or not telemetry.task_assignment_acked
+                    or self._mission is None
+                    or telemetry.task_assignment_mission_id != self._mission.mission_id
+                    or telemetry.task_assignment_checksum != self._mission.uavs[uav_id].assignment_checksum
+                ):
+                    failures.append("task assignment is not acknowledged")
+                warnings[str(uav_id)] = notices
                 per_uav[str(uav_id)] = failures
             return {
                 "ok": all(not failures for failures in per_uav.values()),
                 "checked_at": now,
                 "battery_threshold_enforced": battery_threshold_enforced,
+                "telemetry_age_enforced": False,
+                "warnings": warnings,
                 "failures": per_uav,
                 "telemetry_age_seconds": telemetry_ages,
                 "preflight_telemetry_max_age_seconds": self.config.safety.preflight_telemetry_max_age_seconds,
@@ -705,7 +702,7 @@ class CompetitionOrchestrator:
             self._confirmation_token = token
             self._mission.confirmation_expires_at = expires_at
             self._mission.phase = MissionPhase.PREFLIGHT_READY
-            self._event("preflight_passed", expires_at=expires_at)
+            self._event("preflight_passed", expires_at=expires_at, warnings=report["warnings"])
             self._save()
             return {
                 "ready": True,

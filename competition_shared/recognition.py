@@ -1,4 +1,4 @@
-"""科目一任务卡类别协议；业务编号独立于检测模型 class_id。"""
+"""科目一、二任务卡类别协议；业务编号独立于检测模型 class_id。"""
 CATEGORY_CATALOG = (
     [{'id': i, 'name': '车辆%d' % (i + 1)} for i in range(0, 7)]
     + [{'id': i, 'name': '工事%d' % (i - 6)} for i in range(7, 11)]

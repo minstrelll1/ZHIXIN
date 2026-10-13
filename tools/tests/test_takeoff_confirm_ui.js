@@ -17,7 +17,7 @@ function setup(fetch){
   const nodes=new Map(),calls=[],notes=[];
   const context={
     确认令牌:null,当前状态:{mission:{mission_id:'mission-1',phase:'planned',uavs:{'1':{uav_id:1,target_altitude_m:10},'4':{uav_id:4,target_altitude_m:14}}}},
-    当前角色:{task_publisher:true},覆盖规划中:false,规划结果待核对:false,AbortController,setTimeout,clearTimeout,
+    当前角色:{task_publisher:true},覆盖规划中:false,当前规划作业状态:'',规划结果待核对:false,AbortController,setTimeout,clearTimeout,
     $:id=>{if(!nodes.has(id))nodes.set(id,{disabled:false,open:false,innerHTML:'',showModal(){this.open=true},close(){this.open=false;this.onclose?.()}});return nodes.get(id)},
     提示:(message,error)=>notes.push({message,error}),渲染:()=>{},
     fetch:async(url,options)=>{calls.push({url,body:options.body?JSON.parse(options.body):null});return fetch(url,options)}

@@ -146,6 +146,19 @@ class PlanJobRegistry:
             result["waiting_for_stage"] = self._running["stage"]
         return result
 
+    def cancel_queued_for_takeoff(self) -> Optional[Dict[str, Any]]:
+        """起飞使用当前任务；移除未执行的排队规划，避免随后覆盖已确认任务。"""
+        with self._lock:
+            if self._queued is not None:
+                job = self._queued[0]
+                self._queued = None
+                job.update(state="superseded", cancelled_for_takeoff=True,
+                           error="已选择当前任务起飞；此排队规划已取消，未执行、未下发",
+                           finished_at=time.time())
+                # 旧作业提交替换请求时已标记取消；保持取消意图，在下一边界退出。
+                self._record("起飞取消排队规划", job)
+            return self._public_locked(self._current) if self._current is not None else None
+
     def get(self, job_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
         with self._lock:
             job = self._current if job_id is None else self._jobs.get(job_id)

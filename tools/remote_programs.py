@@ -10,7 +10,7 @@ import subprocess
 import sys
 import time
 
-NAMES = {"onboard": "竞赛程序机载端", "detection": "目标检测程序", "flight": "自主飞行指令程序"}
+NAMES = {"onboard": "竞赛程序机载端", "detection": "目标检测程序", "flight": "自主飞行指令程序", "drop": "抛投程序"}
 
 
 def boot_id():
@@ -28,26 +28,25 @@ def detection_command(uid):
             "uav_id:=%d runtime_mode:=debug debug_save_dir:=/tmp/yolo_debug" % uid)
 
 
+def drop_command():
+    return ("source /opt/ros/noetic/setup.bash\n"
+            "source ~/paotou_ws/devel/setup.bash\n"
+            "roslaunch /home/amov/paotou_ws/src/servo/launch_servo/servo.launch port:=/dev/ttyUSB0")
+
+
 def command_for(key, uid, model, commands=None):
     if commands is not None and key in commands:
         command = commands[key]
         if not isinstance(command, str) or not command.strip() or '\x00' in command:
             raise ValueError('%s启动指令必须为非空字符串' % NAMES[key])
-        if key == 'detection' and (command == (
-                'source ~/SpireCV_bj/src/spirecv-ros/devel/setup.bash && exec roslaunch '
-                'spirecv_ros uav_yolo26_botsort_geolocation.launch uav_id:={uav_id}')
-                or command == detection_command(2)
-                or re.fullmatch(r'roslaunch spirecv_ros uav_yolo26_botsort_geolocation\.launch '
-                                r'uav_id:=(?:[1-6]|\{uav_id\}) runtime_mode:=debug '
-                                r'debug_save_dir:=/tmp/yolo_debug', command)):
-            # 已部署电脑会保留本机配置；只兼容升级已知旧默认指令，不改动其他自定义指令。
-            return detection_command(uid)
         # 仅替换约定变量，保留 Bash 的 ${HOME}、函数或其他花括号。
         return command.replace('{uav_id}', str(uid)).replace('{model}', model)
     if key == "onboard":
         return "exec bash ./tools/start_onboard_stack.sh --model %s --expect-uav-id %d --direct --enable-motion" % (model, uid)
     if key == "detection":
         return detection_command(uid)
+    if key == "drop":
+        return drop_command()
     # 兼容未提供启动配置的旧地面端；竞赛程序不按场景强制切换程序 B 模式。
     return "source ~/recon_ws/devel/setup.bash && exec roslaunch px4_north_camera p600_gx40_position_pid_reconnaissance.launch uav_id:=%d flight_mode:=outdoor" % uid
 
@@ -95,14 +94,22 @@ def matching_launchers(table, key, uid):
     """匹配真实 argv 项，不把包含启动字符串的 shell/管理连接当作程序。"""
     expected = {'onboard': ('onboard_preflight.py', 'start_onboard_stack.sh', 'onboard_competition_stack.launch'),
                 'detection': ('uav_yolo26_botsort_geolocation.launch',),
-                'flight': ('p600_gx40_position_pid_reconnaissance.launch',)}[key]
+                'flight': ('p600_gx40_position_pid_reconnaissance.launch',),
+                'drop': ('servo.launch',)}[key]
     result = {}
     for pid, item in table.items():
         args = item.get('args', [])
         if '--worker' in args or not any(Path(arg).name in expected for arg in args if arg):
             continue
+        if key == 'drop':
+            # 此程序没有 uav_id 参数；仅接管本机指定工作空间的 launch。
+            # 精确匹配 argv，避免误认管理 shell 或其他同名 servo.launch。
+            paths = {str(Path.home() / 'paotou_ws/src/servo/launch_servo/servo.launch'),
+                     '/home/amov/paotou_ws/src/servo/launch_servo/servo.launch'}
+            if not any(arg in paths for arg in args):
+                continue
         match = re.search(r'(?:\buav_id:=|--expect-uav-id\s+)([1-6])(?:\s|$)', ' '.join(args))
-        if match and int(match[1]) == uid:
+        if (match and int(match[1]) == uid) or (key == 'drop' and not match):
             result[pid] = item
     return result
 
@@ -220,6 +227,7 @@ def expected_nodes(uid):
         'detection': ['/uav_yolo26_botsort_geolocation'],
         'flight': [prefix + name for name in ('target_geolocator', 'gimbal_tracker_gx40_vertical',
                    'target_maneuver_gx40_position_pid', 'target_scheduler_gx40_position_pid', 'trajectory_follower')],
+        'drop': ['/servo_serial_node'],
     }
 
 

@@ -127,6 +127,20 @@ const watchdog=setTimeout(()=>{console.error('规划界面测试未能在限定�
   const subject3=fixture(async(_url,options)=>{body=JSON.parse(options.body);return response(mission([1]))});
   subject3.context.$('subject').value='subject3';await subject3.context.生成比赛覆盖();
   assert.equal(body.subject,'subject3');assert.equal(body.planning_mode,undefined);
+  // Queued work does not disable takeoff of the existing mission; running work still does.
+  const queued=fixture(async()=>response(mission([1])));
+  queued.context.当前状态=mission([1]);
+  queued.run("覆盖规划中=true;规划结果待核对=true;当前规划作业状态='queued';更新任务按钮()");
+  assert.equal(queued.nodes.get('prepareButton').disabled,false);
+  assert.match(queued.nodes.get('prepareButton').title,/排队规划会取消/);
+  queued.run("当前规划作业状态='running';更新任务按钮()");
+  assert.equal(queued.nodes.get('prepareButton').disabled,true);
+  // Cancelled queue result must not restore an old plan or mark the current task as failed.
+  queued.run("提交并等待规划=async()=>({cancelled_for_takeoff:true})");
+  await queued.context.生成比赛覆盖();
+  assert.equal(queued.run('规划结果待核对'),false);
+  assert.equal(queued.nodes.get('prepareButton').disabled,false);
+  assert.match(queued.nodes.get('dispatchFeedback').textContent,/已取消.*排队/);
   // Active mission and configuration restrictions are never unlocked by cleanup.
   for(const phase of ['taking_off','running','returning']){
     pending.context.当前状态={mission:{phase}};pending.context.更新任务按钮();

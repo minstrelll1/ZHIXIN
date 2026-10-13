@@ -147,11 +147,14 @@ class LiveTelemetrySnapshotTest(unittest.TestCase):
         prepared = self.backend.prepare_takeoff()
         self.assertTrue(prepared['ready'])
         self.clock.advance(5.1)
+        for item in self.backend._telemetry.values(): item.failsafe=True
         with self.assertRaises(MissionError) as caught:
             self.backend.confirm_takeoff(prepared['confirmation_token'])
         report = caught.exception.preflight
         for uid in ('1','2','4','5'):
-            self.assertIn('telemetry is stale', report['failures'][uid])
+            self.assertIn('failsafe is active', report['failures'][uid])
+            self.assertNotIn('telemetry is stale', report['failures'][uid])
+            self.assertTrue(report['warnings'][uid])
             self.assertGreater(report['telemetry_age_seconds'][uid], 5)
         self.assertIsNone(self.backend._confirmation_token)
         self.assertEqual(self.backend._mission.phase.value, 'planned')
@@ -182,23 +185,23 @@ class LiveTelemetrySnapshotTest(unittest.TestCase):
         self.assertFalse(report['ok'])
         self.assertIn('flight controller is disconnected',report['failures']['5'])
 
-    def test_confirm_after_deadline_rechecks_against_five_seconds(self):
+    def test_confirmation_is_not_blocked_by_telemetry_crossing_five_seconds(self):
         self.clock.advance(4.9)
         prepared=self.backend.prepare_takeoff()
         self.assertTrue(prepared['ready'])
         self.clock.advance(.2)
-        with self.assertRaises(MissionError):
-            self.backend.confirm_takeoff(prepared['confirmation_token'])
-        self.assertFalse(any(c['type']=='takeoff' for c in self.adapter.commands))
+        self.backend.confirm_takeoff(prepared['confirmation_token'])
+        self.assertEqual([c['uav_id'] for c in self.adapter.commands if c['type']=='takeoff'],[1,2,4,5])
 
-    def test_all_scenes_use_same_five_second_preflight_window(self):
-        self.clock.advance(4.0)
-        for scene in ('lab','outdoor5','lab10','outdoor100','outdoor200','competition','dalian_nanshan','xuchang_small'):
+    def test_all_scenes_use_age_as_warning_only(self):
+        self.clock.advance(40.0)
+        for scene in ('lab','outdoor5','lab10','outdoor100','outdoor200','competition','dalian_nanshan','xuchang_small','subject1_actual'):
             with self.subTest(scene=scene):
                 self.backend._mission.flight_profile=scene
                 report=self.backend.preflight_report()
                 self.assertTrue(report['ok'],report)
-                self.assertEqual(report['preflight_telemetry_max_age_seconds'],5.)
+                self.assertFalse(report['telemetry_age_enforced'])
+                self.assertTrue(report['warnings']['1'])
 
     def test_legacy_config_defaults_to_five_without_changing_flight_limit(self):
         import json, tempfile

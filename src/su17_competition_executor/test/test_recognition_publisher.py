@@ -1,4 +1,5 @@
 import copy
+from itertools import product
 import json
 import tempfile
 import unittest
@@ -43,9 +44,9 @@ class RecognitionPublisherTest(unittest.TestCase):
                 self.assertIsNone(node._motion_thread)
 
     def test_accept_publishes_before_ack_in_both_control_modes(self):
-        for mode in ['internal','external']:
-            with self.subTest(mode=mode),tempfile.TemporaryDirectory() as directory:
-                node,msg=self.node(directory);msg['controller_mode']=mode;msg['assignment_checksum']=assignment_checksum(msg)
+        for subject, mode in product(('subject1', 'subject2'), ('internal', 'external')):
+            with self.subTest(subject=subject,mode=mode),tempfile.TemporaryDirectory() as directory:
+                node,msg=self.node(directory);msg['subject']=subject;msg['controller_mode']=mode;msg['assignment_checksum']=assignment_checksum(msg)
                 events=[]
                 node.recognition_categories_pub.publish.side_effect=lambda m:events.append(('ros',m.data))
                 node._publish_status.side_effect=lambda kind,**kw:events.append(('status',kind))
@@ -89,9 +90,9 @@ class RecognitionPublisherTest(unittest.TestCase):
                     self.assertIn('规划航速', node._publish_status.call_args.kwargs['error'])
 
     def test_zero_categories_and_publish_error_do_not_reject_task(self):
-        for failure in [False, True]:
-            with self.subTest(failure=failure),tempfile.TemporaryDirectory() as directory:
-                node,msg=self.node(directory)
+        for subject, failure in product(('subject1', 'subject2'), (False, True)):
+            with self.subTest(subject=subject,failure=failure),tempfile.TemporaryDirectory() as directory:
+                node,msg=self.node(directory);msg['subject']=subject
                 msg['task']['recognition_selection']={'category_count':0,'category_ids':[]}
                 msg['assignment_checksum']=assignment_checksum(msg)
                 if failure:node.recognition_categories_pub.publish.side_effect=RuntimeError('ROS disconnected')
@@ -115,11 +116,28 @@ class RecognitionPublisherTest(unittest.TestCase):
             with tempfile.TemporaryDirectory() as directory:
                 node,msg=self.node(directory)
                 if legacy:msg['task'].pop('recognition_selection')
-                else:msg['subject']='subject2'
+                else:msg['subject']='subject3'
                 msg['assignment_checksum']=assignment_checksum(msg);node._accept_assignment(msg)
                 self.assertTrue(node._assignment_acked)
                 if legacy:self.assertEqual(node.recognition_categories_pub.publish.call_args.args[0].data,[])
                 else:node.recognition_categories_pub.publish.assert_not_called()
+
+    def test_subject_two_new_assignment_updates_or_clears_latched_categories(self):
+        with tempfile.TemporaryDirectory() as directory:
+            node, msg = self.node(directory)
+            msg['subject'] = 'subject2'
+            for index, ids in enumerate(([0, 7, 15], list(range(19)), [], None)):
+                msg['mission_id'] = 'subject2-recognition-%d' % index
+                if ids is None:
+                    msg['task'].pop('recognition_selection')
+                else:
+                    msg['task']['recognition_selection'] = {'category_count': len(ids), 'category_ids': ids}
+                msg['assignment_checksum'] = assignment_checksum(msg)
+                node._accept_assignment(msg)
+                self.assertTrue(node._assignment_acked)
+                self.assertEqual(node.recognition_categories_pub.publish.call_args.args[0].data, ids or [])
+                self.assertEqual(node.recognition_categories_pub.publish.call_count, index + 1)
+                self.assertIsNone(node._motion_thread)
 
     def test_competition_time_follows_assignment_and_ticks_from_monotonic_clock(self):
         with tempfile.TemporaryDirectory() as directory:

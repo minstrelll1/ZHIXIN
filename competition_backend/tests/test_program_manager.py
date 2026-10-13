@@ -109,7 +109,7 @@ class ProgramsTest(unittest.TestCase):
             thread.join(3)
             self.assertFalse(thread.is_alive())
             self.assertEqual(manager._request.call_count, 1)
-            for key in ('onboard', 'detection', 'flight'):
+            for key in remote.NAMES:
                 self.assertEqual(manager.snapshot()['programs'][key]['state'], 'error')
                 self.assertIn('密钥验证失败', manager.read_log(key)['text'])
             manager.stop()
@@ -131,12 +131,16 @@ class ProgramsTest(unittest.TestCase):
                 return SimpleNamespace(returncode=0, stdout=output.getvalue().encode(), stderr=b'')
             with patch('competition_backend.program_manager.subprocess.run', side_effect=run):
                 for command in ('echo 第一次 {uav_id}', 'echo 第二次 {uav_id}'):
-                    path.write_text(json.dumps({'commands': {'flight': command}}, ensure_ascii=False), encoding='utf-8-sig')
-                    self.assertEqual(manager._request('start', {})['commands']['flight'], command)
+                    commands = {key: command + ' ' + key for key in remote.NAMES}
+                    path.write_text(json.dumps({'commands': commands}, ensure_ascii=False), encoding='utf-8-sig')
+                    for key in remote.NAMES:
+                        payload = manager._request('start', {}, program=key)
+                        self.assertEqual(payload['commands'], commands)
+                        self.assertEqual(payload['program'], key)
                     manager.boot_id = 'boot-test'
                     manager.operator_stopped = {'detection'}
                     automatic = manager._request('auto_start', {})
-                    self.assertEqual(automatic['commands']['flight'], command)
+                    self.assertEqual(automatic['commands'], commands)
                     self.assertEqual(automatic['expected_boot_id'], 'boot-test')
                     self.assertEqual(automatic['skip_programs'], ['detection'])
                     self.assertNotIn('clock_sync', automatic)
@@ -170,13 +174,14 @@ class ProgramsTest(unittest.TestCase):
             self.assertEqual(len(lines), 2)
         legacy = 'roslaunch spirecv_ros uav_yolo26_botsort_geolocation.launch uav_id:=2 runtime_mode:=debug debug_save_dir:=/tmp/yolo_debug'
         upgraded = remote.command_for('detection', 4, 'p600', {'detection': legacy})
-        self.assertEqual(upgraded, remote.command_for('detection', 4, 'p600', commands))
+        self.assertEqual(upgraded, legacy)  # 显式填写的编号及命令必须保留
         old_two_line = ('source ~/SpireCV_bj/src/spirecv-ros/devel/setup.bash\n'
                         'exec roslaunch spirecv_ros uav_yolo26_botsort_geolocation.launch '
                         'uav_id:=2 runtime_mode:=debug debug_save_dir:=/tmp/yolo_debug')
-        self.assertEqual(remote.command_for('detection', 4, 'p600', {'detection': old_two_line}), upgraded)
+        self.assertEqual(remote.command_for('detection', 4, 'p600', {'detection': old_two_line}), old_two_line)
         old_default = 'source ~/SpireCV_bj/src/spirecv-ros/devel/setup.bash && exec roslaunch spirecv_ros uav_yolo26_botsort_geolocation.launch uav_id:={uav_id}'
-        self.assertEqual(remote.command_for('detection', 4, 'p600', {'detection': old_default}), upgraded)
+        self.assertEqual(remote.command_for('detection', 4, 'p600', {'detection': old_default}), old_default.replace('{uav_id}', '4'))
+        self.assertEqual(remote.command_for('detection', 4, 'p600'), remote.detection_command(4))
         self.assertEqual(remote.command_for('detection', 4, 'p600', {'detection': 'echo 自定义 {uav_id}'}), 'echo 自定义 4')
         with self.assertRaisesRegex(ValueError, '启动指令'):
             remote.command_for('flight', 1, 'p600', {'flight': ''})
@@ -199,7 +204,7 @@ class ProgramsTest(unittest.TestCase):
             def request(*args):
                 manager.stop_event.set()
                 return {'onboard': dict(state='running'), 'detection': dict(state='error', detail='环境缺失'),
-                        'flight': dict(state='running')}
+                        'flight': dict(state='running'), 'drop': dict(state='running')}
             manager._request = request
             manager._watch()
             state = manager.snapshot()['programs']
@@ -217,7 +222,7 @@ class ProgramsTest(unittest.TestCase):
                 if len(calls) == 1:
                     raise RuntimeError('Permission denied (publickey,password).')
                 manager.stop_event.set()
-                return {key: dict(state='running') for key in ('onboard', 'detection', 'flight')}
+                return {key: dict(state='running') for key in remote.NAMES}
             manager._request = request
             manager._authorize = Mock(return_value=True)
             manager._watch()
@@ -252,7 +257,7 @@ class ProgramsTest(unittest.TestCase):
                 if len(calls) < 3:
                     raise RuntimeError('ssh: connection timed out')
                 manager.stop_event.set()
-                return {key: dict(state='running') for key in ('onboard', 'detection', 'flight')}
+                return {key: dict(state='running') for key in remote.NAMES}
             manager._request = request
             manager._watch()
             self.assertEqual(calls, ['status', 'status', 'status'])
@@ -326,12 +331,12 @@ class ProgramsTest(unittest.TestCase):
                     contextlib.redirect_stdout(io.StringIO()):
                 remote.rpc(request)
                 remote.rpc(request)
-                self.assertEqual(len(calls), 3, '重复确认不能重复启动三个程序')
-                self.assertEqual(calls[-1][-1], 'exec custom_program --uav 3')
+                self.assertEqual(len(calls), len(remote.NAMES), '重复确认不能重复启动机载程序')
+                self.assertEqual(next(item[-1] for item in calls if Path(item[3]).name == 'flight'), 'exec custom_program --uav 3')
                 target = root / 'ground_runtime/programs_uav3/detection/process.json'
                 remote.write_json(target, {'exit_code': 1})
                 remote.rpc(dict(request, action='status'))
-                self.assertEqual(len(calls), 3, '状态检查不能自动重启崩溃程序')
+                self.assertEqual(len(calls), len(remote.NAMES), '状态检查不能自动重启崩溃程序')
 
     def test_child_crash_is_red_even_if_other_child_started(self):
         with tempfile.TemporaryDirectory() as tmp:

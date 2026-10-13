@@ -968,7 +968,7 @@ class OnboardTaskExecutor:
         self._publish_recognition_categories({"subject": "subject1", "task": {}})
 
     def _publish_recognition_categories(self, assignment: Dict[str, Any]) -> None:
-        if assignment.get("subject") != "subject1":
+        if assignment.get("subject") not in ("subject1", "subject2"):
             return
         selection = optional_recognition_selection(assignment.get("task", {}).get("recognition_selection"))
         message = Int32MultiArray()
@@ -978,7 +978,7 @@ class OnboardTaskExecutor:
         except Exception as error:
             rospy.logwarn("识别类别话题发布失败，飞行任务继续接收：%s", error)
             return
-        rospy.loginfo("已发布科目一识别类别：%s，共 %d 类，编号=%s", self.recognition_categories_topic,
+        rospy.loginfo("已发布任务识别类别：%s，共 %d 类，编号=%s", self.recognition_categories_topic,
                       selection["category_count"], message.data)
 
     def _publish_task_region(self, assignment):
