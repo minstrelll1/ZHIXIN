@@ -1,0 +1,45 @@
+{
+  "source_commit": "e9d97c2543fbece43c2f42bed9e8dc65ee68b81c",
+  "files": {
+    "vendor/frozen_link/tcp_adapter.py": {
+      "source": "competition_backend/competition_backend/tcp_adapter.py",
+      "sha256": "0071d29a898470ea67a8ff8f16cd3c011f6a4fefb596a8531da212af2e4c1388"
+    },
+    "vendor/frozen_link/adapter.py": {
+      "source": "competition_backend/competition_backend/adapter.py",
+      "sha256": "dc85a4113942625349b997700e337ad94700d592ae51be0deae1172372923a0d"
+    },
+    "vendor/frozen_link/models.py": {
+      "source": "competition_backend/competition_backend/models.py",
+      "sha256": "aff63e6099905af814f1be1ec47a74d0f546ea0a2577df4e2e234ffc0d41d346"
+    },
+    "vendor/frozen_link/pengfei_telemetry.py": {
+      "source": "competition_backend/competition_backend/pengfei_telemetry.py",
+      "sha256": "76381b18230b693cea5561917e4b06db3eb1e8bb153b90ddab5f1929fd10b273"
+    },
+    "vendor/competition_shared/fleet.py": {
+      "source": "competition_shared/fleet.py",
+      "sha256": "2a99ecd8cac0cf9a966a94855dd8995cfc27cf5b56089972806c9c8686e26f06"
+    },
+    "vendor/competition_shared/competition_time.py": {
+      "source": "competition_shared/competition_time.py",
+      "sha256": "8e6815a43fd597588dab135e7acc14d89b057aa0534776e1e11d4755757da844"
+    },
+    "vendor/competition_shared/task_region.py": {
+      "source": "competition_shared/task_region.py",
+      "sha256": "1a4a977f632b58b896e274953269d5ce6a9ef340d63f406ab8441cae356bf354"
+    },
+    "vendor/competition_shared/recognition.py": {
+      "source": "competition_shared/recognition.py",
+      "sha256": "37eafd62ca86384eae84cbe8ece9b7481ef9e90f8930cb5704e68b5b1ee02468"
+    },
+    "vendor/frozen_protocol/task_protocol.py": {
+      "source": "src/su17_competition_executor/src/su17_competition_executor/task_protocol.py",
+      "sha256": "8ca87938ec095f630ea65f7354338510a92dcb2678858326d5da46925b42aa89"
+    },
+    "vendor/frozen_protocol/transit_protocol.py": {
+      "source": "src/su17_competition_executor/src/su17_competition_executor/transit_protocol.py",
+      "sha256": "7250f8cc2955a57614486d3050b536987f4abad641b89700f19dc1639dfc0c9e"
+    }
+  }
+}

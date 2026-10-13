@@ -1,0 +1,12 @@
+{
+  "mode": "backend",
+  "backend_url": "http://127.0.0.1:8000",
+  "publisher_uav_id": 1,
+  "recognition_category_ids": [],
+  "duration_seconds": 1140,
+  "return_battery_threshold": 0.3,
+  "preflight_battery_min": 0.6,
+  "relay_port": 8000,
+  "ssh_user": "amov",
+  "ssh_key": "~/.ssh/zhixin_competition_ed25519"
+}
