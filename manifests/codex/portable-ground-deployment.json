@@ -2,9 +2,9 @@
   "schema_version": 1,
   "repository": "minstrelll1/ZHIXIN",
   "branch": "codex/portable-ground-deployment",
-  "commit": "e9d97c2543fbece43c2f42bed9e8dc65ee68b81c",
-  "tree_sha": "755e1b846dbbce5a48310763792336d18a4645c4",
-  "file_count": 372,
+  "commit": "01028efff6da93d34db903f95b45c3ae9bc4bd15",
+  "tree_sha": "037af2e5913f195ed0c97e01a9c17bda2040f025",
+  "file_count": 397,
   "files": [
     {
       "path": ".editorconfig",
@@ -1554,6 +1554,181 @@
       "size": 7336
     },
     {
+      "path": "emergency_subject1/01_dispatch.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "cb001480061fda831074b40b544512f3acd0fd57",
+      "size": 9866
+    },
+    {
+      "path": "emergency_subject1/02_takeoff.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "fe05df9b4fe470a2f2adf13e9dcc347db0299157",
+      "size": 6194
+    },
+    {
+      "path": "emergency_subject1/common.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "2cd42326a2528865a889bb08515bddd450fe3211",
+      "size": 11557
+    },
+    {
+      "path": "emergency_subject1/config.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "56665b2140233d9c14c6f867125263d40a0e2490",
+      "size": 314
+    },
+    {
+      "path": "emergency_subject1/fixed_mission.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "1574485fa9e08f6a60f3dbf76fc54fc59c5f492c",
+      "size": 397914
+    },
+    {
+      "path": "emergency_subject1/fixed_mission.sha256",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "efdf9b9102c4e27395aad196e7704fb0fd846c75",
+      "size": 65
+    },
+    {
+      "path": "emergency_subject1/fleet.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "9aac3fa7a275343545dc3be422356956e9dd5c1b",
+      "size": 4281
+    },
+    {
+      "path": "emergency_subject1/relay.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "3dee77a21f0a9aa2f841b54e153f1a247459f713",
+      "size": 18148
+    },
+    {
+      "path": "emergency_subject1/tests/test_backend_coexist.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "a20f2b429f34cdc4295e143e481ccebdbc5cc540",
+      "size": 16609
+    },
+    {
+      "path": "emergency_subject1/tests/test_emergency.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "81ea508fd56d034b5444c5fa9c69a3c4dc4a5c20",
+      "size": 18323
+    },
+    {
+      "path": "emergency_subject1/vendor/competition_shared/__init__.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "size": 0
+    },
+    {
+      "path": "emergency_subject1/vendor/competition_shared/competition_time.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "cdab9308880b61c81a710f731ecb61069ec7f966",
+      "size": 1952
+    },
+    {
+      "path": "emergency_subject1/vendor/competition_shared/fleet.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "24d7b0d7d7228914b43440c536afb30a35dc8afa",
+      "size": 11865
+    },
+    {
+      "path": "emergency_subject1/vendor/competition_shared/recognition.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "2746479739d7d7c40b10785e01da3a024357d99e",
+      "size": 1752
+    },
+    {
+      "path": "emergency_subject1/vendor/competition_shared/task_region.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "acef02d0ed4a118053984b3f0f4583780d3cb9dc",
+      "size": 2092
+    },
+    {
+      "path": "emergency_subject1/vendor/frozen_link/__init__.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "size": 0
+    },
+    {
+      "path": "emergency_subject1/vendor/frozen_link/adapter.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "76776952a58ac30c945c0a3ab96b1a502ae1de06",
+      "size": 2792
+    },
+    {
+      "path": "emergency_subject1/vendor/frozen_link/models.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "209e27caf499de9d08ccbab4b6e8d45a54a9a829",
+      "size": 5057
+    },
+    {
+      "path": "emergency_subject1/vendor/frozen_link/pengfei_telemetry.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "44babaa5d4a71d92aebdaa9a95e17961eaed97fb",
+      "size": 2218
+    },
+    {
+      "path": "emergency_subject1/vendor/frozen_link/tcp_adapter.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "8d83c54972fc2b673c60848e2e5524f237f6884b",
+      "size": 29756
+    },
+    {
+      "path": "emergency_subject1/vendor/frozen_protocol/__init__.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "size": 0
+    },
+    {
+      "path": "emergency_subject1/vendor/frozen_protocol/task_protocol.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "89f5c0414f4bfe7abe7b9c4375171778089e7444",
+      "size": 7413
+    },
+    {
+      "path": "emergency_subject1/vendor/frozen_protocol/transit_protocol.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "b3df84e7feff070bafb4358171c53268b1d7d822",
+      "size": 6213
+    },
+    {
+      "path": "emergency_subject1/vendor_sources.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "10d3a3294835b1b70a4c7acb5aebe68ba0c8cb30",
+      "size": 2151
+    },
+    {
+      "path": "emergency_subject1/科目一固定任务备用脚本.docx",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "ed3a9dbc1daa786e0d077f27adac42be4cb8ae9c",
+      "size": 19890
+    },
+    {
       "path": "src/su17_competition_executor/CMakeLists.txt",
       "type": "blob",
       "mode": "100644",
@@ -2611,5 +2786,5 @@
       "size": 804
     }
   ],
-  "generated_at": "2026-10-11T07:52:23+00:00"
+  "generated_at": "2026-10-13T13:25:21+00:00"
 }
