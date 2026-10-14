@@ -2,9 +2,9 @@
   "schema_version": 1,
   "repository": "minstrelll1/ZHIXIN",
   "branch": "codex/portable-ground-deployment",
-  "commit": "b18edcb2a128b19c28510eb47349509aa54d6d9c",
-  "tree_sha": "768c89fe9e6230ec54b517b6bfcb0604bf6e3d33",
-  "file_count": 399,
+  "commit": "f697e045e9268b159cba0b2bab0c4e5c197ae5e1",
+  "tree_sha": "22f4173c2a6e3e3f67f2aa9133640efe3ef4fc8a",
+  "file_count": 401,
   "files": [
     {
       "path": ".editorconfig",
@@ -94,8 +94,8 @@
       "path": "README.md",
       "type": "blob",
       "mode": "100644",
-      "sha": "7f47a1b48205decef5d43b5bb7d5b85a1c8b3a79",
-      "size": 17968
+      "sha": "9591960b9d699cfc660cb8110d6423045a48f674",
+      "size": 18107
     },
     {
       "path": "SU17地面端与机载端启动指令.txt",
@@ -1291,8 +1291,8 @@
       "path": "docs/latest_deployment_activation.md",
       "type": "blob",
       "mode": "100644",
-      "sha": "c99c3d87da1a10ad98d0488717faca9ef4739f1d",
-      "size": 17152
+      "sha": "bbffc2e78aad302716512fd82e53403481dfd358",
+      "size": 17398
     },
     {
       "path": "docs/lq10_reconnection.md",
@@ -2348,8 +2348,15 @@
       "path": "tools/deploy_onboard_stack.ps1",
       "type": "blob",
       "mode": "100644",
-      "sha": "bd5557f2db2418bba7ff9197fded470e92c58380",
-      "size": 4016
+      "sha": "5daf13679b3dfff83a41b8fd28346312b701d497",
+      "size": 5857
+    },
+    {
+      "path": "tools/deploy_transport.ps1",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "3f08854230ca23de812de3e6421ca708ee7bd2d4",
+      "size": 4211
     },
     {
       "path": "tools/export_stadium_center_summary.py",
@@ -2611,6 +2618,13 @@
       "size": 3416
     },
     {
+      "path": "tools/tests/test_deploy_onboard.ps1",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "acdad60f7b09738ddfe4aff5a97339e1d7ce9d8a",
+      "size": 7568
+    },
+    {
       "path": "tools/tests/test_detail_battery.js",
       "type": "blob",
       "mode": "100644",
@@ -2800,5 +2814,5 @@
       "size": 804
     }
   ],
-  "generated_at": "2026-10-14T01:58:09+00:00"
+  "generated_at": "2026-10-14T03:10:55+00:00"
 }
