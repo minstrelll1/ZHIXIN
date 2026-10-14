@@ -4,9 +4,9 @@ import copy
 import math
 
 # 本地坐标为 [北, 西] 米。先过固定门点，再沿各机绕障通道进入任务区。
-# UAV2/6交换子区后，东侧通道随原UAV2子区归UAV6；UAV2/3使用原最短路线。
+# 通道随子区归属：先交换UAV2/6，再交换UAV1/2；北侧通道归UAV2，UAV1/3沿用最短路线。
 LANES = {
-    1: {"name": "north", "label": "北侧绕行", "anchors_m": [[70.0, -45.0], [130.0, -65.0]]},
+    2: {"name": "north", "label": "北侧绕行", "anchors_m": [[70.0, -45.0], [130.0, -65.0]]},
     6: {"name": "east_then_south", "label": "东侧进入后南绕", "anchors_m": [[0.0, -50.0], [-90.0, -50.0]]},
     4: {"name": "northwest", "label": "西北通道", "anchors_m": [[60.0, 35.0]]},
     5: {"name": "southwest", "label": "西南通道", "anchors_m": [[-15.0, 25.0]]},
@@ -63,11 +63,11 @@ def build_recipient_routes(boundary, holes, home, waypoints_by_uav, recipient_ui
 
 
 def apply_transit_lanes(plan):
-    """反转1/4的现有扫描顺序；只更新固定进返场几何、时长和规划说明。"""
+    """反转2/4的现有扫描顺序；只更新固定进返场几何、时长和规划说明。"""
     from shapely.geometry import LineString, Point
     result = copy.deepcopy(plan)
     area = result["search_area"]
-    for uid in ("1", "4"):
+    for uid in ("2", "4"):
         task = result["planned_uavs"][uid]["task"]
         for name in ("waypoints_m", "scan_waypoints_m", "waypoints_wgs84"):
             task[name] = list(reversed(task[name]))
@@ -109,7 +109,7 @@ def apply_transit_lanes(plan):
                 maximum_completion_time_s=max(task["mission_time_s"] for task in tasks),
                 maximum_aircraft_distance_m=max(task["route_distance_m"] for task in tasks),
                 dedicated_transit_lanes={
-                    "uav_ids": list(LANES), "reversed_scan_order_uav_ids": [1, 4],
+                    "uav_ids": list(LANES), "reversed_scan_order_uav_ids": [2, 4],
                     "unchanged_regions": True, "home_merge_radius_m": MERGE_RADIUS_M,
                     "reference_home_m": copy.deepcopy(area["departure_point_m"]),
                     "minimum_pair_distance_outside_merge_radius_m": pair_distances,

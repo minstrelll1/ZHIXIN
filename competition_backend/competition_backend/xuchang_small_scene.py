@@ -389,7 +389,7 @@ def _prepare_east_transfer_plan():
 
 
 def prepare_xuchang_small_plan():
-    """许昌专用进返场方向：只调整固定路线与1/4点序，不改变高度或控制流程。"""
+    """许昌专用进返场方向：只调整固定路线与2/4点序，不改变高度或控制流程。"""
     from .xuchang_transit_lanes import apply_transit_lanes
     plan = _prepare_east_transfer_plan()
     # 从不变的参考方案交换一次，重复离线生成不会再次交换回来。
@@ -408,6 +408,17 @@ def prepare_xuchang_small_plan():
     constraints["uav4_north_of_uav2"] = constraints.pop("uav4_north_of_uav6")
     info["assignment_swap"] = {"uav_ids": [2, 6], "height_by_uav_unchanged": True,
                                "transit_lanes_follow_regions": True}
+    # 在已完成的2/6交换基础上，再交换本轮1/2子区；点序和通道随区域走。
+    planned["1"], planned["2"] = planned["2"], planned["1"]
+    for uid in ("1", "2"):
+        planned[uid]["uav_id"] = int(uid)
+        planned[uid]["task"]["sector"] = int(uid)
+    for field in ("fixed_subregions_lon_lat", "requested_subregions_lon_lat"):
+        area[field] = {str({1: 2, 2: 1}.get(int(uid), int(uid))): points
+                       for uid, points in area.get(field, {}).items()}
+    constraints["uav4_north_of_uav1"] = constraints.pop("uav4_north_of_uav2")
+    constraints["uav2_east_limit_m"] = constraints.pop("uav1_east_limit_m")
+    info["assignment_swap"].update(uav_ids=[1, 2], previous_swaps=[[2, 6]])
     return apply_transit_lanes(plan)
 
 

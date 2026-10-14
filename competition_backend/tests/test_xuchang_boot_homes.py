@@ -14,7 +14,7 @@ from su17_competition_executor.transit_protocol import route_messages
 from su17_competition_executor.task_protocol import validate_assignment
 
 
-OFFSETS = {1:(0.,0.), 2:(10.,-45./7), 3:(-10.,10.),
+OFFSETS = {2:(0.,0.), 1:(10.,-45./7), 3:(-10.,10.),
            4:(0.,10.), 5:(-10.,0.), 6:(10.,10.)}
 
 
@@ -58,10 +58,10 @@ class XuchangBootHomeTest(unittest.TestCase):
                     if str(other)!=uid:
                         self.assertGreaterEqual(line.distance(Point(offset)),2.5,(uid,other))
             self.assertTrue(all(r['path'][-1]==gps for r in routes['return_paths']))
-        # UAV2位于UAV1原起降点连接段上，必须新增绕行，而非只添加说明。
-        r=self.routes['1']; first=self.local(r['entry_path'][1])
-        self.assertGreater(len(r['entry_path']),len(self.plan['planned_uavs']['1']['task']['transit_routes']['entry_path']))
-        self.assertLess(abs(first[0]-OFFSETS[2][0]),5.)
+        # UAV1位于UAV2原起降点连接段上，必须新增绕行，而非只添加说明。
+        r=self.routes['2']; first=self.local(r['entry_path'][1])
+        self.assertGreater(len(r['entry_path']),len(self.plan['planned_uavs']['2']['task']['transit_routes']['entry_path']))
+        self.assertLess(abs(first[0]-OFFSETS[1][0]),5.)
 
     def test_each_altitude_preserves_recipient_home_endpoints_and_protocol(self):
         for uid,item in self.plan['planned_uavs'].items():

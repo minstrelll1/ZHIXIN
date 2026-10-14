@@ -14,8 +14,8 @@ def build_data():
     from shapely.geometry import Polygon,LineString,Point
     from shapely.ops import nearest_points
     plan=attach_routes(load_xuchang_small_plan());a=plan['search_area'];p=a['coverage']['projection']
-    # UAV2恰好放在UAV1原进场连接上，清楚展示新增绕行。
-    offsets={1:(0.,0.),2:(10.,-45./7),3:(-10.,10.),4:(0.,10.),5:(-10.,0.),6:(10.,10.)}
+    # UAV1恰好放在UAV2原进场连接上，清楚展示新增绕行。
+    offsets={2:(0.,0.),1:(10.,-45./7),3:(-10.,10.),4:(0.,10.),5:(-10.,0.),6:(10.,10.)}
     homes={str(uid):dict(latitude=p['latitude']+n/p['north_m_per_degree'],
         longitude=p['longitude']-w/p['west_m_per_degree'],boot_id='example-boot-%d'%uid,
         source='first_valid_unarmed_gps_per_boot') for uid,(n,w) in offsets.items()}
@@ -39,14 +39,14 @@ def build_data():
             minimum_home=min(minimum_home,*(line.distance(Point(pos)) for other,pos in offsets.items() if str(other)!=uid))
     assert minimum_home>=2.5 and minimum_boundary>=5
     plan.update(example_only=True,flight_altitude_plan='around54m',
-                description='示意起降布局，不是实测GPS；UAV2位于UAV1原直线连接上，用真实运行时函数生成全部路线。')
+                description='示意起降布局，不是实测GPS；UAV1位于UAV2原直线连接上，用真实运行时函数生成全部路线。')
     plan['example_metrics']=dict(min_other_home_distance_m=minimum_home,min_boundary_distance_m=minimum_boundary,
         recipient_count=6,return_paths_per_recipient=75)
     safe=flyable.buffer(-5)
-    near,_=nearest_points(LineString(route_local[1][0]),Point(offsets[2]))
+    near,_=nearest_points(LineString(route_local[2][0]),Point(offsets[1]))
     plan['example_plot_data']=dict(offsets=offsets,routes=route_local,
         safe_rings=[list(ring.coords) for ring in [safe.exterior,*safe.interiors]],
-        uav1_nearest=list(near.coords)[0],uav1_clearance_m=LineString(route_local[1][0]).distance(Point(offsets[2])))
+        uav2_nearest=list(near.coords)[0],uav2_clearance_m=LineString(route_local[2][0]).distance(Point(offsets[1])))
     path=ROOT/'docs/xuchang_boot_home_example.json'
     path.write_text(json.dumps(plan,ensure_ascii=False,separators=(',',':')),encoding='utf-8')
     print(json.dumps(plan['example_metrics'],ensure_ascii=False))
@@ -97,24 +97,24 @@ def plot(plan):
     overview.add_patch(plt.Rectangle((-23,-23),50,55,fill=False,ec='#142c46',lw=1.5))
     overview.annotate('右图放大起降区',xy=(27,32),xytext=(80,-45),fontsize=10,
                       arrowprops=dict(arrowstyle='->',color='#526279'),color='#526279')
-    detail.set_title('UAV1绕开UAV2降落点（半径2.5米）',fontsize=12,pad=12)
+    detail.set_title('UAV2绕开UAV1降落点（半径2.5米）',fontsize=12,pad=12)
     # 原直线仅作对比，不包含在下发路线中。
-    detail.plot(*zip(*map(xy,[offsets[1],[70,-45]])),color='#9ba5b3',ls=':',lw=1.7)
-    entry,returned=route_local[1]
-    detail.plot(*zip(*map(xy,entry)),c=colors[0],lw=2.5,label='UAV1实际进场')
-    detail.plot(*zip(*map(xy,returned)),c='#e97321',lw=2,ls=(0,(4,3)),label='UAV1最终返航')
+    detail.plot(*zip(*map(xy,[offsets[2],[70,-45]])),color='#9ba5b3',ls=':',lw=1.7)
+    entry,returned=route_local[2]
+    detail.plot(*zip(*map(xy,entry)),c=colors[1],lw=2.5,label='UAV2实际进场')
+    detail.plot(*zip(*map(xy,returned)),c='#e97321',lw=2,ls=(0,(4,3)),label='UAV2最终返航')
     for uid,pos in offsets.items():
         x,y=xy(pos)
         detail.add_patch(Circle((x,y),2.5,fc='#e64f5720',ec='#b63340',lw=1.1))
         detail.scatter(x,y,c=colors[uid-1],marker='s',s=56,edgecolor='white',zorder=10)
         detail.annotate('UAV%d\n%dm'%(uid,heights[uid]),(x,y),xytext=(-29 if uid in (3,4,6) else 7,9),
                         textcoords='offset points',fontsize=9,color=colors[uid-1],fontweight='bold')
-    nearest=xy(data['uav1_nearest']);obstacle=xy(offsets[2])
-    measured=data['uav1_clearance_m'];detail.plot([nearest[0],obstacle[0]],[nearest[1],obstacle[1]],c='#ac2d3b',lw=1.3)
+    nearest=xy(data['uav2_nearest']);obstacle=xy(offsets[1])
+    measured=data['uav2_clearance_m'];detail.plot([nearest[0],obstacle[0]],[nearest[1],obstacle[1]],c='#ac2d3b',lw=1.3)
     detail.annotate('最近间距 %.2fm'%measured,xy=nearest,xytext=(11,22),fontsize=11,color='#ac2d3b',
                     arrowprops=dict(arrowstyle='->',color='#ac2d3b'),bbox=dict(boxstyle='round,pad=.35',fc='white',ec='#eed8da'))
     detail.set_xlim(-23,27);detail.set_ylim(-23,32)
-    detail.legend(handles=[Line2D([0],[0],color=colors[0],lw=2,label='实际进场'),
+    detail.legend(handles=[Line2D([0],[0],color=colors[1],lw=2,label='实际进场'),
         Line2D([0],[0],color='#e97321',ls='--',lw=2,label='实际返航'),
         Line2D([0],[0],color='#9ba5b3',ls=':',label='原直线（仅对比）')],loc='lower right',fontsize=9,framealpha=.95)
     fig.legend(handles=[Line2D([0],[0],color=c,lw=2,label='UAV%d'%(i+1)) for i,c in enumerate(colors)],
