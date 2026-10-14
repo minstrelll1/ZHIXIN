@@ -92,6 +92,8 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass `
   -SyncConfig
 ```
 
+首次授权时按提示输入机载 Ubuntu 密码；授权后使用专用密钥。带 `-SyncConfig` 直接同步机队配置；目录/配置检查最多等待20秒，超时停止上传，诊断日志位于 `ground_logs/deploy_onboard_*.log`。
+
 P600 机载地址：
 
 |无人机|机载地址|图传网卡地址|地面互联地址|

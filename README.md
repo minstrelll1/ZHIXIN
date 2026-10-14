@@ -81,7 +81,7 @@ if ($LASTEXITCODE -ge 8) { throw "USB 更新失败，请查看 ground_logs\usb_u
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\competition_development\tools\deploy_onboard_stack.ps1" -UavAddress "192.168.1.202" -Model p600 -SyncConfig
 ```
-首次连接时，按终端提示核对主机指纹，并输入机载登录密码或本机密钥口令。
+首次授权时按提示输入机载 Ubuntu 密码；授权后使用专用密钥。带 `-SyncConfig` 直接同步机队配置；目录/配置检查最多等待20秒，超时停止上传，诊断日志位于 `ground_logs/deploy_onboard_*.log`。
 
 
 P600 机载地址：
