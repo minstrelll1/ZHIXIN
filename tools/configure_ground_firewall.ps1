@@ -61,7 +61,22 @@ function Get-GroundFirewallSpecs([string]$ConfigPath, [int]$Port) {
     $ping.Name = 'ZhiXin-Ground-Peer-ICMPv4'
     $ping.DisplayName = '智信-地面互联-Ping'
     $ping.Protocol = 'ICMPv4'; $ping.IcmpType = '8'
-    return @($tcp, $ping)
+    $heartbeat = $common.Clone()
+    $heartbeat.Name = 'ZhiXin-Prometheus-Heartbeat'
+    $heartbeat.DisplayName = '智信-Prometheus-心跳-TCP55556'
+    $heartbeat.Description = '竞赛地面端接收厂商心跳，仅允许配置内的六架无人机。'
+    $heartbeat.Protocol = 'TCP'; $heartbeat.LocalPort = '55556'; $heartbeat.RemotePort = 'Any'
+    $heartbeat.LocalAddress = @($vehicles | ForEach-Object { $_.ground_host } | Sort-Object -Unique)
+    $heartbeat.RemoteAddress = @($vehicles | ForEach-Object { $_.onboard_host } | Sort-Object -Unique)
+    foreach ($value in @($heartbeat.LocalAddress) + @($heartbeat.RemoteAddress)) {
+        $parsed = $null
+        if (-not [Net.IPAddress]::TryParse([string]$value, [ref]$parsed) -or
+            $parsed.AddressFamily -ne [Net.Sockets.AddressFamily]::InterNetwork -or
+            $value -match '^(0|127)\.' -or $parsed.GetAddressBytes()[0] -ge 224) {
+            throw '厂商心跳防火墙规则需要有效的 ground_host 和 onboard_host。'
+        }
+    }
+    return @($tcp, $ping, $heartbeat)
 }
 
 function Test-GroundFirewallSet($Actual, $Expected) {
@@ -114,7 +129,7 @@ function Set-GroundFirewallRules($Specs) {
         if (Test-GroundFirewallRule $spec) { continue }
         $existing = @(Get-NetFirewallRule -Name $spec.Name -PolicyStore PersistentStore -ErrorAction SilentlyContinue)
         if ($existing.Count -gt 0) {
-            # 只更新本脚本固定名称的两条规则，不删除用户、厂商或系统的其他规则。
+            # 只更新本脚本固定名称的规则，不删除用户、厂商或系统的其他规则。
             $update = $spec.Clone()
             $update.NewDisplayName = $update.DisplayName
             $update.Remove('DisplayName')
@@ -146,7 +161,7 @@ function Invoke-GroundFirewallSetup([string]$ConfigPath, [int]$Port, [switch]$In
     $ConfigPath = (Resolve-Path -LiteralPath $ConfigPath).Path
     $specs = @(Get-GroundFirewallSpecs $ConfigPath $Port)
     if (Test-GroundFirewallReady $specs) {
-        Write-GroundFirewallLog "地面互联防火墙规则已就绪：TCP $Port 和 Ping，仅限机队配置的六个互联IP。"
+        Write-GroundFirewallLog "地面互联防火墙规则已就绪：TCP $Port、Ping 和厂商心跳 TCP 55556，仅限机队配置内的地址。"
         return $true
     }
     if ($InspectOnly) {
@@ -158,11 +173,11 @@ function Invoke-GroundFirewallSetup([string]$ConfigPath, [int]$Port, [switch]$In
     } elseif ($ApplyOnly) {
         throw '配置 Windows 防火墙需要管理员权限。'
     } else {
-        Write-GroundFirewallLog '正在请求 Windows 管理员授权，以配置地面互联 TCP 和 Ping 规则。'
+        Write-GroundFirewallLog '正在请求 Windows 管理员授权，以配置地面互联 TCP、Ping 和厂商心跳规则。'
         Request-GroundFirewallElevation $ConfigPath $Port
         if (-not (Test-GroundFirewallReady $specs)) { throw '授权后规则仍未通过检查，请查看 ground_logs\firewall.log。' }
     }
-    Write-GroundFirewallLog "地面互联防火墙规则已配置并验证：TCP $Port 和 Ping。"
+    Write-GroundFirewallLog "地面互联防火墙规则已配置并验证：TCP $Port、Ping 和厂商心跳 TCP 55556。"
     return $true
 }
 

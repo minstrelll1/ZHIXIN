@@ -20,7 +20,7 @@ class XuchangTransitLanesTest(unittest.TestCase):
 
     def test_only_two_and_four_scan_order_reversed_regions_and_parameters_unchanged(self):
         for uid in range(1, 7):
-            old = copy.deepcopy(self.base["planned_uavs"][str({1: 6, 2: 1, 6: 2}.get(uid, uid))]["task"])
+            old = copy.deepcopy(self.base["planned_uavs"][str({1: 6, 2: 1, 5: 2, 6: 5}.get(uid, uid))]["task"])
             old["sector"] = uid
             new = self.plan["planned_uavs"][str(uid)]["task"]
             for key in ("polygon_m", "area_m2", "bounds_m", "speed_mps", "hover_scan_seconds", "reconnaissance_radius_m", "scan_count"):
@@ -51,9 +51,9 @@ class XuchangTransitLanesTest(unittest.TestCase):
                 self.assertTrue(self.flyable.buffer(1e-7).covers(line))
                 self.assertGreaterEqual(line.distance(self.flyable.boundary), 5.0)
 
-    def test_second_and_sixth_entry_no_longer_share_southwestern_corridor(self):
+    def test_second_and_fifth_entry_no_longer_share_southwestern_corridor(self):
         one = self.routes[2]["entry_path_m"]
-        two = self.routes[6]["entry_path_m"]
+        two = self.routes[5]["entry_path_m"]
         self.assertGreater(max(point[0] for point in one), 100)
         self.assertLess(min(point[0] for point in two), -80)
         self.assertLess(LineString(one).intersection(LineString(two)).length, 1e-7)
@@ -73,16 +73,16 @@ class XuchangTransitLanesTest(unittest.TestCase):
                     continue
                 distance = min(a.distance(b) for a in paths for b in other_paths)
                 self.assertGreater(distance, 13.0, (uid, other, distance))
-                if (uid, other) == (2, 6):
+                if (uid, other) == (2, 5):
                     self.assertGreater(distance, 19.0)
         # 同一名义起点在20m近场内仍会汇合，本验证不是全时段防碰撞保证。
-        self.assertEqual(LineString(self.routes[2]["entry_path_m"]).distance(LineString(self.routes[6]["entry_path_m"])), 0.)
+        self.assertEqual(LineString(self.routes[2]["entry_path_m"]).distance(LineString(self.routes[5]["entry_path_m"])), 0.)
         self.assertFalse(self.area["coverage"]["dedicated_transit_lanes"]["collision_avoidance_guaranteed"])
 
     def test_ten_meter_square_parking_layouts_keep_approach_lanes_separated(self):
         # 代表性布局压力检查：10m见方四角、24种机号排列；不外推为任意实GPS保证。
         zone = Point(0, 0).buffer(20, quad_segs=128)
-        ids = [2, 6, 4, 5]
+        ids = [2, 5, 4, 6]
         corners = [[5., -5.], [-5., -5.], [5., 5.], [-5., 5.]]
         for homes in itertools.permutations(corners):
             paths = {}

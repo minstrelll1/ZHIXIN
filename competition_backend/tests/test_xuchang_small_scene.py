@@ -63,14 +63,14 @@ class XuchangSmallSceneTest(unittest.TestCase):
         previous = {uid: Polygon(points) for uid, points in reference["regions_m"].items()}
         regions = {uid: Polygon(item["task"]["polygon_m"])
                    for uid, item in self.plan["planned_uavs"].items()}
-        self.assertLess(regions["6"].symmetric_difference(previous["1"]).area, 1e-5)
+        self.assertLess(regions["5"].symmetric_difference(previous["1"]).area, 1e-5)
         self.assertGreaterEqual(regions["2"].bounds[1], previous["1"].bounds[1] - 1e-7)
         # UAV2主体沿用旧UAV3所在区；因边界浮点求交允许微小误差。
         self.assertLess(regions["2"].difference(previous["3"]).area, 1e-5)
-        self.assertAlmostEqual(regions["5"].bounds[2], previous["5"].bounds[2] - 30.0, places=7)
-        self.assertGreaterEqual(regions["5"].bounds[0], previous["1"].bounds[0] - 1e-7)
+        self.assertAlmostEqual(regions["6"].bounds[2], previous["5"].bounds[2] - 30.0, places=7)
+        self.assertGreaterEqual(regions["6"].bounds[0], previous["1"].bounds[0] - 1e-7)
         self.assertGreaterEqual(regions["4"].bounds[0], regions["1"].bounds[2] - 1e-7)
-        self.assertEqual(len(regions["5"].exterior.coords), 5)  # 不再保留南界的细长尾巴。
+        self.assertEqual(len(regions["6"].exterior.coords), 5)  # 不再保留南界的细长尾巴。
         for uid, region in regions.items():
             self.assertEqual(region.geom_type, "Polygon")
             self.assertEqual(len(region.interiors), 0)
@@ -110,7 +110,7 @@ class XuchangSmallSceneTest(unittest.TestCase):
         reference = json.loads(EAST_TRANSFER_REFERENCE_PATH.read_text(encoding="utf-8"))
         base = reference["base_plan"]
         for uid in ("1", "2", "5", "6"):
-            actual, old = self.plan["planned_uavs"][uid]["task"], base["planned_uavs"][{"1": "6", "2": "1", "6": "2"}.get(uid, uid)]["task"]
+            actual, old = self.plan["planned_uavs"][uid]["task"], base["planned_uavs"][{"1": "6", "2": "1", "5": "2", "6": "5"}.get(uid, uid)]["task"]
             self.assertEqual(actual["polygon_m"], old["polygon_m"])
             self.assertEqual(actual["waypoints_m"], list(reversed(old["waypoints_m"])) if uid == "2" else old["waypoints_m"])
         old4 = base["planned_uavs"]["4"]["task"]

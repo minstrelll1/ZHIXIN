@@ -88,28 +88,31 @@ function Save-Fleet($Fleet) {
 
 try {
     $fleet = @{ schema_version=1; vehicles=@(1..6 | ForEach-Object {
-        @{ground_terminal_id=$_; peer_host=('192.168.2.' + (197 + 5 * $_)); ground_host='192.168.1.230'}
+        @{ground_terminal_id=$_; peer_host=('192.168.2.' + (197 + 5 * $_)); ground_host='192.168.1.230'; onboard_host=('192.168.1.' + (197 + 5 * $_))}
     }) }
     Save-Fleet $fleet
     $specs = @(Get-GroundFirewallSpecs $configFile 8000)
     $ips = @('192.168.2.202','192.168.2.207','192.168.2.212','192.168.2.217','192.168.2.222','192.168.2.227')
-    Assert ($specs.Count -eq 2) '规则数量不是两条。'
-    foreach ($spec in $specs) {
+    Assert ($specs.Count -eq 3) '规则数量不是三条。'
+    foreach ($spec in $specs[0..1]) {
         Assert (Test-GroundFirewallSet $spec.LocalAddress $ips) '本地地址范围错误。'
         Assert (Test-GroundFirewallSet $spec.RemoteAddress $ips) '远端地址范围错误。'
         Assert ($spec.Profile -eq 'Any' -and $spec.Direction -eq 'Inbound' -and $spec.Action -eq 'Allow') '规则策略错误。'
     }
     Assert ($specs[0].LocalPort -eq '8000' -and $specs[1].IcmpType -eq '8') '端口或 ICMP 类型错误。'
+    Assert ($specs[2].LocalPort -eq '55556') '厂商心跳端口错误。'
+    Assert (Test-GroundFirewallSet $specs[2].LocalAddress @('192.168.1.230')) '心跳本地地址错误。'
+    Assert (Test-GroundFirewallSet $specs[2].RemoteAddress @('192.168.1.202','192.168.1.207','192.168.1.212','192.168.1.217','192.168.1.222','192.168.1.227')) '心跳远端范围错误。'
     $script:Rules['Unrelated'] = @{Name='Unrelated'; Enabled='False'}
     Assert (Invoke-GroundFirewallSetup $configFile 8000) '首次设置失败。'
-    Assert ($script:Writes -eq 2 -and $script:Rules.Count -eq 3) '首次未准确创建两条规则。'
+    Assert ($script:Writes -eq 3 -and $script:Rules.Count -eq 4) '首次未准确创建两条规则。'
     Assert (Invoke-GroundFirewallSetup $configFile 8000) '重复检查失败。'
-    Assert ($script:Writes -eq 2 -and $script:Elevations -eq 0) '重复运行改动了有效规则。'
+    Assert ($script:Writes -eq 3 -and $script:Elevations -eq 0) '重复运行改动了有效规则。'
 
     $script:Rules['ZhiXin-Ground-Peer-TCP'].RemoteAddress = @('Any')
     $script:Rules['ZhiXin-Ground-Peer-ICMPv4'].Enabled = 'False'
     Assert (Invoke-GroundFirewallSetup $configFile 8010) '规则漂移修复失败。'
-    Assert ($script:Writes -eq 4) '漂移修复未更新两条规则。'
+    Assert ($script:Writes -eq 5) '漂移修复未更新两条规则。'
     Assert ($script:Rules['Unrelated'].Enabled -eq 'False') '改动了其他规则。'
     Assert ($script:Rules['ZhiXin-Ground-Peer-TCP'].DisplayName -eq '智信-地面互联-TCP8010') '端口变化未更新名称。'
 
@@ -117,9 +120,9 @@ try {
     Assert (Invoke-GroundFirewallSetup $configFile 8010) '普通用户读取就绪规则失败。'
     Assert ($script:Elevations -eq 0) '已有正确规则时请求了管理员权限。'
     Assert (-not (Invoke-GroundFirewallSetup $configFile 8020 -InspectOnly)) '只读检查误报成功。'
-    Assert ($script:Writes -eq 4 -and $script:Elevations -eq 0) '只读检查修改了规则。'
+    Assert ($script:Writes -eq 5 -and $script:Elevations -eq 0) '只读检查修改了规则。'
     Assert (Invoke-GroundFirewallSetup $configFile 8020) '提权配置后检查失败。'
-    Assert ($script:Elevations -eq 1 -and $script:Writes -eq 5) '提权次数或修复范围错误。'
+    Assert ($script:Elevations -eq 1 -and $script:Writes -eq 6) '提权次数或修复范围错误。'
     $script:DenyElevation = $true
     Assert-Throws { Invoke-GroundFirewallSetup $configFile 8030 } '取消授权被误报为成功。'
     Assert-Throws { Invoke-GroundFirewallSetup $configFile 8030 -ApplyOnly } '子助手无管理员权限时未拒绝。'

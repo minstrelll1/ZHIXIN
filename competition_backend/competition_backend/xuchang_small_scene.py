@@ -419,6 +419,18 @@ def prepare_xuchang_small_plan():
     constraints["uav4_north_of_uav1"] = constraints.pop("uav4_north_of_uav2")
     constraints["uav2_east_limit_m"] = constraints.pop("uav1_east_limit_m")
     info["assignment_swap"].update(uav_ids=[1, 2], previous_swaps=[[2, 6]])
+    # 5/6完整任务对调；从固定基准生成，保留各机高度与实际起降点归属。
+    planned["5"], planned["6"] = planned["6"], planned["5"]
+    for uid in ("5", "6"):
+        planned[uid]["uav_id"] = int(uid)
+        planned[uid]["task"]["sector"] = int(uid)
+    for field in ("fixed_subregions_lon_lat", "requested_subregions_lon_lat"):
+        area[field] = {str({5: 6, 6: 5}.get(int(uid), int(uid))): points
+                       for uid, points in area.get(field, {}).items()}
+    constraints["uav5_equals_previous_uav1"] = constraints.pop("uav6_equals_previous_uav1")
+    for side in ("north", "south"):
+        constraints["uav6_" + side + "_limit_m"] = constraints.pop("uav5_" + side + "_limit_m")
+    info["assignment_swap"].update(uav_ids=[5, 6], previous_swaps=[[2, 6], [1, 2]])
     return apply_transit_lanes(plan)
 
 

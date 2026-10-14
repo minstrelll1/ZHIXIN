@@ -1135,6 +1135,15 @@ def create_app(environment=None, audit=None) -> FastAPI:
         result["pointcloud"] = pointcloud_collector.status()
         result["traffic"] = traffic_monitor.status()
         result["communication"] = communication_status()
+        result["prometheus_heartbeat"] = (adapter.peer_heartbeat_status()
+            if isinstance(adapter, DistributedFleetAdapter) else {})
+        manager = getattr(app.state, "program_manager", None)
+        if manager is not None:
+            local_programs = manager.snapshot()
+            uid = local_programs.get("uav_id")
+            heartbeat = local_programs.get("connection", {}).get("heartbeat_status")
+            if uid is not None and isinstance(heartbeat, dict):
+                result["prometheus_heartbeat"][str(uid)] = heartbeat
         if isinstance(adapter, DistributedFleetAdapter):
             result["traffic"]["by_uav"].update(adapter.peer_traffic_status())
             mirrored = adapter.mirrored_snapshot()
@@ -1728,11 +1737,12 @@ def create_app(environment=None, audit=None) -> FastAPI:
         if not isinstance(adapter, DistributedFleetAdapter) or uav_id != local_uav_id:
             raise HTTPException(status_code=404, detail="UAV is not local to this computer")
         manager = getattr(app.state, "program_manager", None)
-        program_b = ((manager.snapshot().get("programs", {}).get("flight") or {})
-                     if manager is not None else {})
+        managed = manager.snapshot() if manager is not None else {}
+        program_b = managed.get("programs", {}).get("flight") or {}
         return {
             "uav_id": uav_id,
             "telemetry": adapter.local_telemetry_dict(),
+            "prometheus_heartbeat": managed.get("connection", {}).get("heartbeat_status"),
             "competition_clock": competition_clock.snapshot(),
             "traffic": traffic_monitor.status_for_uav(uav_id),
             "program_b": {key: program_b.get(key) for key in ("state", "flight_mode", "reconnaissance_radius_m", "checked_at")}

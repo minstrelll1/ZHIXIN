@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import math
 import threading
 import time
 import urllib.request
@@ -75,6 +76,7 @@ class DistributedFleetAdapter(FleetAdapter):
         self._peer_telemetry: Dict[int, Telemetry] = {}
         self._peer_traffic: Dict[int, Dict[str, Any]] = {}
         self._peer_program_b: Dict[int, Dict[str, Any]] = {}
+        self._peer_heartbeats: Dict[int, Any] = {}
         self._peer_sync_status: Dict[int, Dict[str, Any]] = {}
         self._telemetry_lock = threading.RLock()
         self._task_publisher = False
@@ -144,6 +146,28 @@ class DistributedFleetAdapter(FleetAdapter):
     def peer_program_b_status(self) -> Dict[str, Dict[str, Any]]:
         with self._telemetry_lock:
             return {str(uav_id): dict(status) for uav_id, status in self._peer_program_b.items()}
+
+    def peer_heartbeat_status(self) -> Dict[str, Dict[str, Any]]:
+        # 只传相对年龄；六台 Windows 时钟不一致不会使旧心跳恢复新鲜。
+        now = time.monotonic()
+        with self._telemetry_lock:
+            result = {}
+            for uid, (raw, received, transfer) in self._peer_heartbeats.items():
+                age = max(0.0, now - received)
+                item = dict(raw, peer_age_seconds=age)
+                source_age = raw.get('age_seconds')
+                valid_age = (isinstance(source_age, (int, float)) and not isinstance(source_age, bool)
+                             and math.isfinite(source_age) and source_age >= 0)
+                if valid_age:
+                    item['age_seconds'] = source_age + age + transfer
+                elif item.get('state') in ('normal', 'abnormal'):
+                    item.update(state='unknown', age_seconds=None, detail='厂商心跳时间信息不可用')
+                if age > 3.0:
+                    item.update(state='unknown', detail='地面端心跳状态同步已过期')
+                elif item.get('state') == 'normal' and item.get('age_seconds', 0) >= 4.0:
+                    item.update(state='abnormal', detail='超过 4 秒未收到厂商心跳')
+                result[str(uid)] = item
+            return result
 
     @property
     def is_coordinator(self) -> bool:
@@ -359,6 +383,13 @@ class DistributedFleetAdapter(FleetAdapter):
             if self.competition_clock is not None:
                 if self.competition_clock.accept(result.get('competition_clock'), uav_id, time.monotonic()-request_started):
                     self.remember_publisher(uav_id)
+            heartbeat = result.get("prometheus_heartbeat")
+            with self._telemetry_lock:
+                if isinstance(heartbeat, dict):
+                    self._peer_heartbeats[uav_id] = (dict(heartbeat), time.monotonic(),
+                                                    max(0.0, time.monotonic() - request_started))
+                else:
+                    self._peer_heartbeats.pop(uav_id, None)
             raw = result.get("telemetry")
             traffic = result.get("traffic")
             if isinstance(traffic, dict):

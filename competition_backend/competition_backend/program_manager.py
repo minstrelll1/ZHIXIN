@@ -10,6 +10,7 @@ import time
 
 from .ssh_identity import ssh_identity_args
 from .program_logs import LatestProgramLog
+from .prometheus_connection import PrometheusConnection
 
 NAMES = {'ground': '竞赛程序地面端', 'onboard': '竞赛程序机载端',
          'detection': '目标检测程序', 'flight': '自主飞行指令程序', 'drop': '抛投程序'}
@@ -58,6 +59,9 @@ class ProgramManager:
         self.local = None
         self.boot_id = ''
         self.auto_blocked_boot = ''
+        self.connection = None
+        self.connection_checked = 0.0
+        self.connection_status = {}
         self.auth = dict(state='idle', detail='')
         self.states = {key: dict(state='idle', detail='尚未启动') for key in NAMES}
         self.states['ground'] = dict(state='running', detail='地面网页服务运行中')
@@ -99,7 +103,9 @@ class ProgramManager:
                     stream.write(redact(text, self.secrets))
 
     def _request(self, action, offsets, program=None):
-        if action == 'clock_probe':
+        if action in ('prometheus_probe', 'prometheus_gps'):
+            source = (self.root / 'tools/remote_prometheus.py').read_text(encoding='utf-8-sig')
+        elif action == 'clock_probe':
             # 旧版节点的只读兼容探针只需数百字节，不再传输整个程序管理器。
             source = ("import json, time\nfrom pathlib import Path\n"
                       "def rpc(payload):\n"
@@ -108,6 +114,8 @@ class ProgramManager:
         else:
             source = (self.root / 'tools' / 'remote_programs.py').read_text(encoding='utf-8-sig')
         payload = dict(action=action, uav_id=self.local['uav_id'], model=self.local['model'], offsets=offsets, program=program, latest_log=True)
+        if action == 'prometheus_gps':
+            payload['expected_boot_id'] = program
         if action == 'auto_start':
             payload['expected_boot_id'] = self.boot_id
             payload['skip_programs'] = sorted(self.operator_stopped)
@@ -135,12 +143,46 @@ class ProgramManager:
         command = ['ssh', *ssh_identity_args(), '-T', '-o', 'BatchMode=yes', '-o', 'StrictHostKeyChecking=accept-new',
                    '-o', 'ConnectTimeout=4', '-o', 'ServerAliveInterval=4', '-o', 'ServerAliveCountMax=1',
                    '%s@%s' % (user, self.local['onboard_host']), 'python3 -']
+        if action in ('prometheus_probe', 'prometheus_gps'):
+            command[-1] = "bash -c 'source /opt/ros/noetic/setup.bash && source ~/p600_experiment/devel/setup.bash && exec python3 -'"
         result = subprocess.run(command, input=code.encode('ascii'), capture_output=True, timeout=25 if action == 'stop' else (4 if action == 'clock_probe' else 16),
                                 creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
         if result.returncode:
             detail = (result.stderr or result.stdout).decode('utf-8', errors='replace').strip()
             raise RuntimeError('SSH 连接或机载程序管理失败：' + detail)
         return json.loads(result.stdout.decode('utf-8'))
+
+    def _prepare_connection(self, force=False):
+        # P600 使用实机核验过的厂商连接；独立程序管理器未配置机队时保持原功能。
+        if self.local.get('model') != 'p600' or (not (self.root / 'tools/remote_prometheus.py').exists()
+                and not (self.root / 'config/onboard_programs.json').exists()):
+            return dict(ready=True, auto_start_allowed=True)
+        if not force and time.monotonic() - self.connection_checked < 5:
+            return self.connection_status
+        if self.connection is None:
+            self.connection = PrometheusConnection(self.local)
+        try:
+            config_path = self.root / 'config/onboard_programs.json'
+            config = json.loads(config_path.read_text(encoding='utf-8-sig')) if config_path.exists() else {}
+            if config.get('prometheus_connection', {}).get('enabled', True) is False:
+                self.connection_status = dict(ready=True, auto_start_allowed=True, detail='厂商自动连接已关闭')
+                return self.connection_status
+            probe = self._request('prometheus_probe', {})
+            if self.stop_event.is_set():
+                return dict(ready=False, auto_start_allowed=False, detail='地面端正在关闭')
+            status = self.connection.step(probe, lambda boot: self._request('prometheus_gps', {}, program=boot))
+        except Exception as error:
+            status = dict(ready=False, auto_start_allowed=False, state='error', detail=str(error))
+        previous = self.connection_status.get('detail')
+        self.connection_status = status
+        self.connection_checked = time.monotonic()
+        if previous != status.get('detail'):
+            notice = '[%s] 基础连接：%s\n' % (time.strftime('%Y-%m-%d %H:%M:%S'), status.get('detail', ''))
+            self._append('ground', notice)
+            self._append('onboard', notice)
+            if getattr(self, 'audit', None):
+                self.audit.record('厂商基础连接准备', uav_id=self.local['uav_id'], **status)
+        return status
 
     def start_program(self, key):
         """显式启动一个机载程序；已运行则复用，不触发整批重连启动。"""
@@ -172,6 +214,10 @@ class ProgramManager:
                 self._append(key, '\n操作员请求%s%s。\n' % (verb, NAMES[key]))
                 if getattr(self, 'audit', None):
                     self.audit.record('机载程序人工操作', action=action, program=key, uav_id=self.local['uav_id'])
+                if action == 'start':
+                    connection = self._prepare_connection(force=True)
+                    if not connection.get('ready'):
+                        raise RuntimeError(connection.get('detail', '厂商基础连接尚未就绪'))
                 result = self._request(action, {}, program=key)[key]
                 # 日志由监测线程按原偏移增量读取，避免重复追加完整历史。
                 result.pop('log', None)
@@ -251,6 +297,11 @@ class ProgramManager:
                 action, authorization_attempted = 'start', False
             try:
                 with self.request_lock:
+                    connection = self._prepare_connection(force=action in ('start', 'auto_start'))
+                    if action in ('start', 'auto_start') and not connection.get('ready'):
+                        action = 'status'
+                    if action == 'auto_start' and not connection.get('auto_start_allowed', True):
+                        action = 'status'
                     if action == 'start' and self.operator_stopped:
                         result = self._request('status', offsets)
                         for key in NAMES:
@@ -264,6 +315,7 @@ class ProgramManager:
                         previous_boot = self.boot_id
                         with self.lock:
                             self.boot_id = current_boot
+                            self.connection_checked = 0.0
                             self.auto_blocked_boot = ''
                             if previous_boot:
                                 self.operator_stopped.clear()
@@ -290,13 +342,17 @@ class ProgramManager:
                                           reason=lifecycle.get('auto_start_reason'),
                                           states={key: result[key].get('state') for key in offsets})
                     action, failed_once = 'status', False
-                    if current_boot and pending and self.auto_blocked_boot != current_boot:
+                    if (current_boot and pending and self.auto_blocked_boot != current_boot
+                            and connection.get('ready') and connection.get('auto_start_allowed', True)):
                         action = 'auto_start'
                         if getattr(self, 'audit', None):
                             self.audit.record('机载开机自动启动请求', uav_id=self.local['uav_id'],
                                               boot_id=current_boot, programs=pending)
                     for key in offsets:
                         info = result[key]
+                        if not connection.get('ready') and info.get('state') not in ('running', 'stopped'):
+                            info = dict(info, state=connection.get('state', 'starting'),
+                                        detail='基础连接准备：' + connection.get('detail', '等待连接'))
                         with self.lock:
                             mirror = self._mirror(key)
                             mirror.consume(info)
@@ -351,6 +407,8 @@ class ProgramManager:
             return {'uav_id': self.local['uav_id'] if self.local else None,
                     'boot_id': self.boot_id,
                     'authorization': dict(self.auth),
+                    'connection': dict(self.connection_status, heartbeat_status=(
+                        self.connection.heartbeat_snapshot() if self.connection else None)),
                     'programs': {key: dict(name=NAMES[key], **state) for key, state in self.states.items()}}
 
     def read_log(self, key, offset=0, limit=65536, generation=''):
@@ -383,3 +441,5 @@ class ProgramManager:
     def stop(self):
         # 关闭网页后端只停止地面监控，不终止四个机载程序。
         self.stop_event.set()
+        if self.connection:
+            self.connection.close()

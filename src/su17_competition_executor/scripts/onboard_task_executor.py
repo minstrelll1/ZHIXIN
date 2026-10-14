@@ -27,6 +27,7 @@ import uuid
 from su17_competition_executor.tcp_link import OnboardTcpLink
 from su17_competition_executor.pengfei_bridge import PengfeiReadOnlyBridge
 from su17_competition_executor.ego_state_bridge import EgoStateReadOnlyBridge
+from su17_competition_executor.flight_diagnostics import FlightDiagnostics
 from su17_competition_executor.transit_protocol import route_messages
 from su17_competition_executor.task_protocol import (
     TaskValidationError,
@@ -124,6 +125,7 @@ class OnboardTaskExecutor:
         self._validate_parameters()
 
         self._lock = threading.RLock()
+        self._flight_diagnostics = FlightDiagnostics(logger=rospy.logwarn)
         self._state: Optional[UAVState] = None
         # 仅供地图绘制的 float64 GPS；不参与任务锚点和飞行控制。
         self._gps_fix: Optional[NavSatFix] = None
@@ -166,6 +168,11 @@ class OnboardTaskExecutor:
             local_prefix + "/prometheus/setup", UAVSetup, queue_size=1
         )
         rospy.Subscriber(local_prefix + "/mavros/rc/in", RCIn, self._rc_callback, queue_size=1)
+        try:
+            self._flight_diagnostics.subscribe(rospy, local_prefix)
+        except (ImportError, AttributeError) as error:
+            rospy.logwarn("飞控诊断消息不可用，继续任务通信：%s", error)
+
         self.status_pub = rospy.Publisher(
             fleet_prefix + "/competition/task_status", String, queue_size=10, latch=True
         )
@@ -630,6 +637,11 @@ class OnboardTaskExecutor:
         command.Command_ID = self._next_command_id()
         self.command_pub.publish(command)
 
+    def _with_flight_diagnostics(self, reason: str) -> str:
+        diagnostics = getattr(self, "_flight_diagnostics", None)
+        detail = diagnostics.recent_warnings() if diagnostics is not None else ""
+        return reason + ("；近期飞控提示（请结合本次操作判断）：" + detail if detail else "")
+
     def _ensure_command_control(self, target) -> Tuple[bool, str]:
         ready, reason = self._takeoff_precheck()
         if not ready:
@@ -658,7 +670,7 @@ class OnboardTaskExecutor:
                     self._publish_setup(UAVSetup.ARMING)
                     arm_sent = True
                 if time.monotonic() - stage_started > 10.0:
-                    return False, "解锁超时或被飞控拒绝，请查看飞控提示；未切换指令控制"
+                    return False, self._with_flight_diagnostics("解锁超时或被飞控拒绝，请查看飞控提示；未切换指令控制")
             else:
                 # 在切换前后持续发送本次高度，不使用 Init_Pos_Hover 默认高度。
                 self._publish_takeoff_position(target)
@@ -678,7 +690,7 @@ class OnboardTaskExecutor:
                     mode_sent = True
                     stage_started = time.monotonic()
                 if time.monotonic() - stage_started > 10.0:
-                    return False, "COMMAND_CONTROL/OFFBOARD 切换超时，停止启动任务"
+                    return False, self._with_flight_diagnostics("COMMAND_CONTROL/OFFBOARD 切换超时，停止启动任务")
             # 使用墙钟等待，ROS 仿真时间暂停时仍能超时或接受接管。
             self._abort_motion.wait(1.0 / self.command_rate)
         return False, "ROS 已退出"
