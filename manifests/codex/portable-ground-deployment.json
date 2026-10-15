@@ -2,9 +2,9 @@
   "schema_version": 1,
   "repository": "minstrelll1/ZHIXIN",
   "branch": "codex/portable-ground-deployment",
-  "commit": "f6a3fcf178a4a3511dbbd983993bf689c6f57b89",
-  "tree_sha": "8ade2ecf9cb218d66a7e2e80c903b8e753256ab9",
-  "file_count": 422,
+  "commit": "54e48723dd8fce43a537a29471781abfb785773d",
+  "tree_sha": "5f66462eba3b4b67baf65371b570bc3bf3f3d15f",
+  "file_count": 444,
   "files": [
     {
       "path": ".editorconfig",
@@ -353,8 +353,8 @@
       "path": "competition_backend/competition_backend/orchestrator.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "f49609f7acd107f15bf241feb73b5e21f72122b6",
-      "size": 57192
+      "sha": "69239fd75c7512a5fa3323b24ece283ac9ad0b64",
+      "size": 57406
     },
     {
       "path": "competition_backend/competition_backend/pcl_octree.py",
@@ -1106,6 +1106,13 @@
       "size": 8175
     },
     {
+      "path": "competition_backend/tests/test_telemetry_participation.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "1cbd8324e1598c16e3d0674b943ec3e2efb21cf8",
+      "size": 7241
+    },
+    {
       "path": "competition_backend/tests/test_terrain_assets.py",
       "type": "blob",
       "mode": "100644",
@@ -1291,8 +1298,8 @@
       "path": "config/onboard_programs.json",
       "type": "blob",
       "mode": "100644",
-      "sha": "31c4517279b7944334cc9eccb81299f3a94142f7",
-      "size": 1802
+      "sha": "b7c3051f72606bdce612ac6514720c0afa63914c",
+      "size": 1782
     },
     {
       "path": "docs/autonomous_executor_update.md",
@@ -1580,6 +1587,153 @@
       "mode": "100644",
       "sha": "32ebb2fcbd385083b846f57a21420774122c136b",
       "size": 73078
+    },
+    {
+      "path": "docs/subject2_six_uav_program_b_review/README.txt",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "2ed96403904897b4b3384f7d48293b0deb69dcfe",
+      "size": 6555
+    },
+    {
+      "path": "docs/subject2_six_uav_program_b_review/SHA256SUMS.txt",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "7f8243402a461baa1fc10345042c8a71646b06d9",
+      "size": 1109
+    },
+    {
+      "path": "docs/subject2_six_uav_program_b_review/all_six_uav_messages.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "ce6db3b325c11f9e1c2a2bd6f275855f0e23aa2e",
+      "size": 712252
+    },
+    {
+      "path": "docs/subject2_six_uav_program_b_review/index.html",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "6994fe1a5eb0acc06db0c9e0ab03d2920dd8f56a",
+      "size": 380004
+    },
+    {
+      "path": "docs/subject2_six_uav_program_b_review/live_readonly_check.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "bdf3f825b3a90b8354564a8a78c272f3cb227718",
+      "size": 4519
+    },
+    {
+      "path": "docs/subject2_six_uav_program_b_review/manifest.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "17589bb34dc07af03bad724b1035cce4adf154d1",
+      "size": 11911
+    },
+    {
+      "path": "docs/subject2_six_uav_program_b_review/publisher_reference.py.txt",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "fafab7ed206603a6a6631b586cada367faddc54f",
+      "size": 31513
+    },
+    {
+      "path": "docs/subject2_six_uav_program_b_review/selection_example.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "4f04ecd80274076346c20b9a7238de9c792e183d",
+      "size": 407
+    },
+    {
+      "path": "docs/subject2_six_uav_program_b_review/uav1_messages.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "343373239d499219e489684756a5e885171c164a",
+      "size": 102631
+    },
+    {
+      "path": "docs/subject2_six_uav_program_b_review/uav2_messages.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "098173e9f4c00ccc5f04e7a7c9ecf6b44935b8d6",
+      "size": 106706
+    },
+    {
+      "path": "docs/subject2_six_uav_program_b_review/uav3_messages.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "7fe1b41b1110c0634f7978466208de20bda1eaae",
+      "size": 105585
+    },
+    {
+      "path": "docs/subject2_six_uav_program_b_review/uav4_messages.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "731db152b0bb067d86c45a2731173189e92b4204",
+      "size": 102888
+    },
+    {
+      "path": "docs/subject2_six_uav_program_b_review/uav5_messages.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "6dfefa15669ed99400b3e12edf3b432e5caa649a",
+      "size": 104488
+    },
+    {
+      "path": "docs/subject2_six_uav_program_b_review/uav6_messages.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "b4e2e8ea4b5179915102518a6aedd352b4afb0bb",
+      "size": 98473
+    },
+    {
+      "path": "docs/subject2_uav3_program_b_review/README.txt",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "63e94d6f143ba65d678ccf63c5be9ef7ab88a9fb",
+      "size": 6081
+    },
+    {
+      "path": "docs/subject2_uav3_program_b_review/SHA256SUMS.txt",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "a4245d31590133f754478481324788692daeb593",
+      "size": 555
+    },
+    {
+      "path": "docs/subject2_uav3_program_b_review/ground_to_onboard_assignment.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "b2ae43bdc951b0dcec15d6fc08dfafea24007d47",
+      "size": 33774
+    },
+    {
+      "path": "docs/subject2_uav3_program_b_review/ground_to_onboard_takeoff.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "5b9cd0bb65a4ec62f35fe2e772671dd1db5f392f",
+      "size": 143
+    },
+    {
+      "path": "docs/subject2_uav3_program_b_review/publisher_reference.py.txt",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "30ac57126e9c9b5d991ec1f7620877498fd3d69e",
+      "size": 25536
+    },
+    {
+      "path": "docs/subject2_uav3_program_b_review/uav3_program_b_messages.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "7d89da5b1af73056abd7e26d3820f2071b1704a6",
+      "size": 57694
+    },
+    {
+      "path": "docs/subject2_uav3_program_b_review/uav3_program_b_review.html",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "15bdde19144889830588608cc3bb9675f19c78a8",
+      "size": 37482
     },
     {
       "path": "docs/task_region_protocol.md",
@@ -1886,8 +2040,8 @@
       "path": "src/su17_competition_executor/scripts/onboard_task_executor.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "ac4973999598a683b5d105bc4ba78e5b8da5cdb0",
-      "size": 109263
+      "sha": "4c952c22505a4a1e94f9ec477209349606db7f09",
+      "size": 111834
     },
     {
       "path": "src/su17_competition_executor/setup.py",
@@ -1956,8 +2110,8 @@
       "path": "src/su17_competition_executor/test/test_automatic_takeoff.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "c0f2545aebd620208e7fe630e02ee972c1c614df",
-      "size": 11246
+      "sha": "b29d3d595208a0f8e6f73a479746fc19cbe5b74e",
+      "size": 15910
     },
     {
       "path": "src/su17_competition_executor/test/test_ego_state_bridge.py",
@@ -2961,5 +3115,5 @@
       "size": 804
     }
   ],
-  "generated_at": "2026-10-15T06:07:14+00:00"
+  "generated_at": "2026-10-15T11:25:40+00:00"
 }
