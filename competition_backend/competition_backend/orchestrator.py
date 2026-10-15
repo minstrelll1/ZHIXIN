@@ -56,6 +56,8 @@ def _altitude_profile_for(flight_profile: str, flight_altitude_plan: str) -> str
         return "competition"
     if altitude_plan in ("around54m", "subject2_50m"):
         return altitude_plan
+    if scene == "subject2_actual":
+        return "around54m"
     return "competition" if scene in ("competition", "outdoor100", "outdoor200", "dalian_nanshan", "xuchang_small", "subject1_actual") else ("lab5" if scene == "outdoor5" else "lab")
 
 
@@ -431,7 +433,7 @@ class CompetitionOrchestrator:
                 uav_id: planned_uavs[uav_id] for uav_id in self.active_uav_ids
             }
             actual_routes = {}
-            if flight_profile in ("subject1_actual", "xuchang_small"):
+            if flight_profile in ("subject1_actual", "subject2_actual", "xuchang_small"):
                 from .transit_routes import rebase_gps_routes_for_takeoff
                 homes = (area or {}).get("takeoff_gps_by_uav") or {}
                 if self.live_mode and any(str(uid) not in homes for uid in uavs):
@@ -441,6 +443,9 @@ class CompetitionOrchestrator:
                     if str(uid) in homes:
                         plan_checkpoint("校验 UAV{} 实际起降点与避让航线".format(uid))
                         actual_routes[uid] = rebase_gps_routes_for_takeoff(area, runtime.task, homes[str(uid)])
+            if flight_profile == "subject2_actual":
+                from .subject2_actual_scene import finalize_dispatch
+                finalize_dispatch(area, planned_uavs, actual_routes)
             plan_checkpoint("保存本次规划")
             self._mission = MissionRuntime(
                 mission_id=mission_id,

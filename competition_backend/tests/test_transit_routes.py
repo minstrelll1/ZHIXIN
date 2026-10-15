@@ -21,7 +21,7 @@ class TransitTest(unittest.TestCase):
     @staticmethod
     def _scene_cases():
         for profile in PROFILES:
-            if profile == 'subject1_actual':
+            if profile in ('subject1_actual', 'subject2_actual'):
                 yield profile, 'stadium_center', ('gps',)
             elif profile == 'dalian_nanshan':
                 yield profile, 'fixed_dalian', ('gps',)
@@ -33,14 +33,18 @@ class TransitTest(unittest.TestCase):
 
     def test_all_saved_routes_stay_inside_after_entry_and_reverse_to_departure(self):
         saved = json.loads(CACHE.read_text(encoding='utf-8'))['scenes']
-        self.assertEqual(len(saved), 15)
+        self.assertEqual(len(saved), 16)
         for key, scene in saved.items():
             with self.subTest(scene=key):
                 region = Polygon(scene['boundary_m']).buffer(2.1e-5)
                 home = scene['departure_m']
                 boundary = Polygon(scene['boundary_m'])
                 for vehicle in scene['vehicles'].values():
-                    self.assertEqual(vehicle['entry_path_m'], list(reversed(vehicle['return_paths_m'][0])))
+                    if not key.startswith('subject2_actual/'):
+                        self.assertEqual(vehicle['entry_path_m'], list(reversed(vehicle['return_paths_m'][0])))
+                    else:
+                        self.assertEqual(vehicle['entry_path_m'][-1],vehicle['waypoints_m'][0])
+                        self.assertTrue(boundary.buffer(-5).buffer(1e-7).covers(LineString(vehicle['entry_path_m'])))
                     self.assertEqual(len(vehicle['return_paths_m']), len(vehicle['waypoints_m']))
                     for scan, route in zip(vehicle['waypoints_m'], vehicle['return_paths_m']):
                         self.assertEqual(route[0], scan)

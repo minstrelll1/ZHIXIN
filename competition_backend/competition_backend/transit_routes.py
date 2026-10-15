@@ -7,11 +7,11 @@ import math
 from pathlib import Path
 
 CACHE = Path(__file__).with_name('external_transit_prepared.json')
-PROFILES = ('lab', 'outdoor5', 'lab10', 'outdoor100', 'outdoor200', 'competition', 'dalian_nanshan', 'xuchang_small', 'subject1_actual')
+PROFILES = ('lab', 'outdoor5', 'lab10', 'outdoor100', 'outdoor200', 'competition', 'dalian_nanshan', 'xuchang_small', 'subject1_actual', 'subject2_actual')
 CLEARANCE_PROFILES = ('outdoor100', 'outdoor200', 'competition')
-SAFE_TRANSIT_PROFILES = CLEARANCE_PROFILES + ('xuchang_small', 'subject1_actual')
+SAFE_TRANSIT_PROFILES = CLEARANCE_PROFILES + ('xuchang_small', 'subject1_actual', 'subject2_actual')
 BOUNDARY_CLEARANCE_M = 5.0
-BOOT_HOME_PROFILES = ('subject1_actual', 'xuchang_small')
+BOOT_HOME_PROFILES = ('subject1_actual', 'subject2_actual', 'xuchang_small')
 
 
 def clearance_region(boundary, distance_m, holes=()):
@@ -108,6 +108,9 @@ def scene_plan(profile, departure, apply_clearance=True):
     from .polygon_coverage import plan_competition_coverage, adapt_competition_plan
     from .stadium_departure import load_prepared_stadium_plan, anchor_stadium_plan
     from .scaled_scene_plans import load_scaled_scene_plan
+    if profile == 'subject2_actual':
+        from .subject2_actual_scene import load_plan
+        return load_plan()
     if profile == 'subject1_actual':
         from .subject1_actual_scene import load_plan
         return load_plan()
@@ -264,7 +267,7 @@ def rebase_gps_routes_for_takeoff(area, task, takeoff_gps):
                     or math.dist(path[0], saved['vehicles'][str(uid)]['waypoints_m'][index-1]) > 1e-8):
                 raise ValueError('固定返航通道端点与缓存不一致')
             paths.append(list(reversed(_join_paths(path[:-1], list(reversed(connectors[1]))))))
-    elif area['flight_profile'] == 'subject1_actual':
+    elif area['flight_profile'] in ('subject1_actual', 'subject2_actual'):
         from .landing_avoidance import routes_from_home
         paths = routes_from_home(saved_boundary, home, targets, others)
         entry_path = paths[first_index]
@@ -332,6 +335,9 @@ def prepare_routes(plan):
             vehicle.update(separated)
             vehicle['return_paths_m'] = [part['path'] for part in separated['fleet_return_paths_m']
                                          if int(part['source_uav_id']) == int(uid)]
+    if area['flight_profile'] == 'subject2_actual':
+        for uid, vehicle in vehicles.items():
+            vehicle['entry_path_m'] = copy.deepcopy(wrappers[uid]['task']['entry_path_m'])
     result = dict(boundary_m=boundary, departure_m=departure, vehicles=vehicles)
     if distance:
         result.update(boundary_clearance_m=distance,
@@ -349,7 +355,7 @@ def prepare_routes(plan):
 def save_all_routes():
     scenes = {}
     for profile in PROFILES:
-        for departure in (('stadium_center',) if profile == 'subject1_actual' else
+        for departure in (('stadium_center',) if profile in ('subject1_actual', 'subject2_actual') else
                           ('fixed_dalian',) if profile == 'dalian_nanshan' else
                           ('fixed_xuchang',) if profile == 'xuchang_small' else
                           ('southeast', 'stadium_center')):
