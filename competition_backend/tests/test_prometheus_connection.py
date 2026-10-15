@@ -66,6 +66,18 @@ class ConnectionTests(unittest.TestCase):
         self.assertTrue(result['ready'])
         self.assertFalse(result['auto_start_allowed'])
 
+    def test_reused_gps_audit_is_forwarded_and_preserved_on_reconnect(self):
+        self.heartbeat()
+        self.probe['flight'] = dict(connected=True, armed=False, location_source=4)
+        audit = dict(boot_id='boot-one', mode='reuse_existing_gps', parameter_changes={}, ready=True)
+        self.switch.return_value = dict(ready=True, detail='已复用', preparation_audit=audit)
+        result = self.connection.step(self.probe, self.switch)
+        self.assertEqual(result['preparation_audit'], audit)
+        self.probe.update(prepared=True, preparation_audit=audit)
+        result = self.connection.step(self.probe, self.switch)
+        self.assertEqual(result['preparation_audit'], audit)
+        self.switch.assert_called_once()
+
     def test_existing_flight_never_switches_gps(self):
         self.heartbeat()
         self.probe['flight'] = dict(connected=True, armed=True, location_source=10)
@@ -118,6 +130,34 @@ class ConnectionTests(unittest.TestCase):
 
 
 class PreparationIntegrationTests(unittest.TestCase):
+    def test_ground_saves_parameter_audit_once_and_recovers_it_after_restart(self):
+        import tempfile
+        from competition_backend.program_manager import ProgramManager
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            helper = root/'tools/remote_prometheus.py'
+            helper.parent.mkdir(); helper.write_text('', encoding='utf8')
+            audit = dict(boot_id='boot-one', mode='reuse_existing_gps', ready=True,
+                         parameter_changes={}, before=dict(control=dict(maximum_safe_vel_z=6)),
+                         after=dict(control=dict(maximum_safe_vel_z=6)))
+            for _ in range(2):
+                manager = ProgramManager(directory, {})
+                manager.local = dict(uav_id=2, model='p600', onboard_host='test')
+                manager.connection = Mock()
+                manager.connection.step.return_value = dict(ready=True, detail='已复用', preparation_audit=audit)
+                manager._request = Mock(return_value=dict(boot_id='boot-one'))
+                manager.audit = Mock()
+                manager._prepare_connection(force=True)
+                manager._prepare_connection(force=True)
+                events = [c for c in manager.audit.record.call_args_list if c.args[0] == '厂商GPS准备参数核验']
+                self.assertEqual(len(events), 1)
+            path = root/'ground_logs/programs/uav2_connection_parameters.jsonl'
+            entries = [json.loads(line) for line in path.read_text(encoding='utf8').splitlines()]
+            self.assertEqual(len(entries), 2)  # 每个地面会话补记一次，轮询不重复刷写。
+            self.assertEqual(entries[0]['before']['control']['maximum_safe_vel_z'], 6)
+            self.assertEqual(entries[0]['parameter_changes'], {})
+            self.assertIn('ground_recorded_at', entries[0])
+
     def test_four_program_start_waits_for_preparation_and_runs_once(self):
         import tempfile
         from competition_backend.program_manager import ProgramManager
@@ -134,8 +174,8 @@ class PreparationIntegrationTests(unittest.TestCase):
             def request(action, offsets):
                 calls.append(action)
                 if action == 'auto_start': manager.stop_event.set()
-                return dict({key: dict(state='idle', detail='尚未启动') for key in ('onboard','detection','flight','drop')},
-                            _lifecycle=dict(boot_id='boot', auto_start_pending=['onboard','detection','flight','drop']))
+                return dict({key: dict(state='idle', detail='尚未启动') for key in ('onboard','detection','detection_person','flight','drop')},
+                            _lifecycle=dict(boot_id='boot', auto_start_pending=['onboard','detection','detection_person','flight','drop']))
             manager._request = request
             manager._watch()
             self.assertEqual(calls, ['status','status','status','auto_start'])
@@ -151,7 +191,7 @@ class PreparationIntegrationTests(unittest.TestCase):
             calls = []
             def request(action, offsets):
                 calls.append(action); manager.stop_event.set()
-                return {key: dict(state='running', detail='已就绪') for key in ('onboard','detection','flight','drop')}
+                return {key: dict(state='running', detail='已就绪') for key in ('onboard','detection','detection_person','flight','drop')}
             manager._request = request
             manager._watch()
             self.assertEqual(calls, ['status'])

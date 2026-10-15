@@ -75,7 +75,7 @@ class SingleProgramControlsTests(unittest.TestCase):
     def test_match_all_launchers_ignores_management_shell_and_other_uav(self):
         def item(pid, args):
             return dict(pid=pid, stamp='s', parent=0, args=args)
-        command = 'roslaunch spirecv_ros uav_yolo26_botsort_geolocation.launch uav_id:=1'
+        command = 'roslaunch spirecv_ros uav_yolo26_vb_geolocation.launch uav_id:=1'
         table = {10: item(10, command.split()), 11: item(11, command.split()),
                  12: item(12, ['bash', '-c', command]), 13: item(13, command.replace(':=1', ':=2').split())}
         self.assertEqual(set(remote.matching_launchers(table, 'detection', 1)), {10, 11})
@@ -83,7 +83,7 @@ class SingleProgramControlsTests(unittest.TestCase):
     def test_stop_finds_duplicate_launchers_and_orphan_worker(self):
         with tempfile.TemporaryDirectory() as tmp:
             directory = Path(tmp)
-            args = ['roslaunch', 'spirecv_ros', 'uav_yolo26_botsort_geolocation.launch', 'uav_id:=1']
+            args = ['roslaunch', 'spirecv_ros', 'uav_yolo26_vb_geolocation.launch', 'uav_id:=1']
             table = {100: dict(pid=100, stamp='a', parent=0, args=args),
                      101: dict(pid=101, stamp='b', parent=100, args=['node']),
                      200: dict(pid=200, stamp='c', parent=0, args=args),

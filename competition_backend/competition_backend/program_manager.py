@@ -13,7 +13,8 @@ from .program_logs import LatestProgramLog
 from .prometheus_connection import PrometheusConnection
 
 NAMES = {'ground': '竞赛程序地面端', 'onboard': '竞赛程序机载端',
-         'detection': '目标检测程序', 'flight': '自主飞行指令程序', 'drop': '抛投程序'}
+         'detection': '车辆工事检测程序', 'detection_person': '人员检测程序',
+         'flight': '自主飞行指令程序', 'drop': '抛投程序'}
 
 
 def redact(text, secrets=()):
@@ -62,6 +63,7 @@ class ProgramManager:
         self.connection = None
         self.connection_checked = 0.0
         self.connection_status = {}
+        self.connection_audit_signature = ''
         self.auth = dict(state='idle', detail='')
         self.states = {key: dict(state='idle', detail='尚未启动') for key in NAMES}
         self.states['ground'] = dict(state='running', detail='地面网页服务运行中')
@@ -126,7 +128,7 @@ class ProgramManager:
                     config = json.loads(config_path.read_text(encoding='utf-8-sig'))
                     commands = config.get('commands') if isinstance(config, dict) else None
                     if not isinstance(commands, dict) or set(commands) - (set(NAMES) - {'ground'}):
-                        raise ValueError('commands 必须为仅包含 onboard、detection、flight、drop 的对象')
+                        raise ValueError('commands 必须为仅包含 onboard、detection、detection_person、flight、drop 的对象')
                     payload['commands'] = commands
                 except (OSError, ValueError) as error:
                     raise RuntimeError('读取机载启动配置 config/onboard_programs.json 失败：%s' % error) from error
@@ -176,6 +178,25 @@ class ProgramManager:
         previous = self.connection_status.get('detail')
         self.connection_status = status
         self.connection_checked = time.monotonic()
+        preparation = status.get('preparation_audit')
+        if isinstance(preparation, dict) and preparation:
+            signature = json.dumps(preparation, ensure_ascii=False, sort_keys=True)
+            if signature != self.connection_audit_signature:
+                self.logs.mkdir(parents=True, exist_ok=True)
+                entry = dict(ground_recorded_at=time.strftime('%Y-%m-%d %H:%M:%S'),
+                             uav_id=self.local['uav_id'], **preparation)
+                path = self.logs / ('uav%s_connection_parameters.jsonl' % self.local['uav_id'])
+                with path.open('a', encoding='utf-8') as log:
+                    log.write(json.dumps(entry, ensure_ascii=False) + '\n')
+                changes = preparation.get('parameter_changes')
+                notice = '[%s] GPS 准备参数审计：方式=%s；准备前后差异=%s；详情=%s\n' % (
+                    entry['ground_recorded_at'], preparation.get('mode'),
+                    json.dumps(changes, ensure_ascii=False), path.name)
+                self._append('ground', notice)
+                self._append('onboard', notice)
+                if getattr(self, 'audit', None):
+                    self.audit.record('厂商GPS准备参数核验', uav_id=self.local['uav_id'], preparation=preparation)
+                self.connection_audit_signature = signature
         if previous != status.get('detail'):
             notice = '[%s] 基础连接：%s\n' % (time.strftime('%Y-%m-%d %H:%M:%S'), status.get('detail', ''))
             self._append('ground', notice)
@@ -439,7 +460,7 @@ class ProgramManager:
                         offset=offset + len(raw), size=size, generation=current, reset=reset)
 
     def stop(self):
-        # 关闭网页后端只停止地面监控，不终止四个机载程序。
+        # 关闭网页后端只停止地面监控，不终止五个机载程序。
         self.stop_event.set()
         if self.connection:
             self.connection.close()

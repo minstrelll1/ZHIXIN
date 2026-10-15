@@ -10,7 +10,8 @@ import subprocess
 import sys
 import time
 
-NAMES = {"onboard": "竞赛程序机载端", "detection": "目标检测程序", "flight": "自主飞行指令程序", "drop": "抛投程序"}
+NAMES = {"onboard": "竞赛程序机载端", "detection": "车辆工事检测程序",
+         "detection_person": "人员检测程序", "flight": "自主飞行指令程序", "drop": "抛投程序"}
 
 
 def boot_id():
@@ -22,10 +23,13 @@ def boot_id():
         return ''
 
 
-def detection_command(uid):
+def detection_command(uid, person=False):
+    launch = 'uav_yolo26_ren_geolocation.launch' if person else 'uav_yolo26_vb_geolocation.launch'
     return ("source ~/SpireCV_bj/src/spirecv-ros/devel/setup.bash\n"
-            "exec roslaunch spirecv_ros uav_yolo26_botsort_geolocation.launch "
-            "uav_id:=%d runtime_mode:=debug debug_save_dir:=/tmp/yolo_debug" % uid)
+            "roslaunch spirecv_ros %s uav_id:=%d runtime_mode:=debug "
+            "debug_save_dir:=/home/amov/yolo_debug debug_save_dir_all:=/home/amov/yolo_debug_all "
+            "camera_params:=/home/amov/SpireCV_bj/src/spirecv-ros/sv-rosapp/camera_params/calib_gx40_720.yaml "
+            "detection_area_filter_enabled:=true external_debug_save_enabled:=true" % (launch, uid))
 
 
 def drop_command():
@@ -45,6 +49,8 @@ def command_for(key, uid, model, commands=None):
         return "exec bash ./tools/start_onboard_stack.sh --model %s --expect-uav-id %d --direct --enable-motion" % (model, uid)
     if key == "detection":
         return detection_command(uid)
+    if key == "detection_person":
+        return detection_command(uid, person=True)
     if key == "drop":
         return drop_command()
     # 兼容未提供启动配置的旧地面端；竞赛程序不按场景强制切换程序 B 模式。
@@ -93,7 +99,8 @@ def existing(key, uid):
 def matching_launchers(table, key, uid):
     """匹配真实 argv 项，不把包含启动字符串的 shell/管理连接当作程序。"""
     expected = {'onboard': ('onboard_preflight.py', 'start_onboard_stack.sh', 'onboard_competition_stack.launch'),
-                'detection': ('uav_yolo26_botsort_geolocation.launch',),
+                'detection': ('uav_yolo26_vb_geolocation.launch',),
+                'detection_person': ('uav_yolo26_ren_geolocation.launch',),
                 'flight': ('p600_gx40_position_pid_reconnaissance.launch',),
                 'drop': ('servo.launch',)}[key]
     result = {}
@@ -220,15 +227,50 @@ def status(directory, offset, latest_log=False):
                 log=base64.b64encode(data).decode(), offset=offset + len(data), size=size, **log_meta)
 
 
+def detection_process_nodes(uid):
+    """以各检测程序自己的进程树识别真实 ROS 节点，兼容 launch 内自定义节点名。"""
+    table, result = process_table(), {}
+    runtime = Path.home() / 'competition_development/ground_runtime' / ('programs_uav%d' % uid)
+    for key in ('detection', 'detection_person'):
+        roots = matching_launchers(table, key, uid)
+        for filename in ('process.json', 'worker.json'):
+            meta = current_record(runtime / key / filename, boot_id())
+            if alive(meta):
+                roots[meta['pid']] = meta
+        nodes = set()
+        for pid, item in collect_tree(table, roots).items():
+            args = item.get('args', [])
+            name = next((arg[len('__name:='):] for arg in args if arg.startswith('__name:=')), '')
+            if not name or name == 'rosout':
+                continue
+            namespace = next((arg[len('__ns:='):] for arg in args if arg.startswith('__ns:=')), '')
+            if not namespace and not name.startswith('/'):
+                try:
+                    # 只读取 ROS_NAMESPACE，不把进程环境中的其他内容输出或保存。
+                    entries = Path('/proc/%d/environ' % pid).read_bytes().split(b'\0')
+                    namespace = next((entry.split(b'=', 1)[1].decode('utf-8') for entry in entries
+                                      if entry.startswith(b'ROS_NAMESPACE=')), '')
+                except (OSError, UnicodeError):
+                    pass
+            nodes.add(name if name.startswith('/') else '/' + '/'.join(
+                part for part in (namespace.strip('/'), name) if part))
+        if nodes:
+            result[key] = sorted(nodes)
+    return result
+
+
 def expected_nodes(uid):
     prefix = '/uav%d/' % uid
-    return {
+    result = {
         'onboard': ['/competition_image_stamp_adapter', '/su17_competition_executor', '/su17_onboard_image_sender'],
-        'detection': ['/uav_yolo26_botsort_geolocation'],
+        'detection': ['/uav_yolo26_vb_geolocation'],
+        'detection_person': ['/uav_yolo26_ren_geolocation'],
         'flight': [prefix + name for name in ('target_geolocator', 'gimbal_tracker_gx40_vertical',
                    'target_maneuver_gx40_position_pid', 'target_scheduler_gx40_position_pid', 'trajectory_follower')],
         'drop': ['/servo_serial_node'],
     }
+    result.update(detection_process_nodes(uid))
+    return result
 
 
 def ros_health(uid):

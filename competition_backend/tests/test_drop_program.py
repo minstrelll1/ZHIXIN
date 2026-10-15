@@ -26,17 +26,17 @@ class DropLifecycleTests(unittest.TestCase):
         self.assertIn('drop', self.rpc()['_lifecycle']['auto_start_pending'])
         self.rpc('auto_start')
         self.assertEqual({Path(call[3]).name for call in self.calls},
-                         {'onboard', 'detection', 'flight', 'drop'})
+                         {'onboard', 'detection', 'detection_person', 'flight', 'drop'})
         self.assertEqual(next(call[-1] for call in self.calls if Path(call[3]).name == 'drop'),
                          remote.drop_command())
         self.live.clear()
         for _ in range(3):
             self.rpc('status')
             self.rpc('auto_start')
-        self.assertEqual(len(self.calls), 4)
+        self.assertEqual(len(self.calls), len(remote.NAMES))
         self.boot = 'boot-b'
         self.rpc('auto_start')
-        self.assertEqual(len(self.calls), 8)
+        self.assertEqual(len(self.calls), 2 * len(remote.NAMES))
 
     def test_upgrade_of_existing_boot_does_not_add_drop_until_operator_requests(self):
         runtime = self.root / 'ground_runtime/programs_uav2'
@@ -54,11 +54,11 @@ class DropLifecycleTests(unittest.TestCase):
     def test_drop_failure_is_isolated_and_is_not_retried(self):
         result = self.rpc('auto_start', commands={'drop': ''})
         self.assertEqual(result['drop']['state'], 'error')
-        self.assertEqual({Path(call[3]).name for call in self.calls}, {'onboard', 'detection', 'flight'})
-        for key in ('onboard', 'detection', 'flight'):
+        self.assertEqual({Path(call[3]).name for call in self.calls}, {'onboard', 'detection', 'detection_person', 'flight'})
+        for key in ('onboard', 'detection', 'detection_person', 'flight'):
             self.assertNotEqual(result[key]['state'], 'error')
         self.rpc('auto_start')
-        self.assertEqual(len(self.calls), 3)
+        self.assertEqual(len(self.calls), len(remote.NAMES) - 1)
 
     def test_explicit_drop_start_uses_custom_config_and_is_idempotent(self):
         command = remote.drop_command().replace('/dev/ttyUSB0', '/dev/ttyUSB1')
@@ -82,9 +82,9 @@ class DropLifecycleTests(unittest.TestCase):
         self.live.clear()
         self.rpc('status')
         self.rpc('auto_start')
-        self.assertEqual(len(self.calls), 4)
+        self.assertEqual(len(self.calls), len(remote.NAMES))
         self.rpc('start', program='drop')
-        self.assertEqual(len(self.calls), 5)
+        self.assertEqual(len(self.calls), len(remote.NAMES) + 1)
         self.assertEqual(Path(self.calls[-1][3]).name, 'drop')
 
 

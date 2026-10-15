@@ -204,7 +204,7 @@ class ProgramsTest(unittest.TestCase):
             def request(*args):
                 manager.stop_event.set()
                 return {'onboard': dict(state='running'), 'detection': dict(state='error', detail='环境缺失'),
-                        'flight': dict(state='running'), 'drop': dict(state='running')}
+                        'flight': dict(state='running'), 'drop': dict(state='running'), 'detection_person': dict(state='running')}
             manager._request = request
             manager._watch()
             state = manager.snapshot()['programs']

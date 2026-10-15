@@ -63,7 +63,7 @@ class XuchangSmallSceneTest(unittest.TestCase):
         previous = {uid: Polygon(points) for uid, points in reference["regions_m"].items()}
         regions = {uid: Polygon(item["task"]["polygon_m"])
                    for uid, item in self.plan["planned_uavs"].items()}
-        self.assertLess(regions["5"].symmetric_difference(previous["1"]).area, 1e-5)
+        self.assertLess(regions["3"].symmetric_difference(previous["1"]).area, 1e-5)
         self.assertGreaterEqual(regions["2"].bounds[1], previous["1"].bounds[1] - 1e-7)
         # UAV2主体沿用旧UAV3所在区；因边界浮点求交允许微小误差。
         self.assertLess(regions["2"].difference(previous["3"]).area, 1e-5)
@@ -109,13 +109,13 @@ class XuchangSmallSceneTest(unittest.TestCase):
     def test_eastern_six_transfer_keeps_other_four_tasks_and_uav4_ten_points(self):
         reference = json.loads(EAST_TRANSFER_REFERENCE_PATH.read_text(encoding="utf-8"))
         base = reference["base_plan"]
-        for uid in ("1", "2", "5", "6"):
-            actual, old = self.plan["planned_uavs"][uid]["task"], base["planned_uavs"][{"1": "6", "2": "1", "5": "2", "6": "5"}.get(uid, uid)]["task"]
+        for uid in ("1", "2", "3", "6"):
+            actual, old = self.plan["planned_uavs"][uid]["task"], base["planned_uavs"][{"1": "6", "2": "1", "3": "2", "6": "5"}.get(uid, uid)]["task"]
             self.assertEqual(actual["polygon_m"], old["polygon_m"])
             self.assertEqual(actual["waypoints_m"], list(reversed(old["waypoints_m"])) if uid == "2" else old["waypoints_m"])
         old4 = base["planned_uavs"]["4"]["task"]
         new4 = self.plan["planned_uavs"]["4"]["task"]
-        new3 = self.plan["planned_uavs"]["3"]["task"]
+        new3 = self.plan["planned_uavs"]["5"]["task"]
         self.assertEqual(reference["transferred_waypoint_indices_1based"], [5, 6, 7, 8, 9, 10])
         self.assertEqual(new4["waypoints_m"], list(reversed(old4["waypoints_m"][:4] + old4["waypoints_m"][10:])))
         self.assertEqual(new4["scan_count"], 10)

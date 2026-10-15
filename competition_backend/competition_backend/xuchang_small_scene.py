@@ -431,6 +431,17 @@ def prepare_xuchang_small_plan():
     for side in ("north", "south"):
         constraints["uav6_" + side + "_limit_m"] = constraints.pop("uav5_" + side + "_limit_m")
     info["assignment_swap"].update(uav_ids=[5, 6], previous_swaps=[[2, 6], [1, 2]])
+    # 3/5完整区域及航点对调，固定基准确保重复生成不会反向交换。
+    planned["3"], planned["5"] = planned["5"], planned["3"]
+    for uid in ("3", "5"):
+        planned[uid]["uav_id"] = int(uid)
+        planned[uid]["task"]["sector"] = int(uid)
+    for field in ("fixed_subregions_lon_lat", "requested_subregions_lon_lat"):
+        area[field] = {str({3: 5, 5: 3}.get(int(uid), int(uid))): points
+                       for uid, points in area.get(field, {}).items()}
+    constraints["uav3_equals_previous_uav1"] = constraints.pop("uav5_equals_previous_uav1")
+    info["eastern_transfer"]["destination_uav_id"] = 5
+    info["assignment_swap"].update(uav_ids=[3, 5], previous_swaps=[[2, 6], [1, 2], [5, 6]])
     return apply_transit_lanes(plan)
 
 

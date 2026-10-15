@@ -104,6 +104,7 @@ class PrometheusConnection:
     def step(self, probe, switch_gps):
         """probe 来自机载只读快照；switch_gps 内部再次校验未解锁和开机标识。"""
         ready, detail = False, ''
+        preparation_audit = probe.get('preparation_audit')
         uid = self.local['uav_id']
         if probe['boot_id'] != self.boot_id:
             self.boot_id = probe['boot_id']
@@ -149,9 +150,11 @@ class PrometheusConnection:
         else:
             result = switch_gps(self.boot_id)
             ready, detail = result.get('ready', False), result['detail']
+            preparation_audit = result.get('preparation_audit', preparation_audit)
         self.status = dict(state='running' if ready else 'starting', ready=ready,
                            detail=detail, boot_id=self.boot_id, heartbeat=heartbeat,
                            external_listener=self.external,
+                           preparation_audit=preparation_audit,
                            auto_start_allowed=ready and not state.get('armed') and not probe.get('business_present'))
         return self.status
 

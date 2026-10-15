@@ -172,11 +172,11 @@ class RemoteBootTests(unittest.TestCase):
         self.assertEqual(len(self.calls), len(remote.NAMES))
 
 
-    def test_four_configured_programs_survive_ground_reopen_and_manual_restart_uses_new_command(self):
+    def test_five_configured_programs_survive_ground_reopen_and_manual_restart_uses_new_command(self):
         commands = {key: 'echo first_' + key + ' {uav_id} {model}' for key in remote.NAMES}
         with patch.object(remote.subprocess, 'Popen', side_effect=self.spawn) as launch:
             self.rpc('auto_start', commands=commands)
-            self.assertEqual(len(self.calls), 4)
+            self.assertEqual(len(self.calls), len(remote.NAMES))
             for call in launch.call_args_list:
                 argv = call.args[0]
                 key = Path(argv[3]).name
@@ -196,7 +196,7 @@ class RemoteBootTests(unittest.TestCase):
         updated = {key: 'echo next_' + key + ' {uav_id}' for key in remote.NAMES}
         self.assertEqual(self.rpc()['_lifecycle']['auto_start_pending'], [])
         self.rpc('auto_start', commands=updated)
-        self.assertEqual(len(self.calls), 4)
+        self.assertEqual(len(self.calls), len(remote.NAMES))
         def stop(directory, key, uid):
             for name in ('process.json', 'worker.json'):
                 meta = remote.read_json(directory / name)
@@ -216,7 +216,7 @@ class RemoteBootTests(unittest.TestCase):
             self.assertEqual(len(self.calls), count + 1)
             self.assertEqual(Path(self.calls[-1][3]).name, key)
             self.assertEqual(self.calls[-1][-1], 'echo next_%s 2' % key)
-            self.assertEqual(len(self.live), 8)  # 其他三程序及 worker 仍保持运行
+            self.assertEqual(len(self.live), 2 * len(remote.NAMES))  # 其他程序及 worker 仍保持运行
 
 
 def snapshot(boot='boot-a', pending=False):
