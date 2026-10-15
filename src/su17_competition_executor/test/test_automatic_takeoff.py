@@ -145,6 +145,108 @@ class AutomaticTakeoffTest(unittest.TestCase):
         self.assertTrue(self.node._ensure_command_control(self.target)[0])
         self.assertEqual(self.commands, [])
 
+    def deliver_control(self, mode, failsafe=False):
+        self.node._control_callback(types.SimpleNamespace(
+            uav_id=3, control_state=mode, pos_controller=0, failsafe=failsafe))
+
+    def record_startup_phase(self):
+        self.node._checkpoint.side_effect = lambda phase, **values: self.node._progress.update(
+            phase=phase, **values)
+
+    def test_initial_rc_pos_transition_can_complete_takeoff_handshake(self):
+        self.record_startup_phase()
+        ticks = []
+        def startup():
+            ticks.append(self.clock)
+            self.node._state.armed = True
+            # Separate status frames can report RC_POS while COMMAND is pending.
+            if len(ticks) <= 3:
+                self.deliver_control(1)
+            else:
+                self.deliver_control(2)
+                self.node._state.mode = 'OFFBOARD'
+        self.action = startup
+        self.assertTrue(self.node._ensure_command_control(self.target)[0])
+        self.assertEqual(self.commands, [0, 3])
+        self.assertFalse(self.node._manual_override)
+        self.node.external_path_pub.publish.assert_not_called()
+
+    def test_initial_rc_pos_transition_still_times_out_without_command_control(self):
+        self.record_startup_phase()
+        def startup():
+            self.node._state.armed = True
+            self.deliver_control(1)
+        self.action = startup
+        ok, reason = self.node._ensure_command_control(self.target)
+        self.assertFalse(ok)
+        self.assertIn('切换超时', reason)
+        self.assertFalse(self.node._manual_override)
+        self.assertEqual(self.commands, [0, 3])
+
+    def test_real_rc_switch_still_cancels_during_initial_rc_pos_transition(self):
+        self.record_startup_phase()
+        def startup():
+            self.node._state.armed = True
+            self.deliver_control(1)
+            self.node._rc_callback(types.SimpleNamespace(channels=[1500] * 8))
+        self.action = startup
+        ok, reason = self.node._ensure_command_control(self.target)
+        self.assertFalse(ok)
+        self.assertTrue(self.node._manual_override)
+        self.assertIn('遥控器模式拨杆变动', reason)
+        self.assertEqual(self.commands, [0])
+
+    def test_startup_exception_does_not_allow_other_control_exits(self):
+        for initial, incoming, failsafe, phase in (
+            (1, 0, False, 'entering_command_control'),
+            (0, 3, False, 'entering_command_control'),
+            (0, 99, False, 'entering_command_control'),
+            (0, 1, True, 'entering_command_control'),
+            (0, 1, False, 'taking_off'),
+            (0, 1, False, 'executing'),
+        ):
+            with self.subTest(initial=initial, incoming=incoming, failsafe=failsafe, phase=phase):
+                self.node._automatic_control = True
+                self.node._manual_override = False
+                self.node._abort_motion.clear()
+                self.node._startup_initial_control = initial
+                self.node._command_control_seen = False
+                self.node._progress['phase'] = phase
+                self.deliver_control(incoming, failsafe)
+                self.assertTrue(self.node._manual_override)
+                self.assertTrue(self.node._abort_motion.is_set())
+
+    def test_command_exit_still_cancels_before_offboard_confirmation(self):
+        self.record_startup_phase()
+        self.node._automatic_control = True
+        self.node._startup_initial_control = 0
+        self.node._progress['phase'] = 'entering_command_control'
+        self.deliver_control(2)
+        self.deliver_control(1)
+        self.assertTrue(self.node._manual_override)
+        self.assertTrue(self.node._abort_motion.is_set())
+
+    def test_mode_exit_logs_previous_current_px4_and_rc_context(self):
+        self.node._automatic_control = True
+        self.node._startup_initial_control = 0
+        self.node._progress['phase'] = 'entering_command_control'
+        self.node._state.armed = True
+        self.deliver_control(2)
+        self.deliver_control(1)
+        reason = self.node._publish_status.call_args.kwargs['error']
+        for value in ('COMMAND_CONTROL(2)', 'RC_POS_CONTROL(1)', 'POSCTL', 'armed=True', 'rc_switch=0'):
+            self.assertIn(value, reason)
+
+    def test_repeated_control_state_does_not_spam_transition_log(self):
+        self.node._automatic_control = True
+        self.node._startup_initial_control = 0
+        self.node._progress['phase'] = 'arming'
+        with patch.object(module.rospy, 'loginfo') as log:
+            self.deliver_control(1)
+            self.deliver_control(1)
+            self.deliver_control(1)
+        self.assertEqual(log.call_count, 1)
+
     def test_takeoff_failure_does_not_release_program_b_or_internal_task(self):
         for mode in ('external','internal'):
             with self.subTest(mode=mode):

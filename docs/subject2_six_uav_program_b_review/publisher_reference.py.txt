@@ -1,0 +1,558 @@
+# src/su17_competition_executor/scripts/onboard_task_executor.py:1008
+    def _accept_assignment(self, payload: Dict[str, Any]) -> None:
+        try:
+            assignment = validate_assignment(payload, self.uav_id)
+            if self._assignment and self._assignment_acked and assignment["assignment_checksum"] == self._assignment["assignment_checksum"]:
+                self._publish_competition_time()
+                self._publish_task_region(assignment)
+                self._publish_status("task_received")
+                return
+            if self._motion_thread is not None and self._motion_thread.is_alive():
+                raise TaskValidationError("当前任务正在执行，不能覆盖")
+            waypoints = assignment["task"]["waypoints_m"]
+            requested_speed = float(assignment["task"].get("speed_mps", self.search_speed))
+            if (assignment.get("controller_mode", "internal") == "internal"
+                    and requested_speed > getattr(self, "max_speed", 2.0)):
+                raise TaskValidationError("规划航速超过本机配置上限，请先核验飞控限制并调整配置或规划航速")
+            if assignment["task"]["coordinate_frame"] == "LOCAL_NORTH_WEST":
+                state, _ = self._snapshot()
+                try:
+                    gps = self._valid_gps(state)
+                    resolve_waypoints(assignment["task"], state.position, gps, self.max_distance_from_home)
+                except ValueError as error:
+                    raise TaskValidationError(str(error))
+            elif any(math.hypot(point[0], point[1]) > self.max_distance_from_home for point in waypoints):
+                raise TaskValidationError(
+                    "waypoint exceeds max_distance_from_home_m safety limit"
+                )
+            save_assignment_atomic(self.cache_path, assignment)
+            self._publish_recognition_categories(assignment)
+            self._publish_task_region(assignment)
+        except (OSError, TaskValidationError) as error:
+            self._assignment_acked = False
+            rospy.logerr("任务下发被拒绝：%s", error)
+            self._publish_status("task_rejected", error=str(error))
+            return
+
+        with self._lock:
+            state = self._state
+            if state is not None and not state.armed:
+                self._manual_override = False
+                self._automatic_control = False
+                self._command_control_seen = False
+            self._assignment = assignment
+            self._assignment_acked = True
+            self._competition_time_state = assignment.get("competition_time") or {
+                "schema_version": 1, "mission_id": assignment["mission_id"],
+                "running": False, "synchronized": False, "elapsed_seconds": 0.0,
+                "session_id": "", "revision": 0,
+                "publisher_terminal_id": None, "updated_by": None,
+            }
+            self._competition_time_received_monotonic = time.monotonic()
+            self._home = None
+            self._gps_home = None
+            self._resume_pending = False
+            self._progress = {"phase": "assigned", "next_waypoint": 0}
+            self._last_return_ack = {}
+            self._checkpoint("assigned", next_waypoint=0, execution={})
+        self._publish_competition_time()
+        self._publish_successful_return()
+        self._publish_status(
+            "task_received",
+            waypoint_count=len(waypoints),
+            cache_path=self.cache_path,
+            assignment_checksum=assignment["assignment_checksum"],
+            task_type=assignment["task"]["type"],
+            sector=assignment["task"].get("sector"),
+            bounds_m=assignment["task"].get("bounds_m"),
+            lane_spacing_m=assignment["task"].get("lane_spacing_m"),
+            target_altitude_m=assignment["target_altitude_m"],
+            controller_mode=assignment.get("controller_mode", "internal"),
+        )
+        rospy.loginfo(
+            "已接收任务：任务=%s，UAV%d，航点=%d，缓存=%s",
+            assignment["mission_id"],
+            self.uav_id,
+            len(waypoints),
+            self.cache_path,
+        )
+        rospy.loginfo("比赛时间已发布：%s，已用 %.1f 秒",
+                      self.competition_time_topic,
+                      self._competition_time_state["elapsed_seconds"])
+        rospy.loginfo(
+            "完整任务 SHA-256：%s", assignment["assignment_checksum"]
+        )
+        if self.log_full_task:
+            rospy.loginfo(
+                "完整下发任务 JSON：\n%s",
+                json.dumps(assignment, ensure_ascii=False, indent=2, sort_keys=True),
+            )
+
+
+# src/su17_competition_executor/scripts/onboard_task_executor.py:1609
+    def _publish_external_mission(self, payload: Dict[str, Any]) -> None:
+        """向程序 B 发布经纬度或 ENU 航点，高度统一相对起飞点。"""
+        if getattr(self, "_manual_override", False) or self._abort_motion.is_set():
+            raise ValueError("自动控制已取消，不向程序 B 发布任务")
+        with self._lock:
+            assignment = self._assignment
+            gps_home = self._gps_home
+        if assignment is None:
+            raise ValueError("external mission is not assigned")
+        frame = str(assignment.get("coordinate_frame") or "WGS84").upper()
+        if frame not in ("WGS84", "ENU"):
+            raise ValueError("external mission coordinate frame must be WGS84 or ENU")
+        if frame == "WGS84" and gps_home is None:
+            raise ValueError("GPS home is not available for WGS84 external mission")
+        lat0, lon0, _ = gps_home if gps_home is not None else (0.0, 0.0, 0.0)
+        target_relative_alt = float(assignment["target_altitude_m"])
+        task = assignment["task"]
+        transit_messages = route_messages(assignment)
+        points = []
+        direct = task.get("waypoints_gps") or task.get("waypoints_wgs84")
+        if frame == "WGS84":
+            if direct:
+                for point in direct:
+                    points.append({
+                        "latitude": float(point[0] if isinstance(point, (list, tuple)) else point["latitude"]),
+                        "longitude": float(point[1] if isinstance(point, (list, tuple)) else point["longitude"]),
+                        # 规划高度是唯一高度源，避免旧航点的绝对海拔被透传。
+                        "altitude_m": target_relative_alt,
+                    })
+            else:
+                cos_lat = max(1e-6, abs(math.cos(math.radians(lat0))))
+                for x, y in task["waypoints_m"]:
+                    points.append({
+                        "latitude": lat0 + float(x) / 111111.0,
+                        "longitude": lon0 - float(y) / (111111.0 * cos_lat),
+                        "altitude_m": target_relative_alt,
+                    })
+        else:
+            points = [{"x_m": float(x), "y_m": float(y), "z_m": target_relative_alt}
+                      for x, y in task["waypoints_m"]]
+        message = {
+            "type": "external_mission",
+            "uav_id": self.uav_id,
+            "mission_id": assignment["mission_id"],
+            "assignment_checksum": assignment["assignment_checksum"],
+            "flight_profile": assignment.get("flight_profile", "competition"),
+            "coordinate_frame": frame,
+            "altitude_frame": "RELATIVE_TO_TAKEOFF",
+            "target_altitude_m": target_relative_alt,
+            "relative_altitude_m": target_relative_alt,
+            "waypoints": points,
+            "speed_mps": task.get("speed_mps", self.search_speed),
+            "waypoint_actions": task.get("waypoint_actions", []),
+            "reconnaissance_mode": task.get("reconnaissance_mode", "continuous"),
+            "hover_scan_seconds": task.get("hover_scan_seconds", 0),
+            "return_home": ({
+                "latitude": lat0, "longitude": lon0, "altitude_m": target_relative_alt,
+            } if frame == "WGS84" else {
+                "x_m": 0.0, "y_m": 0.0, "z_m": target_relative_alt,
+            }),
+            "deadline_at": payload.get("deadline_at"),
+            "return_battery_threshold": payload.get("return_battery_threshold"),
+        }
+        path_msg = Float64MultiArray()
+        if frame == "WGS84":
+            path_msg.data = [value for point in points for value in (
+                point["longitude"], point["latitude"], point["altitude_m"]
+            )]
+        else:
+            path_msg.data = [value for point in points for value in (
+                point["x_m"], point["y_m"], point["z_m"]
+            )]
+        # 在程序 B 启动信号之前发布全部航线，带任务编号供接收方核对同一批次。
+        if transit_messages:
+            for publisher, document in zip((self.external_entry_path_pub, self.external_return_paths_pub), transit_messages):
+                publisher.publish(String(data=json.dumps(document, ensure_ascii=False, separators=(",", ":"))))
+        self.external_path_pub.publish(path_msg)
+        landing = assignment.get("landing_point_wgs84") if frame == "WGS84" else assignment.get("landing_point_m")
+        if frame == "WGS84" and landing is None and assignment.get("landing_point_m") is not None:
+            px, py = assignment["landing_point_m"]
+            cos_lat = max(1e-6, abs(math.cos(math.radians(lat0))))
+            landing = [
+                lat0 + float(px) / 111111.0,
+                lon0 - float(py) / (111111.0 * cos_lat),
+                target_relative_alt,
+            ]
+        if landing is None:
+            # 固定比赛方案的降落点就是记录的起飞点。外部程序 B 仍需收到
+            # jiangluodian，因此没有显式降落点时使用任务原点/起飞点。
+            landing = (
+                [lat0, lon0, target_relative_alt]
+                if frame == "WGS84"
+                else [0.0, 0.0, target_relative_alt]
+            )
+        if landing is not None:
+            landing_msg = Float64MultiArray()
+            if frame == "WGS84":
+                landing_msg.data = [float(landing[1]), float(landing[0]), target_relative_alt]
+            else:
+                landing_msg.data = [float(landing[0]), float(landing[1]), target_relative_alt]
+            self.external_landing_pub.publish(landing_msg)
+            message["return_home"] = ({
+                "latitude": float(landing[0]), "longitude": float(landing[1]), "altitude_m": target_relative_alt,
+            } if frame == "WGS84" else {
+                "x_m": float(landing[0]), "y_m": float(landing[1]), "z_m": target_relative_alt,
+            })
+        self.external_mission_pub.publish(
+            String(data=json.dumps(message, ensure_ascii=False, separators=(",", ":")))
+        )
+        # 把只读观察绑定到本次起飞后交给程序 B 的任务，排除旧任务/旧锁存 Land。
+        # 同次开机重启执行器时随任务进度恢复；不会重启或修改程序 B。
+        with self._lock:
+            if self._assignment is assignment and not self._progress.get("external_return_watch"):
+                self._checkpoint(self._progress["phase"], external_return_watch=dict(
+                    mission_id=assignment["mission_id"], assignment_checksum=assignment["assignment_checksum"],
+                    boot_id=self._boot_id, started_ros=float(rospy.Time.now().to_sec())))
+
+
+# src/su17_competition_executor/scripts/onboard_task_executor.py:1726
+    def _publish_recon_start_mode(self, mode: int) -> None:
+        if getattr(self, "_manual_override", False) or self._abort_motion.is_set():
+            raise ValueError("自动控制已取消，不发送程序 B 启动信号")
+        message = Int32()
+        message.data = 1 if int(mode) == 1 else 0
+        self.recon_start_mode_pub.publish(message)
+        self._publish_status("recon_start_mode", mode=message.data)
+
+
+# src/su17_competition_executor/scripts/onboard_task_executor.py:1952
+    def _run_return(self, payload: Dict[str, Any]) -> None:
+        if getattr(self, "_manual_override", False):
+            self._return_receipt(payload, 'failed', '准备返航期间遥控器接管，自动返航已停止')
+            self._publish_status("return_failed", error="遥控器已接管，不再发布自动返航指令")
+            return
+        with self._lock:
+            assignment = self._assignment
+        if assignment and assignment.get("controller_mode", "internal") == "external":
+            # 外部程序 B 独占返航和降落。地面端的返航命令经 TCP 到达机载端后，
+            # 只在固定 ROS 话题发布一个 Bool=true，避免向程序 B 重复传递任务数据。
+            self.external_return_pub.publish(Bool(data=True))
+            self._checkpoint("external_return_requested", reason=payload.get("reason", "unknown"))
+            self._return_receipt(payload, 'forwarded', '机载已向程序B发布返航信号；此回执不代表已到达降落点')
+            self._publish_status("returning", controller_mode="external", reason=payload.get("reason", "unknown"))
+            rospy.loginfo("已在 %s 收到外部程序返航请求", self.external_return_topic)
+            return
+        if self._home is None:
+            self._return_receipt(payload, 'failed', '未记录起飞位置，不能执行返航')
+            self._publish_status("return_failed", error="home position was not recorded")
+            return
+        state, _ = self._snapshot()
+        if state is None:
+            self._return_receipt(payload, 'failed', '缺少飞控状态，不能执行返航')
+            self._publish_status("return_failed", error="UAV state is missing")
+            return
+        target_z = max(float(state.position[2]), self._target_z(self._assignment))
+        destination = list(self._home[:2])
+        if assignment.get("landing_mode") == "selected_departure":
+            return_task = dict(assignment['task'], waypoints_m=[assignment['landing_point_m']])
+            if return_task['coordinate_frame'] == 'LOCAL_NORTH_WEST':
+                return_task['waypoints_wgs84'] = [assignment['landing_point_wgs84']]
+            destination = resolve_waypoints(return_task, self._home, self._gps_home, self.max_distance_from_home)[0]
+        self._checkpoint("returning")
+        self._return_receipt(payload, 'executing', '机载自主返航程序已开始执行')
+        self._publish_status("returning", reason=payload.get("reason", "unknown"))
+        ok, reason = self._fly_to(
+            destination[0],
+            destination[1],
+            target_z,
+            self._home[3],
+            self.return_speed,
+            check_abort=False,
+        )
+        if not ok:
+            self._return_receipt(payload, 'failed', '自主返航执行失败：%s' % reason)
+            self._publish_status("return_failed", error=reason)
+            return
+        if bool(payload.get("land_after_return", True)):
+            self._checkpoint("landing")
+            self._land()
+            self._publish_status("land_commanded")
+        else:
+            self._hover()
+            self._publish_status("returned")
+
+
+# src/su17_competition_executor/scripts/onboard_task_executor.py:1119
+    def _publish_competition_time(self, _event=None) -> None:
+        """按分派时快照和机载单调时钟发布当前估计已用时间。"""
+        with self._lock:
+            state = dict(self._competition_time_state) if self._competition_time_state else None
+            received = self._competition_time_received_monotonic
+        if state is None:
+            return
+        if state["running"]:
+            state["elapsed_seconds"] = round(
+                state["elapsed_seconds"] + max(0.0, time.monotonic() - received), 3)
+        self.competition_time_pub.publish(String(data=json.dumps(
+            state, ensure_ascii=False, separators=(",", ":"))))
+
+
+# src/su17_competition_executor/scripts/onboard_task_executor.py:822
+    def _publish_status(self, state: str, **details: Any) -> None:
+        payload = {
+            "state": state,
+            "uav_id": self.uav_id,
+            "timestamp_unix": time.time(),
+            "task_assignment_acked": self._assignment_acked,
+        }
+        if self._assignment is not None:
+            payload["mission_id"] = self._assignment["mission_id"]
+            payload["assignment_checksum"] = self._assignment[
+                "assignment_checksum"
+            ]
+        payload.update(details)
+        self.status_pub.publish(
+            String(data=json.dumps(payload, ensure_ascii=False, separators=(",", ":")))
+        )
+        if self.tcp_link is not None:
+            self.tcp_link.send_reliable(
+                {"type": "task_status", "uav_id": self.uav_id, "status": payload}
+            )
+
+
+# src/su17_competition_executor/scripts/onboard_task_executor.py:288
+    def _external_status_callback(self, message: String) -> None:
+        """Accept progress notifications from the external flight program B."""
+        try:
+            payload = json.loads(message.data)
+            if not isinstance(payload, dict):
+                raise ValueError("external status must be a JSON object")
+            if payload.get("uav_id") not in (None, self.uav_id):
+                return
+            phase = str(payload.get("phase", payload.get("state", ""))).strip().lower()
+            if not phase:
+                return
+            with self._lock:
+                assignment = self._assignment
+                if assignment is None:
+                    return
+                if payload.get("mission_id") not in (None, assignment["mission_id"]):
+                    return
+                if "next_waypoint" in payload:
+                    self._progress["next_waypoint"] = int(payload["next_waypoint"])
+            if phase == "return_descent":
+                if assignment.get("controller_mode") != "external":
+                    return
+                # 必须带本次任务和版本；普通 landing/returning 不能证明已到返航点。
+                if (payload.get("mission_id") != assignment["mission_id"]
+                        or payload.get("assignment_checksum") != assignment["assignment_checksum"]):
+                    raise ValueError("成功返航标记缺少本次任务编号或分派校验码")
+                if not self._record_successful_return("external_program_b", assignment):
+                    return
+                self._publish_status("external_return_descent", controller_mode="external", successful_return=True)
+            elif phase in ("completed", "task_complete", "finished"):
+                count = len(self._assignment["task"]["waypoints_m"])
+                self._checkpoint("completed", next_waypoint=count)
+                self._publish_status("completed", controller_mode="external")
+            elif phase in ("returning", "return"):
+                self._checkpoint("returning")
+                self._publish_status("returning", controller_mode="external")
+            elif phase in ("landed", "landing"):
+                self._checkpoint(phase)
+                self._publish_status(phase, controller_mode="external")
+            else:
+                self._checkpoint("external_" + phase)
+                self._publish_status("external_status", phase=phase)
+        except (TypeError, ValueError, KeyError) as error:
+            rospy.logwarn("已忽略无效的外部程序状态：%s", error)
+
+
+# src/su17_competition_executor/scripts/onboard_task_executor.py:413
+    def _record_successful_return(self, source, assignment, evidence=None):
+        with self._lock:
+            if self._assignment is not assignment:
+                return False
+            if self._progress.get("successful_return"):
+                return True
+            # 只有已一键起飞的任务才接收标记；旧的锁存消息不能启动新任务补传。
+            if self._home is None or self._progress.get("phase") in ("idle", "assigned"):
+                return False
+            clock = getattr(self, "_competition_time_state", None) or assignment.get("competition_time") or {}
+            event = dict(schema_version=1, uav_id=self.uav_id,
+                         mission_id=assignment["mission_id"],
+                         assignment_checksum=assignment["assignment_checksum"],
+                         competition_session_id=clock.get("session_id", ""),
+                         event_id=uuid.uuid4().hex, phase="return_descent", source=source,
+                         observed_monotonic=time.monotonic(), boot_id=self._boot_id)
+            if evidence:
+                event["evidence"] = evidence
+            self._resume_pending = False
+            self._checkpoint("external_return_descent", successful_return=event)
+        self._publish_successful_return()
+        self._publish_status("successful_return", event=self._successful_return_snapshot())
+        rospy.loginfo("成功返航标记已记录：UAV%d，任务=%s，来源=%s；已到返航点并开始下降",
+                      self.uav_id, assignment["mission_id"], source)
+        return True
+
+
+# src/su17_competition_executor/scripts/onboard_task_executor.py:343
+    def _publish_successful_return(self):
+        publisher = getattr(self, "successful_return_pub", None)
+        if publisher is not None:
+            publisher.publish(String(data=json.dumps(self._successful_return_snapshot(),
+                                                      ensure_ascii=False, allow_nan=False)))
+
+
+# src/su17_competition_executor/scripts/onboard_task_executor.py:349
+    def _external_return_command_callback(self, message: UAVCommand) -> None:
+        """程序 B 的返航终点 Land 是候选，飞控进入降落控制后才确认。"""
+        try:
+            header = getattr(message, "_connection_header", {}) or {}
+            if (header.get("callerid") != self.external_follower_node
+                    or str(header.get("latching", "0")) != "0"
+                    or message.Agent_CMD != UAVCommand.Land):
+                return
+            stamp = float(message.header.stamp.to_sec())
+            age = float(rospy.Time.now().to_sec()) - stamp
+            if not math.isfinite(stamp) or stamp <= 0 or not 0.0 <= age <= 2.0:
+                return
+            with self._lock:
+                assignment = self._assignment
+                watch = self._progress.get("external_return_watch") or {}
+                if (not assignment or assignment.get("controller_mode") != "external"
+                        or self._home is None or self._progress.get("successful_return")
+                        or watch.get("boot_id") != self._boot_id
+                        or watch.get("mission_id") != assignment["mission_id"]
+                        or watch.get("assignment_checksum") != assignment["assignment_checksum"]
+                        or stamp < float(watch.get("started_ros", float("inf")))):
+                    return
+                candidate = dict(watch, received_monotonic=time.monotonic(),
+                                 command_stamp=stamp, command_id=int(message.Command_ID),
+                                 callerid=header["callerid"])
+                old = self._progress.get("external_return_candidate") or {}
+                if old.get("command_stamp") == stamp and old.get("command_id") == candidate["command_id"]:
+                    return
+                self._checkpoint(self._progress["phase"], external_return_candidate=candidate)
+            rospy.loginfo("已观察到程序 B 到点降落指令：UAV%d，节点=%s，指令编号=%d；等待飞控确认降落控制",
+                          self.uav_id, header["callerid"], candidate["command_id"])
+            self._confirm_external_return()
+        except (AttributeError, KeyError, TypeError, ValueError, OSError) as error:
+            rospy.logwarn("成功返航只读监测未确认：%s", error)
+
+
+# src/su17_competition_executor/scripts/onboard_task_executor.py:982
+    def _publish_recognition_categories(self, assignment: Dict[str, Any]) -> None:
+        if assignment.get("subject") not in ("subject1", "subject2"):
+            return
+        selection = optional_recognition_selection(assignment.get("task", {}).get("recognition_selection"))
+        message = Int32MultiArray()
+        message.data = list(selection["category_ids"])
+        try:
+            self.recognition_categories_pub.publish(message)
+        except Exception as error:
+            rospy.logwarn("识别类别话题发布失败，飞行任务继续接收：%s", error)
+            return
+        rospy.loginfo("已发布任务识别类别：%s，共 %d 类，编号=%s", self.recognition_categories_topic,
+                      selection["category_count"], message.data)
+
+
+# competition_shared/task_region.py:31
+def task_region_message(assignment):
+    region = assignment.get("task", {}).get("task_region")
+    if region is None:
+        return None  # 兼容尚未下发子区的旧任务。
+    result = copy.deepcopy(validate_task_region(region, assignment["uav_id"]))
+    result.update(mission_id=assignment["mission_id"], assignment_checksum=assignment["assignment_checksum"],
+                  relative_altitude_m=assignment["target_altitude_m"], altitude_frame="RELATIVE_TO_TAKEOFF")
+    return result
+
+
+# src/su17_competition_executor/src/su17_competition_executor/transit_protocol.py:5
+def route_messages(assignment):
+    routes = assignment['task'].get('transit_routes')
+    if routes is None:
+        return None
+    frame = assignment.get('coordinate_frame', 'WGS84')
+    if not isinstance(routes, dict) or routes.get('schema_version') not in (1, 2) or routes.get('coordinate_frame') != frame or frame not in ('WGS84', 'ENU'):
+        raise ValueError('进返场航线坐标系或版本不一致')
+    version = routes['schema_version']
+    recipient = assignment['uav_id']
+    altitude = float(assignment['target_altitude_m'])
+    def path(values):
+        if not isinstance(values, list) or len(values) < 2 or len(values) > 10000:
+            raise ValueError('进返场航线须包含起点和终点')
+        result = []
+        for point in values:
+            if not isinstance(point, (list, tuple)) or len(point) != 2:
+                raise ValueError('进返场平面航点格式错误')
+            x, y = map(float, point)
+            if not all(math.isfinite(v) for v in (x, y, altitude)) or altitude <= 0:
+                raise ValueError('进返场航点必须为有效数值')
+            if frame == 'WGS84' and (abs(x) > 180 or abs(y) > 90):
+                raise ValueError('进返场经纬度越界')
+            result.append([x, y, altitude])
+        return result
+    entry = path(routes['entry_path'])
+    returns = routes['return_paths']
+    home = path([routes['departure'], routes['departure']])[0]
+    if entry[0] != home:
+        raise ValueError('进场起点与本机降落点不一致')
+    result = []
+    scans = assignment['task'].get('waypoints_wgs84') if frame == 'WGS84' else assignment['task']['waypoints_m']
+    if not isinstance(scans, list) or not scans or len(scans) != len(assignment['task']['waypoints_m']):
+        raise ValueError('进返场航线缺少对应的侦察航点')
+    own_points = [[p[1], p[0]] if frame == 'WGS84' else p[:2] for p in scans]
+    tolerance = 2e-8 if frame == 'WGS84' else 1e-4
+    if version == 2:
+        if (type(routes.get('recipient_uav_id')) is not int or routes['recipient_uav_id'] != recipient
+                or routes.get('route_scope') != 'all_uav_waypoints'):
+            raise ValueError('全机队返航路线接收机或范围不一致')
+        landing = assignment.get('landing_point_wgs84' if frame == 'WGS84' else 'landing_point_m')
+        if landing is not None:
+            expected_home = [landing[1], landing[0]] if frame == 'WGS84' else landing[:2]
+            path([expected_home, expected_home])
+            if math.dist(home[:2], expected_home) > tolerance:
+                raise ValueError('全机队返航路线终点与本机任务降落点不一致')
+        catalog = routes.get('waypoints_by_uav')
+        if not isinstance(catalog, dict) or set(catalog) != {str(uid) for uid in range(1, 7)}:
+            raise ValueError('全机队返航路线必须包含 UAV1～6 的航点')
+        for points in catalog.values():
+            if not isinstance(points, list) or not 1 <= len(points) <= 10000:
+                raise ValueError('全机队侦察航点数量无效')
+            for point in points:
+                path([point, point])
+        if (len(catalog[str(recipient)]) != len(own_points)
+                or any(math.dist(a, b) > tolerance for a, b in zip(catalog[str(recipient)], own_points))):
+            raise ValueError('全机队航点表与本机侦察任务不一致')
+    else:
+        catalog = {str(recipient): own_points}
+    expected_routes = [(int(uid), i + 1, point) for uid, points in sorted(catalog.items(), key=lambda pair: int(pair[0]))
+                       for i, point in enumerate(points)]
+    if not isinstance(returns, list) or len(returns) != len(expected_routes):
+        raise ValueError('每个侦察航点必须对应一条返航路线')
+    own_first = None
+    for item, (source, index, expected) in zip(returns, expected_routes):
+        if not isinstance(item, dict) or type(item.get('waypoint_index')) is not int or item['waypoint_index'] != index:
+            raise ValueError('返航路线须按来源无人机排序且各机航点从 1 连续编号')
+        if version == 2 and (type(item.get('source_uav_id')) is not int or item['source_uav_id'] != source):
+            raise ValueError('返航路线来源无人机编号不一致或重复')
+        values = path(item['path'])
+        if math.dist(values[0][:2], expected) > tolerance or values[-1] != home:
+            raise ValueError('返航路线起终点与来源侦察航点或本机降落点不一致')
+        result.append(dict(waypoint_index=index, path=values))
+        if version == 2:
+            result[-1]['source_uav_id'] = source
+        if source == recipient and index == 1:
+            own_first = values[0]
+    if entry[-1] != own_first:
+        raise ValueError('进场终点必须是本机第一个侦察航点')
+    common = dict(schema_version=1, mission_id=assignment['mission_id'], uav_id=assignment['uav_id'],
+                  assignment_checksum=assignment['assignment_checksum'], coordinate_frame=frame,
+                  coordinate_order='longitude_latitude_relative_altitude' if frame == 'WGS84' else 'x_y_z',
+                  altitude_frame='RELATIVE_TO_TAKEOFF', plan_sha256=routes['plan_sha256'])
+    if 'boundary_clearance_m' in routes:
+        clearance = float(routes['boundary_clearance_m'])
+        if not math.isfinite(clearance) or clearance <= 0:
+            raise ValueError('进返场边界间距无效')
+        if routes.get('endpoint_clearance_policy') != 'takeoff_landing_connector_only':
+            raise ValueError('进返场边界间距例外只能用于固定起降点连接段')
+        common.update(boundary_clearance_m=clearance,
+                      endpoint_clearance_policy=routes['endpoint_clearance_policy'])
+    returned = dict(common, routes=result)
+    if version == 2:
+        returned.update(schema_version=2, route_scope='all_uav_waypoints', landing_point=home,
+                        waypoint_counts_by_uav={uid: len(points) for uid, points in catalog.items()})
+    return dict(common, path=entry), returned

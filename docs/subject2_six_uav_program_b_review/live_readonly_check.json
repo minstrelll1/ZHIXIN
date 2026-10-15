@@ -1,0 +1,184 @@
+{
+  "observed_at": "2026-10-15T15:09:20.770040+08:00",
+  "read_only": true,
+  "ui_options": {
+    "subject2_actual_present": true,
+    "around54m_present": true
+  },
+  "grounds": [
+    {
+      "uav_id": 1,
+      "active_uav_ids": [
+        1,
+        5,
+        4,
+        6
+      ],
+      "model": "p600",
+      "connection_ready": true,
+      "flight": {
+        "state": "stopped",
+        "flight_mode": "unknown",
+        "reconnaissance_radius_m": null
+      },
+      "local_gps": {
+        "connected": true,
+        "latitude": 34.13827133178711,
+        "longitude": 113.90946197509766,
+        "gps_status": 4
+      },
+      "auto_takeoff_ready": true,
+      "auto_takeoff_reason": "可自动解锁并进入指令控制",
+      "peer5_sync": {
+        "ok": true,
+        "last_success_at": 1792048158.6073177,
+        "last_error": "",
+        "request_duration_ms": 16.0
+      },
+      "uav5_cache": {
+        "connected": true,
+        "latitude": 34.13825607299805,
+        "longitude": 113.90953826904297
+      }
+    },
+    {
+      "uav_id": 2,
+      "active_uav_ids": [
+        1,
+        5,
+        4,
+        6
+      ],
+      "model": "p600",
+      "connection_ready": true,
+      "flight": {
+        "state": "running",
+        "flight_mode": "outdoor",
+        "reconnaissance_radius_m": 50.0
+      },
+      "local_gps": {
+        "connected": true,
+        "latitude": 34.138301849365234,
+        "longitude": 113.90940856933594,
+        "gps_status": 6
+      },
+      "auto_takeoff_ready": false,
+      "auto_takeoff_reason": "未收到新鲜遥控器信号，请保持遥控器开启并连接",
+      "peer5_sync": {
+        "ok": true,
+        "last_success_at": 1792048176.2928197,
+        "last_error": "",
+        "request_duration_ms": 16.0
+      },
+      "uav5_cache": {
+        "connected": true,
+        "latitude": 34.13825607299805,
+        "longitude": 113.90953826904297
+      }
+    },
+    {
+      "uav_id": 3,
+      "error": "<urlopen error [WinError 10061] 由于目标计算机积极拒绝，无法连接。>"
+    },
+    {
+      "uav_id": 4,
+      "active_uav_ids": [
+        1,
+        5,
+        4,
+        6
+      ],
+      "model": "p600",
+      "connection_ready": true,
+      "flight": {
+        "state": "running",
+        "flight_mode": "outdoor",
+        "reconnaissance_radius_m": 50.0
+      },
+      "local_gps": {
+        "connected": true,
+        "latitude": 34.13825607299805,
+        "longitude": 113.90953063964844,
+        "gps_status": 6
+      },
+      "auto_takeoff_ready": true,
+      "auto_takeoff_reason": "可自动解锁并进入指令控制",
+      "peer5_sync": {
+        "ok": true,
+        "last_success_at": 1792048181.8933716,
+        "last_error": "",
+        "request_duration_ms": 31.0
+      },
+      "uav5_cache": {
+        "connected": true,
+        "latitude": 34.13825607299805,
+        "longitude": 113.90953826904297
+      }
+    },
+    {
+      "uav_id": 5,
+      "active_uav_ids": [
+        1,
+        5,
+        4,
+        6
+      ],
+      "model": "p600",
+      "connection_ready": true,
+      "flight": {
+        "state": "running",
+        "flight_mode": "outdoor",
+        "reconnaissance_radius_m": 50.0
+      },
+      "local_gps": {
+        "connected": true,
+        "latitude": 34.13825607299805,
+        "longitude": 113.90953826904297,
+        "gps_status": 6
+      },
+      "auto_takeoff_ready": false,
+      "auto_takeoff_reason": "未收到新鲜遥控器信号，请保持遥控器开启并连接",
+      "peer5_sync": null,
+      "uav5_cache": {
+        "connected": true,
+        "latitude": 34.13825607299805,
+        "longitude": 113.90953826904297
+      }
+    },
+    {
+      "uav_id": 6,
+      "active_uav_ids": [
+        1,
+        5,
+        4,
+        6
+      ],
+      "model": "p600",
+      "connection_ready": true,
+      "flight": {
+        "state": "running",
+        "flight_mode": "outdoor",
+        "reconnaissance_radius_m": 50.0
+      },
+      "local_gps": {
+        "connected": true,
+        "latitude": 34.138275146484375,
+        "longitude": 113.90948486328125,
+        "gps_status": 3
+      },
+      "auto_takeoff_ready": true,
+      "auto_takeoff_reason": "可自动解锁并进入指令控制",
+      "peer5_sync": {
+        "ok": true,
+        "last_success_at": 1792048175.189046,
+        "last_error": "",
+        "request_duration_ms": 16.0
+      },
+      "uav5_cache": {
+        "connected": true,
+        "latitude": 34.13825607299805,
+        "longitude": 113.90953826904297
+      }
+    }
+  ]
+}

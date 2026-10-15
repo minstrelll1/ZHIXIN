@@ -152,6 +152,7 @@ class OnboardTaskExecutor:
         self._rc_mode_switch = None
         self._manual_override = False
         self._automatic_control = False
+        self._automatic_control_stop_reason = ""
         self._command_control_seen = False
         self._startup_initial_control = None
         self._boot_id = Path("/proc/sys/kernel/random/boot_id").read_text().strip()
@@ -542,18 +543,54 @@ class OnboardTaskExecutor:
             self._abort_motion.set()
             return
         with self._lock:
+            previous = getattr(self, "_control", None)
             self._control = message
             self._control_received = time.monotonic()
         self._confirm_external_return()
         if getattr(self, "_automatic_control", False):
             mode = int(message.control_state)
+            previous_mode = getattr(previous, "control_state", None)
+            detail = self._control_transition_detail(previous_mode, message)
+            if previous_mode != mode:
+                rospy.loginfo("自动控制状态变化：%s", detail)
             if mode == UAVControlState.COMMAND_CONTROL:
                 self._command_control_seen = True
             elif (getattr(self, "_command_control_seen", False)
                   or mode != getattr(self, "_startup_initial_control", mode)):
+                # 解锁时厂商控制器可能先报告 RC_POS，再响应本次 COMMAND 请求。
+                # 只允许首次 INIT -> RC_POS 的启动过渡；真实拨杆变化仍由
+                # _rc_callback 立即取消，见过 COMMAND 后的退出绝不自动抢回。
+                startup_rc_pos = (
+                    not getattr(self, "_command_control_seen", False)
+                    and getattr(self, "_startup_initial_control", None) == UAVControlState.INIT
+                    and mode == UAVControlState.RC_POS_CONTROL
+                    and not message.failsafe
+                    and self._progress.get("phase") in (
+                        "preparing_takeoff", "arming", "entering_command_control")
+                )
+                if startup_rc_pos:
+                    return
                 # 正常降落由厂商控制器进入 LAND_CONTROL，不应被记录为遥控器接管。
                 if self._progress.get("phase") not in ("landing", "landed", "external_return_requested", "external_return_descent"):
-                    self._release_automatic_control("控制模式已退出自动控制，停止任务输出并交还遥控器")
+                    self._release_automatic_control(
+                        "控制模式已退出自动控制，停止任务输出并交还遥控器；" + detail)
+
+    def _control_transition_detail(self, previous_mode, control) -> str:
+        names = {0: "INIT", 1: "RC_POS_CONTROL", 2: "COMMAND_CONTROL", 3: "LAND_CONTROL"}
+        def label(value):
+            return "{}({})".format(names.get(value, "UNKNOWN"), value)
+        state = getattr(self, "_state", None)
+        return (
+            "control={} -> {}; initial={}; command_seen={}; phase={}; "
+            "armed={}; px4_mode={}; failsafe={}; rc_switch={}; rc_ch6_pwm={}"
+        ).format(
+            label(previous_mode), label(int(control.control_state)),
+            label(getattr(self, "_startup_initial_control", None)),
+            getattr(self, "_command_control_seen", False), self._progress.get("phase", ""),
+            getattr(state, "armed", None), getattr(state, "mode", "unknown"),
+            getattr(control, "failsafe", None), getattr(self, "_rc_mode_switch", None),
+            getattr(self, "_rc_mode_pwm", None),
+        )
 
     def _rc_callback(self, message: RCIn) -> None:
         if len(message.channels) < 8:
@@ -562,6 +599,7 @@ class OnboardTaskExecutor:
         # 两种厂商 rc_input.h 均以通道 6 控制模式。只检测拨杆变动，
         # 不发送/模拟 RC，也不改变其飞控接管逻辑。
         value = int(message.channels[5])
+        self._rc_mode_pwm = value
         mode = 0 if value <= 1250 else 2 if value >= 1750 else 1
         previous = getattr(self, "_rc_mode_switch", None)
         self._rc_mode_switch = mode
@@ -570,6 +608,7 @@ class OnboardTaskExecutor:
 
     def _release_automatic_control(self, reason: str) -> None:
         with self._lock:
+            self._automatic_control_stop_reason = reason
             self._manual_override = True
             self._automatic_control = False
             self._abort_motion.set()
@@ -649,13 +688,16 @@ class OnboardTaskExecutor:
         state, control = self._snapshot()
         self._startup_initial_control = int(control.control_state)
         self._command_control_seen = control.control_state == UAVControlState.COMMAND_CONTROL
+        self._automatic_control_stop_reason = ""
         self._automatic_control = True
         self._checkpoint("preparing_takeoff")
+        rospy.loginfo("开始自动起飞控制切换：%s", self._control_transition_detail(control.control_state, control))
         arm_sent = mode_sent = False
         stage_started = time.monotonic()
         while not rospy.is_shutdown():
             if self._abort_motion.is_set():
-                return False, "自动起飞已取消，未重新请求解锁或切换模式"
+                reason = getattr(self, "_automatic_control_stop_reason", "")
+                return False, (reason or "自动起飞已取消，未重新请求解锁或切换模式")
             ready, reason = self._takeoff_precheck()
             if not ready:
                 return False, reason
@@ -1045,6 +1087,7 @@ class OnboardTaskExecutor:
             if state is not None and not state.armed:
                 self._manual_override = False
                 self._automatic_control = False
+                self._automatic_control_stop_reason = ""
                 self._command_control_seen = False
             self._assignment = assignment
             self._assignment_acked = True

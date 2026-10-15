@@ -1,0 +1,3256 @@
+{
+  "offline_example": true,
+  "global_uav_id": 1,
+  "local_ros_uav_id": 1,
+  "model": "p600",
+  "summary": {
+    "height_m": 59.0,
+    "planning_radius_m": 61.0,
+    "scan_count": 5,
+    "scan_seconds_per_visit": 30,
+    "expected_scan_order_1_based": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      5,
+      4,
+      3,
+      2,
+      1
+    ],
+    "return_route_count": 36,
+    "region_vertex_counts": [
+      8
+    ],
+    "nominal_planning_time_s": 764.0297295008728,
+    "sample_dispatch_time_s": 773.0836379423067,
+    "planning_time_limit_s": 840,
+    "external_mission_speed_mps": 0.3
+  },
+  "phase_names": {
+    "assignment_accepted": "1. 规划分派被机载接受",
+    "duplicate_assignment": "条件分支：收到完全相同的重复分派",
+    "after_successful_takeoff": "2. 起飞成功后交给程序B",
+    "periodic_competition_time": "3. 执行期间比赛计时（每秒；这里仅一帧样例）",
+    "conditional_return_request": "条件分支：收到人工/地面返航请求",
+    "conditional_return_descent_feedback": "4. 收到B的本任务return_descent回报后（示例分支）",
+    "conditional_landed_feedback": "5. 收到B的landed回报后（示例分支）",
+    "conditional_completed_feedback": "6. 收到B的completed回报后（示例分支）"
+  },
+  "events": {
+    "assignment_accepted": [
+      {
+        "sequence": 1,
+        "topic": "/uav1/competition/recognition_categories",
+        "message_type": "std_msgs/Int32MultiArray",
+        "latch": true,
+        "queue_size": 1,
+        "data": [],
+        "ros_message": {
+          "layout": {
+            "dim": [],
+            "data_offset": 0
+          },
+          "data": []
+        }
+      },
+      {
+        "sequence": 2,
+        "topic": "/ground_mission_planner/vehicle_1/task_region",
+        "message_type": "std_msgs/String",
+        "latch": true,
+        "queue_size": 1,
+        "data": {
+          "schema_version": 1,
+          "uav_id": 1,
+          "coordinate_frame": "WGS84",
+          "coordinate_order": "longitude_latitude",
+          "polygons": [
+            {
+              "outer": [
+                [
+                  113.71015833333334,
+                  33.86756388888889
+                ],
+                [
+                  113.71053327491367,
+                  33.86757500375787
+                ],
+                [
+                  113.70932600919852,
+                  33.86635881084895
+                ],
+                [
+                  113.70774469418835,
+                  33.86657369457703
+                ],
+                [
+                  113.70786944444444,
+                  33.869261111111115
+                ],
+                [
+                  113.71010555555556,
+                  33.869505555555556
+                ],
+                [
+                  113.71019722222222,
+                  33.86801666666667
+                ],
+                [
+                  113.71015833333334,
+                  33.86756388888889
+                ]
+              ],
+              "holes": []
+            }
+          ],
+          "mission_id": "subject2-531993ca70",
+          "assignment_checksum": "9c588e80fdfc6391d1b5d6acaac33681eba518ecc986038bf0b58338db180f3a",
+          "relative_altitude_m": 59.0,
+          "altitude_frame": "RELATIVE_TO_TAKEOFF"
+        },
+        "ros_message": {
+          "data": "{\"schema_version\": 1, \"uav_id\": 1, \"coordinate_frame\": \"WGS84\", \"coordinate_order\": \"longitude_latitude\", \"polygons\": [{\"outer\": [[113.71015833333334, 33.86756388888889], [113.71053327491367, 33.86757500375787], [113.70932600919852, 33.86635881084895], [113.70774469418835, 33.86657369457703], [113.70786944444444, 33.869261111111115], [113.71010555555556, 33.869505555555556], [113.71019722222222, 33.86801666666667], [113.71015833333334, 33.86756388888889]], \"holes\": []}], \"mission_id\": \"subject2-531993ca70\", \"assignment_checksum\": \"9c588e80fdfc6391d1b5d6acaac33681eba518ecc986038bf0b58338db180f3a\", \"relative_altitude_m\": 59.0, \"altitude_frame\": \"RELATIVE_TO_TAKEOFF\"}"
+        }
+      },
+      {
+        "sequence": 3,
+        "topic": "/uav1/competition/competition_time",
+        "message_type": "std_msgs/String",
+        "latch": true,
+        "queue_size": 1,
+        "data": {
+          "schema_version": 1,
+          "mission_id": "subject2-531993ca70",
+          "running": true,
+          "synchronized": true,
+          "elapsed_seconds": 6.734,
+          "session_id": "e0ef95357d394097b7c01b80f6ec6d7b",
+          "revision": 0,
+          "publisher_terminal_id": 1,
+          "updated_by": 1
+        },
+        "ros_message": {
+          "data": "{\"schema_version\":1,\"mission_id\":\"subject2-531993ca70\",\"running\":true,\"synchronized\":true,\"elapsed_seconds\":6.734,\"session_id\":\"e0ef95357d394097b7c01b80f6ec6d7b\",\"revision\":0,\"publisher_terminal_id\":1,\"updated_by\":1}"
+        }
+      },
+      {
+        "sequence": 4,
+        "topic": "/uav1/competition/successful_return",
+        "message_type": "std_msgs/String",
+        "latch": true,
+        "queue_size": 1,
+        "data": {},
+        "ros_message": {
+          "data": "{}"
+        }
+      },
+      {
+        "sequence": 5,
+        "topic": "/uav1/competition/task_status",
+        "message_type": "std_msgs/String",
+        "latch": true,
+        "queue_size": 10,
+        "data": {
+          "state": "task_received",
+          "uav_id": 1,
+          "timestamp_unix": 1792048357.8445318,
+          "task_assignment_acked": true,
+          "mission_id": "subject2-531993ca70",
+          "assignment_checksum": "9c588e80fdfc6391d1b5d6acaac33681eba518ecc986038bf0b58338db180f3a",
+          "waypoint_count": 5,
+          "cache_path": "F:\\Projects\\ZhiXin\\competition_development\\ground_runtime\\subject2_validation\\tmp\\tmpa90u60xx\\task.json",
+          "task_type": "lawnmower_search",
+          "sector": 1,
+          "bounds_m": {
+            "x_min": 253.35712026879074,
+            "x_max": 602.3938331312319,
+            "y_min": -219.71619730661916,
+            "y_max": 38.31584812611126
+          },
+          "lane_spacing_m": null,
+          "target_altitude_m": 59.0,
+          "controller_mode": "external"
+        },
+        "ros_message": {
+          "data": "{\"state\":\"task_received\",\"uav_id\":1,\"timestamp_unix\":1792048357.8445318,\"task_assignment_acked\":true,\"mission_id\":\"subject2-531993ca70\",\"assignment_checksum\":\"9c588e80fdfc6391d1b5d6acaac33681eba518ecc986038bf0b58338db180f3a\",\"waypoint_count\":5,\"cache_path\":\"F:\\\\Projects\\\\ZhiXin\\\\competition_development\\\\ground_runtime\\\\subject2_validation\\\\tmp\\\\tmpa90u60xx\\\\task.json\",\"task_type\":\"lawnmower_search\",\"sector\":1,\"bounds_m\":{\"x_min\":253.35712026879074,\"x_max\":602.3938331312319,\"y_min\":-219.71619730661916,\"y_max\":38.31584812611126},\"lane_spacing_m\":null,\"target_altitude_m\":59.0,\"controller_mode\":\"external\"}"
+        }
+      }
+    ],
+    "duplicate_assignment": [
+      {
+        "sequence": 1,
+        "topic": "/uav1/competition/competition_time",
+        "message_type": "std_msgs/String",
+        "latch": true,
+        "queue_size": 1,
+        "data": {
+          "schema_version": 1,
+          "mission_id": "subject2-531993ca70",
+          "running": true,
+          "synchronized": true,
+          "elapsed_seconds": 6.734,
+          "session_id": "e0ef95357d394097b7c01b80f6ec6d7b",
+          "revision": 0,
+          "publisher_terminal_id": 1,
+          "updated_by": 1
+        },
+        "ros_message": {
+          "data": "{\"schema_version\":1,\"mission_id\":\"subject2-531993ca70\",\"running\":true,\"synchronized\":true,\"elapsed_seconds\":6.734,\"session_id\":\"e0ef95357d394097b7c01b80f6ec6d7b\",\"revision\":0,\"publisher_terminal_id\":1,\"updated_by\":1}"
+        }
+      },
+      {
+        "sequence": 2,
+        "topic": "/ground_mission_planner/vehicle_1/task_region",
+        "message_type": "std_msgs/String",
+        "latch": true,
+        "queue_size": 1,
+        "data": {
+          "schema_version": 1,
+          "uav_id": 1,
+          "coordinate_frame": "WGS84",
+          "coordinate_order": "longitude_latitude",
+          "polygons": [
+            {
+              "outer": [
+                [
+                  113.71015833333334,
+                  33.86756388888889
+                ],
+                [
+                  113.71053327491367,
+                  33.86757500375787
+                ],
+                [
+                  113.70932600919852,
+                  33.86635881084895
+                ],
+                [
+                  113.70774469418835,
+                  33.86657369457703
+                ],
+                [
+                  113.70786944444444,
+                  33.869261111111115
+                ],
+                [
+                  113.71010555555556,
+                  33.869505555555556
+                ],
+                [
+                  113.71019722222222,
+                  33.86801666666667
+                ],
+                [
+                  113.71015833333334,
+                  33.86756388888889
+                ]
+              ],
+              "holes": []
+            }
+          ],
+          "mission_id": "subject2-531993ca70",
+          "assignment_checksum": "9c588e80fdfc6391d1b5d6acaac33681eba518ecc986038bf0b58338db180f3a",
+          "relative_altitude_m": 59.0,
+          "altitude_frame": "RELATIVE_TO_TAKEOFF"
+        },
+        "ros_message": {
+          "data": "{\"schema_version\": 1, \"uav_id\": 1, \"coordinate_frame\": \"WGS84\", \"coordinate_order\": \"longitude_latitude\", \"polygons\": [{\"outer\": [[113.71015833333334, 33.86756388888889], [113.71053327491367, 33.86757500375787], [113.70932600919852, 33.86635881084895], [113.70774469418835, 33.86657369457703], [113.70786944444444, 33.869261111111115], [113.71010555555556, 33.869505555555556], [113.71019722222222, 33.86801666666667], [113.71015833333334, 33.86756388888889]], \"holes\": []}], \"mission_id\": \"subject2-531993ca70\", \"assignment_checksum\": \"9c588e80fdfc6391d1b5d6acaac33681eba518ecc986038bf0b58338db180f3a\", \"relative_altitude_m\": 59.0, \"altitude_frame\": \"RELATIVE_TO_TAKEOFF\"}"
+        }
+      },
+      {
+        "sequence": 3,
+        "topic": "/uav1/competition/task_status",
+        "message_type": "std_msgs/String",
+        "latch": true,
+        "queue_size": 10,
+        "data": {
+          "state": "task_received",
+          "uav_id": 1,
+          "timestamp_unix": 1792048357.8445318,
+          "task_assignment_acked": true,
+          "mission_id": "subject2-531993ca70",
+          "assignment_checksum": "9c588e80fdfc6391d1b5d6acaac33681eba518ecc986038bf0b58338db180f3a"
+        },
+        "ros_message": {
+          "data": "{\"state\":\"task_received\",\"uav_id\":1,\"timestamp_unix\":1792048357.8445318,\"task_assignment_acked\":true,\"mission_id\":\"subject2-531993ca70\",\"assignment_checksum\":\"9c588e80fdfc6391d1b5d6acaac33681eba518ecc986038bf0b58338db180f3a\"}"
+        }
+      }
+    ],
+    "after_successful_takeoff": [
+      {
+        "sequence": 1,
+        "topic": "/ground_mission_planner/vehicle_1/entry_path",
+        "message_type": "std_msgs/String",
+        "latch": true,
+        "queue_size": 1,
+        "data": {
+          "schema_version": 1,
+          "mission_id": "subject2-531993ca70",
+          "uav_id": 1,
+          "assignment_checksum": "9c588e80fdfc6391d1b5d6acaac33681eba518ecc986038bf0b58338db180f3a",
+          "coordinate_frame": "WGS84",
+          "coordinate_order": "longitude_latitude_relative_altitude",
+          "altitude_frame": "RELATIVE_TO_TAKEOFF",
+          "plan_sha256": "c2a3f2f75e07bca3639fd6a1666510733d49498326edf1b5b5b4eaf4804fe819",
+          "boundary_clearance_m": 5.0,
+          "endpoint_clearance_policy": "takeoff_landing_connector_only",
+          "path": [
+            [
+              113.70563,
+              33.86468538780239,
+              59.0
+            ],
+            [
+              113.70584891025213,
+              33.86416972884242,
+              59.0
+            ],
+            [
+              113.70742673284403,
+              33.86429929456621,
+              59.0
+            ],
+            [
+              113.70762602585076,
+              33.86432776499574,
+              59.0
+            ],
+            [
+              113.7087948,
+              33.8691414,
+              59.0
+            ]
+          ]
+        },
+        "ros_message": {
+          "data": "{\"schema_version\":1,\"mission_id\":\"subject2-531993ca70\",\"uav_id\":1,\"assignment_checksum\":\"9c588e80fdfc6391d1b5d6acaac33681eba518ecc986038bf0b58338db180f3a\",\"coordinate_frame\":\"WGS84\",\"coordinate_order\":\"longitude_latitude_relative_altitude\",\"altitude_frame\":\"RELATIVE_TO_TAKEOFF\",\"plan_sha256\":\"c2a3f2f75e07bca3639fd6a1666510733d49498326edf1b5b5b4eaf4804fe819\",\"boundary_clearance_m\":5.0,\"endpoint_clearance_policy\":\"takeoff_landing_connector_only\",\"path\":[[113.70563,33.86468538780239,59.0],[113.70584891025213,33.86416972884242,59.0],[113.70742673284403,33.86429929456621,59.0],[113.70762602585076,33.86432776499574,59.0],[113.7087948,33.8691414,59.0]]}"
+        }
+      },
+      {
+        "sequence": 2,
+        "topic": "/ground_mission_planner/vehicle_1/return_paths",
+        "message_type": "std_msgs/String",
+        "latch": true,
+        "queue_size": 1,
+        "data": {
+          "schema_version": 2,
+          "mission_id": "subject2-531993ca70",
+          "uav_id": 1,
+          "assignment_checksum": "9c588e80fdfc6391d1b5d6acaac33681eba518ecc986038bf0b58338db180f3a",
+          "coordinate_frame": "WGS84",
+          "coordinate_order": "longitude_latitude_relative_altitude",
+          "altitude_frame": "RELATIVE_TO_TAKEOFF",
+          "plan_sha256": "c2a3f2f75e07bca3639fd6a1666510733d49498326edf1b5b5b4eaf4804fe819",
+          "boundary_clearance_m": 5.0,
+          "endpoint_clearance_policy": "takeoff_landing_connector_only",
+          "routes": [
+            {
+              "waypoint_index": 1,
+              "path": [
+                [
+                  113.7087948,
+                  33.8691414,
+                  59.0
+                ],
+                [
+                  113.7076257227269,
+                  33.86432799609478,
+                  59.0
+                ],
+                [
+                  113.70742668954661,
+                  33.86429956278331,
+                  59.0
+                ],
+                [
+                  113.70584919725394,
+                  33.86417002418263,
+                  59.0
+                ],
+                [
+                  113.70563,
+                  33.86468538780239,
+                  59.0
+                ]
+              ],
+              "source_uav_id": 1
+            },
+            {
+              "waypoint_index": 2,
+              "path": [
+                [
+                  113.70956949748272,
+                  33.86858609311216,
+                  59.0
+                ],
+                [
+                  113.7076257227269,
+                  33.86432799609478,
+                  59.0
+                ],
+                [
+                  113.70742668954661,
+                  33.86429956278331,
+                  59.0
+                ],
+                [
+                  113.70584919725394,
+                  33.86417002418263,
+                  59.0
+                ],
+                [
+                  113.70563,
+                  33.86468538780239,
+                  59.0
+                ]
+              ],
+              "source_uav_id": 1
+            },
+            {
+              "waypoint_index": 3,
+              "path": [
+                [
+                  113.70877841702311,
+                  33.86809114149811,
+                  59.0
+                ],
+                [
+                  113.7076257227269,
+                  33.86432799609478,
+                  59.0
+                ],
+                [
+                  113.70742668954661,
+                  33.86429956278331,
+                  59.0
+                ],
+                [
+                  113.70584919725394,
+                  33.86417002418263,
+                  59.0
+                ],
+                [
+                  113.70563,
+                  33.86468538780239,
+                  59.0
+                ]
+              ],
+              "source_uav_id": 1
+            },
+            {
+              "waypoint_index": 4,
+              "path": [
+                [
+                  113.70877841702311,
+                  33.86710123827002,
+                  59.0
+                ],
+                [
+                  113.7076257227269,
+                  33.86432799609478,
+                  59.0
+                ],
+                [
+                  113.70742668954661,
+                  33.86429956278331,
+                  59.0
+                ],
+                [
+                  113.70584919725394,
+                  33.86417002418263,
+                  59.0
+                ],
+                [
+                  113.70563,
+                  33.86468538780239,
+                  59.0
+                ]
+              ],
+              "source_uav_id": 1
+            },
+            {
+              "waypoint_index": 5,
+              "path": [
+                [
+                  113.70937172736782,
+                  33.86644130278462,
+                  59.0
+                ],
+                [
+                  113.7076257227269,
+                  33.86432799609478,
+                  59.0
+                ],
+                [
+                  113.70742668954661,
+                  33.86429956278331,
+                  59.0
+                ],
+                [
+                  113.70584919725394,
+                  33.86417002418263,
+                  59.0
+                ],
+                [
+                  113.70563,
+                  33.86468538780239,
+                  59.0
+                ]
+              ],
+              "source_uav_id": 1
+            },
+            {
+              "waypoint_index": 1,
+              "path": [
+                [
+                  113.7106603,
+                  33.8663255,
+                  59.0
+                ],
+                [
+                  113.7076257227269,
+                  33.86432799609478,
+                  59.0
+                ],
+                [
+                  113.70742668954661,
+                  33.86429956278331,
+                  59.0
+                ],
+                [
+                  113.70584919725394,
+                  33.86417002418263,
+                  59.0
+                ],
+                [
+                  113.70563,
+                  33.86468538780239,
+                  59.0
+                ]
+              ],
+              "source_uav_id": 2
+            },
+            {
+              "waypoint_index": 2,
+              "path": [
+                [
+                  113.71071469539349,
+                  33.86710671273984,
+                  59.0
+                ],
+                [
+                  113.7076257227269,
+                  33.86432799609478,
+                  59.0
+                ],
+                [
+                  113.70742668954661,
+                  33.86429956278331,
+                  59.0
+                ],
+                [
+                  113.70584919725394,
+                  33.86417002418263,
+                  59.0
+                ],
+                [
+                  113.70563,
+                  33.86468538780239,
+                  59.0
+                ]
+              ],
+              "source_uav_id": 2
+            },
+            {
+              "waypoint_index": 3,
+              "path": [
+                [
+                  113.71165491397254,
+                  33.866792972918915,
+                  59.0
+                ],
+                [
+                  113.7076257227269,
+                  33.86432799609478,
+                  59.0
+                ],
+                [
+                  113.70742668954661,
+                  33.86429956278331,
+                  59.0
+                ],
+                [
+                  113.70584919725394,
+                  33.86417002418263,
+                  59.0
+                ],
+                [
+                  113.70563,
+                  33.86468538780239,
+                  59.0
+                ]
+              ],
+              "source_uav_id": 2
+            },
+            {
+              "waypoint_index": 4,
+              "path": [
+                [
+                  113.71203100140416,
+                  33.865851753456134,
+                  59.0
+                ],
+                [
+                  113.7076257227269,
+                  33.86432799609478,
+                  59.0
+                ],
+                [
+                  113.70742668954661,
+                  33.86429956278331,
+                  59.0
+                ],
+                [
+                  113.70584919725394,
+                  33.86417002418263,
+                  59.0
+                ],
+                [
+                  113.70563,
+                  33.86468538780239,
+                  59.0
+                ]
+              ],
+              "source_uav_id": 2
+            },
+            {
+              "waypoint_index": 5,
+              "path": [
+                [
+                  113.71127882654092,
+                  33.865224273814285,
+                  59.0
+                ],
+                [
+                  113.7076257227269,
+                  33.86432799609478,
+                  59.0
+                ],
+                [
+                  113.70742668954661,
+                  33.86429956278331,
+                  59.0
+                ],
+                [
+                  113.70584919725394,
+                  33.86417002418263,
+                  59.0
+                ],
+                [
+                  113.70563,
+                  33.86468538780239,
+                  59.0
+                ]
+              ],
+              "source_uav_id": 2
+            },
+            {
+              "waypoint_index": 6,
+              "path": [
+                [
+                  113.71033860796189,
+                  33.86538114372475,
+                  59.0
+                ],
+                [
+                  113.7076257227269,
+                  33.86432799609478,
+                  59.0
+                ],
+                [
+                  113.70742668954661,
+                  33.86429956278331,
+                  59.0
+                ],
+                [
+                  113.70584919725394,
+                  33.86417002418263,
+                  59.0
+                ],
+                [
+                  113.70563,
+                  33.86468538780239,
+                  59.0
+                ]
+              ],
+              "source_uav_id": 2
+            },
+            {
+              "waypoint_index": 1,
+              "path": [
+                [
+                  113.70431208229463,
+                  33.862600605591204,
+                  59.0
+                ],
+                [
+                  113.70545974195971,
+                  33.864126545891516,
+                  59.0
+                ],
+                [
+                  113.70560424440994,
+                  33.86460413240758,
+                  59.0
+                ],
+                [
+                  113.70563,
+                  33.86468538780239,
+                  59.0
+                ]
+              ],
+              "source_uav_id": 3
+            },
+            {
+              "waypoint_index": 2,
+              "path": [
+                [
+                  113.70479840224931,
+                  33.86327676899837,
+                  59.0
+                ],
+                [
+                  113.70545974195971,
+                  33.864126545891516,
+                  59.0
+                ],
+                [
+                  113.70560424440994,
+                  33.86460413240758,
+                  59.0
+                ],
+                [
+                  113.70563,
+                  33.86468538780239,
+                  59.0
+                ]
+              ],
+              "source_uav_id": 3
+            },
+            {
+              "waypoint_index": 3,
+              "path": [
+                [
+                  113.70600468711197,
+                  33.86351187095896,
+                  59.0
+                ],
+                [
+                  113.70563,
+                  33.86468538780239,
+                  59.0
+                ]
+              ],
+              "source_uav_id": 3
+            },
+            {
+              "waypoint_index": 4,
+              "path": [
+                [
+                  113.70671795637882,
+                  33.863809382858115,
+                  59.0
+                ],
+                [
+                  113.70584919725394,
+                  33.86417002418263,
+                  59.0
+                ],
+                [
+                  113.70563,
+                  33.86468538780239,
+                  59.0
+                ]
+              ],
+              "source_uav_id": 3
+            },
+            {
+              "waypoint_index": 5,
+              "path": [
+                [
+                  113.70671795637882,
+                  33.862916847160655,
+                  59.0
+                ],
+                [
+                  113.70584919725394,
+                  33.86417002418263,
+                  59.0
+                ],
+                [
+                  113.70563,
+                  33.86468538780239,
+                  59.0
+                ]
+              ],
+              "source_uav_id": 3
+            },
+            {
+              "waypoint_index": 6,
+              "path": [
+                [
+                  113.7088694477029,
+                  33.866247418328506,
+                  59.0
+                ],
+                [
+                  113.7076257227269,
+                  33.86432799609478,
+                  59.0
+                ],
+                [
+                  113.70742668954661,
+                  33.86429956278331,
+                  59.0
+                ],
+                [
+                  113.70584919725394,
+                  33.86417002418263,
+                  59.0
+                ],
+                [
+                  113.70563,
+                  33.86468538780239,
+                  59.0
+                ]
+              ],
+              "source_uav_id": 3
+            },
+            {
+              "waypoint_index": 1,
+              "path": [
+                [
+                  113.7118039,
+                  33.8635343,
+                  59.0
+                ],
+                [
+                  113.70584919725394,
+                  33.86417002418263,
+                  59.0
+                ],
+                [
+                  113.70563,
+                  33.86468538780239,
+                  59.0
+                ]
+              ],
+              "source_uav_id": 4
+            },
+            {
+              "waypoint_index": 2,
+              "path": [
+                [
+                  113.7121194936239,
+                  33.86278366942165,
+                  59.0
+                ],
+                [
+                  113.70584919725394,
+                  33.86417002418263,
+                  59.0
+                ],
+                [
+                  113.70563,
+                  33.86468538780239,
+                  59.0
+                ]
+              ],
+              "source_uav_id": 4
+            },
+            {
+              "waypoint_index": 3,
+              "path": [
+                [
+                  113.7112765390358,
+                  33.86278366942165,
+                  59.0
+                ],
+                [
+                  113.70584919725394,
+                  33.86417002418263,
+                  59.0
+                ],
+                [
+                  113.70563,
+                  33.86468538780239,
+                  59.0
+                ]
+              ],
+              "source_uav_id": 4
+            },
+            {
+              "waypoint_index": 4,
+              "path": [
+                [
+                  113.7106021753653,
+                  33.863486879365105,
+                  59.0
+                ],
+                [
+                  113.70584919725394,
+                  33.86417002418263,
+                  59.0
+                ],
+                [
+                  113.70563,
+                  33.86468538780239,
+                  59.0
+                ]
+              ],
+              "source_uav_id": 4
+            },
+            {
+              "waypoint_index": 5,
+              "path": [
+                [
+                  113.71077076628292,
+                  33.86433073129725,
+                  59.0
+                ],
+                [
+                  113.70584919725394,
+                  33.86417002418263,
+                  59.0
+                ],
+                [
+                  113.70563,
+                  33.86468538780239,
+                  59.0
+                ]
+              ],
+              "source_uav_id": 4
+            },
+            {
+              "waypoint_index": 6,
+              "path": [
+                [
+                  113.71195090270628,
+                  33.864471373285944,
+                  59.0
+                ],
+                [
+                  113.70584919725394,
+                  33.86417002418263,
+                  59.0
+                ],
+                [
+                  113.70563,
+                  33.86468538780239,
+                  59.0
+                ]
+              ],
+              "source_uav_id": 4
+            },
+            {
+              "waypoint_index": 1,
+              "path": [
+                [
+                  113.7056089355071,
+                  33.86368246704267,
+                  59.0
+                ],
+                [
+                  113.70560212235021,
+                  33.86423461219761,
+                  59.0
+                ],
+                [
+                  113.70560212235021,
+                  33.86459523268144,
+                  59.0
+                ],
+                [
+                  113.70560424440994,
+                  33.86460413240758,
+                  59.0
+                ],
+                [
+                  113.70563,
+                  33.86468538780239,
+                  59.0
+                ]
+              ],
+              "source_uav_id": 5
+            },
+            {
+              "waypoint_index": 2,
+              "path": [
+                [
+                  113.70528472220398,
+                  33.8621949075469,
+                  59.0
+                ],
+                [
+                  113.70560212235021,
+                  33.86459523268144,
+                  59.0
+                ],
+                [
+                  113.70560424440994,
+                  33.86460413240758,
+                  59.0
+                ],
+                [
+                  113.70563,
+                  33.86468538780239,
+                  59.0
+                ]
+              ],
+              "source_uav_id": 5
+            },
+            {
+              "waypoint_index": 3,
+              "path": [
+                [
+                  113.70609525546179,
+                  33.861789209502604,
+                  59.0
+                ],
+                [
+                  113.70565787764978,
+                  33.86459523268144,
+                  59.0
+                ],
+                [
+                  113.70565575559006,
+                  33.86460413240758,
+                  59.0
+                ],
+                [
+                  113.70563,
+                  33.86468538780239,
+                  59.0
+                ]
+              ],
+              "source_uav_id": 5
+            },
+            {
+              "waypoint_index": 4,
+              "path": [
+                [
+                  113.70609525546179,
+                  33.86111304609543,
+                  59.0
+                ],
+                [
+                  113.70565787764978,
+                  33.86459523268144,
+                  59.0
+                ],
+                [
+                  113.70565575559006,
+                  33.86460413240758,
+                  59.0
+                ],
+                [
+                  113.70563,
+                  33.86468538780239,
+                  59.0
+                ]
+              ],
+              "source_uav_id": 5
+            },
+            {
+              "waypoint_index": 5,
+              "path": [
+                [
+                  113.70512261555243,
+                  33.8613835114583,
+                  59.0
+                ],
+                [
+                  113.70560212235021,
+                  33.86459523268144,
+                  59.0
+                ],
+                [
+                  113.70560424440994,
+                  33.86460413240758,
+                  59.0
+                ],
+                [
+                  113.70563,
+                  33.86468538780239,
+                  59.0
+                ]
+              ],
+              "source_uav_id": 5
+            },
+            {
+              "waypoint_index": 6,
+              "path": [
+                [
+                  113.70431208229463,
+                  33.861789209502604,
+                  59.0
+                ],
+                [
+                  113.70545974195971,
+                  33.864126545891516,
+                  59.0
+                ],
+                [
+                  113.70560424440994,
+                  33.86460413240758,
+                  59.0
+                ],
+                [
+                  113.70563,
+                  33.86468538780239,
+                  59.0
+                ]
+              ],
+              "source_uav_id": 5
+            },
+            {
+              "waypoint_index": 1,
+              "path": [
+                [
+                  113.71006797620527,
+                  33.86272493677641,
+                  59.0
+                ],
+                [
+                  113.70584919725394,
+                  33.86417002418263,
+                  59.0
+                ],
+                [
+                  113.70563,
+                  33.86468538780239,
+                  59.0
+                ]
+              ],
+              "source_uav_id": 6
+            },
+            {
+              "waypoint_index": 2,
+              "path": [
+                [
+                  113.71035976817808,
+                  33.86199468029667,
+                  59.0
+                ],
+                [
+                  113.70584919725394,
+                  33.86417002418263,
+                  59.0
+                ],
+                [
+                  113.70563,
+                  33.86468538780239,
+                  59.0
+                ]
+              ],
+              "source_uav_id": 6
+            },
+            {
+              "waypoint_index": 3,
+              "path": [
+                [
+                  113.71108924811008,
+                  33.86150784264351,
+                  59.0
+                ],
+                [
+                  113.70584919725394,
+                  33.86417002418263,
+                  59.0
+                ],
+                [
+                  113.70563,
+                  33.86468538780239,
+                  59.0
+                ]
+              ],
+              "source_uav_id": 6
+            },
+            {
+              "waypoint_index": 4,
+              "path": [
+                [
+                  113.71079745613729,
+                  33.86077758616377,
+                  59.0
+                ],
+                [
+                  113.70986769843093,
+                  33.86194919520432,
+                  59.0
+                ],
+                [
+                  113.70584919725394,
+                  33.86417002418263,
+                  59.0
+                ],
+                [
+                  113.70563,
+                  33.86468538780239,
+                  59.0
+                ]
+              ],
+              "source_uav_id": 6
+            },
+            {
+              "waypoint_index": 5,
+              "path": [
+                [
+                  113.71167283205571,
+                  33.86077758616377,
+                  59.0
+                ],
+                [
+                  113.70986769843093,
+                  33.86194919520432,
+                  59.0
+                ],
+                [
+                  113.70584919725394,
+                  33.86417002418263,
+                  59.0
+                ],
+                [
+                  113.70563,
+                  33.86468538780239,
+                  59.0
+                ]
+              ],
+              "source_uav_id": 6
+            },
+            {
+              "waypoint_index": 6,
+              "path": [
+                [
+                  113.71211052001492,
+                  33.86138613323022,
+                  59.0
+                ],
+                [
+                  113.70584919725394,
+                  33.86417002418263,
+                  59.0
+                ],
+                [
+                  113.70563,
+                  33.86468538780239,
+                  59.0
+                ]
+              ],
+              "source_uav_id": 6
+            },
+            {
+              "waypoint_index": 7,
+              "path": [
+                [
+                  113.7118187280421,
+                  33.86199468029667,
+                  59.0
+                ],
+                [
+                  113.70584919725394,
+                  33.86417002418263,
+                  59.0
+                ],
+                [
+                  113.70563,
+                  33.86468538780239,
+                  59.0
+                ]
+              ],
+              "source_uav_id": 6
+            }
+          ],
+          "route_scope": "all_uav_waypoints",
+          "landing_point": [
+            113.70563,
+            33.86468538780239,
+            59.0
+          ],
+          "waypoint_counts_by_uav": {
+            "1": 5,
+            "2": 6,
+            "3": 6,
+            "4": 6,
+            "5": 6,
+            "6": 7
+          }
+        },
+        "ros_message": {
+          "data": "{\"schema_version\":2,\"mission_id\":\"subject2-531993ca70\",\"uav_id\":1,\"assignment_checksum\":\"9c588e80fdfc6391d1b5d6acaac33681eba518ecc986038bf0b58338db180f3a\",\"coordinate_frame\":\"WGS84\",\"coordinate_order\":\"longitude_latitude_relative_altitude\",\"altitude_frame\":\"RELATIVE_TO_TAKEOFF\",\"plan_sha256\":\"c2a3f2f75e07bca3639fd6a1666510733d49498326edf1b5b5b4eaf4804fe819\",\"boundary_clearance_m\":5.0,\"endpoint_clearance_policy\":\"takeoff_landing_connector_only\",\"routes\":[{\"waypoint_index\":1,\"path\":[[113.7087948,33.8691414,59.0],[113.7076257227269,33.86432799609478,59.0],[113.70742668954661,33.86429956278331,59.0],[113.70584919725394,33.86417002418263,59.0],[113.70563,33.86468538780239,59.0]],\"source_uav_id\":1},{\"waypoint_index\":2,\"path\":[[113.70956949748272,33.86858609311216,59.0],[113.7076257227269,33.86432799609478,59.0],[113.70742668954661,33.86429956278331,59.0],[113.70584919725394,33.86417002418263,59.0],[113.70563,33.86468538780239,59.0]],\"source_uav_id\":1},{\"waypoint_index\":3,\"path\":[[113.70877841702311,33.86809114149811,59.0],[113.7076257227269,33.86432799609478,59.0],[113.70742668954661,33.86429956278331,59.0],[113.70584919725394,33.86417002418263,59.0],[113.70563,33.86468538780239,59.0]],\"source_uav_id\":1},{\"waypoint_index\":4,\"path\":[[113.70877841702311,33.86710123827002,59.0],[113.7076257227269,33.86432799609478,59.0],[113.70742668954661,33.86429956278331,59.0],[113.70584919725394,33.86417002418263,59.0],[113.70563,33.86468538780239,59.0]],\"source_uav_id\":1},{\"waypoint_index\":5,\"path\":[[113.70937172736782,33.86644130278462,59.0],[113.7076257227269,33.86432799609478,59.0],[113.70742668954661,33.86429956278331,59.0],[113.70584919725394,33.86417002418263,59.0],[113.70563,33.86468538780239,59.0]],\"source_uav_id\":1},{\"waypoint_index\":1,\"path\":[[113.7106603,33.8663255,59.0],[113.7076257227269,33.86432799609478,59.0],[113.70742668954661,33.86429956278331,59.0],[113.70584919725394,33.86417002418263,59.0],[113.70563,33.86468538780239,59.0]],\"source_uav_id\":2},{\"waypoint_index\":2,\"path\":[[113.71071469539349,33.86710671273984,59.0],[113.7076257227269,33.86432799609478,59.0],[113.70742668954661,33.86429956278331,59.0],[113.70584919725394,33.86417002418263,59.0],[113.70563,33.86468538780239,59.0]],\"source_uav_id\":2},{\"waypoint_index\":3,\"path\":[[113.71165491397254,33.866792972918915,59.0],[113.7076257227269,33.86432799609478,59.0],[113.70742668954661,33.86429956278331,59.0],[113.70584919725394,33.86417002418263,59.0],[113.70563,33.86468538780239,59.0]],\"source_uav_id\":2},{\"waypoint_index\":4,\"path\":[[113.71203100140416,33.865851753456134,59.0],[113.7076257227269,33.86432799609478,59.0],[113.70742668954661,33.86429956278331,59.0],[113.70584919725394,33.86417002418263,59.0],[113.70563,33.86468538780239,59.0]],\"source_uav_id\":2},{\"waypoint_index\":5,\"path\":[[113.71127882654092,33.865224273814285,59.0],[113.7076257227269,33.86432799609478,59.0],[113.70742668954661,33.86429956278331,59.0],[113.70584919725394,33.86417002418263,59.0],[113.70563,33.86468538780239,59.0]],\"source_uav_id\":2},{\"waypoint_index\":6,\"path\":[[113.71033860796189,33.86538114372475,59.0],[113.7076257227269,33.86432799609478,59.0],[113.70742668954661,33.86429956278331,59.0],[113.70584919725394,33.86417002418263,59.0],[113.70563,33.86468538780239,59.0]],\"source_uav_id\":2},{\"waypoint_index\":1,\"path\":[[113.70431208229463,33.862600605591204,59.0],[113.70545974195971,33.864126545891516,59.0],[113.70560424440994,33.86460413240758,59.0],[113.70563,33.86468538780239,59.0]],\"source_uav_id\":3},{\"waypoint_index\":2,\"path\":[[113.70479840224931,33.86327676899837,59.0],[113.70545974195971,33.864126545891516,59.0],[113.70560424440994,33.86460413240758,59.0],[113.70563,33.86468538780239,59.0]],\"source_uav_id\":3},{\"waypoint_index\":3,\"path\":[[113.70600468711197,33.86351187095896,59.0],[113.70563,33.86468538780239,59.0]],\"source_uav_id\":3},{\"waypoint_index\":4,\"path\":[[113.70671795637882,33.863809382858115,59.0],[113.70584919725394,33.86417002418263,59.0],[113.70563,33.86468538780239,59.0]],\"source_uav_id\":3},{\"waypoint_index\":5,\"path\":[[113.70671795637882,33.862916847160655,59.0],[113.70584919725394,33.86417002418263,59.0],[113.70563,33.86468538780239,59.0]],\"source_uav_id\":3},{\"waypoint_index\":6,\"path\":[[113.7088694477029,33.866247418328506,59.0],[113.7076257227269,33.86432799609478,59.0],[113.70742668954661,33.86429956278331,59.0],[113.70584919725394,33.86417002418263,59.0],[113.70563,33.86468538780239,59.0]],\"source_uav_id\":3},{\"waypoint_index\":1,\"path\":[[113.7118039,33.8635343,59.0],[113.70584919725394,33.86417002418263,59.0],[113.70563,33.86468538780239,59.0]],\"source_uav_id\":4},{\"waypoint_index\":2,\"path\":[[113.7121194936239,33.86278366942165,59.0],[113.70584919725394,33.86417002418263,59.0],[113.70563,33.86468538780239,59.0]],\"source_uav_id\":4},{\"waypoint_index\":3,\"path\":[[113.7112765390358,33.86278366942165,59.0],[113.70584919725394,33.86417002418263,59.0],[113.70563,33.86468538780239,59.0]],\"source_uav_id\":4},{\"waypoint_index\":4,\"path\":[[113.7106021753653,33.863486879365105,59.0],[113.70584919725394,33.86417002418263,59.0],[113.70563,33.86468538780239,59.0]],\"source_uav_id\":4},{\"waypoint_index\":5,\"path\":[[113.71077076628292,33.86433073129725,59.0],[113.70584919725394,33.86417002418263,59.0],[113.70563,33.86468538780239,59.0]],\"source_uav_id\":4},{\"waypoint_index\":6,\"path\":[[113.71195090270628,33.864471373285944,59.0],[113.70584919725394,33.86417002418263,59.0],[113.70563,33.86468538780239,59.0]],\"source_uav_id\":4},{\"waypoint_index\":1,\"path\":[[113.7056089355071,33.86368246704267,59.0],[113.70560212235021,33.86423461219761,59.0],[113.70560212235021,33.86459523268144,59.0],[113.70560424440994,33.86460413240758,59.0],[113.70563,33.86468538780239,59.0]],\"source_uav_id\":5},{\"waypoint_index\":2,\"path\":[[113.70528472220398,33.8621949075469,59.0],[113.70560212235021,33.86459523268144,59.0],[113.70560424440994,33.86460413240758,59.0],[113.70563,33.86468538780239,59.0]],\"source_uav_id\":5},{\"waypoint_index\":3,\"path\":[[113.70609525546179,33.861789209502604,59.0],[113.70565787764978,33.86459523268144,59.0],[113.70565575559006,33.86460413240758,59.0],[113.70563,33.86468538780239,59.0]],\"source_uav_id\":5},{\"waypoint_index\":4,\"path\":[[113.70609525546179,33.86111304609543,59.0],[113.70565787764978,33.86459523268144,59.0],[113.70565575559006,33.86460413240758,59.0],[113.70563,33.86468538780239,59.0]],\"source_uav_id\":5},{\"waypoint_index\":5,\"path\":[[113.70512261555243,33.8613835114583,59.0],[113.70560212235021,33.86459523268144,59.0],[113.70560424440994,33.86460413240758,59.0],[113.70563,33.86468538780239,59.0]],\"source_uav_id\":5},{\"waypoint_index\":6,\"path\":[[113.70431208229463,33.861789209502604,59.0],[113.70545974195971,33.864126545891516,59.0],[113.70560424440994,33.86460413240758,59.0],[113.70563,33.86468538780239,59.0]],\"source_uav_id\":5},{\"waypoint_index\":1,\"path\":[[113.71006797620527,33.86272493677641,59.0],[113.70584919725394,33.86417002418263,59.0],[113.70563,33.86468538780239,59.0]],\"source_uav_id\":6},{\"waypoint_index\":2,\"path\":[[113.71035976817808,33.86199468029667,59.0],[113.70584919725394,33.86417002418263,59.0],[113.70563,33.86468538780239,59.0]],\"source_uav_id\":6},{\"waypoint_index\":3,\"path\":[[113.71108924811008,33.86150784264351,59.0],[113.70584919725394,33.86417002418263,59.0],[113.70563,33.86468538780239,59.0]],\"source_uav_id\":6},{\"waypoint_index\":4,\"path\":[[113.71079745613729,33.86077758616377,59.0],[113.70986769843093,33.86194919520432,59.0],[113.70584919725394,33.86417002418263,59.0],[113.70563,33.86468538780239,59.0]],\"source_uav_id\":6},{\"waypoint_index\":5,\"path\":[[113.71167283205571,33.86077758616377,59.0],[113.70986769843093,33.86194919520432,59.0],[113.70584919725394,33.86417002418263,59.0],[113.70563,33.86468538780239,59.0]],\"source_uav_id\":6},{\"waypoint_index\":6,\"path\":[[113.71211052001492,33.86138613323022,59.0],[113.70584919725394,33.86417002418263,59.0],[113.70563,33.86468538780239,59.0]],\"source_uav_id\":6},{\"waypoint_index\":7,\"path\":[[113.7118187280421,33.86199468029667,59.0],[113.70584919725394,33.86417002418263,59.0],[113.70563,33.86468538780239,59.0]],\"source_uav_id\":6}],\"route_scope\":\"all_uav_waypoints\",\"landing_point\":[113.70563,33.86468538780239,59.0],\"waypoint_counts_by_uav\":{\"1\":5,\"2\":6,\"3\":6,\"4\":6,\"5\":6,\"6\":7}}"
+        }
+      },
+      {
+        "sequence": 3,
+        "topic": "/ground_mission_planner/vehicle_1/path_stage_1",
+        "message_type": "std_msgs/Float64MultiArray",
+        "latch": true,
+        "queue_size": 1,
+        "data": [
+          113.7087948,
+          33.8691414,
+          59.0,
+          113.70956949748272,
+          33.86858609311216,
+          59.0,
+          113.70877841702311,
+          33.86809114149811,
+          59.0,
+          113.70877841702311,
+          33.86710123827002,
+          59.0,
+          113.70937172736782,
+          33.86644130278462,
+          59.0
+        ],
+        "ros_message": {
+          "layout": {
+            "dim": [],
+            "data_offset": 0
+          },
+          "data": [
+            113.7087948,
+            33.8691414,
+            59.0,
+            113.70956949748272,
+            33.86858609311216,
+            59.0,
+            113.70877841702311,
+            33.86809114149811,
+            59.0,
+            113.70877841702311,
+            33.86710123827002,
+            59.0,
+            113.70937172736782,
+            33.86644130278462,
+            59.0
+          ]
+        }
+      },
+      {
+        "sequence": 4,
+        "topic": "/ground_mission_planner/vehicle_1/jiangluodian",
+        "message_type": "std_msgs/Float64MultiArray",
+        "latch": true,
+        "queue_size": 1,
+        "data": [
+          113.70563,
+          33.86468538780239,
+          59.0
+        ],
+        "ros_message": {
+          "layout": {
+            "dim": [],
+            "data_offset": 0
+          },
+          "data": [
+            113.70563,
+            33.86468538780239,
+            59.0
+          ]
+        }
+      },
+      {
+        "sequence": 5,
+        "topic": "/uav1/competition/external_mission",
+        "message_type": "std_msgs/String",
+        "latch": true,
+        "queue_size": 1,
+        "data": {
+          "type": "external_mission",
+          "uav_id": 1,
+          "mission_id": "subject2-531993ca70",
+          "assignment_checksum": "9c588e80fdfc6391d1b5d6acaac33681eba518ecc986038bf0b58338db180f3a",
+          "flight_profile": "subject2_actual",
+          "coordinate_frame": "WGS84",
+          "altitude_frame": "RELATIVE_TO_TAKEOFF",
+          "target_altitude_m": 59.0,
+          "relative_altitude_m": 59.0,
+          "waypoints": [
+            {
+              "latitude": 33.8691414,
+              "longitude": 113.7087948,
+              "altitude_m": 59.0
+            },
+            {
+              "latitude": 33.86858609311216,
+              "longitude": 113.70956949748272,
+              "altitude_m": 59.0
+            },
+            {
+              "latitude": 33.86809114149811,
+              "longitude": 113.70877841702311,
+              "altitude_m": 59.0
+            },
+            {
+              "latitude": 33.86710123827002,
+              "longitude": 113.70877841702311,
+              "altitude_m": 59.0
+            },
+            {
+              "latitude": 33.86644130278462,
+              "longitude": 113.70937172736782,
+              "altitude_m": 59.0
+            }
+          ],
+          "speed_mps": 0.3,
+          "waypoint_actions": [
+            {
+              "index": 0,
+              "action": "hover_scan",
+              "duration_s": 30.0
+            },
+            {
+              "index": 1,
+              "action": "hover_scan",
+              "duration_s": 30.0
+            },
+            {
+              "index": 2,
+              "action": "hover_scan",
+              "duration_s": 30.0
+            },
+            {
+              "index": 3,
+              "action": "hover_scan",
+              "duration_s": 30.0
+            },
+            {
+              "index": 4,
+              "action": "hover_scan",
+              "duration_s": 30.0
+            }
+          ],
+          "reconnaissance_mode": "hover_scan",
+          "hover_scan_seconds": 30.0,
+          "return_home": {
+            "latitude": 33.86468538780239,
+            "longitude": 113.70563,
+            "altitude_m": 59.0
+          },
+          "deadline_at": 1792049497.8445318,
+          "return_battery_threshold": 0.3
+        },
+        "ros_message": {
+          "data": "{\"type\":\"external_mission\",\"uav_id\":1,\"mission_id\":\"subject2-531993ca70\",\"assignment_checksum\":\"9c588e80fdfc6391d1b5d6acaac33681eba518ecc986038bf0b58338db180f3a\",\"flight_profile\":\"subject2_actual\",\"coordinate_frame\":\"WGS84\",\"altitude_frame\":\"RELATIVE_TO_TAKEOFF\",\"target_altitude_m\":59.0,\"relative_altitude_m\":59.0,\"waypoints\":[{\"latitude\":33.8691414,\"longitude\":113.7087948,\"altitude_m\":59.0},{\"latitude\":33.86858609311216,\"longitude\":113.70956949748272,\"altitude_m\":59.0},{\"latitude\":33.86809114149811,\"longitude\":113.70877841702311,\"altitude_m\":59.0},{\"latitude\":33.86710123827002,\"longitude\":113.70877841702311,\"altitude_m\":59.0},{\"latitude\":33.86644130278462,\"longitude\":113.70937172736782,\"altitude_m\":59.0}],\"speed_mps\":0.3,\"waypoint_actions\":[{\"index\":0,\"action\":\"hover_scan\",\"duration_s\":30.0},{\"index\":1,\"action\":\"hover_scan\",\"duration_s\":30.0},{\"index\":2,\"action\":\"hover_scan\",\"duration_s\":30.0},{\"index\":3,\"action\":\"hover_scan\",\"duration_s\":30.0},{\"index\":4,\"action\":\"hover_scan\",\"duration_s\":30.0}],\"reconnaissance_mode\":\"hover_scan\",\"hover_scan_seconds\":30.0,\"return_home\":{\"latitude\":33.86468538780239,\"longitude\":113.70563,\"altitude_m\":59.0},\"deadline_at\":1792049497.8445318,\"return_battery_threshold\":0.3}"
+        }
+      },
+      {
+        "sequence": 6,
+        "topic": "/ground_mission_planner/recon_start_mode",
+        "message_type": "std_msgs/Int32",
+        "latch": true,
+        "queue_size": 1,
+        "data": 0,
+        "ros_message": {
+          "data": 0
+        }
+      },
+      {
+        "sequence": 7,
+        "topic": "/uav1/competition/task_status",
+        "message_type": "std_msgs/String",
+        "latch": true,
+        "queue_size": 10,
+        "data": {
+          "state": "recon_start_mode",
+          "uav_id": 1,
+          "timestamp_unix": 1792048357.8445318,
+          "task_assignment_acked": true,
+          "mission_id": "subject2-531993ca70",
+          "assignment_checksum": "9c588e80fdfc6391d1b5d6acaac33681eba518ecc986038bf0b58338db180f3a",
+          "mode": 0
+        },
+        "ros_message": {
+          "data": "{\"state\":\"recon_start_mode\",\"uav_id\":1,\"timestamp_unix\":1792048357.8445318,\"task_assignment_acked\":true,\"mission_id\":\"subject2-531993ca70\",\"assignment_checksum\":\"9c588e80fdfc6391d1b5d6acaac33681eba518ecc986038bf0b58338db180f3a\",\"mode\":0}"
+        }
+      },
+      {
+        "sequence": 8,
+        "topic": "/uav1/competition/task_status",
+        "message_type": "std_msgs/String",
+        "latch": true,
+        "queue_size": 10,
+        "data": {
+          "state": "external_mission_published",
+          "uav_id": 1,
+          "timestamp_unix": 1792048357.8445318,
+          "task_assignment_acked": true,
+          "mission_id": "subject2-531993ca70",
+          "assignment_checksum": "9c588e80fdfc6391d1b5d6acaac33681eba518ecc986038bf0b58338db180f3a",
+          "controller_mode": "external"
+        },
+        "ros_message": {
+          "data": "{\"state\":\"external_mission_published\",\"uav_id\":1,\"timestamp_unix\":1792048357.8445318,\"task_assignment_acked\":true,\"mission_id\":\"subject2-531993ca70\",\"assignment_checksum\":\"9c588e80fdfc6391d1b5d6acaac33681eba518ecc986038bf0b58338db180f3a\",\"controller_mode\":\"external\"}"
+        }
+      }
+    ],
+    "periodic_competition_time": [
+      {
+        "sequence": 1,
+        "topic": "/uav1/competition/competition_time",
+        "message_type": "std_msgs/String",
+        "latch": true,
+        "queue_size": 1,
+        "data": {
+          "schema_version": 1,
+          "mission_id": "subject2-531993ca70",
+          "running": true,
+          "synchronized": true,
+          "elapsed_seconds": 6.734,
+          "session_id": "e0ef95357d394097b7c01b80f6ec6d7b",
+          "revision": 0,
+          "publisher_terminal_id": 1,
+          "updated_by": 1
+        },
+        "ros_message": {
+          "data": "{\"schema_version\":1,\"mission_id\":\"subject2-531993ca70\",\"running\":true,\"synchronized\":true,\"elapsed_seconds\":6.734,\"session_id\":\"e0ef95357d394097b7c01b80f6ec6d7b\",\"revision\":0,\"publisher_terminal_id\":1,\"updated_by\":1}"
+        }
+      }
+    ],
+    "conditional_return_request": [
+      {
+        "sequence": 1,
+        "topic": "/ground_mission_planner/vehicle_1/return_home",
+        "message_type": "std_msgs/Bool",
+        "latch": true,
+        "queue_size": 1,
+        "data": true,
+        "ros_message": {
+          "data": true
+        }
+      },
+      {
+        "sequence": 2,
+        "topic": "/uav1/competition/task_status",
+        "message_type": "std_msgs/String",
+        "latch": true,
+        "queue_size": 10,
+        "data": {
+          "state": "returning",
+          "uav_id": 1,
+          "timestamp_unix": 1792048357.8445318,
+          "task_assignment_acked": true,
+          "mission_id": "subject2-531993ca70",
+          "assignment_checksum": "9c588e80fdfc6391d1b5d6acaac33681eba518ecc986038bf0b58338db180f3a",
+          "controller_mode": "external",
+          "reason": "manual_return"
+        },
+        "ros_message": {
+          "data": "{\"state\":\"returning\",\"uav_id\":1,\"timestamp_unix\":1792048357.8445318,\"task_assignment_acked\":true,\"mission_id\":\"subject2-531993ca70\",\"assignment_checksum\":\"9c588e80fdfc6391d1b5d6acaac33681eba518ecc986038bf0b58338db180f3a\",\"controller_mode\":\"external\",\"reason\":\"manual_return\"}"
+        }
+      }
+    ],
+    "conditional_return_descent_feedback": [
+      {
+        "sequence": 1,
+        "topic": "/uav1/competition/successful_return",
+        "message_type": "std_msgs/String",
+        "latch": true,
+        "queue_size": 1,
+        "data": {
+          "schema_version": 1,
+          "uav_id": 1,
+          "mission_id": "subject2-531993ca70",
+          "assignment_checksum": "9c588e80fdfc6391d1b5d6acaac33681eba518ecc986038bf0b58338db180f3a",
+          "competition_session_id": "e0ef95357d394097b7c01b80f6ec6d7b",
+          "event_id": "61dbf8d690944a6ca33bd844e3e09367",
+          "phase": "return_descent",
+          "source": "external_program_b",
+          "age_seconds": 0.0
+        },
+        "ros_message": {
+          "data": "{\"schema_version\": 1, \"uav_id\": 1, \"mission_id\": \"subject2-531993ca70\", \"assignment_checksum\": \"9c588e80fdfc6391d1b5d6acaac33681eba518ecc986038bf0b58338db180f3a\", \"competition_session_id\": \"e0ef95357d394097b7c01b80f6ec6d7b\", \"event_id\": \"61dbf8d690944a6ca33bd844e3e09367\", \"phase\": \"return_descent\", \"source\": \"external_program_b\", \"age_seconds\": 0.0}"
+        }
+      },
+      {
+        "sequence": 2,
+        "topic": "/uav1/competition/task_status",
+        "message_type": "std_msgs/String",
+        "latch": true,
+        "queue_size": 10,
+        "data": {
+          "state": "successful_return",
+          "uav_id": 1,
+          "timestamp_unix": 1792048357.8445318,
+          "task_assignment_acked": true,
+          "mission_id": "subject2-531993ca70",
+          "assignment_checksum": "9c588e80fdfc6391d1b5d6acaac33681eba518ecc986038bf0b58338db180f3a",
+          "event": {
+            "schema_version": 1,
+            "uav_id": 1,
+            "mission_id": "subject2-531993ca70",
+            "assignment_checksum": "9c588e80fdfc6391d1b5d6acaac33681eba518ecc986038bf0b58338db180f3a",
+            "competition_session_id": "e0ef95357d394097b7c01b80f6ec6d7b",
+            "event_id": "61dbf8d690944a6ca33bd844e3e09367",
+            "phase": "return_descent",
+            "source": "external_program_b",
+            "age_seconds": 0.0
+          }
+        },
+        "ros_message": {
+          "data": "{\"state\":\"successful_return\",\"uav_id\":1,\"timestamp_unix\":1792048357.8445318,\"task_assignment_acked\":true,\"mission_id\":\"subject2-531993ca70\",\"assignment_checksum\":\"9c588e80fdfc6391d1b5d6acaac33681eba518ecc986038bf0b58338db180f3a\",\"event\":{\"schema_version\":1,\"uav_id\":1,\"mission_id\":\"subject2-531993ca70\",\"assignment_checksum\":\"9c588e80fdfc6391d1b5d6acaac33681eba518ecc986038bf0b58338db180f3a\",\"competition_session_id\":\"e0ef95357d394097b7c01b80f6ec6d7b\",\"event_id\":\"61dbf8d690944a6ca33bd844e3e09367\",\"phase\":\"return_descent\",\"source\":\"external_program_b\",\"age_seconds\":0.0}}"
+        }
+      },
+      {
+        "sequence": 3,
+        "topic": "/uav1/competition/task_status",
+        "message_type": "std_msgs/String",
+        "latch": true,
+        "queue_size": 10,
+        "data": {
+          "state": "external_return_descent",
+          "uav_id": 1,
+          "timestamp_unix": 1792048357.8445318,
+          "task_assignment_acked": true,
+          "mission_id": "subject2-531993ca70",
+          "assignment_checksum": "9c588e80fdfc6391d1b5d6acaac33681eba518ecc986038bf0b58338db180f3a",
+          "controller_mode": "external",
+          "successful_return": true
+        },
+        "ros_message": {
+          "data": "{\"state\":\"external_return_descent\",\"uav_id\":1,\"timestamp_unix\":1792048357.8445318,\"task_assignment_acked\":true,\"mission_id\":\"subject2-531993ca70\",\"assignment_checksum\":\"9c588e80fdfc6391d1b5d6acaac33681eba518ecc986038bf0b58338db180f3a\",\"controller_mode\":\"external\",\"successful_return\":true}"
+        }
+      }
+    ],
+    "conditional_landed_feedback": [
+      {
+        "sequence": 1,
+        "topic": "/uav1/competition/task_status",
+        "message_type": "std_msgs/String",
+        "latch": true,
+        "queue_size": 10,
+        "data": {
+          "state": "landed",
+          "uav_id": 1,
+          "timestamp_unix": 1792048357.8445318,
+          "task_assignment_acked": true,
+          "mission_id": "subject2-531993ca70",
+          "assignment_checksum": "9c588e80fdfc6391d1b5d6acaac33681eba518ecc986038bf0b58338db180f3a",
+          "controller_mode": "external"
+        },
+        "ros_message": {
+          "data": "{\"state\":\"landed\",\"uav_id\":1,\"timestamp_unix\":1792048357.8445318,\"task_assignment_acked\":true,\"mission_id\":\"subject2-531993ca70\",\"assignment_checksum\":\"9c588e80fdfc6391d1b5d6acaac33681eba518ecc986038bf0b58338db180f3a\",\"controller_mode\":\"external\"}"
+        }
+      }
+    ],
+    "conditional_completed_feedback": [
+      {
+        "sequence": 1,
+        "topic": "/uav1/competition/task_status",
+        "message_type": "std_msgs/String",
+        "latch": true,
+        "queue_size": 10,
+        "data": {
+          "state": "completed",
+          "uav_id": 1,
+          "timestamp_unix": 1792048357.8445318,
+          "task_assignment_acked": true,
+          "mission_id": "subject2-531993ca70",
+          "assignment_checksum": "9c588e80fdfc6391d1b5d6acaac33681eba518ecc986038bf0b58338db180f3a",
+          "controller_mode": "external"
+        },
+        "ros_message": {
+          "data": "{\"state\":\"completed\",\"uav_id\":1,\"timestamp_unix\":1792048357.8445318,\"task_assignment_acked\":true,\"mission_id\":\"subject2-531993ca70\",\"assignment_checksum\":\"9c588e80fdfc6391d1b5d6acaac33681eba518ecc986038bf0b58338db180f3a\",\"controller_mode\":\"external\"}"
+        }
+      }
+    ]
+  },
+  "reverse_direction_feedback": {
+    "direction": "B -> 机载执行器；不是下发给B",
+    "topic": "/uav1/competition/external_status",
+    "message_type": "std_msgs/String",
+    "return_descent_example": {
+      "uav_id": 1,
+      "mission_id": "subject2-531993ca70",
+      "assignment_checksum": "9c588e80fdfc6391d1b5d6acaac33681eba518ecc986038bf0b58338db180f3a",
+      "phase": "return_descent"
+    },
+    "completion_example": {
+      "uav_id": 1,
+      "mission_id": "subject2-531993ca70",
+      "assignment_checksum": "9c588e80fdfc6391d1b5d6acaac33681eba518ecc986038bf0b58338db180f3a",
+      "phase": "completed"
+    }
+  },
+  "ground_to_onboard_appendix": {
+    "direction": "地面 -> 机载执行器；不是B直接接收的ROS消息",
+    "assign_task": {
+      "mission_id": "subject2-531993ca70",
+      "subject": "subject2",
+      "flight_profile": "subject2_actual",
+      "task": {
+        "waypoints_m": [
+          [
+            562.001723210149,
+            -58.852201571047424
+          ],
+          [
+            500.4071202687909,
+            -130.53625727714956
+          ],
+          [
+            445.50712026879086,
+            -57.336257277149514
+          ],
+          [
+            335.7071202687908,
+            -57.336257277149514
+          ],
+          [
+            262.50712026879074,
+            -112.23625727714955
+          ]
+        ],
+        "scan_waypoints_m": [
+          [
+            562.001723210149,
+            -58.852201571047424
+          ],
+          [
+            500.4071202687909,
+            -130.53625727714956
+          ],
+          [
+            445.50712026879086,
+            -57.336257277149514
+          ],
+          [
+            335.7071202687908,
+            -57.336257277149514
+          ],
+          [
+            262.50712026879074,
+            -112.23625727714955
+          ]
+        ],
+        "scan_count": 5,
+        "original_scan_count": 5,
+        "coverage_added_scan_count": 0,
+        "turning_point_count": 0,
+        "flight_path_m": [
+          [
+            67.74114761847449,
+            233.99204351995675
+          ],
+          [
+            10.544290190600249,
+            213.7359112122208
+          ],
+          [
+            24.91571162685013,
+            67.73734390598787
+          ],
+          [
+            28.073649770809464,
+            49.29642817428148
+          ],
+          [
+            562.001723210149,
+            -58.852201571047424
+          ],
+          [
+            500.4071202687909,
+            -130.53625727714956
+          ],
+          [
+            445.50712026879086,
+            -57.336257277149514
+          ],
+          [
+            335.7071202687908,
+            -57.336257277149514
+          ],
+          [
+            262.50712026879074,
+            -112.23625727714955
+          ],
+          [
+            335.7071202687908,
+            -57.336257277149514
+          ],
+          [
+            445.50712026879086,
+            -57.336257277149514
+          ],
+          [
+            500.4071202687909,
+            -130.53625727714956
+          ],
+          [
+            562.001723210149,
+            -58.852201571047424
+          ],
+          [
+            28.099283260548738,
+            49.32447673231317
+          ],
+          [
+            24.94546224969246,
+            67.74135028869027
+          ],
+          [
+            10.577049306696003,
+            213.70935445393843
+          ],
+          [
+            67.74114761847449,
+            233.99204351995675
+          ]
+        ],
+        "route_primitives": [
+          {
+            "kind": "line",
+            "start": [
+              67.74114761847449,
+              233.99204351995675
+            ],
+            "end": [
+              10.544290190600249,
+              213.7359112122208
+            ],
+            "length_m": 60.67776689771202
+          },
+          {
+            "kind": "line",
+            "start": [
+              10.544290190600249,
+              213.7359112122208
+            ],
+            "end": [
+              24.91571162685013,
+              67.73734390598787
+            ],
+            "length_m": 146.70419015682862
+          },
+          {
+            "kind": "line",
+            "start": [
+              24.91571162685013,
+              67.73734390598787
+            ],
+            "end": [
+              28.073649770809464,
+              49.29642817428148
+            ],
+            "length_m": 18.709354514385833
+          },
+          {
+            "kind": "line",
+            "start": [
+              28.073649770809464,
+              49.29642817428148
+            ],
+            "end": [
+              562.001723210149,
+              -58.852201571047424
+            ],
+            "length_m": 544.7708818599219
+          },
+          {
+            "kind": "line",
+            "start": [
+              562.001723210149,
+              -58.852201571047424
+            ],
+            "end": [
+              500.4071202687909,
+              -130.53625727714956
+            ],
+            "length_m": 94.51189847833504
+          },
+          {
+            "kind": "line",
+            "start": [
+              500.4071202687909,
+              -130.53625727714956
+            ],
+            "end": [
+              445.50712026879086,
+              -57.336257277149514
+            ],
+            "length_m": 91.50000000000006
+          },
+          {
+            "kind": "line",
+            "start": [
+              445.50712026879086,
+              -57.336257277149514
+            ],
+            "end": [
+              335.7071202687908,
+              -57.336257277149514
+            ],
+            "length_m": 109.80000000000007
+          },
+          {
+            "kind": "line",
+            "start": [
+              335.7071202687908,
+              -57.336257277149514
+            ],
+            "end": [
+              262.50712026879074,
+              -112.23625727714955
+            ],
+            "length_m": 91.50000000000006
+          },
+          {
+            "kind": "line",
+            "start": [
+              262.50712026879074,
+              -112.23625727714955
+            ],
+            "end": [
+              335.7071202687908,
+              -57.336257277149514
+            ],
+            "length_m": 91.50000000000006
+          },
+          {
+            "kind": "line",
+            "start": [
+              335.7071202687908,
+              -57.336257277149514
+            ],
+            "end": [
+              445.50712026879086,
+              -57.336257277149514
+            ],
+            "length_m": 109.80000000000007
+          },
+          {
+            "kind": "line",
+            "start": [
+              445.50712026879086,
+              -57.336257277149514
+            ],
+            "end": [
+              500.4071202687909,
+              -130.53625727714956
+            ],
+            "length_m": 91.50000000000006
+          },
+          {
+            "kind": "line",
+            "start": [
+              500.4071202687909,
+              -130.53625727714956
+            ],
+            "end": [
+              562.001723210149,
+              -58.852201571047424
+            ],
+            "length_m": 94.51189847833504
+          },
+          {
+            "kind": "line",
+            "start": [
+              562.001723210149,
+              -58.852201571047424
+            ],
+            "end": [
+              28.099283260548738,
+              49.32447673231317
+            ],
+            "length_m": 544.7513277752383
+          },
+          {
+            "kind": "line",
+            "start": [
+              28.099283260548738,
+              49.32447673231317
+            ],
+            "end": [
+              24.94546224969246,
+              67.74135028869027
+            ],
+            "length_m": 18.68496236442826
+          },
+          {
+            "kind": "line",
+            "start": [
+              24.94546224969246,
+              67.74135028869027
+            ],
+            "end": [
+              10.577049306696003,
+              213.70935445393843
+            ],
+            "length_m": 146.67347930176868
+          },
+          {
+            "kind": "line",
+            "start": [
+              10.577049306696003,
+              213.70935445393843
+            ],
+            "end": [
+              67.74114761847449,
+              233.99204351995675
+            ],
+            "length_m": 60.6557632179124
+          }
+        ],
+        "waypoint_actions": [
+          {
+            "index": 0,
+            "action": "hover_scan",
+            "duration_s": 30.0
+          },
+          {
+            "index": 1,
+            "action": "hover_scan",
+            "duration_s": 30.0
+          },
+          {
+            "index": 2,
+            "action": "hover_scan",
+            "duration_s": 30.0
+          },
+          {
+            "index": 3,
+            "action": "hover_scan",
+            "duration_s": 30.0
+          },
+          {
+            "index": 4,
+            "action": "hover_scan",
+            "duration_s": 30.0
+          }
+        ],
+        "route_distance_m": 2316.2515230448666,
+        "travel_time_s": 463.25030460897335,
+        "hover_scan_time_s": 300.0,
+        "mission_time_s": 773.0836379423067,
+        "required_area_m2": 65632.86499181329,
+        "uncovered_area_m2": 22968.979792364586,
+        "coverage_ratio": 0.6500384404180799,
+        "boundary_clearance_m": 5.0,
+        "planning_clearance_m": 5.03,
+        "maximum_scan_count": 16,
+        "type": "lawnmower_search",
+        "coordinate_frame": "LOCAL_NORTH_WEST",
+        "sector": 1,
+        "polygon_m": [
+          [
+            387.0242960394496,
+            -185.02222484432244
+          ],
+          [
+            388.25715656529155,
+            -219.71619730661916
+          ],
+          [
+            253.35712026879074,
+            -108.0058784932761
+          ],
+          [
+            277.19200904776613,
+            38.31584812611126
+          ],
+          [
+            575.2800716665926,
+            26.772497970734598
+          ],
+          [
+            602.3938331312319,
+            -180.13860866254663
+          ],
+          [
+            437.2463769352987,
+            -188.62067887196122
+          ]
+        ],
+        "area_m2": 68479.0945201836,
+        "bounds_m": {
+          "x_min": 253.35712026879074,
+          "x_max": 602.3938331312319,
+          "y_min": -219.71619730661916,
+          "y_max": 38.31584812611126
+        },
+        "shape": {
+          "long_side_m": 351.5665208993499,
+          "short_side_m": 253.541055116653,
+          "aspect_ratio": 1.3866256127142638,
+          "rectangle_fill_ratio": 0.7682493555324847,
+          "compactness": 0.7366460924798454
+        },
+        "reconnaissance_radius_m": 61.0,
+        "reconnaissance_mode": "hover_scan",
+        "hover_scan_seconds": 30.0,
+        "turn_radius_m": 0.0,
+        "coverage_reference_altitude_m": 59.0,
+        "waypoints_wgs84": [
+          [
+            33.8691414,
+            113.7087948
+          ],
+          [
+            33.86858609311216,
+            113.70956949748272
+          ],
+          [
+            33.86809114149811,
+            113.70877841702311
+          ],
+          [
+            33.86710123827002,
+            113.70877841702311
+          ],
+          [
+            33.86644130278462,
+            113.70937172736782
+          ]
+        ],
+        "scan_passes": 2,
+        "scan_visit_count": 10,
+        "scan_execution_order": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          4,
+          3,
+          2,
+          1,
+          0
+        ],
+        "scan_pass_order": "forward_then_reverse",
+        "entry_path_m": [
+          [
+            67.74114761847449,
+            233.99204351995675
+          ],
+          [
+            10.544290190600249,
+            213.7359112122208
+          ],
+          [
+            24.91571162685013,
+            67.73734390598787
+          ],
+          [
+            28.073649770809464,
+            49.29642817428148
+          ],
+          [
+            562.001723210149,
+            -58.852201571047424
+          ]
+        ],
+        "final_return_path_m": [
+          [
+            562.001723210149,
+            -58.852201571047424
+          ],
+          [
+            28.099283260548738,
+            49.32447673231317
+          ],
+          [
+            24.94546224969246,
+            67.74135028869027
+          ],
+          [
+            10.577049306696003,
+            213.70935445393843
+          ],
+          [
+            67.74114761847449,
+            233.99204351995675
+          ]
+        ],
+        "takeoff_time_s": 9.833333333333334,
+        "takeoff_speed_mps": 6.0,
+        "timing_altitude_m": 59.0,
+        "mission_time_limit_s": 840.0,
+        "remaining_time_s": 66.91636205769328,
+        "priority_buildings": [
+          "building2"
+        ],
+        "transit_routes": {
+          "schema_version": 2,
+          "plan_sha256": "c2a3f2f75e07bca3639fd6a1666510733d49498326edf1b5b5b4eaf4804fe819",
+          "coordinate_frame": "WGS84",
+          "coordinate_order": "longitude_latitude",
+          "departure": [
+            113.70563,
+            33.86468538780239
+          ],
+          "entry_path": [
+            [
+              113.70563,
+              33.86468538780239
+            ],
+            [
+              113.70584891025213,
+              33.86416972884242
+            ],
+            [
+              113.70742673284403,
+              33.86429929456621
+            ],
+            [
+              113.70762602585076,
+              33.86432776499574
+            ],
+            [
+              113.7087948,
+              33.8691414
+            ]
+          ],
+          "return_paths": [
+            {
+              "waypoint_index": 1,
+              "path": [
+                [
+                  113.7087948,
+                  33.8691414
+                ],
+                [
+                  113.7076257227269,
+                  33.86432799609478
+                ],
+                [
+                  113.70742668954661,
+                  33.86429956278331
+                ],
+                [
+                  113.70584919725394,
+                  33.86417002418263
+                ],
+                [
+                  113.70563,
+                  33.86468538780239
+                ]
+              ],
+              "source_uav_id": 1
+            },
+            {
+              "waypoint_index": 2,
+              "path": [
+                [
+                  113.70956949748272,
+                  33.86858609311216
+                ],
+                [
+                  113.7076257227269,
+                  33.86432799609478
+                ],
+                [
+                  113.70742668954661,
+                  33.86429956278331
+                ],
+                [
+                  113.70584919725394,
+                  33.86417002418263
+                ],
+                [
+                  113.70563,
+                  33.86468538780239
+                ]
+              ],
+              "source_uav_id": 1
+            },
+            {
+              "waypoint_index": 3,
+              "path": [
+                [
+                  113.70877841702311,
+                  33.86809114149811
+                ],
+                [
+                  113.7076257227269,
+                  33.86432799609478
+                ],
+                [
+                  113.70742668954661,
+                  33.86429956278331
+                ],
+                [
+                  113.70584919725394,
+                  33.86417002418263
+                ],
+                [
+                  113.70563,
+                  33.86468538780239
+                ]
+              ],
+              "source_uav_id": 1
+            },
+            {
+              "waypoint_index": 4,
+              "path": [
+                [
+                  113.70877841702311,
+                  33.86710123827002
+                ],
+                [
+                  113.7076257227269,
+                  33.86432799609478
+                ],
+                [
+                  113.70742668954661,
+                  33.86429956278331
+                ],
+                [
+                  113.70584919725394,
+                  33.86417002418263
+                ],
+                [
+                  113.70563,
+                  33.86468538780239
+                ]
+              ],
+              "source_uav_id": 1
+            },
+            {
+              "waypoint_index": 5,
+              "path": [
+                [
+                  113.70937172736782,
+                  33.86644130278462
+                ],
+                [
+                  113.7076257227269,
+                  33.86432799609478
+                ],
+                [
+                  113.70742668954661,
+                  33.86429956278331
+                ],
+                [
+                  113.70584919725394,
+                  33.86417002418263
+                ],
+                [
+                  113.70563,
+                  33.86468538780239
+                ]
+              ],
+              "source_uav_id": 1
+            },
+            {
+              "waypoint_index": 1,
+              "path": [
+                [
+                  113.7106603,
+                  33.8663255
+                ],
+                [
+                  113.7076257227269,
+                  33.86432799609478
+                ],
+                [
+                  113.70742668954661,
+                  33.86429956278331
+                ],
+                [
+                  113.70584919725394,
+                  33.86417002418263
+                ],
+                [
+                  113.70563,
+                  33.86468538780239
+                ]
+              ],
+              "source_uav_id": 2
+            },
+            {
+              "waypoint_index": 2,
+              "path": [
+                [
+                  113.71071469539349,
+                  33.86710671273984
+                ],
+                [
+                  113.7076257227269,
+                  33.86432799609478
+                ],
+                [
+                  113.70742668954661,
+                  33.86429956278331
+                ],
+                [
+                  113.70584919725394,
+                  33.86417002418263
+                ],
+                [
+                  113.70563,
+                  33.86468538780239
+                ]
+              ],
+              "source_uav_id": 2
+            },
+            {
+              "waypoint_index": 3,
+              "path": [
+                [
+                  113.71165491397254,
+                  33.866792972918915
+                ],
+                [
+                  113.7076257227269,
+                  33.86432799609478
+                ],
+                [
+                  113.70742668954661,
+                  33.86429956278331
+                ],
+                [
+                  113.70584919725394,
+                  33.86417002418263
+                ],
+                [
+                  113.70563,
+                  33.86468538780239
+                ]
+              ],
+              "source_uav_id": 2
+            },
+            {
+              "waypoint_index": 4,
+              "path": [
+                [
+                  113.71203100140416,
+                  33.865851753456134
+                ],
+                [
+                  113.7076257227269,
+                  33.86432799609478
+                ],
+                [
+                  113.70742668954661,
+                  33.86429956278331
+                ],
+                [
+                  113.70584919725394,
+                  33.86417002418263
+                ],
+                [
+                  113.70563,
+                  33.86468538780239
+                ]
+              ],
+              "source_uav_id": 2
+            },
+            {
+              "waypoint_index": 5,
+              "path": [
+                [
+                  113.71127882654092,
+                  33.865224273814285
+                ],
+                [
+                  113.7076257227269,
+                  33.86432799609478
+                ],
+                [
+                  113.70742668954661,
+                  33.86429956278331
+                ],
+                [
+                  113.70584919725394,
+                  33.86417002418263
+                ],
+                [
+                  113.70563,
+                  33.86468538780239
+                ]
+              ],
+              "source_uav_id": 2
+            },
+            {
+              "waypoint_index": 6,
+              "path": [
+                [
+                  113.71033860796189,
+                  33.86538114372475
+                ],
+                [
+                  113.7076257227269,
+                  33.86432799609478
+                ],
+                [
+                  113.70742668954661,
+                  33.86429956278331
+                ],
+                [
+                  113.70584919725394,
+                  33.86417002418263
+                ],
+                [
+                  113.70563,
+                  33.86468538780239
+                ]
+              ],
+              "source_uav_id": 2
+            },
+            {
+              "waypoint_index": 1,
+              "path": [
+                [
+                  113.70431208229463,
+                  33.862600605591204
+                ],
+                [
+                  113.70545974195971,
+                  33.864126545891516
+                ],
+                [
+                  113.70560424440994,
+                  33.86460413240758
+                ],
+                [
+                  113.70563,
+                  33.86468538780239
+                ]
+              ],
+              "source_uav_id": 3
+            },
+            {
+              "waypoint_index": 2,
+              "path": [
+                [
+                  113.70479840224931,
+                  33.86327676899837
+                ],
+                [
+                  113.70545974195971,
+                  33.864126545891516
+                ],
+                [
+                  113.70560424440994,
+                  33.86460413240758
+                ],
+                [
+                  113.70563,
+                  33.86468538780239
+                ]
+              ],
+              "source_uav_id": 3
+            },
+            {
+              "waypoint_index": 3,
+              "path": [
+                [
+                  113.70600468711197,
+                  33.86351187095896
+                ],
+                [
+                  113.70563,
+                  33.86468538780239
+                ]
+              ],
+              "source_uav_id": 3
+            },
+            {
+              "waypoint_index": 4,
+              "path": [
+                [
+                  113.70671795637882,
+                  33.863809382858115
+                ],
+                [
+                  113.70584919725394,
+                  33.86417002418263
+                ],
+                [
+                  113.70563,
+                  33.86468538780239
+                ]
+              ],
+              "source_uav_id": 3
+            },
+            {
+              "waypoint_index": 5,
+              "path": [
+                [
+                  113.70671795637882,
+                  33.862916847160655
+                ],
+                [
+                  113.70584919725394,
+                  33.86417002418263
+                ],
+                [
+                  113.70563,
+                  33.86468538780239
+                ]
+              ],
+              "source_uav_id": 3
+            },
+            {
+              "waypoint_index": 6,
+              "path": [
+                [
+                  113.7088694477029,
+                  33.866247418328506
+                ],
+                [
+                  113.7076257227269,
+                  33.86432799609478
+                ],
+                [
+                  113.70742668954661,
+                  33.86429956278331
+                ],
+                [
+                  113.70584919725394,
+                  33.86417002418263
+                ],
+                [
+                  113.70563,
+                  33.86468538780239
+                ]
+              ],
+              "source_uav_id": 3
+            },
+            {
+              "waypoint_index": 1,
+              "path": [
+                [
+                  113.7118039,
+                  33.8635343
+                ],
+                [
+                  113.70584919725394,
+                  33.86417002418263
+                ],
+                [
+                  113.70563,
+                  33.86468538780239
+                ]
+              ],
+              "source_uav_id": 4
+            },
+            {
+              "waypoint_index": 2,
+              "path": [
+                [
+                  113.7121194936239,
+                  33.86278366942165
+                ],
+                [
+                  113.70584919725394,
+                  33.86417002418263
+                ],
+                [
+                  113.70563,
+                  33.86468538780239
+                ]
+              ],
+              "source_uav_id": 4
+            },
+            {
+              "waypoint_index": 3,
+              "path": [
+                [
+                  113.7112765390358,
+                  33.86278366942165
+                ],
+                [
+                  113.70584919725394,
+                  33.86417002418263
+                ],
+                [
+                  113.70563,
+                  33.86468538780239
+                ]
+              ],
+              "source_uav_id": 4
+            },
+            {
+              "waypoint_index": 4,
+              "path": [
+                [
+                  113.7106021753653,
+                  33.863486879365105
+                ],
+                [
+                  113.70584919725394,
+                  33.86417002418263
+                ],
+                [
+                  113.70563,
+                  33.86468538780239
+                ]
+              ],
+              "source_uav_id": 4
+            },
+            {
+              "waypoint_index": 5,
+              "path": [
+                [
+                  113.71077076628292,
+                  33.86433073129725
+                ],
+                [
+                  113.70584919725394,
+                  33.86417002418263
+                ],
+                [
+                  113.70563,
+                  33.86468538780239
+                ]
+              ],
+              "source_uav_id": 4
+            },
+            {
+              "waypoint_index": 6,
+              "path": [
+                [
+                  113.71195090270628,
+                  33.864471373285944
+                ],
+                [
+                  113.70584919725394,
+                  33.86417002418263
+                ],
+                [
+                  113.70563,
+                  33.86468538780239
+                ]
+              ],
+              "source_uav_id": 4
+            },
+            {
+              "waypoint_index": 1,
+              "path": [
+                [
+                  113.7056089355071,
+                  33.86368246704267
+                ],
+                [
+                  113.70560212235021,
+                  33.86423461219761
+                ],
+                [
+                  113.70560212235021,
+                  33.86459523268144
+                ],
+                [
+                  113.70560424440994,
+                  33.86460413240758
+                ],
+                [
+                  113.70563,
+                  33.86468538780239
+                ]
+              ],
+              "source_uav_id": 5
+            },
+            {
+              "waypoint_index": 2,
+              "path": [
+                [
+                  113.70528472220398,
+                  33.8621949075469
+                ],
+                [
+                  113.70560212235021,
+                  33.86459523268144
+                ],
+                [
+                  113.70560424440994,
+                  33.86460413240758
+                ],
+                [
+                  113.70563,
+                  33.86468538780239
+                ]
+              ],
+              "source_uav_id": 5
+            },
+            {
+              "waypoint_index": 3,
+              "path": [
+                [
+                  113.70609525546179,
+                  33.861789209502604
+                ],
+                [
+                  113.70565787764978,
+                  33.86459523268144
+                ],
+                [
+                  113.70565575559006,
+                  33.86460413240758
+                ],
+                [
+                  113.70563,
+                  33.86468538780239
+                ]
+              ],
+              "source_uav_id": 5
+            },
+            {
+              "waypoint_index": 4,
+              "path": [
+                [
+                  113.70609525546179,
+                  33.86111304609543
+                ],
+                [
+                  113.70565787764978,
+                  33.86459523268144
+                ],
+                [
+                  113.70565575559006,
+                  33.86460413240758
+                ],
+                [
+                  113.70563,
+                  33.86468538780239
+                ]
+              ],
+              "source_uav_id": 5
+            },
+            {
+              "waypoint_index": 5,
+              "path": [
+                [
+                  113.70512261555243,
+                  33.8613835114583
+                ],
+                [
+                  113.70560212235021,
+                  33.86459523268144
+                ],
+                [
+                  113.70560424440994,
+                  33.86460413240758
+                ],
+                [
+                  113.70563,
+                  33.86468538780239
+                ]
+              ],
+              "source_uav_id": 5
+            },
+            {
+              "waypoint_index": 6,
+              "path": [
+                [
+                  113.70431208229463,
+                  33.861789209502604
+                ],
+                [
+                  113.70545974195971,
+                  33.864126545891516
+                ],
+                [
+                  113.70560424440994,
+                  33.86460413240758
+                ],
+                [
+                  113.70563,
+                  33.86468538780239
+                ]
+              ],
+              "source_uav_id": 5
+            },
+            {
+              "waypoint_index": 1,
+              "path": [
+                [
+                  113.71006797620527,
+                  33.86272493677641
+                ],
+                [
+                  113.70584919725394,
+                  33.86417002418263
+                ],
+                [
+                  113.70563,
+                  33.86468538780239
+                ]
+              ],
+              "source_uav_id": 6
+            },
+            {
+              "waypoint_index": 2,
+              "path": [
+                [
+                  113.71035976817808,
+                  33.86199468029667
+                ],
+                [
+                  113.70584919725394,
+                  33.86417002418263
+                ],
+                [
+                  113.70563,
+                  33.86468538780239
+                ]
+              ],
+              "source_uav_id": 6
+            },
+            {
+              "waypoint_index": 3,
+              "path": [
+                [
+                  113.71108924811008,
+                  33.86150784264351
+                ],
+                [
+                  113.70584919725394,
+                  33.86417002418263
+                ],
+                [
+                  113.70563,
+                  33.86468538780239
+                ]
+              ],
+              "source_uav_id": 6
+            },
+            {
+              "waypoint_index": 4,
+              "path": [
+                [
+                  113.71079745613729,
+                  33.86077758616377
+                ],
+                [
+                  113.70986769843093,
+                  33.86194919520432
+                ],
+                [
+                  113.70584919725394,
+                  33.86417002418263
+                ],
+                [
+                  113.70563,
+                  33.86468538780239
+                ]
+              ],
+              "source_uav_id": 6
+            },
+            {
+              "waypoint_index": 5,
+              "path": [
+                [
+                  113.71167283205571,
+                  33.86077758616377
+                ],
+                [
+                  113.70986769843093,
+                  33.86194919520432
+                ],
+                [
+                  113.70584919725394,
+                  33.86417002418263
+                ],
+                [
+                  113.70563,
+                  33.86468538780239
+                ]
+              ],
+              "source_uav_id": 6
+            },
+            {
+              "waypoint_index": 6,
+              "path": [
+                [
+                  113.71211052001492,
+                  33.86138613323022
+                ],
+                [
+                  113.70584919725394,
+                  33.86417002418263
+                ],
+                [
+                  113.70563,
+                  33.86468538780239
+                ]
+              ],
+              "source_uav_id": 6
+            },
+            {
+              "waypoint_index": 7,
+              "path": [
+                [
+                  113.7118187280421,
+                  33.86199468029667
+                ],
+                [
+                  113.70584919725394,
+                  33.86417002418263
+                ],
+                [
+                  113.70563,
+                  33.86468538780239
+                ]
+              ],
+              "source_uav_id": 6
+            }
+          ],
+          "boundary_clearance_m": 5.0,
+          "endpoint_clearance_policy": "takeoff_landing_connector_only",
+          "recipient_uav_id": 1,
+          "route_scope": "all_uav_waypoints",
+          "waypoints_by_uav": {
+            "1": [
+              [
+                113.7087948,
+                33.8691414
+              ],
+              [
+                113.70956949748272,
+                33.86858609311216
+              ],
+              [
+                113.70877841702311,
+                33.86809114149811
+              ],
+              [
+                113.70877841702311,
+                33.86710123827002
+              ],
+              [
+                113.70937172736782,
+                33.86644130278462
+              ]
+            ],
+            "2": [
+              [
+                113.7106603,
+                33.8663255
+              ],
+              [
+                113.71071469539349,
+                33.86710671273984
+              ],
+              [
+                113.71165491397254,
+                33.866792972918915
+              ],
+              [
+                113.71203100140416,
+                33.865851753456134
+              ],
+              [
+                113.71127882654092,
+                33.865224273814285
+              ],
+              [
+                113.71033860796189,
+                33.86538114372475
+              ]
+            ],
+            "3": [
+              [
+                113.70431208229463,
+                33.862600605591204
+              ],
+              [
+                113.70479840224931,
+                33.86327676899837
+              ],
+              [
+                113.70600468711197,
+                33.86351187095896
+              ],
+              [
+                113.70671795637882,
+                33.863809382858115
+              ],
+              [
+                113.70671795637882,
+                33.862916847160655
+              ],
+              [
+                113.7088694477029,
+                33.866247418328506
+              ]
+            ],
+            "4": [
+              [
+                113.7118039,
+                33.8635343
+              ],
+              [
+                113.7121194936239,
+                33.86278366942165
+              ],
+              [
+                113.7112765390358,
+                33.86278366942165
+              ],
+              [
+                113.7106021753653,
+                33.863486879365105
+              ],
+              [
+                113.71077076628292,
+                33.86433073129725
+              ],
+              [
+                113.71195090270628,
+                33.864471373285944
+              ]
+            ],
+            "5": [
+              [
+                113.7056089355071,
+                33.86368246704267
+              ],
+              [
+                113.70528472220398,
+                33.8621949075469
+              ],
+              [
+                113.70609525546179,
+                33.861789209502604
+              ],
+              [
+                113.70609525546179,
+                33.86111304609543
+              ],
+              [
+                113.70512261555243,
+                33.8613835114583
+              ],
+              [
+                113.70431208229463,
+                33.861789209502604
+              ]
+            ],
+            "6": [
+              [
+                113.71006797620527,
+                33.86272493677641
+              ],
+              [
+                113.71035976817808,
+                33.86199468029667
+              ],
+              [
+                113.71108924811008,
+                33.86150784264351
+              ],
+              [
+                113.71079745613729,
+                33.86077758616377
+              ],
+              [
+                113.71167283205571,
+                33.86077758616377
+              ],
+              [
+                113.71211052001492,
+                33.86138613323022
+              ],
+              [
+                113.7118187280421,
+                33.86199468029667
+              ]
+            ]
+          },
+          "other_home_clearance_m": 2.5,
+          "avoided_home_count": 5,
+          "home_reference_source": "first_valid_unarmed_gps_per_boot",
+          "home_reference_boot_id": "offline-boot-1"
+        },
+        "recognition_selection": {
+          "category_count": 0,
+          "category_ids": [],
+          "category_names": []
+        },
+        "task_region": {
+          "schema_version": 1,
+          "uav_id": 1,
+          "coordinate_frame": "WGS84",
+          "coordinate_order": "longitude_latitude",
+          "polygons": [
+            {
+              "outer": [
+                [
+                  113.71015833333334,
+                  33.86756388888889
+                ],
+                [
+                  113.71053327491367,
+                  33.86757500375787
+                ],
+                [
+                  113.70932600919852,
+                  33.86635881084895
+                ],
+                [
+                  113.70774469418835,
+                  33.86657369457703
+                ],
+                [
+                  113.70786944444444,
+                  33.869261111111115
+                ],
+                [
+                  113.71010555555556,
+                  33.869505555555556
+                ],
+                [
+                  113.71019722222222,
+                  33.86801666666667
+                ],
+                [
+                  113.71015833333334,
+                  33.86756388888889
+                ]
+              ],
+              "holes": []
+            }
+          ]
+        }
+      },
+      "target_altitude_m": 59.0,
+      "controller_mode": "external",
+      "coordinate_frame": "WGS84",
+      "landing_point_m": null,
+      "landing_sequence": 1,
+      "landing_mode": "onboard_home",
+      "landing_point_wgs84": [
+        33.86468538780239,
+        113.70563,
+        59.0
+      ],
+      "competition_time": {
+        "schema_version": 1,
+        "mission_id": "subject2-531993ca70",
+        "running": true,
+        "synchronized": true,
+        "elapsed_seconds": 6.73399999999674,
+        "session_id": "e0ef95357d394097b7c01b80f6ec6d7b",
+        "revision": 0,
+        "publisher_terminal_id": 1,
+        "updated_by": 1
+      },
+      "assignment_checksum": "9c588e80fdfc6391d1b5d6acaac33681eba518ecc986038bf0b58338db180f3a",
+      "type": "assign_task",
+      "uav_id": 1
+    },
+    "takeoff": {
+      "mission_id": "subject2-531993ca70",
+      "target_altitude_m": 59.0,
+      "deadline_at": 1792049497.8445318,
+      "return_battery_threshold": 0.3,
+      "type": "takeoff",
+      "uav_id": 1
+    }
+  }
+}

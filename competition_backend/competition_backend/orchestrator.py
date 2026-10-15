@@ -567,7 +567,9 @@ class CompetitionOrchestrator:
             return self.snapshot()
 
     def update_telemetry(self, telemetry: Telemetry) -> None:
-        if telemetry.uav_id not in self.active_uav_ids:
+        # 任务参与名单只限制分派与执行；未参与任务的配置内飞机也必须持续更新状态。
+        # 否则断线后被排除的飞机重连时，本机网页会一直保留旧遥测。
+        if telemetry.uav_id not in self.config.uav_ids:
             return
         with self._telemetry_lock:
             previous = self._telemetry.get(telemetry.uav_id)

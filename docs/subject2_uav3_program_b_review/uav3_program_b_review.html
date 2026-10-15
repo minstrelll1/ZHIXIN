@@ -1,0 +1,1245 @@
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><title>科目二 UAV3 程序B接口核对</title>
+<style>body{max-width:1100px;margin:32px auto;padding:0 24px;font:16px/1.7 system-ui,"Microsoft YaHei";color:#172337;background:#f7f9fc}h1{font-size:28px}h2{font-size:21px;margin-top:32px}li{margin:12px 0}code,pre{font-family:Consolas,monospace}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#102238;color:#e7f0fc;padding:20px;border-radius:8px;font-size:13px;line-height:1.5}summary{cursor:pointer;font-weight:600;padding:12px;background:#e6eef8;overflow-wrap:anywhere}details{margin:12px 0;border:1px solid #bfcfe4;border-radius:8px;overflow:hidden}details p{padding:0 12px}table{border-collapse:collapse;width:100%;font-size:14px}td,th{padding:8px;border:1px solid #ccd8e7;text-align:left}.note{padding:15px;border-left:4px solid #c97411;background:#fff0d8}a{color:#1759ad}</style>
+<h1>科目二 UAV3：程序B接口核对</h1><p>来源提交 <code>f6a3fcf178a4a3511dbbd983993bf689c6f57b89</code> · 2026-10-15 · 全局编号3 / 本机ROS编号3（P600示例）</p><p class="note">离线核对样本，非现场实飞记录。固定航点与区域为当前版本；起降GPS、任务ID、截止时间、速度回退值等动态内容见下方说明。</p><p><a href="uav3_program_b_messages.json">完整B消息JSON</a> · <a href="README.txt">纯文本说明</a> · <a href="ground_to_onboard_assignment.json">地面到机载任务附录</a> · <a href="publisher_reference.py.txt">发布函数原文</a></p><h2>作者需要核对的行为和字段</h2><ol><li>本资料是固定规划与既有离线模拟任务的接口核对样本，不是真实飞行日志。导出只调用当前发布函数并捕获假ROS消息。</li><li>样例全局UAV编号G=3、本机ROS编号L=3（P600示例）。SU17等绑定可能L=1；区域、航线、降落点、external_mission和return_home话题用L，类别/计时/任务状态/成功返航话题用G。JSON中的uav_id仍为全局编号3。</li><li>所有std_msgs/String消息的data是JSON字符串。为了阅读，本文件事件data已解析；ros_message保留实际String.data字符串。MultiArray包含默认空layout；不能把包装对象整体当作ROS String.data发送。</li><li>区域外环是16个不同顶点加重复首点闭合，共17项，非凸、无孔洞；不能替换成包围盒或凸包，否则会重新与UAV5重叠。</li><li>坐标为WGS84。区域顶点为[经度,纬度]；path_stage_1、entry_path、return_paths和jiangluodian为[经度,纬度,相对高度米]。高度53米相对UAV3自己的起飞点，不是海拔。</li><li>path_stage_1只有6个点、18个数。B按已确认逻辑执行1→2→3→4→5→6→6→5→4→3→2→1，每次扫描30秒，转折点6共60秒。当前external_mission不含scan_passes或scan_execution_order；两趟需要B已有行为，不能把6点列表当作只执行一次的完整任务。</li><li>waypoint_actions.index从0开始（0至5）；return_paths.routes[].waypoint_index从1开始。return_paths用(source_uav_id,waypoint_index)联合定位。</li><li>return_paths为六机5/6/6/6/6/7个点共36条路线，全部返回接收机UAV3自己的降落点。UAV3正常两趟结束在本机第1点，应选择source_uav_id=3、waypoint_index=1。不是从第6点直接返场，也不是返回源飞机的起降点。</li><li>entry_path是到第1个扫描航点的进场折线。折线中的中间顶点是通行点，不是额外扫描航点；return_paths同理。</li><li>当前样例external_mission.speed_mps=0.3，来自测试节点search_speed。正式值来自机载配置，初始化还受max_speed限制。场景规划按5m/s水平、6m/s爬升估时，但这两个速度不通过本次B控制消息强制设置；请作者核对B是否使用speed_mps。</li><li>当前样例deadline_at=1792044639.7734976为Unix秒，是既有起飞命令中的示例截止时刻。840秒仅为规划预算，并未下发为B强制超时；return_battery_threshold=0.3代表30%。</li><li>55米扫描半径、840秒规划上限、6m/s爬升、scan_passes=2等在地面到机载assign_task中存在，但当前external_mission未透传这些字段。禁止把附录assign_task误认为B实际收到了全部规划字段。</li><li>航点和子区边界来自固定规划；实际进返场与降落点根据各机本次开机首次有效未解锁GPS重接。这里的UAV3模拟降落点为纬度33.86450507756048、经度113.70563，不是现场实际位置。</li><li>mission_id、assignment_checksum、plan_sha256、截止时间、比赛计时快照、状态时间和缓存路径是样例值；真实每次分派按本次任务核对。部分不带任务号的数组/启动话题是原接口，请B协调同批次带编号JSON的接收。所有列出发布器均锁存；跨话题实际收到的先后不能只依赖发布调用顺序。</li><li>本样例识别类别为空数组，代表本次离线任务未选类别；正式内容来自页面选项。competition_time承接已有比赛计时快照，可能running=true；规划或起飞不等价于重新从零计时。</li><li>successful_return初始发布{}，是未有成功返航事件，不是成功。后续状态由原只读监测或B回报生成。return_home的Bool=true只在收到返航请求时发布，分派和起飞交接阶段不会顺带发送。</li><li>子区域无面积重叠不代表扫描圆或所有航段不能跨子区分界；原规划允许扫描圆边缘交叠。进场分离、赛方边界5米安全距离和禁扫区约束已保留。</li><li>任务交接与返航请求的消息原文在本资料中完整列出，包括36条返航线；计时和task_status是动态辅助话题，本资料给出接受任务及起飞交接时快照，不伪造后续飞行遥测序列。</li></ol><h2>固定扫描航点</h2><table><tr><th>点号</th><th>经度</th><th>纬度</th><th>相对高度/m</th></tr><tr><td>1</td><td>113.70431208229463</td><td>33.862600605591204</td><td>53</td></tr><tr><td>2</td><td>113.70479840224931</td><td>33.86327676899837</td><td>53</td></tr><tr><td>3</td><td>113.70600468711197</td><td>33.86351187095896</td><td>53</td></tr><tr><td>4</td><td>113.70671795637882</td><td>33.863809382858115</td><td>53</td></tr><tr><td>5</td><td>113.70671795637882</td><td>33.862916847160655</td><td>53</td></tr><tr><td>6</td><td>113.7088694477029</td><td>33.866247418328506</td><td>53</td></tr></table><p>实际单趟数组（18个数）：</p><pre>[
+  113.70431208229463,
+  33.862600605591204,
+  53.0,
+  113.70479840224931,
+  33.86327676899837,
+  53.0,
+  113.70600468711197,
+  33.86351187095896,
+  53.0,
+  113.70671795637882,
+  33.863809382858115,
+  53.0,
+  113.70671795637882,
+  33.862916847160655,
+  53.0,
+  113.7088694477029,
+  33.866247418328506,
+  53.0
+]</pre><h2>接受规划与分派后</h2><details><summary>1. /uav3/competition/recognition_categories · std_msgs/Int32MultiArray</summary><p>完整内容（String.data已解析为JSON，未省略航线）；JSON文件同时提供原始ROS字段。</p><pre>[]</pre></details><details><summary>2. /ground_mission_planner/vehicle_3/task_region · std_msgs/String</summary><p>完整内容（String.data已解析为JSON，未省略航线）；JSON文件同时提供原始ROS字段。</p><pre>{
+  &quot;schema_version&quot;: 1,
+  &quot;uav_id&quot;: 3,
+  &quot;coordinate_frame&quot;: &quot;WGS84&quot;,
+  &quot;coordinate_order&quot;: &quot;longitude_latitude&quot;,
+  &quot;polygons&quot;: [
+    {
+      &quot;outer&quot;: [
+        [
+          113.7042256254138,
+          33.862600605591204
+        ],
+        [
+          113.70471194536847,
+          33.86327676899837
+        ],
+        [
+          113.70479840224931,
+          33.863348893095136
+        ],
+        [
+          113.7053366403856,
+          33.8637380705926
+        ],
+        [
+          113.7055926123887,
+          33.863491704542646
+        ],
+        [
+          113.70583760708114,
+          33.86366884996372
+        ],
+        [
+          113.70573143285333,
+          33.86377103975322
+        ],
+        [
+          113.70558163507802,
+          33.86391521601369
+        ],
+        [
+          113.70594476691448,
+          33.86417778146537
+        ],
+        [
+          113.70742670397908,
+          33.86429947337761
+        ],
+        [
+          113.7076258237682,
+          33.86432791906177
+        ],
+        [
+          113.70773538688022,
+          33.86547250391295
+        ],
+        [
+          113.7088694477029,
+          33.866292495888985
+        ],
+        [
+          113.70892348325341,
+          33.866247418328506
+        ],
+        [
+          113.7071922749758,
+          33.862566296812986
+        ],
+        [
+          113.70431208229463,
+          33.86252848149444
+        ],
+        [
+          113.7042256254138,
+          33.862600605591204
+        ]
+      ],
+      &quot;holes&quot;: []
+    }
+  ],
+  &quot;mission_id&quot;: &quot;subject2-581c4f8998&quot;,
+  &quot;assignment_checksum&quot;: &quot;0ad3c88b5c4257d72dba8e60378fe638fbf003e839939e58065a796003aeb1e2&quot;,
+  &quot;relative_altitude_m&quot;: 53.0,
+  &quot;altitude_frame&quot;: &quot;RELATIVE_TO_TAKEOFF&quot;
+}</pre></details><details><summary>3. /uav3/competition/competition_time · std_msgs/String</summary><p>完整内容（String.data已解析为JSON，未省略航线）；JSON文件同时提供原始ROS字段。</p><pre>{
+  &quot;schema_version&quot;: 1,
+  &quot;mission_id&quot;: &quot;subject2-581c4f8998&quot;,
+  &quot;running&quot;: true,
+  &quot;synchronized&quot;: true,
+  &quot;elapsed_seconds&quot;: 2.656,
+  &quot;session_id&quot;: &quot;a351f6c2834c46699ada38acc5c4110f&quot;,
+  &quot;revision&quot;: 0,
+  &quot;publisher_terminal_id&quot;: 1,
+  &quot;updated_by&quot;: 1
+}</pre></details><details><summary>4. /uav3/competition/successful_return · std_msgs/String</summary><p>完整内容（String.data已解析为JSON，未省略航线）；JSON文件同时提供原始ROS字段。</p><pre>{}</pre></details><details><summary>5. /uav3/competition/task_status · std_msgs/String</summary><p>完整内容（String.data已解析为JSON，未省略航线）；JSON文件同时提供原始ROS字段。</p><pre>{
+  &quot;state&quot;: &quot;task_received&quot;,
+  &quot;uav_id&quot;: 3,
+  &quot;timestamp_unix&quot;: 1792043499.7734976,
+  &quot;task_assignment_acked&quot;: true,
+  &quot;mission_id&quot;: &quot;subject2-581c4f8998&quot;,
+  &quot;assignment_checksum&quot;: &quot;0ad3c88b5c4257d72dba8e60378fe638fbf003e839939e58065a796003aeb1e2&quot;,
+  &quot;waypoint_count&quot;: 6,
+  &quot;cache_path&quot;: &quot;F:\\Projects\\ZhiXin\\competition_development\\ground_runtime\\subject2_validation\\tmp\\tmppc93g0_q\\task.json&quot;,
+  &quot;task_type&quot;: &quot;lawnmower_search&quot;,
+  &quot;sector&quot;: 3,
+  &quot;bounds_m&quot;: {
+    &quot;x_min&quot;: -171.502756121,
+    &quot;x_max&quot;: 246.00146933500002,
+    &quot;y_min&quot;: -70.759478555,
+    &quot;y_max&quot;: 363.941176331
+  },
+  &quot;lane_spacing_m&quot;: null,
+  &quot;target_altitude_m&quot;: 53.0,
+  &quot;controller_mode&quot;: &quot;external&quot;
+}</pre></details><h2>起飞成功后交给B</h2><details><summary>1. /ground_mission_planner/vehicle_3/entry_path · std_msgs/String</summary><p>完整内容（String.data已解析为JSON，未省略航线）；JSON文件同时提供原始ROS字段。</p><pre>{
+  &quot;schema_version&quot;: 1,
+  &quot;mission_id&quot;: &quot;subject2-581c4f8998&quot;,
+  &quot;uav_id&quot;: 3,
+  &quot;assignment_checksum&quot;: &quot;0ad3c88b5c4257d72dba8e60378fe638fbf003e839939e58065a796003aeb1e2&quot;,
+  &quot;coordinate_frame&quot;: &quot;WGS84&quot;,
+  &quot;coordinate_order&quot;: &quot;longitude_latitude_relative_altitude&quot;,
+  &quot;altitude_frame&quot;: &quot;RELATIVE_TO_TAKEOFF&quot;,
+  &quot;plan_sha256&quot;: &quot;c2a3f2f75e07bca3639fd6a1666510733d49498326edf1b5b5b4eaf4804fe819&quot;,
+  &quot;boundary_clearance_m&quot;: 5.0,
+  &quot;endpoint_clearance_policy&quot;: &quot;takeoff_landing_connector_only&quot;,
+  &quot;path&quot;: [
+    [
+      113.70563,
+      33.86450507756048,
+      53.0
+    ],
+    [
+      113.70546009898337,
+      33.864126306125925,
+      53.0
+    ],
+    [
+      113.70431208229463,
+      33.862600605591204,
+      53.0
+    ]
+  ]
+}</pre></details><details><summary>2. /ground_mission_planner/vehicle_3/return_paths · std_msgs/String</summary><p>完整内容（String.data已解析为JSON，未省略航线）；JSON文件同时提供原始ROS字段。</p><pre>{
+  &quot;schema_version&quot;: 2,
+  &quot;mission_id&quot;: &quot;subject2-581c4f8998&quot;,
+  &quot;uav_id&quot;: 3,
+  &quot;assignment_checksum&quot;: &quot;0ad3c88b5c4257d72dba8e60378fe638fbf003e839939e58065a796003aeb1e2&quot;,
+  &quot;coordinate_frame&quot;: &quot;WGS84&quot;,
+  &quot;coordinate_order&quot;: &quot;longitude_latitude_relative_altitude&quot;,
+  &quot;altitude_frame&quot;: &quot;RELATIVE_TO_TAKEOFF&quot;,
+  &quot;plan_sha256&quot;: &quot;c2a3f2f75e07bca3639fd6a1666510733d49498326edf1b5b5b4eaf4804fe819&quot;,
+  &quot;boundary_clearance_m&quot;: 5.0,
+  &quot;endpoint_clearance_policy&quot;: &quot;takeoff_landing_connector_only&quot;,
+  &quot;routes&quot;: [
+    {
+      &quot;waypoint_index&quot;: 1,
+      &quot;path&quot;: [
+        [
+          113.7087948,
+          33.8691414,
+          53.0
+        ],
+        [
+          113.7076257227269,
+          33.86432799609478,
+          53.0
+        ],
+        [
+          113.70742668954661,
+          33.86429956278331,
+          53.0
+        ],
+        [
+          113.70584919725394,
+          33.864170024182634,
+          53.0
+        ],
+        [
+          113.70563,
+          33.86450507756048,
+          53.0
+        ]
+      ],
+      &quot;source_uav_id&quot;: 1
+    },
+    {
+      &quot;waypoint_index&quot;: 2,
+      &quot;path&quot;: [
+        [
+          113.70956949748272,
+          33.86858609311216,
+          53.0
+        ],
+        [
+          113.7076257227269,
+          33.86432799609478,
+          53.0
+        ],
+        [
+          113.70742668954661,
+          33.86429956278331,
+          53.0
+        ],
+        [
+          113.70584919725394,
+          33.864170024182634,
+          53.0
+        ],
+        [
+          113.70563,
+          33.86450507756048,
+          53.0
+        ]
+      ],
+      &quot;source_uav_id&quot;: 1
+    },
+    {
+      &quot;waypoint_index&quot;: 3,
+      &quot;path&quot;: [
+        [
+          113.70877841702311,
+          33.86809114149811,
+          53.0
+        ],
+        [
+          113.7076257227269,
+          33.86432799609478,
+          53.0
+        ],
+        [
+          113.70742668954661,
+          33.86429956278331,
+          53.0
+        ],
+        [
+          113.70584919725394,
+          33.864170024182634,
+          53.0
+        ],
+        [
+          113.70563,
+          33.86450507756048,
+          53.0
+        ]
+      ],
+      &quot;source_uav_id&quot;: 1
+    },
+    {
+      &quot;waypoint_index&quot;: 4,
+      &quot;path&quot;: [
+        [
+          113.70877841702311,
+          33.86710123827002,
+          53.0
+        ],
+        [
+          113.7076257227269,
+          33.86432799609478,
+          53.0
+        ],
+        [
+          113.70742668954661,
+          33.86429956278331,
+          53.0
+        ],
+        [
+          113.70584919725394,
+          33.864170024182634,
+          53.0
+        ],
+        [
+          113.70563,
+          33.86450507756048,
+          53.0
+        ]
+      ],
+      &quot;source_uav_id&quot;: 1
+    },
+    {
+      &quot;waypoint_index&quot;: 5,
+      &quot;path&quot;: [
+        [
+          113.70937172736782,
+          33.86644130278462,
+          53.0
+        ],
+        [
+          113.7076257227269,
+          33.86432799609478,
+          53.0
+        ],
+        [
+          113.70742668954661,
+          33.86429956278331,
+          53.0
+        ],
+        [
+          113.70584919725394,
+          33.864170024182634,
+          53.0
+        ],
+        [
+          113.70563,
+          33.86450507756048,
+          53.0
+        ]
+      ],
+      &quot;source_uav_id&quot;: 1
+    },
+    {
+      &quot;waypoint_index&quot;: 1,
+      &quot;path&quot;: [
+        [
+          113.7106603,
+          33.8663255,
+          53.0
+        ],
+        [
+          113.7076257227269,
+          33.86432799609478,
+          53.0
+        ],
+        [
+          113.70742668954661,
+          33.86429956278331,
+          53.0
+        ],
+        [
+          113.70584919725394,
+          33.864170024182634,
+          53.0
+        ],
+        [
+          113.70563,
+          33.86450507756048,
+          53.0
+        ]
+      ],
+      &quot;source_uav_id&quot;: 2
+    },
+    {
+      &quot;waypoint_index&quot;: 2,
+      &quot;path&quot;: [
+        [
+          113.71071469539349,
+          33.86710671273984,
+          53.0
+        ],
+        [
+          113.7076257227269,
+          33.86432799609478,
+          53.0
+        ],
+        [
+          113.70742668954661,
+          33.86429956278331,
+          53.0
+        ],
+        [
+          113.70584919725394,
+          33.864170024182634,
+          53.0
+        ],
+        [
+          113.70563,
+          33.86450507756048,
+          53.0
+        ]
+      ],
+      &quot;source_uav_id&quot;: 2
+    },
+    {
+      &quot;waypoint_index&quot;: 3,
+      &quot;path&quot;: [
+        [
+          113.71165491397254,
+          33.866792972918915,
+          53.0
+        ],
+        [
+          113.7076257227269,
+          33.86432799609478,
+          53.0
+        ],
+        [
+          113.70742668954661,
+          33.86429956278331,
+          53.0
+        ],
+        [
+          113.70584919725394,
+          33.864170024182634,
+          53.0
+        ],
+        [
+          113.70563,
+          33.86450507756048,
+          53.0
+        ]
+      ],
+      &quot;source_uav_id&quot;: 2
+    },
+    {
+      &quot;waypoint_index&quot;: 4,
+      &quot;path&quot;: [
+        [
+          113.71203100140416,
+          33.865851753456134,
+          53.0
+        ],
+        [
+          113.7076257227269,
+          33.86432799609478,
+          53.0
+        ],
+        [
+          113.70742668954661,
+          33.86429956278331,
+          53.0
+        ],
+        [
+          113.70584919725394,
+          33.864170024182634,
+          53.0
+        ],
+        [
+          113.70563,
+          33.86450507756048,
+          53.0
+        ]
+      ],
+      &quot;source_uav_id&quot;: 2
+    },
+    {
+      &quot;waypoint_index&quot;: 5,
+      &quot;path&quot;: [
+        [
+          113.71127882654092,
+          33.865224273814285,
+          53.0
+        ],
+        [
+          113.7076257227269,
+          33.86432799609478,
+          53.0
+        ],
+        [
+          113.70742668954661,
+          33.86429956278331,
+          53.0
+        ],
+        [
+          113.70584919725394,
+          33.864170024182634,
+          53.0
+        ],
+        [
+          113.70563,
+          33.86450507756048,
+          53.0
+        ]
+      ],
+      &quot;source_uav_id&quot;: 2
+    },
+    {
+      &quot;waypoint_index&quot;: 6,
+      &quot;path&quot;: [
+        [
+          113.71033860796189,
+          33.86538114372475,
+          53.0
+        ],
+        [
+          113.7076257227269,
+          33.86432799609478,
+          53.0
+        ],
+        [
+          113.70742668954661,
+          33.86429956278331,
+          53.0
+        ],
+        [
+          113.70584919725394,
+          33.864170024182634,
+          53.0
+        ],
+        [
+          113.70563,
+          33.86450507756048,
+          53.0
+        ]
+      ],
+      &quot;source_uav_id&quot;: 2
+    },
+    {
+      &quot;waypoint_index&quot;: 1,
+      &quot;path&quot;: [
+        [
+          113.70431208229463,
+          33.862600605591204,
+          53.0
+        ],
+        [
+          113.7054597419597,
+          33.864126545891516,
+          53.0
+        ],
+        [
+          113.70563,
+          33.86450507756048,
+          53.0
+        ]
+      ],
+      &quot;source_uav_id&quot;: 3
+    },
+    {
+      &quot;waypoint_index&quot;: 2,
+      &quot;path&quot;: [
+        [
+          113.70479840224931,
+          33.86327676899837,
+          53.0
+        ],
+        [
+          113.7054597419597,
+          33.864126545891516,
+          53.0
+        ],
+        [
+          113.70563,
+          33.86450507756048,
+          53.0
+        ]
+      ],
+      &quot;source_uav_id&quot;: 3
+    },
+    {
+      &quot;waypoint_index&quot;: 3,
+      &quot;path&quot;: [
+        [
+          113.70600468711197,
+          33.86351187095896,
+          53.0
+        ],
+        [
+          113.70563,
+          33.86450507756048,
+          53.0
+        ]
+      ],
+      &quot;source_uav_id&quot;: 3
+    },
+    {
+      &quot;waypoint_index&quot;: 4,
+      &quot;path&quot;: [
+        [
+          113.70671795637882,
+          33.863809382858115,
+          53.0
+        ],
+        [
+          113.70584919725394,
+          33.864170024182634,
+          53.0
+        ],
+        [
+          113.70563,
+          33.86450507756048,
+          53.0
+        ]
+      ],
+      &quot;source_uav_id&quot;: 3
+    },
+    {
+      &quot;waypoint_index&quot;: 5,
+      &quot;path&quot;: [
+        [
+          113.70671795637882,
+          33.862916847160655,
+          53.0
+        ],
+        [
+          113.70584919725394,
+          33.864170024182634,
+          53.0
+        ],
+        [
+          113.70563,
+          33.86450507756048,
+          53.0
+        ]
+      ],
+      &quot;source_uav_id&quot;: 3
+    },
+    {
+      &quot;waypoint_index&quot;: 6,
+      &quot;path&quot;: [
+        [
+          113.7088694477029,
+          33.866247418328506,
+          53.0
+        ],
+        [
+          113.7076257227269,
+          33.86432799609478,
+          53.0
+        ],
+        [
+          113.70742668954661,
+          33.86429956278331,
+          53.0
+        ],
+        [
+          113.70584919725394,
+          33.864170024182634,
+          53.0
+        ],
+        [
+          113.70563,
+          33.86450507756048,
+          53.0
+        ]
+      ],
+      &quot;source_uav_id&quot;: 3
+    },
+    {
+      &quot;waypoint_index&quot;: 1,
+      &quot;path&quot;: [
+        [
+          113.7118039,
+          33.8635343,
+          53.0
+        ],
+        [
+          113.70584919725394,
+          33.864170024182634,
+          53.0
+        ],
+        [
+          113.70563,
+          33.86450507756048,
+          53.0
+        ]
+      ],
+      &quot;source_uav_id&quot;: 4
+    },
+    {
+      &quot;waypoint_index&quot;: 2,
+      &quot;path&quot;: [
+        [
+          113.7121194936239,
+          33.86278366942165,
+          53.0
+        ],
+        [
+          113.70584919725394,
+          33.864170024182634,
+          53.0
+        ],
+        [
+          113.70563,
+          33.86450507756048,
+          53.0
+        ]
+      ],
+      &quot;source_uav_id&quot;: 4
+    },
+    {
+      &quot;waypoint_index&quot;: 3,
+      &quot;path&quot;: [
+        [
+          113.7112765390358,
+          33.86278366942165,
+          53.0
+        ],
+        [
+          113.70584919725394,
+          33.864170024182634,
+          53.0
+        ],
+        [
+          113.70563,
+          33.86450507756048,
+          53.0
+        ]
+      ],
+      &quot;source_uav_id&quot;: 4
+    },
+    {
+      &quot;waypoint_index&quot;: 4,
+      &quot;path&quot;: [
+        [
+          113.7106021753653,
+          33.863486879365105,
+          53.0
+        ],
+        [
+          113.70584919725394,
+          33.864170024182634,
+          53.0
+        ],
+        [
+          113.70563,
+          33.86450507756048,
+          53.0
+        ]
+      ],
+      &quot;source_uav_id&quot;: 4
+    },
+    {
+      &quot;waypoint_index&quot;: 5,
+      &quot;path&quot;: [
+        [
+          113.71077076628292,
+          33.86433073129725,
+          53.0
+        ],
+        [
+          113.70584919725394,
+          33.864170024182634,
+          53.0
+        ],
+        [
+          113.70563,
+          33.86450507756048,
+          53.0
+        ]
+      ],
+      &quot;source_uav_id&quot;: 4
+    },
+    {
+      &quot;waypoint_index&quot;: 6,
+      &quot;path&quot;: [
+        [
+          113.71195090270628,
+          33.864471373285944,
+          53.0
+        ],
+        [
+          113.70584919725394,
+          33.864170024182634,
+          53.0
+        ],
+        [
+          113.70563,
+          33.86450507756048,
+          53.0
+        ]
+      ],
+      &quot;source_uav_id&quot;: 4
+    },
+    {
+      &quot;waypoint_index&quot;: 1,
+      &quot;path&quot;: [
+        [
+          113.7056089355071,
+          33.86368246704267,
+          53.0
+        ],
+        [
+          113.70560212235021,
+          33.86423461219761,
+          53.0
+        ],
+        [
+          113.70560212235021,
+          33.86441492243952,
+          53.0
+        ],
+        [
+          113.70560424440994,
+          33.86442382216566,
+          53.0
+        ],
+        [
+          113.70563,
+          33.86450507756048,
+          53.0
+        ]
+      ],
+      &quot;source_uav_id&quot;: 5
+    },
+    {
+      &quot;waypoint_index&quot;: 2,
+      &quot;path&quot;: [
+        [
+          113.70528472220398,
+          33.8621949075469,
+          53.0
+        ],
+        [
+          113.70560212235021,
+          33.86441492243952,
+          53.0
+        ],
+        [
+          113.70560424440994,
+          33.86442382216566,
+          53.0
+        ],
+        [
+          113.70563,
+          33.86450507756048,
+          53.0
+        ]
+      ],
+      &quot;source_uav_id&quot;: 5
+    },
+    {
+      &quot;waypoint_index&quot;: 3,
+      &quot;path&quot;: [
+        [
+          113.70609525546179,
+          33.861789209502604,
+          53.0
+        ],
+        [
+          113.70565787764978,
+          33.86441492243952,
+          53.0
+        ],
+        [
+          113.70565575559006,
+          33.86442382216566,
+          53.0
+        ],
+        [
+          113.70563,
+          33.86450507756048,
+          53.0
+        ]
+      ],
+      &quot;source_uav_id&quot;: 5
+    },
+    {
+      &quot;waypoint_index&quot;: 4,
+      &quot;path&quot;: [
+        [
+          113.70609525546179,
+          33.86111304609543,
+          53.0
+        ],
+        [
+          113.70565787764978,
+          33.86441492243952,
+          53.0
+        ],
+        [
+          113.70565575559006,
+          33.86442382216566,
+          53.0
+        ],
+        [
+          113.70563,
+          33.86450507756048,
+          53.0
+        ]
+      ],
+      &quot;source_uav_id&quot;: 5
+    },
+    {
+      &quot;waypoint_index&quot;: 5,
+      &quot;path&quot;: [
+        [
+          113.70512261555243,
+          33.8613835114583,
+          53.0
+        ],
+        [
+          113.70560212235021,
+          33.86441492243952,
+          53.0
+        ],
+        [
+          113.70560424440994,
+          33.86442382216566,
+          53.0
+        ],
+        [
+          113.70563,
+          33.86450507756048,
+          53.0
+        ]
+      ],
+      &quot;source_uav_id&quot;: 5
+    },
+    {
+      &quot;waypoint_index&quot;: 6,
+      &quot;path&quot;: [
+        [
+          113.70431208229463,
+          33.861789209502604,
+          53.0
+        ],
+        [
+          113.7054597419597,
+          33.864126545891516,
+          53.0
+        ],
+        [
+          113.70563,
+          33.86450507756048,
+          53.0
+        ]
+      ],
+      &quot;source_uav_id&quot;: 5
+    },
+    {
+      &quot;waypoint_index&quot;: 1,
+      &quot;path&quot;: [
+        [
+          113.71006797620527,
+          33.86272493677641,
+          53.0
+        ],
+        [
+          113.70584919725394,
+          33.864170024182634,
+          53.0
+        ],
+        [
+          113.70563,
+          33.86450507756048,
+          53.0
+        ]
+      ],
+      &quot;source_uav_id&quot;: 6
+    },
+    {
+      &quot;waypoint_index&quot;: 2,
+      &quot;path&quot;: [
+        [
+          113.71035976817808,
+          33.86199468029667,
+          53.0
+        ],
+        [
+          113.70584919725394,
+          33.864170024182634,
+          53.0
+        ],
+        [
+          113.70563,
+          33.86450507756048,
+          53.0
+        ]
+      ],
+      &quot;source_uav_id&quot;: 6
+    },
+    {
+      &quot;waypoint_index&quot;: 3,
+      &quot;path&quot;: [
+        [
+          113.71108924811008,
+          33.86150784264351,
+          53.0
+        ],
+        [
+          113.70584919725394,
+          33.864170024182634,
+          53.0
+        ],
+        [
+          113.70563,
+          33.86450507756048,
+          53.0
+        ]
+      ],
+      &quot;source_uav_id&quot;: 6
+    },
+    {
+      &quot;waypoint_index&quot;: 4,
+      &quot;path&quot;: [
+        [
+          113.71079745613729,
+          33.86077758616377,
+          53.0
+        ],
+        [
+          113.70986769843094,
+          33.86194919520432,
+          53.0
+        ],
+        [
+          113.70584919725394,
+          33.864170024182634,
+          53.0
+        ],
+        [
+          113.70563,
+          33.86450507756048,
+          53.0
+        ]
+      ],
+      &quot;source_uav_id&quot;: 6
+    },
+    {
+      &quot;waypoint_index&quot;: 5,
+      &quot;path&quot;: [
+        [
+          113.71167283205571,
+          33.86077758616377,
+          53.0
+        ],
+        [
+          113.70986769843094,
+          33.86194919520432,
+          53.0
+        ],
+        [
+          113.70584919725394,
+          33.864170024182634,
+          53.0
+        ],
+        [
+          113.70563,
+          33.86450507756048,
+          53.0
+        ]
+      ],
+      &quot;source_uav_id&quot;: 6
+    },
+    {
+      &quot;waypoint_index&quot;: 6,
+      &quot;path&quot;: [
+        [
+          113.71211052001492,
+          33.86138613323022,
+          53.0
+        ],
+        [
+          113.70584919725394,
+          33.864170024182634,
+          53.0
+        ],
+        [
+          113.70563,
+          33.86450507756048,
+          53.0
+        ]
+      ],
+      &quot;source_uav_id&quot;: 6
+    },
+    {
+      &quot;waypoint_index&quot;: 7,
+      &quot;path&quot;: [
+        [
+          113.7118187280421,
+          33.86199468029667,
+          53.0
+        ],
+        [
+          113.70584919725394,
+          33.864170024182634,
+          53.0
+        ],
+        [
+          113.70563,
+          33.86450507756048,
+          53.0
+        ]
+      ],
+      &quot;source_uav_id&quot;: 6
+    }
+  ],
+  &quot;route_scope&quot;: &quot;all_uav_waypoints&quot;,
+  &quot;landing_point&quot;: [
+    113.70563,
+    33.86450507756048,
+    53.0
+  ],
+  &quot;waypoint_counts_by_uav&quot;: {
+    &quot;1&quot;: 5,
+    &quot;2&quot;: 6,
+    &quot;3&quot;: 6,
+    &quot;4&quot;: 6,
+    &quot;5&quot;: 6,
+    &quot;6&quot;: 7
+  }
+}</pre></details><details><summary>3. /ground_mission_planner/vehicle_3/path_stage_1 · std_msgs/Float64MultiArray</summary><p>完整内容（String.data已解析为JSON，未省略航线）；JSON文件同时提供原始ROS字段。</p><pre>[
+  113.70431208229463,
+  33.862600605591204,
+  53.0,
+  113.70479840224931,
+  33.86327676899837,
+  53.0,
+  113.70600468711197,
+  33.86351187095896,
+  53.0,
+  113.70671795637882,
+  33.863809382858115,
+  53.0,
+  113.70671795637882,
+  33.862916847160655,
+  53.0,
+  113.7088694477029,
+  33.866247418328506,
+  53.0
+]</pre></details><details><summary>4. /ground_mission_planner/vehicle_3/jiangluodian · std_msgs/Float64MultiArray</summary><p>完整内容（String.data已解析为JSON，未省略航线）；JSON文件同时提供原始ROS字段。</p><pre>[
+  113.70563,
+  33.86450507756048,
+  53.0
+]</pre></details><details><summary>5. /uav3/competition/external_mission · std_msgs/String</summary><p>完整内容（String.data已解析为JSON，未省略航线）；JSON文件同时提供原始ROS字段。</p><pre>{
+  &quot;type&quot;: &quot;external_mission&quot;,
+  &quot;uav_id&quot;: 3,
+  &quot;mission_id&quot;: &quot;subject2-581c4f8998&quot;,
+  &quot;assignment_checksum&quot;: &quot;0ad3c88b5c4257d72dba8e60378fe638fbf003e839939e58065a796003aeb1e2&quot;,
+  &quot;flight_profile&quot;: &quot;subject2_actual&quot;,
+  &quot;coordinate_frame&quot;: &quot;WGS84&quot;,
+  &quot;altitude_frame&quot;: &quot;RELATIVE_TO_TAKEOFF&quot;,
+  &quot;target_altitude_m&quot;: 53.0,
+  &quot;relative_altitude_m&quot;: 53.0,
+  &quot;waypoints&quot;: [
+    {
+      &quot;latitude&quot;: 33.862600605591204,
+      &quot;longitude&quot;: 113.70431208229463,
+      &quot;altitude_m&quot;: 53.0
+    },
+    {
+      &quot;latitude&quot;: 33.86327676899837,
+      &quot;longitude&quot;: 113.70479840224931,
+      &quot;altitude_m&quot;: 53.0
+    },
+    {
+      &quot;latitude&quot;: 33.86351187095896,
+      &quot;longitude&quot;: 113.70600468711197,
+      &quot;altitude_m&quot;: 53.0
+    },
+    {
+      &quot;latitude&quot;: 33.863809382858115,
+      &quot;longitude&quot;: 113.70671795637882,
+      &quot;altitude_m&quot;: 53.0
+    },
+    {
+      &quot;latitude&quot;: 33.862916847160655,
+      &quot;longitude&quot;: 113.70671795637882,
+      &quot;altitude_m&quot;: 53.0
+    },
+    {
+      &quot;latitude&quot;: 33.866247418328506,
+      &quot;longitude&quot;: 113.7088694477029,
+      &quot;altitude_m&quot;: 53.0
+    }
+  ],
+  &quot;speed_mps&quot;: 0.3,
+  &quot;waypoint_actions&quot;: [
+    {
+      &quot;index&quot;: 0,
+      &quot;action&quot;: &quot;hover_scan&quot;,
+      &quot;duration_s&quot;: 30.0
+    },
+    {
+      &quot;index&quot;: 1,
+      &quot;action&quot;: &quot;hover_scan&quot;,
+      &quot;duration_s&quot;: 30.0
+    },
+    {
+      &quot;index&quot;: 2,
+      &quot;action&quot;: &quot;hover_scan&quot;,
+      &quot;duration_s&quot;: 30.0
+    },
+    {
+      &quot;index&quot;: 3,
+      &quot;action&quot;: &quot;hover_scan&quot;,
+      &quot;duration_s&quot;: 30.0
+    },
+    {
+      &quot;index&quot;: 4,
+      &quot;action&quot;: &quot;hover_scan&quot;,
+      &quot;duration_s&quot;: 30.0
+    },
+    {
+      &quot;index&quot;: 5,
+      &quot;action&quot;: &quot;hover_scan&quot;,
+      &quot;duration_s&quot;: 30.0
+    }
+  ],
+  &quot;reconnaissance_mode&quot;: &quot;hover_scan&quot;,
+  &quot;hover_scan_seconds&quot;: 30.0,
+  &quot;return_home&quot;: {
+    &quot;latitude&quot;: 33.86450507756048,
+    &quot;longitude&quot;: 113.70563,
+    &quot;altitude_m&quot;: 53.0
+  },
+  &quot;deadline_at&quot;: 1792044639.7734976,
+  &quot;return_battery_threshold&quot;: 0.3
+}</pre></details><details><summary>6. /ground_mission_planner/recon_start_mode · std_msgs/Int32</summary><p>完整内容（String.data已解析为JSON，未省略航线）；JSON文件同时提供原始ROS字段。</p><pre>0</pre></details><details><summary>7. /uav3/competition/task_status · std_msgs/String</summary><p>完整内容（String.data已解析为JSON，未省略航线）；JSON文件同时提供原始ROS字段。</p><pre>{
+  &quot;state&quot;: &quot;recon_start_mode&quot;,
+  &quot;uav_id&quot;: 3,
+  &quot;timestamp_unix&quot;: 1792043499.7734976,
+  &quot;task_assignment_acked&quot;: true,
+  &quot;mission_id&quot;: &quot;subject2-581c4f8998&quot;,
+  &quot;assignment_checksum&quot;: &quot;0ad3c88b5c4257d72dba8e60378fe638fbf003e839939e58065a796003aeb1e2&quot;,
+  &quot;mode&quot;: 0
+}</pre></details><details><summary>8. /uav3/competition/task_status · std_msgs/String</summary><p>完整内容（String.data已解析为JSON，未省略航线）；JSON文件同时提供原始ROS字段。</p><pre>{
+  &quot;state&quot;: &quot;external_mission_published&quot;,
+  &quot;uav_id&quot;: 3,
+  &quot;timestamp_unix&quot;: 1792043499.7734976,
+  &quot;task_assignment_acked&quot;: true,
+  &quot;mission_id&quot;: &quot;subject2-581c4f8998&quot;,
+  &quot;assignment_checksum&quot;: &quot;0ad3c88b5c4257d72dba8e60378fe638fbf003e839939e58065a796003aeb1e2&quot;,
+  &quot;controller_mode&quot;: &quot;external&quot;
+}</pre></details><h2>条件分支：之后收到人工返航请求（不在起飞交接时发布）</h2><details><summary>1. /ground_mission_planner/vehicle_3/return_home · std_msgs/Bool</summary><p>完整内容（String.data已解析为JSON，未省略航线）；JSON文件同时提供原始ROS字段。</p><pre>true</pre></details><details><summary>2. /uav3/competition/task_status · std_msgs/String</summary><p>完整内容（String.data已解析为JSON，未省略航线）；JSON文件同时提供原始ROS字段。</p><pre>{
+  &quot;state&quot;: &quot;returning&quot;,
+  &quot;uav_id&quot;: 3,
+  &quot;timestamp_unix&quot;: 1792043499.7734976,
+  &quot;task_assignment_acked&quot;: true,
+  &quot;mission_id&quot;: &quot;subject2-581c4f8998&quot;,
+  &quot;assignment_checksum&quot;: &quot;0ad3c88b5c4257d72dba8e60378fe638fbf003e839939e58065a796003aeb1e2&quot;,
+  &quot;controller_mode&quot;: &quot;external&quot;,
+  &quot;reason&quot;: &quot;manual_return&quot;
+}</pre></details><h2>反向状态接口（供作者核对）</h2><pre>{
+  &quot;direction&quot;: &quot;B -&gt; 机载，属于反向状态接口，不是下发指令&quot;,
+  &quot;topic&quot;: &quot;/uav3/competition/external_status&quot;,
+  &quot;message_type&quot;: &quot;std_msgs/String&quot;,
+  &quot;example&quot;: {
+    &quot;uav_id&quot;: 3,
+    &quot;mission_id&quot;: &quot;subject2-581c4f8998&quot;,
+    &quot;assignment_checksum&quot;: &quot;0ad3c88b5c4257d72dba8e60378fe638fbf003e839939e58065a796003aeb1e2&quot;,
+    &quot;phase&quot;: &quot;return_descent&quot;
+  },
+  &quot;note&quot;: &quot;return_descent表示已到返航点并开始下降，必须携带当前任务ID和校验和；returning/landing不能替代。作者可检查现有状态上报是否匹配，无需因此更改接口。&quot;
+}</pre></html>

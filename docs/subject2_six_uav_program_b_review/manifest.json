@@ -1,0 +1,242 @@
+{
+  "title": "科目二六机不同高度：程序B全流程消息核对包",
+  "generated_at": "2026-10-15T15:15:41.975878+08:00",
+  "source_commit": "f6a3fcf178a4a3511dbbd983993bf689c6f57b89",
+  "offline_only": true,
+  "real_mission_dispatched": false,
+  "selection": {
+    "subject": "subject2",
+    "planning_mode": "competition",
+    "flight_profile": "subject2_actual",
+    "flight_altitude_plan": "around54m",
+    "coordinate_mode": "gps",
+    "departure_point": "stadium_center",
+    "controller_mode": "external",
+    "speed_mps": 5.0,
+    "hover_scan_seconds": 30.0,
+    "reconnaissance_radius_m": 61.0,
+    "recognition_selection": {
+      "category_ids": [],
+      "category_count": 0
+    }
+  },
+  "notes": [
+    "当前网页支持科目二比赛使用场景(subject2_actual)与六机不同高度(around54m)。选场景时页面自动选择科目二和around54m；GPS与操场中央固定。控制模式为external。",
+    "这是当前源码及固定规划的完整离线接口样例，不是真实分派或飞行抓包。六机起降点使用操场中央附近间隔10米的模拟点；绝不能将这些示例降落点当作现场实际降落点。",
+    "六架P600样例的全局编号G与本机ROS编号L均为1至6。每架独立ROS环境中的公共/ground_mission_planner/recon_start_mode不能合并为一个共享控制总线。自定义ROS话题覆盖、机载已部署版本及B实际订阅仍须以现场为准。",
+    "每个uavN_messages.json含所有阶段的消息、ROS类型、话题、调用顺序和ros_message原文；data为便于阅读的解析值。std_msgs/String的实际data是JSON字符串；MultiArray的layout为dim=[]、data_offset=0。",
+    "所有列出的ROS发布器均latch=true；task_status队列10，其余1。调用顺序不保证跨话题接收顺序，B应按mission_id和assignment_checksum配对JSON；数组和启动信号本身没有任务号。",
+    "规划与分派阶段发布识别类别、task_region、比赛计时、successful_return={}及task_status。此时不会发布扫描航点/进返场航线/启动B信号。相同分派重传只重发计时、区域和task_received。",
+    "点击一键起飞先经地面预检/确认，将takeoff发到机载执行器。机载成功起飞后依次发布entry_path、return_paths、path_stage_1、jiangluodian、external_mission、recon_start_mode=0。起飞失败不会交给B执行。不是按下按钮便立刻发送航点。",
+    "坐标为WGS84；task_region顶点[经度,纬度]，三个路径接口及jiangluodian为[经度,纬度,相对起飞高度米]。external_mission航点使用latitude/longitude/altitude_m字段。高度不是绝对海拔。地面assign_task中的waypoints_wgs84则是[纬度,经度]，不要混用。",
+    "六机高度59/56/53/50/47/44m，对应规划扫描半径61/58/55/52/50/45m，航点数5/6/6/6/6/7。地面规划的半径不会通过当前external_mission自动设置B定位器半径。",
+    "path_stage_1仅包含单趟航点。按用户已确认的B行为执行1→…→N→N→…→1，每次访问扫描30秒，N处共60秒。external_mission不含scan_passes或scan_execution_order；不能据此误认为收到两趟展开航点或自动设置了两趟模式。",
+    "waypoint_actions.index从0开始；return_paths.routes[].waypoint_index从1开始。每架接收36条返场线，覆盖六架的全部扫描点，所有路线终点均为接收机自己的降落点。正常两趟结束选择(source_uav_id=本机编号,waypoint_index=1)。",
+    "entry_path/return_paths的中间折线顶点仅用于通行，不是额外扫描点。固定扫描点和子区边界不会因任务发布者位置平移；进返场线、降落点在分派时根据各机本次开机首次有效未解锁GPS重接并验证。",
+    "六个任务子区无面积重叠；边界可能相接。UAV3子区为非凸多边形，必须保留完整顶点与孔洞语义，不可取凸包或包围盒。扫描圆边缘重叠与子区面积重叠是两件事。",
+    "速度重要差异：场景估时用水平5m/s、爬升6m/s；task未设置speed_mps，当前external_mission回退到执行器search_speed。默认launch为0.30m/s，启动时又受max_speed限制；本包实际捕获值0.3。未读六架现场ROS参数，不能认定实机覆盖值。B作者应核对是否使用该字段，不能将规划估时速度当作已下发飞行速度。",
+    "840秒是科目二规划预算（爬升+两趟扫描/航行+返回降落点上方），不是external_mission强制超时字段。当前科目二通用任务时长默认1140秒，deadline_at继承takeoff命令。本包附录保留实际离线测试生成的截止时刻，不能用它作为现场时限。",
+    "return_battery_threshold=0.3是30%；B是否按该阈值及deadline_at返航取决于B实现。扫描半径、6m/s爬升、840秒预算、两趟说明在地面assign_task规划元数据内，不代表B的external_mission收到这些字段。",
+    "mission_id、assignment_checksum、plan_sha256、比赛计时、deadline_at、事件ID和状态时间都是本次离线样例值。识别类别样例[]代表未选类别；现场从页面选择生成。完整地面assign_task/takeoff附录不是直接发给B的消息。",
+    "competition_time在接受任务后及执行期间约每秒发布，继承全队比赛时钟，不等于本机起飞后时间。包中只给快照，不能预先列出未来所有动态消息。task_status按事件发布；异常/拒绝/人工接管状态也可能出现，详见发布函数摘录。",
+    "return_home Bool=true只在执行器收到返航请求时发布；正常两趟结束的自动返场由B已有逻辑负责，不保证会再收到Bool。返航请求只发信号，不重新发布整包航点。",
+    "successful_return初始{}不是成功；后续事件表示已到返航点并开始下降，不等于已落地。这里通过B携带当前mission_id和assignment_checksum的return_descent反馈捕获该分支；另外已有只读Land+飞控降落状态监测也可生成该事件。",
+    "外部模式逐点飞行、扫描与降落由B执行。竞赛执行器不会再逐航点发送独立扫描指令。图像启动消息属于图像程序，Prometheus起飞命令属于飞控，均不是B任务接口，未混入B消息列表。",
+    "当前工作区onboard_programs.json已有其他修改：flight启动命令含flight_mode:=outdoor_small_range、reconnaissance_mode:=2、sweep_yaw_speed_deg_s:=-20。它是B启动配置，不是选择科目二后自动下发的ROS消息；本次不更改此配置。现场已运行模式可能与文件不同，检查快照详见live_readonly_check.json。"
+  ],
+  "aircraft_summaries": [
+    {
+      "uav_id": 1,
+      "height_m": 59.0,
+      "planning_radius_m": 61.0,
+      "scan_count": 5,
+      "scan_seconds_per_visit": 30,
+      "expected_scan_order_1_based": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        5,
+        4,
+        3,
+        2,
+        1
+      ],
+      "return_route_count": 36,
+      "region_vertex_counts": [
+        8
+      ],
+      "nominal_planning_time_s": 764.0297295008728,
+      "sample_dispatch_time_s": 773.0836379423067,
+      "planning_time_limit_s": 840,
+      "external_mission_speed_mps": 0.3
+    },
+    {
+      "uav_id": 2,
+      "height_m": 56.0,
+      "planning_radius_m": 58.0,
+      "scan_count": 6,
+      "scan_seconds_per_visit": 30,
+      "expected_scan_order_1_based": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        6,
+        5,
+        4,
+        3,
+        2,
+        1
+      ],
+      "return_route_count": 36,
+      "region_vertex_counts": [
+        7
+      ],
+      "nominal_planning_time_s": 785.9143341064007,
+      "sample_dispatch_time_s": 791.3209255021654,
+      "planning_time_limit_s": 840,
+      "external_mission_speed_mps": 0.3
+    },
+    {
+      "uav_id": 3,
+      "height_m": 53.0,
+      "planning_radius_m": 55.0,
+      "scan_count": 6,
+      "scan_seconds_per_visit": 30,
+      "expected_scan_order_1_based": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        6,
+        5,
+        4,
+        3,
+        2,
+        1
+      ],
+      "return_route_count": 36,
+      "region_vertex_counts": [
+        17
+      ],
+      "nominal_planning_time_s": 782.6595472227916,
+      "sample_dispatch_time_s": 784.5118362905112,
+      "planning_time_limit_s": 840,
+      "external_mission_speed_mps": 0.3
+    },
+    {
+      "uav_id": 4,
+      "height_m": 50.0,
+      "planning_radius_m": 52.0,
+      "scan_count": 6,
+      "scan_seconds_per_visit": 30,
+      "expected_scan_order_1_based": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        6,
+        5,
+        4,
+        3,
+        2,
+        1
+      ],
+      "return_route_count": 36,
+      "region_vertex_counts": [
+        5
+      ],
+      "nominal_planning_time_s": 808.5084456552695,
+      "sample_dispatch_time_s": 793.7244027759027,
+      "planning_time_limit_s": 840,
+      "external_mission_speed_mps": 0.3
+    },
+    {
+      "uav_id": 5,
+      "height_m": 47.0,
+      "planning_radius_m": 50.0,
+      "scan_count": 6,
+      "scan_seconds_per_visit": 30,
+      "expected_scan_order_1_based": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        6,
+        5,
+        4,
+        3,
+        2,
+        1
+      ],
+      "return_route_count": 36,
+      "region_vertex_counts": [
+        15
+      ],
+      "nominal_planning_time_s": 607.340497862862,
+      "sample_dispatch_time_s": 601.466271327264,
+      "planning_time_limit_s": 840,
+      "external_mission_speed_mps": 0.3
+    },
+    {
+      "uav_id": 6,
+      "height_m": 44.0,
+      "planning_radius_m": 45.0,
+      "scan_count": 7,
+      "scan_seconds_per_visit": 30,
+      "expected_scan_order_1_based": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        7,
+        6,
+        5,
+        4,
+        3,
+        2,
+        1
+      ],
+      "return_route_count": 36,
+      "region_vertex_counts": [
+        9
+      ],
+      "nominal_planning_time_s": 819.4406283512499,
+      "sample_dispatch_time_s": 800.9104606751995,
+      "planning_time_limit_s": 840,
+      "external_mission_speed_mps": 0.3
+    }
+  ],
+  "provenance": {
+    "competition_backend/competition_backend/web/index.html": "3ba7f35dc454e5bb79757ebb67b04eae0eb08cf850192e6d15a6a4e8e3fa8240",
+    "competition_backend/config/competition.example.json": "d2e04008a770e434193b691dde5a02f859961ff856aec57784113a3979d81ff8",
+    "competition_backend/competition_backend/orchestrator.py": "8e36ce267235dfbdd468f65d9b0940996e0bfa5fea19a8c856f31db6a5bb284b",
+    "competition_backend/competition_backend/subject2_actual_scene.py": "eff81f6f86aa8b64551aea3b8d795495eca5541859fc3b1b887d716b8c9191b7",
+    "competition_backend/competition_backend/subject2_actual_prepared.json": "1fbe8aba539d1d69926f1c2b2378c6e9a742b1c3b3607afde4c0571e3576a79e",
+    "src/su17_competition_executor/scripts/onboard_task_executor.py": "812ab85055c250279cc17315894562b43c5024054e2aa161209698ff14313da6",
+    "src/su17_competition_executor/launch/onboard_task_executor.launch": "9b53d01065d3db4a1215f5557898226418005451d20ba3fb2084394f519297c1",
+    "src/su17_competition_executor/launch/onboard_competition_stack.launch": "4eaa0750deebb8d3e53f84e5785e128247c48941b9858fc3cb5ceb779f592a95",
+    "src/su17_competition_executor/src/su17_competition_executor/transit_protocol.py": "7250f8cc2955a57614486d3050b536987f4abad641b89700f19dc1639dfc0c9e",
+    "competition_shared/task_region.py": "1a4a977f632b58b896e274953269d5ce6a9ef340d63f406ab8441cae356bf354",
+    "config/onboard_programs.json": "c01ee76e041b2679aad6c1e131a4f5545cc56b65fe2497bc981dc0a86d32b68a"
+  },
+  "validation": {
+    "six_ground_dispatch_test": "passed",
+    "real_publisher_functions_captured": true,
+    "real_flight_mocked": true,
+    "all_36_return_routes_per_uav_included": true
+  }
+}
