@@ -2,9 +2,9 @@
   "schema_version": 1,
   "repository": "minstrelll1/ZHIXIN",
   "branch": "codex/portable-ground-deployment",
-  "commit": "54e48723dd8fce43a537a29471781abfb785773d",
-  "tree_sha": "5f66462eba3b4b67baf65371b570bc3bf3f3d15f",
-  "file_count": 444,
+  "commit": "ec1b9693a38eae4e1d21f6f3c1b48c34e35c5d9d",
+  "tree_sha": "e68eff1ec34913d641c293058a9adf730aa3071a",
+  "file_count": 452,
   "files": [
     {
       "path": ".editorconfig",
@@ -94,8 +94,8 @@
       "path": "README.md",
       "type": "blob",
       "mode": "100644",
-      "sha": "a9735f9c38bcbbabaec80659be71307caddef554",
-      "size": 21499
+      "sha": "2c9cdcfbb4b8a3eccc6dd82acbe135d1f5c1bb9b",
+      "size": 23855
     },
     {
       "path": "SU17地面端与机载端启动指令.txt",
@@ -136,8 +136,8 @@
       "path": "competition_backend/competition_backend/api.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "067c5abebdb616005af8523e05a2840fea4dd3ee",
-      "size": 111799
+      "sha": "cbe81bf51af6adf102397afec291926c74378cbc",
+      "size": 115083
     },
     {
       "path": "competition_backend/competition_backend/assignment_protocol.py",
@@ -276,15 +276,15 @@
       "path": "competition_backend/competition_backend/diagnostics.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "5a1f570352db03a72c70cc7705fc385e2c30185a",
-      "size": 7348
+      "sha": "bc1c1ccb607aa51c0627ffeb98e422e12df954e8",
+      "size": 10162
     },
     {
       "path": "competition_backend/competition_backend/distributed_adapter.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "ab0539667d6e828a6a896e149fb27ba9bd4cca96",
-      "size": 28249
+      "sha": "829b7d47a8eb13af221be18e411e4d386b46c033",
+      "size": 29603
     },
     {
       "path": "competition_backend/competition_backend/external_transit_prepared.json",
@@ -299,6 +299,13 @@
       "mode": "100644",
       "sha": "affd762f073e28a0bc88e990d553d7c0fcc1bc76",
       "size": 14090
+    },
+    {
+      "path": "competition_backend/competition_backend/fixed_targets.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "f3caa86109499e15a057084d60378aa522091750",
+      "size": 6248
     },
     {
       "path": "competition_backend/competition_backend/ground_entry.py",
@@ -353,8 +360,8 @@
       "path": "competition_backend/competition_backend/orchestrator.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "69239fd75c7512a5fa3323b24ece283ac9ad0b64",
-      "size": 57406
+      "sha": "e130dca3c006a697540b020313d59208fe8d878d",
+      "size": 58419
     },
     {
       "path": "competition_backend/competition_backend/pcl_octree.py",
@@ -395,15 +402,15 @@
       "path": "competition_backend/competition_backend/program_logs.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "737f877c55e54490dcfe9adaa8ff2b74eda372bc",
-      "size": 4162
+      "sha": "27d480ee2caed11cf6e2e49377be366efa851020",
+      "size": 5690
     },
     {
       "path": "competition_backend/competition_backend/program_manager.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "56124211398b695d79512970bf5621a0c5d65793",
-      "size": 27225
+      "sha": "72e3d9c1d74a2f1f525c64111d32d2e20ec9a50e",
+      "size": 30307
     },
     {
       "path": "competition_backend/competition_backend/prometheus_connection.py",
@@ -556,8 +563,8 @@
       "path": "competition_backend/competition_backend/tcp_adapter.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "8d83c54972fc2b673c60848e2e5524f237f6884b",
-      "size": 29756
+      "sha": "3e3e261d4720116bc91dfe4765f81901037d6a7a",
+      "size": 30411
     },
     {
       "path": "competition_backend/competition_backend/time_reference.py",
@@ -742,6 +749,13 @@
       "size": 8816
     },
     {
+      "path": "competition_backend/tests/test_connection_diagnostics.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "e07acb8fce39276a8b2242bf80853e9bfebe8333",
+      "size": 7791
+    },
+    {
       "path": "competition_backend/tests/test_coverage_api.py",
       "type": "blob",
       "mode": "100644",
@@ -803,6 +817,20 @@
       "mode": "100644",
       "sha": "459d374694f7a68f6e432a8f5e55cae52574cc3f",
       "size": 8052
+    },
+    {
+      "path": "competition_backend/tests/test_fixed_targets.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "1ce840d6d6690db969193b2103fe5821422db7f5",
+      "size": 11572
+    },
+    {
+      "path": "competition_backend/tests/test_fixed_targets_distribution.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "35ce0ba845d73e82a5c11e8d15e80964ecca62dd",
+      "size": 6230
     },
     {
       "path": "competition_backend/tests/test_fleet.py",
@@ -997,8 +1025,8 @@
       "path": "competition_backend/tests/test_remote_prometheus.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "c5ddefffba70546e1b1a5750eaf8a3a685975f67",
-      "size": 13028
+      "sha": "f63bbdae0fc9845b9c89470418f9ed3c92283fab",
+      "size": 13351
     },
     {
       "path": "competition_backend/tests/test_restart_executor.py",
@@ -1197,6 +1225,13 @@
       "size": 1952
     },
     {
+      "path": "competition_shared/fixed_targets.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "d6eef7125ca3cd8e5bb22605c84b1f8f1bccf5bf",
+      "size": 4797
+    },
+    {
       "path": "competition_shared/fleet.py",
       "type": "blob",
       "mode": "100644",
@@ -1286,6 +1321,13 @@
       "mode": "100644",
       "sha": "acef02d0ed4a118053984b3f0f4583780d3cb9dc",
       "size": 2092
+    },
+    {
+      "path": "config/fixed_targets.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "201083f6bfa1f41626d753dd41f6e885ae85b617",
+      "size": 1007
     },
     {
       "path": "config/fleet.json",
@@ -1382,8 +1424,8 @@
       "path": "docs/latest_deployment_activation.md",
       "type": "blob",
       "mode": "100644",
-      "sha": "a14199b828352fd5a3f900d60ea39cffba1379a4",
-      "size": 20100
+      "sha": "8e5ebf944b043dd78318ced35b7dcfd40fc0f10c",
+      "size": 21304
     },
     {
       "path": "docs/lq10_reconnection.md",
@@ -1823,8 +1865,8 @@
       "path": "docs/程序B_ROS任务接口.md",
       "type": "blob",
       "mode": "100644",
-      "sha": "73fcddf00613627aea0e10e6754b540032aeff00",
-      "size": 7336
+      "sha": "701fa83991c7a15e91adff7615c9f740c1b0c1bf",
+      "size": 11532
     },
     {
       "path": "emergency_subject1/01_dispatch.py",
@@ -2040,8 +2082,8 @@
       "path": "src/su17_competition_executor/scripts/onboard_task_executor.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "4c952c22505a4a1e94f9ec477209349606db7f09",
-      "size": 111834
+      "sha": "5bdd13abe2f9d78717f7784214520f618284fa40",
+      "size": 114892
     },
     {
       "path": "src/su17_competition_executor/setup.py",
@@ -2061,8 +2103,8 @@
       "path": "src/su17_competition_executor/src/su17_competition_executor/boot_gps_home.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "727d000cccaab34c1c5f0c711aea2ebb1d74b10b",
-      "size": 1955
+      "sha": "0afda55c9c1bbfcd753886c1660de5fec33be9d8",
+      "size": 2744
     },
     {
       "path": "src/su17_competition_executor/src/su17_competition_executor/ego_state_bridge.py",
@@ -2075,8 +2117,8 @@
       "path": "src/su17_competition_executor/src/su17_competition_executor/flight_diagnostics.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "620cb64cf65d3882d8250f8f36e1e5805f0ccb77",
-      "size": 2386
+      "sha": "e8eaeb2e3902f61269ec5139e9a2b93094388ce6",
+      "size": 9834
     },
     {
       "path": "src/su17_competition_executor/src/su17_competition_executor/pengfei_bridge.py",
@@ -2089,8 +2131,8 @@
       "path": "src/su17_competition_executor/src/su17_competition_executor/task_protocol.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "89f5c0414f4bfe7abe7b9c4375171778089e7444",
-      "size": 7413
+      "sha": "f3c6e43f93015f5108ea61e519cd951432a8046b",
+      "size": 7736
     },
     {
       "path": "src/su17_competition_executor/src/su17_competition_executor/tcp_link.py",
@@ -2124,15 +2166,29 @@
       "path": "src/su17_competition_executor/test/test_executor_autonomy.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "991a642675dcb8d78e1db4a3d6154f2b993a45e8",
-      "size": 38255
+      "sha": "27116266c33da7ad64139a05475e7931986b8c47",
+      "size": 38657
+    },
+    {
+      "path": "src/su17_competition_executor/test/test_fixed_target_publisher.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "01dff57030801a386bdfa8575d5d3595260c1699",
+      "size": 4627
     },
     {
       "path": "src/su17_competition_executor/test/test_flight_diagnostics.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "fb7a95477a917416093ccb5e8b6d8e3eaf04355e",
-      "size": 1400
+      "sha": "8b12a182e67110c2928d87df8f823bed71a15774",
+      "size": 4754
+    },
+    {
+      "path": "src/su17_competition_executor/test/test_localization_diagnostics.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "6c4598a746943ef248c10c03553de216129e9e9e",
+      "size": 2605
     },
     {
       "path": "src/su17_competition_executor/test/test_onboard_return_receipts.py",
@@ -2796,15 +2852,15 @@
       "path": "tools/remote_programs.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "7d2a4e155a16fc45068cfbb3f0088a42945fbb90",
-      "size": 33415
+      "sha": "ca11c47152cdef9cdda1f0addd51f137b7d9ac9c",
+      "size": 33468
     },
     {
       "path": "tools/remote_prometheus.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "e0049c86314ff683ca5d961b17b70553241fc1fd",
-      "size": 14751
+      "sha": "1be7bc069816ec3a88fec59da8f6747749f60360",
+      "size": 15735
     },
     {
       "path": "tools/setup_onboard_ssh.ps1",
@@ -2985,8 +3041,8 @@
       "path": "tools/tests/test_incremental_update.ps1",
       "type": "blob",
       "mode": "100644",
-      "sha": "955a08066aa6abcf3f0669bd0235ea9c38852c01",
-      "size": 15195
+      "sha": "ae8da9b98356b058601174d2a189f943667c14a1",
+      "size": 15956
     },
     {
       "path": "tools/tests/test_onboard_messages.py",
@@ -3076,8 +3132,8 @@
       "path": "tools/update_ground.ps1",
       "type": "blob",
       "mode": "100644",
-      "sha": "2c0c08d9c6998d69e9be42aec9db7cd2f3280839",
-      "size": 16832
+      "sha": "697e6a50302324a7d7efaba13083559ecb42cc99",
+      "size": 16936
     },
     {
       "path": "六机六地面端快速部署与启动.txt",
@@ -3115,5 +3171,5 @@
       "size": 804
     }
   ],
-  "generated_at": "2026-10-15T11:25:40+00:00"
+  "generated_at": "2026-10-17T07:48:06+00:00"
 }
