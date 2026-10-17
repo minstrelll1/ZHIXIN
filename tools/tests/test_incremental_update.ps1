@@ -183,6 +183,16 @@ try {
     Assert-True (-not (Test-Path -LiteralPath (Join-Path $destination 'tools/broken.ps1'))) '解析错误脚本被安装'
     $global:UpdateFixture_remote.Remove('tools/broken.ps1')
 
+    # 定点工事是比赛运行数据：首次安装提供空模板，后续更新保留赛后人工修正。
+    Set-Remote 'config/fixed_targets.json' '{"schema_version":1,"targets":[]}'
+    Run-Update
+    Assert-True ((Read-Local 'config/fixed_targets.json') -eq '{"schema_version":1,"targets":[]}') '未安装定点目标初始模板'
+    Set-Local 'config/fixed_targets.json' '{"manual_building_position":true}'
+    $global:UpdateFixture_downloads.Clear()
+    Run-Update
+    Assert-True ((Read-Local 'config/fixed_targets.json') -eq '{"manual_building_position":true}') '更新覆盖了赛后人工修正的工事目标'
+    Assert-True (-not $global:UpdateFixture_downloads.Contains('config/fixed_targets.json')) '重复下载定点目标覆盖模板'
+
     $heldLock = [IO.File]::Open((Join-Path $destination '.runtime/ground_update.lock'), [IO.FileMode]::Open, [IO.FileAccess]::ReadWrite, [IO.FileShare]::None)
     try { Expect-Failure } finally { $heldLock.Dispose() }
     $logs = @(Get-ChildItem -LiteralPath (Join-Path $destination 'ground_logs') -Filter 'update_*.log')

@@ -145,6 +145,7 @@ class CompetitionOrchestrator:
         landing_area: Optional[Dict[str, Any]] = None,
         prepared_plan: Optional[Dict[str, Any]] = None,
         recognition_selection: Optional[Dict[str, Any]] = None,
+        fixed_targets: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         with self._lock:
             if self._mission and self._mission.phase not in (
@@ -157,6 +158,9 @@ class CompetitionOrchestrator:
                 raise MissionError("an active mission already exists")
             if subject not in self.config.subjects:
                 raise MissionError("unknown subject: %s" % subject)
+            if fixed_targets is not None:
+                from competition_shared.fixed_targets import validate_fixed_targets
+                fixed_targets = validate_fixed_targets(fixed_targets)
             template = self.config.subjects[subject]
             area = None
             landing_plan = None
@@ -491,6 +495,8 @@ class CompetitionOrchestrator:
                     "landing_point_m": runtime.landing_point_m,
                     "landing_sequence": runtime.landing_sequence,
                 }
+                if fixed_targets is not None:
+                    assignment_payload["fixed_targets"] = copy.deepcopy(fixed_targets)
                 if controller_mode == "external" and normalized_gps_origin is not None:
                     lat0 = normalized_gps_origin["latitude"]
                     lon0 = normalized_gps_origin["longitude"]
@@ -580,6 +586,8 @@ class CompetitionOrchestrator:
             self._telemetry[telemetry.uav_id] = telemetry
         audit = getattr(self.journal, "audit", None)
         mission = self._mission
+        if audit and hasattr(audit, 'record_telemetry_diagnostics'):
+            audit.record_telemetry_diagnostics(telemetry)
         if changes and audit:
             audit.record("机载遥测关键状态变化", uav_id=telemetry.uav_id, changes=changes,
                          mission_id=mission.mission_id if mission else None)
@@ -947,6 +955,15 @@ class CompetitionOrchestrator:
                 self._event("mission_completed")
                 self.adapter.release_coordination()
             self._save()
+
+    def completed_flight_snapshot(self) -> Dict[str, Any]:
+        """仅暴露已结束的本次飞行，不复制航线，也不把离线预规划视为飞行。"""
+        with self._lock:
+            mission = self._mission
+            if (mission is None or mission.takeoff_commanded_at is None
+                    or mission.phase not in (MissionPhase.COMPLETED, MissionPhase.FAILED)):
+                return {}
+            return {"mission_id": mission.mission_id, "subject": mission.subject}
 
     def takeoff_participants_snapshot(self) -> Dict[str, Any]:
         """读取预检通过后本次一键起飞名单；不复制大型航线、不控制飞行。"""

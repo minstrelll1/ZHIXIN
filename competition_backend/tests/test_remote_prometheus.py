@@ -85,6 +85,12 @@ class RemotePreparationTests(unittest.TestCase):
         self.switch.assert_not_called()
         self.param_get.assert_not_called()
 
+    def test_ros_master_refusal_preserves_layer_and_boot_identity(self):
+        self.master.getSystemState.side_effect=ConnectionRefusedError('refused')
+        with self.assertRaisesRegex(RuntimeError, r'\[ros_master\].*boot-one'):
+            self.run_action('prometheus_probe')
+        self.switch.assert_not_called()
+
     def test_existing_gps_keeps_tuned_six_mps_fence_and_px4_settings(self):
         original = copy.deepcopy((self.control, self.fence, self.px4))
         result = self.run_action()

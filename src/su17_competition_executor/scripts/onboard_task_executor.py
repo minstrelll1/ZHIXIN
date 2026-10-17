@@ -156,6 +156,10 @@ class OnboardTaskExecutor:
         self._command_control_seen = False
         self._startup_initial_control = None
         self._boot_id = Path("/proc/sys/kernel/random/boot_id").read_text().strip()
+        self._flight_diagnostics.configure_storage(
+            Path.home() / 'competition_development/ground_runtime/diagnostics' / ('uav%d' % self.uav_id) / self._boot_id,
+            self._boot_id, self.uav_id)
+        rospy.on_shutdown(self._flight_diagnostics.close)
         from su17_competition_executor.boot_gps_home import BootGpsHome
         self._boot_gps_home = BootGpsHome("/tmp/competition_uav{}_boot_gps.json".format(self.uav_id), self._boot_id)
         self._restore_progress()
@@ -191,6 +195,9 @@ class OnboardTaskExecutor:
             self.recognition_categories_topic, Int32MultiArray, queue_size=1, latch=True
         )
         self._restore_recognition_categories()
+        self.fixed_targets_topic = fleet_prefix + "/competition/fixed_targets"
+        self.fixed_targets_pub = rospy.Publisher(self.fixed_targets_topic, String, queue_size=1, latch=True)
+        self._publish_fixed_targets({"uav_id": self.uav_id})
         self.external_mission_pub = rospy.Publisher(
             self.external_mission_topic, String, queue_size=1, latch=True
         )
@@ -886,6 +893,7 @@ class OnboardTaskExecutor:
         if self.tcp_link is None:
             return
         state, control = self._snapshot()
+        self._record_localization_diagnostics(state, control)
         if state is None or control is None:
             return
         def gps_value(field_name):
@@ -917,6 +925,8 @@ class OnboardTaskExecutor:
                 "timestamp_unix": time.time(),
                 "connected": bool(state.connected) and not self._identity_error and time.monotonic() - min(self._state_received, self._control_received) < 2.0,
                 "capabilities": {"motion_enabled": self.enable_motion, "max_speed_mps": self.max_speed,
+                    "diagnostics_supported": True,
+                    "localization_diagnostics": getattr(self, '_localization_diagnostics_wire', None),
                     "return_ack_supported": True,
                     "boot_id": getattr(self, "_boot_id", ""), "boot_gps_home": boot_home,
                     "auto_takeoff_supported": True, "auto_takeoff_ready": auto_ready,
@@ -955,6 +965,30 @@ class OnboardTaskExecutor:
                 "task_complete": bool(self._assignment and self._progress.get("next_waypoint", 0) >= len(self._assignment["task"]["waypoints_m"])),
             }
         )
+
+    def _record_localization_diagnostics(self, state, control):
+        # 无遥测时也留证；任何诊断异常都不能阻断原有遥测和控制流程。
+        diagnostics = getattr(self, '_flight_diagnostics', None)
+        if diagnostics is None:
+            return
+        try:
+            now = time.monotonic()
+            gps = self._gps_position_payload(getattr(self, '_gps_fix', None),
+                                            getattr(self, '_gps_fix_received', None), now)
+            recorder = getattr(self, '_boot_gps_home', None)
+            reason = recorder.diagnostic_reason(
+                connected=bool(getattr(state, 'connected', False)) and now-self._state_received < 2,
+                armed=bool(getattr(state, 'armed', False)), gps_status=int(getattr(state, 'gps_status', 0)),
+                location_source=int(getattr(state, 'location_source', -1)), gps=gps) if recorder else 'recorder_unavailable'
+            result = diagnostics.localization_snapshot(state, control,
+                now-self._state_received if self._state_received else None,
+                now-self._control_received if self._control_received else None, gps, reason)
+            result['boot_id'] = getattr(self, '_boot_id', '')
+            self._localization_diagnostics = result
+            self._localization_diagnostics_wire = diagnostics.wire_snapshot(result)
+        except Exception as error:
+            self._localization_diagnostics_wire = None
+            rospy.logwarn_throttle(30, '定位诊断记录失败，原有业务继续：%s', error)
 
     def _high_level_callback(self, message: String) -> None:
         try:
@@ -1035,6 +1069,17 @@ class OnboardTaskExecutor:
         rospy.loginfo("已发布任务识别类别：%s，共 %d 类，编号=%s", self.recognition_categories_topic,
                       selection["category_count"], message.data)
 
+    def _publish_fixed_targets(self, assignment):
+        from competition_shared.fixed_targets import fixed_targets_message
+        message = fixed_targets_message(assignment)
+        try:
+            self.fixed_targets_pub.publish(String(data=json.dumps(message, ensure_ascii=False, allow_nan=False)))
+        except Exception as error:
+            rospy.logwarn("定点目标话题发布失败，飞行任务继续接收：%s", error)
+            return
+        rospy.loginfo("定点目标已发布：%s，共 %d 个，来源任务=%s", self.fixed_targets_topic,
+                      len(message["targets"]), message["source_mission_id"])
+
     def _publish_task_region(self, assignment):
         from competition_shared.task_region import task_region_message
         region = task_region_message(assignment)
@@ -1053,6 +1098,7 @@ class OnboardTaskExecutor:
             if self._assignment and self._assignment_acked and assignment["assignment_checksum"] == self._assignment["assignment_checksum"]:
                 self._publish_competition_time()
                 self._publish_task_region(assignment)
+                self._publish_fixed_targets(assignment)
                 self._publish_status("task_received")
                 return
             if self._motion_thread is not None and self._motion_thread.is_alive():
@@ -1076,6 +1122,7 @@ class OnboardTaskExecutor:
             save_assignment_atomic(self.cache_path, assignment)
             self._publish_recognition_categories(assignment)
             self._publish_task_region(assignment)
+            self._publish_fixed_targets(assignment)
         except (OSError, TaskValidationError) as error:
             self._assignment_acked = False
             rospy.logerr("任务下发被拒绝：%s", error)

@@ -35,3 +35,20 @@ class BootGpsHome:
                 temporary.write_text(json.dumps(self.home), encoding='utf-8')
                 temporary.replace(self.path)
         return dict(self.home) if self.home else None
+
+    def diagnostic_reason(self, *, connected, armed, gps_status, location_source, gps):
+        """逐项说明现有记录条件；只读，不修改或放宽条件。"""
+        if self.home is not None:
+            return 'recorded'
+        reasons = []
+        if not connected:
+            reasons.append('flight_state_missing_or_disconnected')
+        if armed:
+            reasons.append('armed_before_home_recorded')
+        if gps_status < 3:
+            reasons.append('gps_fix_below_3d')
+        if location_source not in (4, 5):
+            reasons.append('location_source_not_gps_or_rtk')
+        if not isinstance(gps, dict) or not self._valid(gps):
+            reasons.append('global_position_missing_or_invalid')
+        return ','.join(reasons) or 'awaiting_home_record'

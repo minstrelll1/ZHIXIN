@@ -83,6 +83,9 @@ class DistributedFleetAdapter(FleetAdapter):
         self._fleet_sync_status: Dict[str, Any] = {"complete": False, "in_progress": False, "peers": {}}
         self._publisher_uav_id: Optional[int] = None
         self.competition_clock = None
+        self.fixed_targets_provider = None
+        self.fixed_targets_consumer = None
+        self._fixed_targets_sync_error = ""
 
     @property
     def bind_host(self) -> str:
@@ -208,6 +211,10 @@ class DistributedFleetAdapter(FleetAdapter):
         """Push the publisher's validated fleet configuration to all peers."""
         if not self._task_publisher:
             raise RuntimeError("只有任务发布端可以同步机队配置")
+        fixed_targets = self.fixed_targets_provider() if self.fixed_targets_provider else None
+        payload = {"publisher_id": self.node_id, "config": config}
+        if fixed_targets is not None:
+            payload["fixed_targets"] = fixed_targets
         peers: Dict[str, Dict[str, Any]] = {
             str(uid): {"ok": False, "in_progress": True}
             for uid in self.uav_ids if uid != self.local_uav_id
@@ -224,12 +231,12 @@ class DistributedFleetAdapter(FleetAdapter):
                 alternate = "http://{}:{}".format(entry["peer_host"], entry["web_port"]) if entry["peer_host"] else base_url
                 try:
                     response = self._request_json(base_url + "/api/v1/peer/fleet-config", method="POST",
-                                                  payload={"publisher_id": self.node_id, "config": config})
+                                                  payload=payload)
                 except Exception:
                     if alternate == base_url:
                         raise
                     response = self._request_json(alternate + "/api/v1/peer/fleet-config", method="POST",
-                                                  payload={"publisher_id": self.node_id, "config": config})
+                                                  payload=payload)
                 if response.get("accepted") is not True:
                     raise RuntimeError("对端未确认接收配置")
                 return str(uav_id), {
@@ -380,6 +387,19 @@ class DistributedFleetAdapter(FleetAdapter):
             result = self._request_json(
                 "{}/api/v1/peer/telemetry/{}".format(base_url, uav_id)
             )
+            # 同一已认证互联响应携带发布端快照；每次重连都会重新读取，无需重新选择角色。
+            # 目标文件损坏或写入失败不应中断飞行遥测同步。
+            fixed = result.get("fixed_targets")
+            if fixed is not None and self.fixed_targets_consumer is not None and not self._task_publisher:
+                try:
+                    if not isinstance(fixed, dict) or fixed.get("publisher_uav_id") != uav_id:
+                        raise ValueError("定点目标发布端编号与互联节点不一致")
+                    self.fixed_targets_consumer(uav_id, fixed["document"])
+                    self._fixed_targets_sync_error = ""
+                except (OSError, ValueError, KeyError, TypeError) as error:
+                    if getattr(self, "audit", None) and str(error) != self._fixed_targets_sync_error:
+                        self.audit.record("定点目标同步待重试", uav_id=uav_id, error=str(error))
+                    self._fixed_targets_sync_error = str(error)
             if self.competition_clock is not None:
                 if self.competition_clock.accept(result.get('competition_clock'), uav_id, time.monotonic()-request_started):
                     self.remember_publisher(uav_id)

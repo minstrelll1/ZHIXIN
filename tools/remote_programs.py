@@ -224,6 +224,7 @@ def status(directory, offset, latest_log=False):
                         log_start=size, log_read_start=size)
         data, offset = b'', size
     return dict(state=state, detail=detail, pid=meta.get('pid'), exit_code=meta.get('exit_code'),
+                log_boot_id=meta.get('boot_id', ''),
                 log=base64.b64encode(data).decode(), offset=offset + len(data), size=size, **log_meta)
 
 

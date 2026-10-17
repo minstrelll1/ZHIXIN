@@ -3,6 +3,9 @@ import base64
 import codecs
 from datetime import datetime, timedelta, timezone
 import json
+import hashlib
+import shutil
+import re
 from pathlib import Path
 import uuid
 
@@ -16,6 +19,7 @@ class LatestProgramLog:
         self.source, self.redact = source, redact
         self.decoder = codecs.getincrementaldecoder('utf-8')(errors='replace')
         self.offset, self.session, self.line_open = 0, '', False
+        self.boot_id = ''
         self.generation = uuid.uuid4().hex
         try:
             saved = json.loads(self.cursor.read_text(encoding='utf-8'))
@@ -23,6 +27,7 @@ class LatestProgramLog:
                     and self.path.stat().st_size == saved['local_size']):
                 self.offset = int(saved['offset'])
                 self.session, self.generation = saved['session'], saved['generation']
+                self.boot_id = saved.get('boot_id', '')
                 self.line_open = saved.get('line_open', False)
                 self.decoder.setstate((base64.b64decode(saved.get('pending_utf8', '')), 0))
         except (OSError, ValueError, KeyError, TypeError):
@@ -30,6 +35,7 @@ class LatestProgramLog:
 
     def _save(self):
         saved = dict(version=self.VERSION, source=self.source, offset=self.offset,
+                     boot_id=self.boot_id,
                      session=self.session, generation=self.generation, line_open=self.line_open,
                      pending_utf8=base64.b64encode(self.decoder.getstate()[0]).decode('ascii'),
                      local_size=self.path.stat().st_size)
@@ -64,7 +70,27 @@ class LatestProgramLog:
         self._write(text.rstrip('\n') + '\n', '地面记录')
         self._save()
 
-    def consume(self, info):
+    def _archive(self):
+        """只归档已收到的打印；失败时不截断原文件。"""
+        if not self.path.exists() or not self.path.stat().st_size:
+            return
+        # 标识来自远端，不直接拼接路径。
+        boot = (self.boot_id if re.fullmatch(r'[A-Za-z0-9_-]{1,80}', self.boot_id) else
+                hashlib.sha256(self.boot_id.encode()).hexdigest()[:16]) if self.boot_id else 'unknown_boot'
+        directory = self.path.parent / 'history' / self.path.stem / boot
+        directory.mkdir(parents=True, exist_ok=True)
+        destination = directory / (self.generation + '.log')
+        temporary = destination.with_suffix('.log.tmp')
+        shutil.copyfile(self.path, temporary)
+        temporary.replace(destination)
+        destination.with_suffix('.json').write_text(json.dumps(dict(
+            boot_id=self.boot_id, source=self.source, log_session=self.session,
+            generation=self.generation, received_bytes=self.offset,
+            archived_at=datetime.now().astimezone().isoformat(),
+            completeness='仅含地面已接收内容；断线期间未读到的打印可能缺失'),
+            ensure_ascii=False, indent=2), encoding='utf-8')
+
+    def consume(self, info, boot_id=''):
         session = info.get('log_session')
         if not session:
             return  # SSH/状态查询失败不能清空已有日志。
@@ -72,11 +98,15 @@ class LatestProgramLog:
         read_start = int(info.get('log_read_start', start))
         if session != self.session:
             self.path.parent.mkdir(parents=True, exist_ok=True)
+            self._archive()
             self.path.write_bytes(b'')
             self.session, self.generation = session, uuid.uuid4().hex
+            self.boot_id = boot_id
             self.offset, self.line_open = start, False
             self.decoder.reset()
             self._write('仅保留本程序最近一次启动；时间为地面接收时间（北京时间），原始打印时间保留。\n', '地面记录')
+        elif boot_id and not self.boot_id:
+            self.boot_id = boot_id
         if read_start != self.offset:
             # 远端截断/换会话时，当前页可能从旧偏移开始；下次按新起点重新读取。
             self._save()

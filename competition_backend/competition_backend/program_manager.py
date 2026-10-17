@@ -138,7 +138,8 @@ class ProgramManager:
         payload_json = json.dumps(payload, ensure_ascii=True, separators=(',', ':'))
         code = ("import base64, json\n"
                 f"PROGRAM_SOURCE = base64.b64decode('{source_b64}').decode('utf-8')\n"
-                "exec(compile(PROGRAM_SOURCE, 'remote_programs.py', 'exec'))\n"
+                "exec(compile(PROGRAM_SOURCE, %r, 'exec'))\n" % (
+                    'remote_prometheus.py' if action.startswith('prometheus_') else 'remote_programs.py') +
                 f"rpc(json.loads({payload_json!r}))\n")
         user = self.env.get('COMPETITION_SSH_USER', 'amov')
         # accept-new 只接受初次连接，不覆盖已改变的主机密钥。
@@ -147,12 +148,35 @@ class ProgramManager:
                    '%s@%s' % (user, self.local['onboard_host']), 'python3 -']
         if action in ('prometheus_probe', 'prometheus_gps'):
             command[-1] = "bash -c 'source /opt/ros/noetic/setup.bash && source ~/p600_experiment/devel/setup.bash && exec python3 -'"
-        result = subprocess.run(command, input=code.encode('ascii'), capture_output=True, timeout=25 if action == 'stop' else (4 if action == 'clock_probe' else 16),
-                                creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
-        if result.returncode:
-            detail = (result.stderr or result.stdout).decode('utf-8', errors='replace').strip()
-            raise RuntimeError('SSH 连接或机载程序管理失败：' + detail)
-        return json.loads(result.stdout.decode('utf-8'))
+        started = time.monotonic()
+        try:
+            result = subprocess.run(command, input=code.encode('ascii'), capture_output=True, timeout=25 if action == 'stop' else (4 if action == 'clock_probe' else 16),
+                                    creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
+            if result.returncode:
+                detail = (result.stderr or result.stdout).decode('utf-8', errors='replace').strip()
+                raise RuntimeError('SSH 连接或机载程序管理失败：' + detail)
+            answer = json.loads(result.stdout.decode('utf-8'))
+        except Exception as error:
+            detail = str(error)
+            stage = ('ros_master' if '[ros_master]' in detail else
+                     'ssh_authentication' if 'Permission denied' in detail else
+                     'ssh_transport' if re.search(r'(?i)connect to host|banner exchange|connection (?:reset|closed)', detail) else
+                     'ssh_request_timeout' if isinstance(error, subprocess.TimeoutExpired) else 'remote_execution')
+            self._request_diagnostic(action, program, stage, started, detail)
+            raise
+        self._request_diagnostic(action, program, 'completed', started, '')
+        return answer
+
+    def _request_diagnostic(self, action, program, stage, started, error):
+        try:
+            audit = getattr(self, 'audit', None)
+            if audit:
+                audit.record_snapshot('机载管理请求诊断', (action, program), (stage, error), interval=30,
+                    uav_id=self.local['uav_id'], onboard_host=self.local['onboard_host'], port=22,
+                    action=action, program=program, stage=stage, boot_id=self.boot_id,
+                    elapsed_seconds=round(time.monotonic()-started, 3), error=redact(error, self.secrets))
+        except Exception:
+            pass  # 诊断不得改变原请求的结果、重试和授权逻辑。
 
     def _prepare_connection(self, force=False):
         # P600 使用实机核验过的厂商连接；独立程序管理器未配置机队时保持原功能。
@@ -163,6 +187,7 @@ class ProgramManager:
             return self.connection_status
         if self.connection is None:
             self.connection = PrometheusConnection(self.local)
+        probe = None
         try:
             config_path = self.root / 'config/onboard_programs.json'
             config = json.loads(config_path.read_text(encoding='utf-8-sig')) if config_path.exists() else {}
@@ -178,6 +203,20 @@ class ProgramManager:
         previous = self.connection_status.get('detail')
         self.connection_status = status
         self.connection_checked = time.monotonic()
+        try:
+            audit = getattr(self, 'audit', None)
+            if audit:
+                flight = (probe or {}).get('flight', {})
+                health = {key: flight.get(key) for key in ('connected', 'armed', 'mode', 'location_source', 'odom_valid', 'gps_status')}
+                health.update(ready=status.get('ready'), detail=status.get('detail'), boot_id=(probe or {}).get('boot_id'))
+                audit.record_snapshot('基础连接分层诊断', self.local['uav_id'], health, interval=10,
+                    uav_id=self.local['uav_id'], onboard_host=self.local['onboard_host'],
+                    ground_host=self.local.get('ground_host'), boot_id=(probe or {}).get('boot_id'),
+                    probe=probe, heartbeat=self.connection.heartbeat_snapshot(),
+                    preparation_ready=status.get('ready'), detail=status.get('detail'),
+                    readiness_scope='基础配置准备通过不等于GPS定位有效或起降点已记录')
+        except Exception:
+            pass
         preparation = status.get('preparation_audit')
         if isinstance(preparation, dict) and preparation:
             signature = json.dumps(preparation, ensure_ascii=False, sort_keys=True)
@@ -376,7 +415,13 @@ class ProgramManager:
                                         detail='基础连接准备：' + connection.get('detail', '等待连接'))
                         with self.lock:
                             mirror = self._mirror(key)
-                            mirror.consume(info)
+                            try:
+                                mirror.consume(info, boot_id=info.get('log_boot_id', ''))
+                            except OSError as error:
+                                # 磁盘或归档失败不能把运行中的程序判为停止，也不能截断旧证据。
+                                if getattr(self, 'audit', None):
+                                    self.audit.record_snapshot('程序打印保存失败', key, str(error), interval=30,
+                                        program=key, uav_id=self.local['uav_id'], error=str(error))
                             offsets[key] = mirror.offset
                         raw = info.pop('log', '')
                         if info.get('state') == 'error' and not raw:

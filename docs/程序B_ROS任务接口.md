@@ -86,3 +86,51 @@ GPS 实飞任务的 `jiangluodian` 使用规划分派前获取并锁定的本机
 进场消息保持版本 1，终点为本机首个侦察点。返航消息升级为 `schema_version=2`：每架接收机收到六机全部规划航点的返航路线，**每条终点均为接收机自身的 `jiangluodian`，所有路线高度均为接收机任务高度**。`uav_id` 表示接收机；每项 `routes` 新增 `source_uav_id`，必须和来源机内从 1 开始的 `waypoint_index` 一起选择路线，不能只用数组下标。`landing_point` 为接收机降落点，`waypoint_counts_by_uav` 为各来源机航点数量。
 
 例如 UAV1 消息中 `source_uav_id=2, waypoint_index=3` 表示从 UAV2 第 3 个侦察点返回 UAV1 降落点。GPS 仍为 `[经度,纬度,相对高度]`，XYZ 为 `[X,Y,Z]`。完整示例与时机见 [进场与全机队返航接口](external_transit_routes.md)。程序 B 的读取端需适配这些字段，本工程没有修改程序 B 源码。
+
+## 固定目标记录
+
+地面文件：`config/fixed_targets.json`。保留科目一最终赛事结果中去重排序后的**全部固定目标**，包括车辆、人员、工事及其他型号；移动目标不写入。固定目标之间的顺序与最终 `target-submission.json` 的 `features` 一致，经纬度取各目标的 `Point` 坐标。
+
+自动更新由当前任务发布端执行，条件为本次科目一任务实际发出过起飞指令，且已进入 `completed` 或已确认全部结束的 `failed` 状态。飞行中、只有规划、科目二飞行和人工成果预览均不更新。读取最终成果与对应整理摘要，确认去重排序已完成且版本匹配后，原子替换这一份文件，不追加历史。成果尚未到齐时保留上一份；同一轮后续整理可补齐结果，直到开始下一任务或操作员修改文件。
+
+赛后人工修正请编辑**当前任务发布端电脑**的该文件，保存为 UTF-8 JSON。可以修改坐标、型号、增删固定目标；`target_id` 须唯一，按赛事 `target-001` 格式编号；`target_category` 只能为 `固定`，`target_type` 与 `target_model` 沿用赛事结果。`category_id` 使用既有类别目录：车辆1～7 为 0～6，工事1～4 为 7～10，固定人员1～4 为 11～14；未知型号可填 `null`。旧版无 `target_category` 的工事记录仍按固定目标接受。`source_mission_id` 保留自动生成的科目一任务编号；没有来源任务的人工初始配置可留空。本机当前 `config/fixed_targets.json` 仅供联调，**坐标不是真实检测结果**，正式使用前应由下一次科目一结果覆盖或人工清空。示例：
+
+```json
+{
+  "schema_version": 1,
+  "coordinate_frame": "WGS84",
+  "source_mission_id": "",
+  "targets": [
+    {
+      "target_id": "target-001",
+      "target_category": "固定",
+      "target_type": "工事",
+      "target_model": "工事2",
+      "category_id": 8,
+      "latitude": 33.8691414,
+      "longitude": 113.7087948
+    },
+    {
+      "target_id": "target-002",
+      "target_category": "固定",
+      "target_type": "人员",
+      "target_model": "人员1",
+      "category_id": 11,
+      "latitude": 33.8644,
+      "longitude": 113.7098
+    }
+  ]
+}
+```
+
+人工修改后，同一轮飞行的后台整理不会覆盖修正；下一轮科目一飞行结束后正常生成新记录。普通地面端的副本会被发布端覆盖，应在发布端修改。互联配置同步及断线重连后的遥测互通都会读取发布端最新文件，即使无人机未连接也可同步。`tools/update_ground.ps1` 首次安装提供模板，后续保留本机已有记录。手动整目录覆盖代码时也应保留该文件。
+
+科目一、科目二在“规划与分派”时将文件内容放入 `assign_task.fixed_targets`，六机使用同一份快照并纳入各自完整任务 SHA-256。已分派后再修改 JSON 不会改变正在执行的任务，下次分派才生效。缺失文件按空列表处理；格式或类别编号有误时规划会提示配置错误。
+
+ROS 话题为 `/uavN/competition/fixed_targets`，N 是全机队编号 1～6（包括本地 ROS 编号固定为 1 的 P600）；消息类型 `std_msgs/String`，`queue_size=1`、`latch=True`。接收并校验分派任务后、发送 `task_received` 回执前发布，无需点击起飞。字符串内为上述 JSON 加上当前 `mission_id`、`uav_id`、`assignment_checksum`。`source_mission_id` 是目标记录来源，`mission_id` 是本次飞行，二者可能不同。
+
+```bash
+rostopic echo /uav3/competition/fixed_targets
+```
+
+程序 B 应按 `target_type`、`target_model` 或 `category_id` 区分固定目标类型，按命名字段 `latitude`、`longitude` 读取 WGS84 经纬度。晚启动的订阅者会收到锁存消息；重复分派同一报文会重新发布。新进程启动、空目标记录或旧版不带此字段的任务会发布空列表，接收方应清除旧目标。此话题只传递目标信息，不触发飞行或改变已有航线。需要同时更新地面代码、`competition_shared` 和机载竞赛执行器；无需新增 ROS 自定义消息类型。本工程未修改程序 B 源码。

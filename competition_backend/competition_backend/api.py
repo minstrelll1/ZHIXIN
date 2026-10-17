@@ -41,6 +41,8 @@ from .image_aggregation import (
     resolve_image_file,
 )
 from .subject1_reporting import AutoSubject1Reporter, reporting_router
+from .fixed_targets import FixedTargetStore, FixedTargetRecorder
+from competition_shared.fixed_targets import validate_fixed_targets
 from .recognition_settings import RecognitionSettings
 from competition_shared.recognition import optional_recognition_selection
 from .journal import EventJournal
@@ -382,6 +384,12 @@ def create_app(environment=None, audit=None) -> FastAPI:
                 except (KeyError, TypeError, ValueError, OverflowError):
                     pass
             if not valid_home:
+                audit.record('规划起降点缺失', uav_id=uid,
+                    boot_id=capabilities.get('boot_id'), boot_home=home,
+                    connected=item.get('connected'), odom_valid=item.get('odom_valid'),
+                    gps_status=item.get('gps_status'), gps_num=item.get('gps_num'),
+                    location_source=item.get('location_source'), gps_position=item.get('gps_position'),
+                    onboard=capabilities.get('localization_diagnostics'))
                 missing.append(uid)
                 continue
             details = {}
@@ -425,6 +433,39 @@ def create_app(environment=None, audit=None) -> FastAPI:
     )
     publisher_results = env.get("COMPETITION_PUBLISHER_RESULTS") == "1"
     results_started_monotonic = float(env.get("COMPETITION_RESULTS_STARTED_MONOTONIC", time.monotonic()))
+    fixed_target_store = FixedTargetStore(env.get(
+        "COMPETITION_FIXED_TARGETS_CONFIG", str(Path(fleet_path).parent / "fixed_targets.json")))
+    def _is_target_publisher():
+        return bool(operator_state["configured"] and operator_state["task_publisher"])
+
+    fixed_target_export_error = ""
+    def _fixed_targets_for_peers():
+        nonlocal fixed_target_export_error
+        if not _is_target_publisher():
+            return None
+        try:
+            document = fixed_target_store.read()
+            fixed_target_export_error = ""
+            return document
+        except (OSError, ValueError) as error:
+            if str(error) != fixed_target_export_error:
+                audit.record("定点目标暂不可同步", error=str(error))
+            fixed_target_export_error = str(error)
+            return None
+
+    def _accept_fixed_targets(publisher_uid, document):
+        if not operator_state["configured"] or _is_target_publisher():
+            return
+        if fixed_target_store.replace(document):
+            audit.record("发布端定点目标已同步", publisher_uav_id=publisher_uid,
+                         source_mission_id=document["source_mission_id"], target_count=len(document["targets"]))
+
+    fixed_target_recorder = FixedTargetRecorder(
+        fixed_target_store, image_root, orchestrator.completed_flight_snapshot,
+        _is_target_publisher, audit=audit)
+    if isinstance(adapter, DistributedFleetAdapter):
+        adapter.fixed_targets_provider = _fixed_targets_for_peers
+        adapter.fixed_targets_consumer = _accept_fixed_targets
 
     auto_subject1_reporter = AutoSubject1Reporter(
         image_root, competition_clock,
@@ -691,9 +732,11 @@ def create_app(environment=None, audit=None) -> FastAPI:
             pointcloud_collector.start()
             traffic_monitor.start()
             auto_subject1_reporter.start()
+            fixed_target_recorder.start()
             time_reference_collector.start()
             yield
         finally:
+            fixed_target_recorder.stop()
             time_reference_collector.stop()
             auto_subject1_reporter.stop()
             traffic_monitor.stop()
@@ -716,6 +759,8 @@ def create_app(environment=None, audit=None) -> FastAPI:
     app.state.audit = audit
     app.state.competition_clock = competition_clock
     app.state.auto_subject1_reporter = auto_subject1_reporter
+    app.state.fixed_target_store = fixed_target_store
+    app.state.fixed_target_recorder = fixed_target_recorder
     app.add_middleware(DiagnosticMiddleware, audit=audit)
     app.state.adapter = adapter
     app.state.fleet_store = fleet_store
@@ -1481,6 +1526,13 @@ def create_app(environment=None, audit=None) -> FastAPI:
         plan_checkpoint("核对本地角色和配置")
         role = _require_operator_ready()
         _fleet_motion_guard()
+        fixed_targets = None
+        if role["task_publisher"] and payload.get("subject") in ("subject1", "subject2"):
+            fixed_target_recorder.tick()
+            try:
+                fixed_targets = fixed_target_store.read()
+            except (OSError, ValueError) as error:
+                raise HTTPException(status_code=409, detail="定点目标配置读取失败：{}".format(error)) from error
         requested_coordinate_mode = str(
             payload.get("coordinate_mode") or (payload.get("search_area") or {}).get("coordinate_mode") or ""
         ).strip().lower()
@@ -1578,6 +1630,7 @@ def create_app(environment=None, audit=None) -> FastAPI:
                 payload.get("landing_area"),
                 prepared,
                 recognition_selection,
+                fixed_targets,
             )
         except Exception:
             if isinstance(adapter, DistributedFleetAdapter):
@@ -1723,8 +1776,11 @@ def create_app(environment=None, audit=None) -> FastAPI:
             source = _verify_peer_publisher(publisher_id)
             if operator_selection_required and source.get("fleet_revision") != revision(incoming):
                 raise RuntimeError("收到的配置不是发布端当前版本，请重新同步")
+            fixed_targets = validate_fixed_targets(payload["fixed_targets"]) if "fixed_targets" in payload else None
             current = fleet_store.read()
             fleet_store.save(incoming, revision(current))
+            if fixed_targets is not None:
+                _accept_fixed_targets(source.get("local_uav_id"), fixed_targets)
             try:
                 adapter.accept_fleet_config(int(source.get("local_uav_id")))
             except (TypeError, ValueError):
@@ -1751,12 +1807,15 @@ def create_app(environment=None, audit=None) -> FastAPI:
         manager = getattr(app.state, "program_manager", None)
         managed = manager.snapshot() if manager is not None else {}
         program_b = managed.get("programs", {}).get("flight") or {}
+        fixed_targets = _fixed_targets_for_peers()
         return {
             "uav_id": uav_id,
             "telemetry": adapter.local_telemetry_dict(),
             "prometheus_heartbeat": managed.get("connection", {}).get("heartbeat_status"),
             "competition_clock": competition_clock.snapshot(),
             "traffic": traffic_monitor.status_for_uav(uav_id),
+            "fixed_targets": {"publisher_uav_id": local_uav_id, "document": fixed_targets}
+            if fixed_targets is not None else None,
             "program_b": {key: program_b.get(key) for key in ("state", "flight_mode", "reconnaissance_radius_m", "checked_at")}
             if program_b else None,
         }

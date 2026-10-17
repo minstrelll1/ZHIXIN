@@ -504,7 +504,14 @@ class TcpFleetAdapter(FleetAdapter):
                     raise ValueError("任务相对高度无效")
                 telemetry.mission_altitude_m = float(mission_altitude) if mission_altitude is not None else None
                 if isinstance(message.get("capabilities"), dict):
+                    previous_diagnostic = telemetry.capabilities.get('localization_diagnostics')
+                    previous_boot = telemetry.capabilities.get('boot_id')
                     telemetry.capabilities = dict(message["capabilities"])
+                    # 仅保留本次开机最近的只读诊断；不刷新其中的采样时间。
+                    if (telemetry.capabilities.get('diagnostics_supported') is True
+                            and telemetry.capabilities.get('localization_diagnostics') is None
+                            and previous_boot and previous_boot == telemetry.capabilities.get('boot_id')):
+                        telemetry.capabilities['localization_diagnostics'] = previous_diagnostic
                 # 兼容旧版机载端；没有该字段时清除旧目标，避免重连后残留。
                 telemetry.pengfei = sanitize_pengfei(message.get("pengfei"))
                 if telemetry.pengfei:

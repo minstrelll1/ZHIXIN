@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "coordinate_frame": "WGS84",
+  "source_mission_id": "",
+  "targets": [
+    {
+      "target_id": "target-001",
+      "target_category": "固定",
+      "target_type": "车辆",
+      "target_model": "车辆1",
+      "category_id": 0,
+      "latitude": 33.8628,
+      "longitude": 113.7082
+    },
+    {
+      "target_id": "target-002",
+      "target_category": "固定",
+      "target_type": "工事",
+      "target_model": "工事2",
+      "category_id": 8,
+      "latitude": 33.8632,
+      "longitude": 113.7086
+    },
+    {
+      "target_id": "target-003",
+      "target_category": "固定",
+      "target_type": "人员",
+      "target_model": "人员3",
+      "category_id": 13,
+      "latitude": 33.8636,
+      "longitude": 113.709
+    },
+    {
+      "target_id": "target-004",
+      "target_category": "固定",
+      "target_type": "其他",
+      "target_model": "未知型号",
+      "category_id": null,
+      "latitude": 33.8648,
+      "longitude": 113.7102
+    }
+  ]
+}

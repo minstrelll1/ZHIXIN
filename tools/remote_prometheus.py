@@ -140,6 +140,17 @@ def flight_sample(rospy, uid):
     def receive(msg):
         result.update(connected=bool(msg.connected), armed=bool(msg.armed),
                       location_source=int(msg.location_source), mode=msg.mode)
+        # 仅采集现有消息；不增加等待，不用诊断字段控制准备或飞行。
+        try:
+            for name in ('odom_valid', 'gps_status', 'gps_num', 'latitude', 'longitude', 'altitude', 'rel_alt'):
+                value = getattr(msg, name, None)
+                result[name] = None if isinstance(value, float) and not math.isfinite(value) else value
+            result['velocity'] = list(msg.velocity)
+            result['source_stamp'] = msg.header.stamp.to_sec()
+        except (AttributeError, TypeError, ValueError):
+            result['diagnostic_detail'] = '部分旧版状态字段不可用'
+        result['sampled_wall_time'] = time.time()
+        result['sampled_monotonic'] = time.monotonic()
         event.set()
     sub = rospy.Subscriber('/uav%d/prometheus/state' % uid, UAVState, receive, queue_size=1)
     try:
@@ -174,9 +185,12 @@ def run(payload):
     def param(name, default=None):
         code, _, value = master.getParam('/competition_connection', name)
         return value if code == 1 else default
-    code, _, state = master.getSystemState('/competition_connection')
+    try:
+        code, _, state = master.getSystemState('/competition_connection')
+    except (OSError, xmlrpc.client.Error) as error:
+        raise RuntimeError('[ros_master] SSH已执行远端代码，但机载ROS Master 127.0.0.1:11311不可用；boot_id=%s；%s' % (boot, error)) from error
     if code != 1:
-        raise RuntimeError('ROS Master 尚未就绪')
+        raise RuntimeError('[ros_master] ROS Master 尚未就绪；boot_id=' + boot)
     nodes = {node for group in state for _, names in group for node in names}
     bridge = param('/communication_bridge', {}) if '/communication_bridge' in nodes else {}
     bridge = {key: bridge.get(key) for key in ('ROBOT_ID', 'uav_id', 'is_simulation', 'autoload',

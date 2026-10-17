@@ -220,7 +220,13 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\setup_onboard_ss
 启动管理脚本由地面端通过 SSH 自动传送；本次开机与断线区分功能只需更新地面端并重开，不需要为此重新编译机载代码。此次新增程序 B 的 `/uavN/target_scheduler/completed_targets` 话题兼容，需要按上面的机载更新命令同步竞赛机载代码；不修改目标检测、程序 B 或厂商工作空间。U 盘复制时同时复制根目录的 `智信竞赛.exe`。原有命令行启动方式仍可使用。
 
 
-五个机载程序的地面日志各自只保留最近一次程序启动的内容，保存在 `ground_logs/programs/uavN_onboard.log`、`uavN_detection.log`、`uavN_detection_person.log`、`uavN_flight.log`、`uavN_drop.log`；新一次启动自动替换对应地面副本，断线重连和地面端重开继续同步同一次日志。每行加北京时间的“地面接收”时间，原始打印中的机载时间保留；补读历史时接收时间不是实际发生时间。机载原始 `console.log` 继续保留，不清理。更新后重启地面后端生效，无需重新部署或编译五个机载程序。
+五个机载程序的当前打印仍在 `ground_logs/programs/uavN_onboard.log`、`uavN_detection.log`、`uavN_detection_person.log`、`uavN_flight.log`、`uavN_drop.log`。新一次程序启动前，已收到的旧打印归档到 `ground_logs/programs/history/uavN_程序名/<boot_id>/`，附同名 JSON 记录来源；旧版无法确认开机标识时放在 `unknown_boot`。断线重连和地面端重开继续同步同一次日志。每行的“地面接收”北京时间不是历史打印的实际发生时间；原始机载时间保留。归档只包含地面已收到的内容，机载原始 `console.log` 不清理。
+
+连接与定位诊断即时写入 `ground_logs/sessions/<地面启动编号>/events.jsonl`（含轮转文件）：区分 SSH 连接、授权、机载执行与 ROS Master 失败，记录请求耗时、厂商心跳、GPS 状态和星数、定位有效性、起降点未记录原因及飞控原始告警。状态变化及时记录，稳定定位每 5 秒采样；基础配置就绪不等于定位有效。日志含地面接收时间、单调时间、机载开机和进程标识，不保存密码。
+
+机载竞赛执行器另存 `~/competition_development/ground_runtime/diagnostics/uavN/<boot_id>/diagnostics.jsonl`（含 `.1`～`.4` 轮转文件，每份最多约 5 MiB）。机地断连仍记录 GPS 原始质量字段、位置数据接收年龄、估计器状态和告警；缺失话题如实记为未收到，不推测失效根因。排查时保留整个地面 `ground_logs` 和对应机载诊断目录；不同开机文件保留，需定期自行备份清理。
+
+本次地面日志增强更新后重开后端生效；完整机载诊断需重新部署机载竞赛代码并重启竞赛执行器。仅新增只读诊断，不改变定位判定、参数、规划、起飞或程序启动条件。
 
 程序打印窗口每秒自动读取新日志；“加载更多日志”用于分批补看尚未显示的历史，不会启动或重启程序。 “查找内容”搜索已加载打印，不区分大小写；支持高亮、匹配数量、上一处／下一处，以及 Enter／Shift+Enter 跳转。未加载的历史需先点“加载更多日志”。
 
@@ -249,3 +255,9 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\stop_ground.ps1
 ### 程序 B 实时业务数据
 
 机载竞赛程序只读采集程序 B 的当前目标、上次识别、调度/机动/云台/循线状态及侦察点序号，在网页‘实时任务详情 → 实时数据’展示。需将最新程序 B 的三个消息编译到机载 ~/recon_ws 后更新竞赛机载端。详见 [程序 B 遥测接入](docs/program_b_telemetry.md)。
+
+### 固定目标记录与下发
+
+`config/fixed_targets.json` 保存最新一轮科目一最终去重排序结果中的全部固定目标，包括车辆、工事、人员及其他类型，按成果顺序记录类型和经纬度；移动目标不写入。实际起飞的任务结束后由任务发布端覆盖更新；科目二和普通地面端不生成这份记录。赛后可在当前任务发布端直接编辑该 JSON，同一轮后台整理会保留人工修正。下一轮科目一飞行结束后再用新结果覆盖；地面端重连时同步当前发布端版本，增量代码更新保留已有文件。当前仓库文件仅供联调，编号遵循赛事 `target-001` 格式，坐标不是真实侦察结果。
+
+科目一、科目二点击“规划与分派”时均把该文件快照随完整任务下发。机载竞赛程序在接收任务时发布 `/uavN/competition/fixed_targets`（`std_msgs/String`，JSON，锁存）。本功能需要更新地面端和机载竞赛程序；程序 B 需订阅这个新话题才能使用。格式与人工编辑示例见 [程序 B ROS 任务接口](docs/程序B_ROS任务接口.md#固定目标记录)。

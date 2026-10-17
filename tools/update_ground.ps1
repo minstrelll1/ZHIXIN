@@ -74,6 +74,7 @@ function Test-ProtectedPath([string]$Path) {
 
 function Test-PreservedFile([string]$Path, [string]$Local) {
     return (Test-ProtectedPath $Path) -or
+        ($Path -eq 'config/fixed_targets.json' -and (Test-Path -LiteralPath $Local -PathType Leaf)) -or
         ($Path -match '^third_party/.*\.(exe|dll|zip|msi)$' -and (Test-Path -LiteralPath $Local))
 }
 

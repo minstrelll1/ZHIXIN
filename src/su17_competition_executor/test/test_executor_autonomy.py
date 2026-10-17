@@ -495,6 +495,14 @@ class AutonomyTest(unittest.TestCase):
 
 
 class PreciseGpsTelemetryTest(unittest.TestCase):
+    def setUp(self):
+        # 诊断文件在专用测试中使用临时目录验证；构造器测试不得写操作员主目录。
+        storage = patch.object(module.FlightDiagnostics, 'configure_storage')
+        shutdown = patch.object(rospy, 'on_shutdown', Mock(), create=True)
+        for patcher in (storage, shutdown):
+            patcher.start()
+            self.addCleanup(patcher.stop)
+
     @staticmethod
     def fix(**values):
         fields = {

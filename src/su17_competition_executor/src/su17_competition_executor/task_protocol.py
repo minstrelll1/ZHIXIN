@@ -127,6 +127,12 @@ def validate_assignment(
             task_region_message(normalized)
         except (ValueError, TypeError, KeyError) as error:
             raise TaskValidationError("任务子区域校验失败：{}".format(error)) from error
+    if "fixed_targets" in normalized:
+        from competition_shared.fixed_targets import validate_fixed_targets
+        try:
+            validate_fixed_targets(normalized["fixed_targets"])
+        except ValueError as error:
+            raise TaskValidationError("定点目标校验失败：{}".format(error)) from error
     return normalized
 
 

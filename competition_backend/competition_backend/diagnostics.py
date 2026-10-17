@@ -41,6 +41,52 @@ class Diagnostics:
         self._closed = False
         self._initialized = False
         self.context = {}
+        self._snapshots = {}
+        self._flight_alerts = {}
+
+    def record_snapshot(self, event, key, signature_state, interval=10, **details):
+        """状态变化立即留证，稳定期间低频采样；不成为业务判定条件。"""
+        try:
+            now = time.monotonic()
+            signature = json.dumps(safe(signature_state), sort_keys=True, ensure_ascii=False)
+            with self._lock:
+                previous = self._snapshots.get((event, key))
+                if previous and previous[0] == signature and now - previous[1] < interval:
+                    return
+                self._snapshots[(event, key)] = (signature, now)
+            self.record(event, **details)
+        except Exception:
+            logging.getLogger(__name__).exception("诊断快照失败，业务继续运行")
+
+    def record_telemetry_diagnostics(self, telemetry):
+        """本机与共享遥测均记录；保留来源时钟，不把地面接收时间当成发生时间。"""
+        try:
+            uid = telemetry.uav_id
+            capabilities = telemetry.capabilities or {}
+            home = capabilities.get('boot_gps_home')
+            diagnostic = capabilities.get('localization_diagnostics') or {}
+            state = {name: getattr(telemetry, name, None) for name in
+                     ('connected', 'armed', 'odom_valid', 'failsafe', 'gps_status', 'location_source', 'control_state')}
+            state.update(boot_id=capabilities.get('boot_id'), boot_home=home,
+                         home_reason=diagnostic.get('boot_home_reason'))
+            payload = {name: getattr(telemetry, name, None) for name in
+                       ('gps_num', 'latitude', 'longitude', 'altitude', 'gps_position',
+                        'gps_telemetry_age_seconds', 'position', 'velocity', 'received_at')}
+            self.record_snapshot('定位与起降点诊断', uid, state, interval=5,
+                                 uav_id=uid, state=state, measurements=payload,
+                                 onboard=diagnostic)
+            instance = diagnostic.get('instance_id')
+            for alert in diagnostic.get('alerts', []):
+                seq = alert.get('sequence', 0)
+                with self._lock:
+                    previous = self._flight_alerts.get(uid, (None, 0))
+                    if previous[0] == instance and seq <= previous[1]:
+                        continue
+                    self._flight_alerts[uid] = (instance, seq)
+                self.record('机载飞控原始告警', uav_id=uid, boot_id=capabilities.get('boot_id'),
+                            instance_id=instance, alert=alert)
+        except Exception:
+            logging.getLogger(__name__).exception("遥测诊断失败，业务继续运行")
 
     def _initialize(self):
         if self._initialized:
@@ -66,7 +112,8 @@ class Diagnostics:
                 if self._handler is None:
                     return
                 body = dict(time=datetime.now().astimezone().isoformat(timespec="milliseconds"),
-                            unix_time=time.time(), session_id=self.session_id, **self.context)
+                            unix_time=time.time(), ground_monotonic=time.monotonic(),
+                            session_id=self.session_id, **self.context)
                 body.update(event=event, details=safe(details))
                 self._handler.emit(logging.LogRecord("diagnostics", logging.INFO, "", 0,
                                    json.dumps(body, ensure_ascii=False), (), None))
