@@ -2,9 +2,9 @@
   "schema_version": 1,
   "repository": "minstrelll1/ZHIXIN",
   "branch": "codex/portable-ground-deployment",
-  "commit": "1bdaf38c484539cb8aa878ff354ac5d58db77449",
-  "tree_sha": "048db7cce748cd6531fd762c04c5e0d9140d5811",
-  "file_count": 644,
+  "commit": "01afb98638e2378d2e52df5f8881fda46748cff6",
+  "tree_sha": "952d48a1823f7732e04ef1530eff66033c4c4253",
+  "file_count": 645,
   "files": [
     {
       "path": ".editorconfig",
@@ -94,8 +94,8 @@
       "path": "README.md",
       "type": "blob",
       "mode": "100644",
-      "sha": "b6f7d94f293493066dfba8b5c701eb46baca48dd",
-      "size": 24593
+      "sha": "0874cf7977d01a6bc96ee7bf058fb597b2cc1030",
+      "size": 25449
     },
     {
       "path": "SU17地面端与机载端启动指令.txt",
@@ -423,8 +423,8 @@
       "path": "competition_backend/competition_backend/program_manager.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "619ff3320523862b6dc331bb99908d2c69f5e750",
-      "size": 32335
+      "sha": "e7f13342d35506a6ff21c3661035d390002f99cc",
+      "size": 35068
     },
     {
       "path": "competition_backend/competition_backend/prometheus_connection.py",
@@ -1118,6 +1118,13 @@
       "mode": "100644",
       "sha": "13cb7e02726049693fbd9fb95db78c52cce6a7c2",
       "size": 1064
+    },
+    {
+      "path": "competition_backend/tests/test_ssh_bind_compatibility.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "5adc1d6f484a312a3db5c66abca4e1129492b5d7",
+      "size": 8551
     },
     {
       "path": "competition_backend/tests/test_stadium_departure.py",
@@ -4515,5 +4522,5 @@
       "size": 804
     }
   ],
-  "generated_at": "2026-10-18T10:47:34+00:00"
+  "generated_at": "2026-10-18T12:06:31+00:00"
 }
