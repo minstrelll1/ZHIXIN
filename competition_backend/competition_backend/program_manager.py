@@ -5,7 +5,9 @@ import json
 import os
 from pathlib import Path
 import re
+import socket
 import subprocess
+import sys
 import threading
 import time
 import zlib
@@ -82,6 +84,8 @@ class ProgramManager:
         self.connection_checked = 0.0
         self.connection_status = {}
         self.connection_audit_signature = ''
+        self._ssh_bind_unsupported = False
+        self._ssh_bind_notice_written = False
         self.auth = dict(state='idle', detail='')
         self.states = {key: dict(state='idle', detail='尚未启动') for key in NAMES}
         self.states['ground'] = dict(state='running', detail='地面网页服务运行中')
@@ -121,6 +125,46 @@ class ProgramManager:
                 self.logs.mkdir(parents=True, exist_ok=True)
                 with self._path(key).open('a', encoding='utf-8') as stream:
                     stream.write(redact(text, self.secrets))
+
+    def _check_default_ssh_route(self):
+        """旧版 Windows SSH 兼容重试前核对出口；UDP connect 不发送数据报。"""
+        expected = self.local['ground_host']
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as probe:
+                probe.settimeout(2)
+                probe.connect((self.local['onboard_host'], 22))
+                source = probe.getsockname()[0]
+        except OSError as error:
+            raise SSHTransportError('旧版 Windows SSH 地址绑定不兼容，默认出口核验失败：%s' % error) from error
+        if source != expected:
+            raise SSHTransportError(
+                '旧版 Windows SSH 地址绑定不兼容，默认出口 %s 与图传地址 %s 不一致；'
+                '未发送兼容重试，请检查图传网卡及路由' % (source, expected))
+
+    def _run_ssh(self, command, **kwargs):
+        """仅在连接建立前的已知 -b 错误上重试；其他失败保持原恢复流程。"""
+        binding_index = command.index('-b') if '-b' in command else None
+        compatible = sys.platform == 'win32' and binding_index is not None
+        if not (compatible and self._ssh_bind_unsupported):
+            result = subprocess.run(command, **kwargs)
+            # 精确匹配 OpenSSH 本地 connect 错误，不能因远端脚本报错而重复执行请求。
+            if not (compatible and result.returncode == 255 and not result.stdout.strip()
+                    and re.fullmatch(r'ssh: connect to host %s port 22: Invalid argument'
+                                     % re.escape(self.local['onboard_host']),
+                                     result.stderr.decode('utf-8', errors='replace').strip(), re.IGNORECASE)):
+                return result
+            self._ssh_bind_unsupported = True
+        # 每次兼容连接都重新核对，不能把先前成功当作网卡/路由永不变化。
+        self._check_default_ssh_route()
+        if not self._ssh_bind_notice_written:
+            try:
+                self._append('ground', '[%s] SSH 兼容模式：检测到 Windows SSH 的 -b 地址绑定错误；'
+                             '已核验默认出口为 %s，后续每次连接核验后省略 -b，保留原密钥和主机校验。\n'
+                             % (time.strftime('%Y-%m-%d %H:%M:%S'), self.local['ground_host']))
+                self._ssh_bind_notice_written = True
+            except OSError:
+                pass  # 诊断写入失败不能改变连接结果。
+        return subprocess.run(command[:binding_index] + command[binding_index + 2:], **kwargs)
 
     def _request(self, action, offsets, program=None):
         if action in ('prometheus_probe', 'prometheus_gps'):
@@ -173,8 +217,8 @@ class ProgramManager:
             command[-1] = "bash -c 'source /opt/ros/noetic/setup.bash && source ~/p600_experiment/devel/setup.bash && exec python3 -'"
         started = time.monotonic()
         try:
-            result = subprocess.run(command, input=code.encode('ascii'), capture_output=True, timeout=4 if action == 'clock_probe' else 45,
-                                    creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
+            result = self._run_ssh(command, input=code.encode('ascii'), capture_output=True, timeout=4 if action == 'clock_probe' else 45,
+                                   creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
             if result.returncode:
                 detail = (result.stderr or result.stdout).decode('utf-8', errors='replace').strip()
                 # OpenSSH 255 是连接失败；认证/主机密钥错误仍需明确处理，不伪装成弱网。

@@ -195,6 +195,8 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\setup_onboard_ss
 
 若普通 `ssh amov@机载IP` 也无法登录，先解决用户名、密码或 SSH 服务配置；程序不能绕过服务器身份认证。授权脚本不会启动、停止或重启飞行程序。
 
+旧版 Windows OpenSSH（例如 8.1）可能在 `-b 192.168.1.230` 绑定图传地址时报告 `ssh: connect to host ... port 22: Invalid argument`，而普通 SSH 可以连接。地面程序仅在收到这一明确的连接前错误时启用兼容模式：每次连接先核对系统默认出口仍为本机配置的图传地址，再省略 `-b`；默认出口不符则提示检查网卡和路由，不从其他网口重试。正常客户端仍保留显式地址绑定。专用密钥、主机密钥校验、启动记录和断线恢复流程保持不变；此修复只需更新并重开地面端，无需更新机载端。带 `BatchMode=yes`、未指定竞赛专用密钥的手工测试出现 `Permission denied`，不能据此判定竞赛免密失效，应使用 `-i "$env:USERPROFILE\.ssh\zhixin_competition_ed25519" -o IdentitiesOnly=yes` 再核对。
+
 ### 双击启动
 
 1. 完成首次部署后，在项目目录双击 `智信竞赛.exe`；自动启动地面后端并用默认浏览器打开竞赛网页。重复双击复用已运行的后端。
