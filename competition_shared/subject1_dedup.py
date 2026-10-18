@@ -177,13 +177,11 @@ def _ordered(features):
 
 
 def _submission_order(features):
-    """重排静目标为次数、成功、分数；动目标保持原质量顺序和穿插位置。"""
-    ordered = _ordered(features)
-    def static_rank(feature):
-        success, count, score = _quality(feature)
-        return (-count, -success, -score, str(feature.get("id", "")), str(feature.get("_source_uav", "")))
-    fixed = iter(sorted((f for f in ordered if _kind(f)[0] == "固定"), key=static_rank))
-    return [next(fixed) if _kind(f)[0] == "固定" else f for f in ordered]
+    """静动目标统一按最终类型优先、次数、成功、分数筛选并排列。"""
+    def submission_rank(feature):
+        vehicle_or_building = feature.get('properties', {}).get('targetType') in ('车辆', '车', '工事', '建筑物')
+        return (-int(vehicle_or_building),) + _static_representative_key(feature)
+    return sorted(features, key=submission_rank)
 
 
 def _submission_moving_kind(feature):
@@ -215,11 +213,9 @@ def _unselected_person(feature, preferences):
                 and _person_number(feature) not in options)
 
 
-def _static_representative_key(feature, preferences):
+def _static_representative_key(feature):
     success, count, score = _quality(feature)
-    vehicle_or_building = feature.get('properties', {}).get('targetType') in ('车辆', '车', '工事', '建筑物')
-    return (-int(vehicle_or_building), int(_unselected_person(feature, preferences)),
-            -count, -success, -score, str(feature.get('id', '')), str(feature.get('_source_uav', '')))
+    return (-count, -success, -score, str(feature.get('id', '')), str(feature.get('_source_uav', '')))
 
 
 def consolidate(document, *, max_targets=MAX_SUBMISSION_TARGETS, recognition_selection=None):
@@ -252,7 +248,7 @@ def consolidate(document, *, max_targets=MAX_SUBMISSION_TARGETS, recognition_sel
                 not _unselected_person(member, preferences),
                 min(MAX_MOVING_TRACK_POINTS, len(_track(member))), _quality(member), str(member.get("id", ""))))
         else:
-            winner = min(group["members"], key=lambda member: _static_representative_key(member, preferences))
+            winner = min(group["members"], key=_static_representative_key)
         winners.append(winner)
         for member in group["members"]:
             if member is winner:
@@ -272,7 +268,7 @@ def consolidate(document, *, max_targets=MAX_SUBMISSION_TARGETS, recognition_sel
     # 动目标只从去重代表中选择，不能拿同一目标的多机副本凑满3个。
     moving_selected, moving_counts = [], {kind: 0 for kind in MOVING_CATEGORY_LIMITS}
     primary = [f for f in winners if not _unselected_person(f, preferences)]
-    for candidate in _ordered(primary):
+    for candidate in _submission_order(primary):
         kind = _submission_moving_kind(candidate)
         if (kind in MOVING_CATEGORY_LIMITS and moving_counts[kind] < MOVING_CATEGORY_LIMITS[kind]
                 and len(moving_selected) < max_targets):
@@ -375,10 +371,10 @@ def consolidate(document, *, max_targets=MAX_SUBMISSION_TARGETS, recognition_sel
                     "moving_distance_m": MOVING_DISTANCE_M, "other_distance_m": OTHER_DISTANCE_M,
                     "moving_track_point_limit": MAX_MOVING_TRACK_POINTS,
                     "track_truncations": track_truncations, "quality_ranking": quality_ranking,
-                    "quality_order": ["detection_count", "tracking_success", "confidence"],
-                    "static_quality_order": ["detection_count", "tracking_success", "confidence"],
-                    "moving_quality_order": ["tracking_success", "detection_count", "confidence"],
-                    "representative_quality_order": ["vehicle_or_building", "selected_person_model", "detection_count", "tracking_success", "confidence"],
+                    "quality_order": ["vehicle_or_building", "detection_count", "tracking_success", "confidence"],
+                    "static_quality_order": ["vehicle_or_building", "detection_count", "tracking_success", "confidence"],
+                    "moving_quality_order": ["vehicle_or_building", "detection_count", "tracking_success", "confidence"],
+                    "representative_quality_order": ["detection_count", "tracking_success", "confidence"],
                     "person_selection": dict(recognition_selection=recognition_selection,
                         preferred_models=preferences, remappings=person_remappings,
                         unselected_group_policy='preserve_original_if_no_person_model_selected',

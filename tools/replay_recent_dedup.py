@@ -29,6 +29,39 @@ def save(path, value):
     path.write_text(json.dumps(value, ensure_ascii=False, indent=2, allow_nan=False)+'\n', encoding='utf8')
 
 
+def check_ranking(document, audit, raw_document):
+    """从原始候选独立核对代表、最终顺序及发送内容，避免只验证审计标签。"""
+    originals = {(str(f['id']), f['_source_uav']): f for f in raw_document['features']}
+    def quality(feature):
+        props = feature['properties']; q = feature['_quality']
+        return (q['detection_count'], int(q['tracking_success']), props.get('confidence', -1.0))
+    ranks = []
+    assert len(document['features']) == len(audit['quality_ranking'])
+    for submitted, row in zip(document['features'], audit['quality_ranking']):
+        source = originals[str(row['id']), row['source_uav']]
+        props = submitted['properties']; source_props = source['properties']
+        assert props['targetType'] == source_props['targetType'] == row['target_type']
+        assert props['targetCategory'] == source_props['targetCategory'] == row['target_category']
+        assert props.get('confidence', -1.0) == source_props.get('confidence', -1.0) == row['score']
+        assert quality(source) == (row['detection_count'], int(row['tracking_success']), row['score'])
+        ranks.append((int(props['targetType'] in ('车辆', '工事')),)+quality(source))
+        if props['targetCategory'] == '固定':
+            assert submitted['geometry'] == source['geometry']
+            assert props['timestamp'] == source_props['timestamp']
+        else:
+            assert props['trackPoints'] == source_props['trackPoints'][:40]
+            assert submitted['geometry']['coordinates'] == [p['coordinates'] for p in props['trackPoints']]
+    assert ranks == sorted(ranks, reverse=True), '最终静动目标优先级顺序错误'
+    for row in audit['merged']:
+        if row['target_category'] == '固定':
+            kept = originals[str(row['kept_id']), row['kept_source_uav']]
+            merged = originals[str(row['merged_id']), row['source_uav']]
+            assert quality(kept) >= quality(merged), '静目标重复组未选择质量最高的代表'
+    expected = ['vehicle_or_building', 'detection_count', 'tracking_success', 'confidence']
+    assert audit['static_quality_order'] == audit['moving_quality_order'] == expected
+    assert audit['representative_quality_order'] == expected[1:]
+
+
 def check_submit(reporter, prepared, document):
     """验证现有赛方multipart协议及冻结文件的字节一致性，绝不发往ENDPOINT。"""
     captured = {}
@@ -121,6 +154,9 @@ def main():
             format_audit=json.loads((package/'submission-format.json').read_text(encoding='utf8'))
             frozen_audit=json.loads((reporter.root/(prepared['draft_id']+'.format.json')).read_text(encoding='utf8'))
             assert frozen_audit['deduplication']['person_selection']==audit['person_selection']
+            for key in ('static_quality_order','moving_quality_order','representative_quality_order'):
+                assert frozen_audit['deduplication'][key] == audit[key]
+            check_ranking(frozen,audit,json.loads((package/'raw-targets.json').read_text(encoding='utf8')))
             summary=report.validate_document(frozen)
             assert all(f['id']=='target-%03d'%i for i,f in enumerate(frozen['features'],1))
             assert all(not any(k.startswith('_') for k in f) for f in frozen['features'])
@@ -145,7 +181,7 @@ def main():
                 converted_to_static=len(audit['motion_reclassifications']),
                 nearest_observations=sum(a['rule']=='minimum_horizontal_distance' for a in format_audit['static_position_selection']),
                 submitted_models=dict(Counter(f['properties']['targetCategory']+'/'+f['properties']['targetModel'] for f in frozen['features'])),
-                simulated_upload_verified=True,report=str(destination.relative_to(output)))
+                ranking_verified=True,simulated_upload_verified=True,report=str(destination.relative_to(output)))
             results.append(entry)
             print(session.name,variant,summary,'remapped',entry['person_remappings'])
     assert all(digest(Path(p))==h for p,h in originals.items()),'历史原始数据发生变化'

@@ -19,26 +19,28 @@ def selection(*ids):
 
 
 class PersonSelectionTest(unittest.TestCase):
-    def test_static_representative_vehicle_building_then_count_success_score(self):
+    def test_static_representative_count_success_score_without_type_priority(self):
         cases = [
             [feature('person', broad='人员', model='人员1', count=999, success=True, score=1),
              feature('vehicle', count=1, score=.1)],
             [feature('vehicle', count=8, success=True), feature('building', broad='工事', model='工事2', count=9)],
             [feature('no-success', count=10), feature('success', count=9, success=True)],
+            [feature('no-success', count=10, score=1), feature('success', count=10, success=True, score=.1)],
             [feature('low-score', count=10, success=True, score=.1), feature('high-score', count=10, success=True, score=.9)],
         ]
-        for values, expected in zip(cases, ('vehicle','building','no-success','high-score')):
+        for values, expected in zip(cases, ('person','building','no-success','success','high-score')):
             result,_=consolidate(document(values))
             self.assertEqual([expected],[f['id'] for f in result['features']])
 
-    def test_selected_person_wins_same_static_or_moving_group(self):
+    def test_static_quality_representative_then_person_mapping_moving_rule_unchanged(self):
         for moving in (False,True):
             with self.subTest(moving=moving):
                 values=[feature('unselected',broad='人员',model='人员1',moving=moving,count=999,success=True,track_points=8),
                         feature('selected',broad='人员',model='人员2',moving=moving,count=1,track_points=5)]
                 result,audit=consolidate(document(values),recognition_selection=selection(16 if moving else 12))
-                self.assertEqual(['selected'],[f['id'] for f in result['features']])
-                self.assertEqual([],audit['person_selection']['remappings'])
+                self.assertEqual(['selected' if moving else 'unselected'],[f['id'] for f in result['features']])
+                self.assertEqual('人员2',result['features'][0]['properties']['targetModel'])
+                self.assertEqual(0 if moving else 1,len(audit['person_selection']['remappings']))
 
     def test_full_primary_set_does_not_admit_unselected_people(self):
         values=[feature('car%d'%i,east=i*100) for i in range(16)]

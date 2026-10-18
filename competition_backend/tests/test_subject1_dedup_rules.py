@@ -112,7 +112,58 @@ class DedupRulesTest(unittest.TestCase):
                   feature('tie-low', east=500, count=5, success=True, score=.4)]
         result, audit = consolidate(document(list(reversed(values))))
         self.assertEqual([v['id'] for v in values], [v['id'] for v in result['features']])
-        self.assertEqual(['detection_count', 'tracking_success', 'confidence'], audit['static_quality_order'])
+        self.assertEqual(['vehicle_or_building', 'detection_count', 'tracking_success', 'confidence'], audit['static_quality_order'])
+
+    def test_final_type_priority_is_shared_by_static_and_moving_and_uses_submitted_type(self):
+        values = [feature('building', broad='工事', model='工事1', east=100, count=4),
+                  feature('moving-car', moving=True, east=200, count=3),
+                  feature('car', east=300, count=2),
+                  feature('moving-person', broad='人员', model='人员1', moving=True, east=400, count=999),
+                  feature('person', broad='人员', model='人员1', east=500, count=998)]
+        # 混淆判重大类不能覆盖最终上报类型的优先级。
+        values[0]['_dedup_category'] = '人员'
+        values[-1]['_dedup_category'] = '车辆'
+        result, audit = consolidate(document(list(reversed(values))))
+        self.assertEqual([v['id'] for v in values], [v['id'] for v in result['features']])
+        self.assertEqual(audit['static_quality_order'], audit['moving_quality_order'])
+        self.assertEqual(['detection_count', 'tracking_success', 'confidence'], audit['representative_quality_order'])
+        for original, submitted in zip(values, result['features']):
+            self.assertEqual(original['geometry'], submitted['geometry'])
+            self.assertEqual(original['properties'], submitted['properties'])
+
+    def test_moving_quota_and_final_order_count_before_success_then_score(self):
+        values = []
+        for kind, north in (('车辆', 1000), ('人员', 2000)):
+            for name, count, success, score in (('count', 10, False, .1),
+                                                 ('success', 9, True, .1),
+                                                 ('score', 9, False, .9),
+                                                 ('low-score', 9, False, .8),
+                                                 ('low-count', 8, True, 1)):
+                values.append(feature(kind+name, broad=kind, model=kind+'1', moving=True,
+                                      east=len(values)*100, north=north,
+                                      count=count, success=success, score=score))
+        result, audit = consolidate(document(list(reversed(values))))
+        self.assertEqual([kind+name for kind in ('车辆','人员') for name in ('count','success','score')],
+                         [v['id'] for v in result['features']])
+        self.assertEqual({'人员':3,'车辆':3}, audit['selection']['moving_selected_counts'])
+
+    def test_static_limit_prefers_vehicle_and_building_equally_before_person_count(self):
+        values = [feature('person%d'%i, broad='人员', model='人员1', east=i*100, count=1000+i) for i in range(16)]
+        values.extend([feature('car', east=2000, count=1, success=True, score=.9),
+                       feature('building', broad='工事', model='工事1', east=2100, count=2)])
+        result, _ = consolidate(document(values))
+        self.assertEqual(['building', 'car']+['person%d'%i for i in range(15,1,-1)],
+                         [v['id'] for v in result['features']])
+
+    def test_static_backfill_uses_type_priority_after_quality_representative(self):
+        values = [feature('person', broad='人员', model='人员1', count=1000),
+                  feature('merged-car', count=1),
+                  feature('other-person', broad='人员', model='人员1', east=100, count=900),
+                  feature('merged-person', broad='人员', model='人员1', east=101, count=800)]
+        result, audit = consolidate(document(values), max_targets=3)
+        self.assertEqual(['merged-car', 'person', 'other-person'], [v['id'] for v in result['features']])
+        self.assertEqual(['merged-car'], [v['id'] for v in audit['backfilled']])
+        self.assertEqual('person', audit['backfilled'][0]['represented_by'])
 
     def test_selection_reserves_three_moving_people_three_cars_and_ten_static(self):
         values = [feature('s%d'%i, east=100*i, count=i, success=True) for i in range(12)]
@@ -229,9 +280,11 @@ class DedupRulesTest(unittest.TestCase):
             self.assertEqual(built['features'],frozen['features'])
             audit = json.loads((reporter.root/(prepared['draft_id']+'.format.json')).read_text(encoding='utf-8'))
             self.assertEqual({'人员':3,'车辆':3},audit['deduplication']['selection']['moving_selected_counts'])
-            self.assertEqual('person3',audit['id_mapping'][0]['source_id'])
+            self.assertEqual('11',audit['id_mapping'][0]['source_id'])
             self.assertEqual('固定',frozen['features'][0]['properties']['targetCategory'])
-            self.assertEqual('人员1',frozen['features'][0]['properties']['targetModel'])
+            self.assertEqual('车辆1',frozen['features'][0]['properties']['targetModel'])
+            self.assertNotIn('person3',[item['source_id'] for item in audit['id_mapping']])
+            self.assertEqual(['车辆']*13+['人员']*3,[f['properties']['targetType'] for f in frozen['features']])
             converted, = [r for r in audit['motion_classification'] if r['converted_to_static']]
             self.assertEqual(.8,converted['low_speed_time_fraction'])
             self.assertEqual(original,{p.name:p.read_bytes() for p in folder.iterdir()})
@@ -252,6 +305,59 @@ class DedupRulesTest(unittest.TestCase):
                 imported=Subject1Reporter(other,publisher_dedup=True)
                 frozen['name']='重新确认的队名'
                 self.assertEqual(16,imported.prepare(frozen)['target_count'])
+
+    def test_mixed_raw_nearest_representative_order_freeze_and_multipart_upload(self):
+        from tools.replay_recent_dedup import check_ranking, check_submit
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp); mission='subject1-ranking-wire'
+            folder=root/'UAV2'/mission; folder.mkdir(parents=True)
+            specs=[('person-winner',11,False,0,999,True),
+                   ('merged-car',0,False,0,1,False),
+                   ('nearest-building',8,False,100,2,False),
+                   ('moving-count',0,True,300,10,False),
+                   ('moving-success',0,True,400,9,True),
+                   ('static-car',0,False,500,3,False),
+                   ('moving-person',15,True,600,1000,True),
+                   ('converted-person',15,True,700,900,False)]
+            for target,cid,moving,east,count,success in specs:
+                seconds=(0,6,12) if moving else (0,6) if target=='nearest-building' else (0,)
+                for moment in seconds:
+                    farther=target=='nearest-building' and moment==6
+                    category_id=0 if farther else cid
+                    displacement=moment*2 if moving and target!='converted-person' else 0
+                    lon,lat=point(east+(100 if farther else displacement))
+                    raw=dict(mission_id=mission,global_id=target,is_moving=moving,
+                             category_id=category_id,longitude_deg=lon,latitude_deg=lat,
+                             localization_time=dict(secs=1700000000+moment,nsecs=0),
+                             detection_received_at_unix_ns=(1700000000+moment)*1000000000,
+                             horizontal_distance_m=50 if farther else 0,
+                             detection_count=999 if farther else count,
+                             tracking_success=True if farther else success,score=.9 if farther else .3)
+                    (folder/('%s-%d.json'%(target,moment))).write_text(json.dumps(raw),encoding='utf8')
+            originals={p.name:p.read_bytes() for p in folder.iterdir()}
+            reporter=Subject1Reporter(root,publisher_dedup=True)
+            built=reporter.build(mission,TEAM_NAME)
+            package=root/'subject1_submissions'/mission
+            decisions=json.loads((package/'dedup-decisions.json').read_text(encoding='utf8'))
+            raw=json.loads((package/'raw-targets.json').read_text(encoding='utf8'))
+            prepared=reporter.prepare(built,already_deduplicated=True)
+            frozen=json.loads(reporter.draft(prepared['draft_id']).read_text(encoding='utf8'))
+            audit=json.loads((reporter.root/(prepared['draft_id']+'.format.json')).read_text(encoding='utf8'))
+            self.assertEqual(['moving-count','moving-success','static-car','nearest-building',
+                              'moving-person','person-winner','converted-person'],
+                             [row['source_id'] for row in audit['id_mapping']])
+            self.assertEqual(dict(target_count=7,fixed=4,moving=3),validate_document(frozen))
+            self.assertEqual(['target-%03d'%i for i in range(1,8)], [f['id'] for f in frozen['features']])
+            closest=frozen['features'][3]
+            self.assertEqual('工事2',closest['properties']['targetModel'])
+            self.assertEqual(point(100),closest['geometry']['coordinates'])
+            self.assertEqual(.3,closest['properties']['confidence'])
+            self.assertEqual('固定',frozen['features'][-1]['properties']['targetCategory'])
+            self.assertEqual(1,len(decisions['motion_reclassifications']))
+            self.assertEqual(built['features'],frozen['features'])
+            check_ranking(frozen,decisions,raw)
+            self.assertTrue(check_submit(reporter,prepared,frozen)['receipt_is_simulated'])
+            self.assertEqual(originals,{p.name:p.read_bytes() for p in folder.iterdir()})
 
 
 
