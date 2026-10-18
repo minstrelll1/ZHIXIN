@@ -2,7 +2,7 @@
   "offline_only": true,
   "simulated_homes": true,
   "source_plan_sha256": "60c52b29986a25ddc51da5a601dd5c3b2dd105ec2dc049d3bee2209c460adb14",
-  "fixed_bundle_sha256": "feb4a151bed4fd06d0ed0ea934129248b1643791a579c5e9eff872283be4b242",
+  "fixed_bundle_sha256": "aa83860f6bd500c1bea560ab10ce049a2f733576d3385f88c04c491610b00401",
   "description": "来自实际代码的离线 API→六地面端→机载缓存→起飞成功发布。所有起降点为模拟值，不用于实飞。",
   "scenes": [
     {
@@ -62,7 +62,7 @@
     },
     {
       "scene_id": "final_scene_2",
-      "dispatch_seconds": 0.40600000000267755,
+      "dispatch_seconds": 2.01500000001397,
       "planning_preview": "final_scene_2/planning_preview.json",
       "aircraft": [
         {
@@ -78,7 +78,7 @@
           "file": "final_scene_2/uav2.json",
           "stage_1_count": 3,
           "stage_2_count": 7,
-          "task_altitude_m": 50.0,
+          "task_altitude_m": 49.0,
           "return_route_count": 21
         },
         {
@@ -86,7 +86,7 @@
           "file": "final_scene_2/uav3.json",
           "stage_1_count": 4,
           "stage_2_count": 7,
-          "task_altitude_m": 53.0,
+          "task_altitude_m": 51.0,
           "return_route_count": 21
         },
         {
@@ -94,7 +94,7 @@
           "file": "final_scene_2/uav4.json",
           "stage_1_count": 4,
           "stage_2_count": 7,
-          "task_altitude_m": 47.0,
+          "task_altitude_m": 53.0,
           "return_route_count": 21
         },
         {
@@ -102,7 +102,7 @@
           "file": "final_scene_2/uav5.json",
           "stage_1_count": 3,
           "stage_2_count": 7,
-          "task_altitude_m": 50.0,
+          "task_altitude_m": 55.0,
           "return_route_count": 21
         },
         {
@@ -110,7 +110,7 @@
           "file": "final_scene_2/uav6.json",
           "stage_1_count": 4,
           "stage_2_count": 7,
-          "task_altitude_m": 53.0,
+          "task_altitude_m": 57.0,
           "return_route_count": 21
         }
       ]
@@ -179,13 +179,13 @@
     "final_scene_1/uav4.json": "651ddcaf3860659e3447eedd67449b3a7df515409c318c1ea8ba8bdc97fc024e",
     "final_scene_1/uav5.json": "b42826b31ae23d3a86f7882d8e052a0beccb7cd4b6809cdbb7d367d9fe9c31fa",
     "final_scene_1/uav6.json": "4308bd420f867d430396b2123e6f1ecbf09fc4d815ccedd34ea752556e257cc7",
-    "final_scene_2/planning_preview.json": "02fe7254b301d2793b6d3b9b247a7b1a24d80a704b5208acbc50c1f91fcb0991",
-    "final_scene_2/uav1.json": "356ec6c88062c5186af70bd16c0972d6e27af5e7ad72f7ab9b87dd91e6e24eaa",
-    "final_scene_2/uav2.json": "a4ee2ed1fa328593b2337ccbb14a4a0799d3e0272a346106f1b1db00b593282b",
-    "final_scene_2/uav3.json": "2b801f1fd1e78e7bf98668534c891d0aa72c63aa385720cc315e3b15380fb54a",
-    "final_scene_2/uav4.json": "703922ad77505540a0b421ce2703e93e7de4a02edf54469e564f40560c385e36",
-    "final_scene_2/uav5.json": "536a10ec49f62827b614cfb8a0b11fc4fe8ce6e4f3c96fd79c74bef7f38d9009",
-    "final_scene_2/uav6.json": "e1eafdc96deddf2eada5cd7326e046ca5473432980483321093f98dafb212b7a",
+    "final_scene_2/planning_preview.json": "77ef3a2a0442a78f885a5f28990368bc334e41256e964ea0bbebb475661d1a27",
+    "final_scene_2/uav1.json": "3d613d9e36564e33e566ae1736805b144b4ec1f1727b957be3aab8d2b9e43170",
+    "final_scene_2/uav2.json": "a8d5777afad6e98dce36427053c9740db00e2e97395f13f8d7644feda408d00a",
+    "final_scene_2/uav3.json": "c0c27a745719df62dfa960f1779a16f46ba6b8a93732cb98ae2d4e2e6901e61e",
+    "final_scene_2/uav4.json": "bee247933ef3e872be75da7b55cf28aa5739d9fb75751331188aa04d4dc5bbb3",
+    "final_scene_2/uav5.json": "9a974c1d00d61f06855330793057b2c88d082f4357282ea580780921e0cece0c",
+    "final_scene_2/uav6.json": "5b91e07f39f4c13942b58fc695a5428834f651fce3cd617af853fa991d2601d7",
     "xuchang_small_2/planning_preview.json": "b17bd2d9a66994e0fb79f135a321bbf5810e5f5d92e8970fce3d8067f7db5a14",
     "xuchang_small_2/uav1.json": "def6a6e93fd559988cc20e5e54a1e52ef6bcbbde0749bae948779bc463dd9e33",
     "xuchang_small_2/uav2.json": "5cdb0eb419dee632da295067bcd751e32de81c35b85c0ad1af15f2110f3754f9",

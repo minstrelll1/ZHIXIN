@@ -11,11 +11,19 @@ HEIGHT_PROFILES = {
     'final_fixed': dict(zip(range(1, 7), (47., 50., 53., 34., 37., 40.))),
     'final_dual': dict(zip(range(1, 7), (47., 50., 53., 47., 50., 53.))),
 }
+FINAL_SCENE_2_UPPER_HEIGHTS = dict(zip(range(1, 7), (47., 49., 51., 53., 55., 57.)))
 PATH = Path(__file__).with_name('final_scenes_prepared.json')
 
 
 def altitude_profile(profile):
     return 'final_fixed' if profile == 'final_scene_1' else 'final_dual'
+
+
+def height_profiles_for(profile):
+    """同一双层接口按场景取高度，决赛2调整不影响许昌2。"""
+    key = altitude_profile(profile)
+    heights = FINAL_SCENE_2_UPPER_HEIGHTS if profile == 'final_scene_2' else HEIGHT_PROFILES[key]
+    return {key: dict(heights)}
 
 
 def departure_for(profile):

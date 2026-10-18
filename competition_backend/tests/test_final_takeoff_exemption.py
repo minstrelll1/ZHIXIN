@@ -120,7 +120,9 @@ class FinalTakeoffExemptionTest(unittest.TestCase):
                 a,b=copy.deepcopy(original),copy.deepcopy(task)
                 a.pop('transit_routes');b.pop('transit_routes')
                 self.assertEqual(a,b)
-        self.assertLessEqual(new['planned_uavs']['4']['task']['mission_time_s'],960.)
+        # 2026-10-19仅提高上层高度，额外爬升/下降令UAV4名义用时略超预算；不得因此删点或拦截分派。
+        self.assertGreater(new['planned_uavs']['4']['task']['mission_time_s'],960.)
+        self.assertIsNone(new['planned_uavs']['4']['task']['mission_time_limit_s'])
         preview,_=build_data()
         scene=next(s for s in preview['scenes'] if s['scene_id']=='final_scene_2')
         p=new['search_area']['coverage']['projection']

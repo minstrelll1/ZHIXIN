@@ -13,7 +13,7 @@ from competition_shared.competition_time import normalize_competition_time
 from .adapter import FleetAdapter
 from .assignment_protocol import assignment_checksum
 from .config import ASCENDING_34M_HEIGHTS
-from .final_scenes import PROFILES as FINAL_PROFILES, HEIGHT_PROFILES, altitude_profile
+from .final_scenes import PROFILES as FINAL_PROFILES, height_profiles_for, altitude_profile
 from .plan_jobs import plan_checkpoint
 from .journal import EventJournal
 from .return_receipts import ReturnReceiptTracker
@@ -182,7 +182,7 @@ class CompetitionOrchestrator:
             if flight_profile in FINAL_PROFILES:
                 if subject != 'subject2' or controller_mode != 'external' or prepared_plan is None:
                     raise MissionError('决赛固定场景仅支持科目二、外部程序 B 和已保存的固定规划')
-                profiles = dict(profiles, **HEIGHT_PROFILES)
+                profiles = dict(profiles, **height_profiles_for(flight_profile))
             if profiles:
                 altitude_profile = _altitude_profile_for(flight_profile, flight_altitude_plan)
                 if altitude_profile not in profiles:

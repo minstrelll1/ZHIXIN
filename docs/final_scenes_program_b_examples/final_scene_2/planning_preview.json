@@ -2,11 +2,11 @@
   "offline_only": true,
   "simulated_homes": true,
   "mission": {
-    "mission_id": "subject2-85e9cb95ee",
+    "mission_id": "subject2-9c658ebf8e",
     "subject": "subject2",
     "duration_seconds": 0.0,
     "phase": "planned",
-    "planned_at": 1792329609.069426,
+    "planned_at": 1792365737.9273543,
     "flight_profile": "final_scene_2",
     "flight_altitude_plan": "final_dual",
     "controller_mode": "external",
@@ -88,7 +88,7 @@
           "execution_mode": "upper_roundtrip_then_lower_roundtrip",
           "partition_group": "all",
           "takeoff_speed_mps": 6.0,
-          "timing_altitude_m": 47,
+          "timing_altitude_m": 47.0,
           "mission_time_s": 782.2198337714542,
           "mission_time_limit_s": null,
           "entry_path_m": [
@@ -629,7 +629,7 @@
           "layers": [
             {
               "layer_id": "upper",
-              "altitude_m": 47,
+              "altitude_m": 47.0,
               "reconnaissance_radius_m": 50,
               "speed_mps": 5,
               "hover_scan_seconds": 30.0,
@@ -769,7 +769,7 @@
             "from_waypoint_id": "UAV1_upper_001",
             "to_waypoint_id": "UAV1_lower_001",
             "horizontal_distance_m": 0.0,
-            "vertical_distance_m": 13,
+            "vertical_distance_m": 13.0,
             "descent_speed_mps": 2.0,
             "descent_speed_status": "accepted_provisional",
             "duration_s": 6.5,
@@ -883,13 +883,13 @@
         "phase": "ready",
         "return_reason": null,
         "last_error": null,
-        "assignment_checksum": "54dc594b22d47b0b386436a28695c673de8863e72ee84e77566c14de5cd9c60f",
+        "assignment_checksum": "932aeec75e0c79d5980240dbb4ba2c56df6c327e262d83e27bfa0be429da3721",
         "landing_point_m": null,
         "landing_sequence": 1
       },
       "2": {
         "uav_id": 2,
-        "target_altitude_m": 50.0,
+        "target_altitude_m": 49.0,
         "task": {
           "type": "lawnmower_search",
           "sector": 2,
@@ -960,8 +960,8 @@
           "execution_mode": "upper_roundtrip_then_lower_roundtrip",
           "partition_group": "all",
           "takeoff_speed_mps": 6.0,
-          "timing_altitude_m": 50,
-          "mission_time_s": 842.9021541768988,
+          "timing_altitude_m": 49.0,
+          "mission_time_s": 842.0688208435654,
           "mission_time_limit_s": null,
           "entry_path_m": [
             [
@@ -1737,7 +1737,7 @@
           "layers": [
             {
               "layer_id": "upper",
-              "altitude_m": 50,
+              "altitude_m": 49.0,
               "reconnaissance_radius_m": 50,
               "speed_mps": 5,
               "hover_scan_seconds": 30.0,
@@ -1888,10 +1888,10 @@
             "from_waypoint_id": "UAV2_upper_001",
             "to_waypoint_id": "UAV2_lower_001",
             "horizontal_distance_m": 0.0,
-            "vertical_distance_m": 13,
+            "vertical_distance_m": 12.0,
             "descent_speed_mps": 2.0,
             "descent_speed_status": "accepted_provisional",
-            "duration_s": 6.5,
+            "duration_s": 6.0,
             "preferred_horizontal_limit_m": 20.0,
             "preferred_limit_met": true,
             "note": "上层正逆两趟回到上层首点后原位下降；下层首点与上层首点重合。"
@@ -1949,9 +1949,9 @@
           "scan_pass_order": "forward_then_reverse",
           "mission_budget_seconds": 960.0,
           "timing_components": {
-            "initial_climb_seconds": 8.333333333333334,
-            "descent_seconds": 6.5,
-            "return_climb_seconds": 2.1666666666666665,
+            "initial_climb_seconds": 8.166666666666666,
+            "descent_seconds": 6.0,
+            "return_climb_seconds": 2.0,
             "horizontal_flight_seconds": 225.9021541768988,
             "scan_seconds": 600.0
           },
@@ -2006,13 +2006,13 @@
         "phase": "ready",
         "return_reason": null,
         "last_error": null,
-        "assignment_checksum": "443cfcd25f5f0d839ac2a5bc140a0a328d387c35217dd7d0eaaa5e0c47a9ca9d",
+        "assignment_checksum": "c455ee51a192a98f657f0547aefaa000537dd4a3150a7193e582a6f47d639fa4",
         "landing_point_m": null,
         "landing_sequence": 2
       },
       "3": {
         "uav_id": 3,
-        "target_altitude_m": 53.0,
+        "target_altitude_m": 51.0,
         "task": {
           "type": "lawnmower_search",
           "sector": 3,
@@ -2087,8 +2087,8 @@
           "execution_mode": "upper_roundtrip_then_lower_roundtrip",
           "partition_group": "all",
           "takeoff_speed_mps": 6.0,
-          "timing_altitude_m": 53,
-          "mission_time_s": 956.2147834955267,
+          "timing_altitude_m": 51.0,
+          "mission_time_s": 954.5481168288601,
           "mission_time_limit_s": null,
           "entry_path_m": [
             [
@@ -2884,7 +2884,7 @@
           "layers": [
             {
               "layer_id": "upper",
-              "altitude_m": 53,
+              "altitude_m": 51.0,
               "reconnaissance_radius_m": 50,
               "speed_mps": 5,
               "hover_scan_seconds": 30.0,
@@ -3046,10 +3046,10 @@
             "from_waypoint_id": "UAV3_upper_001",
             "to_waypoint_id": "UAV3_lower_001",
             "horizontal_distance_m": 0.0,
-            "vertical_distance_m": 13,
+            "vertical_distance_m": 11.0,
             "descent_speed_mps": 2.0,
             "descent_speed_status": "accepted_provisional",
-            "duration_s": 6.5,
+            "duration_s": 5.5,
             "preferred_horizontal_limit_m": 20.0,
             "preferred_limit_met": true,
             "note": "上层正逆两趟回到上层首点后原位下降；下层首点与上层首点重合。"
@@ -3111,9 +3111,9 @@
           "scan_pass_order": "forward_then_reverse",
           "mission_budget_seconds": 960.0,
           "timing_components": {
-            "initial_climb_seconds": 8.833333333333334,
-            "descent_seconds": 6.5,
-            "return_climb_seconds": 2.1666666666666665,
+            "initial_climb_seconds": 8.5,
+            "descent_seconds": 5.5,
+            "return_climb_seconds": 1.8333333333333333,
             "horizontal_flight_seconds": 278.7147834955268,
             "scan_seconds": 660
           },
@@ -3164,13 +3164,13 @@
         "phase": "ready",
         "return_reason": null,
         "last_error": null,
-        "assignment_checksum": "fed0cd988e18636c6d748b665a390f9ff3114f7c5141a9fd548173a8603dec50",
+        "assignment_checksum": "55718be08187a0594f72e5fda76f0ba41a12a2465b07fb637b36dc1ba513ad37",
         "landing_point_m": null,
         "landing_sequence": 3
       },
       "4": {
         "uav_id": 4,
-        "target_altitude_m": 47.0,
+        "target_altitude_m": 53.0,
         "task": {
           "type": "lawnmower_search",
           "sector": 4,
@@ -3245,8 +3245,8 @@
           "execution_mode": "upper_roundtrip_then_lower_roundtrip",
           "partition_group": "all",
           "takeoff_speed_mps": 6.0,
-          "timing_altitude_m": 47,
-          "mission_time_s": 957.8514908120379,
+          "timing_altitude_m": 53.0,
+          "mission_time_s": 962.8514908120379,
           "mission_time_limit_s": null,
           "entry_path_m": [
             [
@@ -4042,7 +4042,7 @@
           "layers": [
             {
               "layer_id": "upper",
-              "altitude_m": 47,
+              "altitude_m": 53.0,
               "reconnaissance_radius_m": 50,
               "speed_mps": 5,
               "hover_scan_seconds": 30.0,
@@ -4204,10 +4204,10 @@
             "from_waypoint_id": "UAV4_upper_001",
             "to_waypoint_id": "UAV4_lower_001",
             "horizontal_distance_m": 0.0,
-            "vertical_distance_m": 13,
+            "vertical_distance_m": 19.0,
             "descent_speed_mps": 2.0,
             "descent_speed_status": "accepted_provisional",
-            "duration_s": 6.5,
+            "duration_s": 9.5,
             "preferred_horizontal_limit_m": 20.0,
             "preferred_limit_met": true,
             "note": "上层正逆两趟回到上层首点后原位下降；下层首点与上层首点重合。"
@@ -4269,9 +4269,9 @@
           "scan_pass_order": "forward_then_reverse",
           "mission_budget_seconds": 960.0,
           "timing_components": {
-            "initial_climb_seconds": 7.833333333333333,
-            "descent_seconds": 6.5,
-            "return_climb_seconds": 2.1666666666666665,
+            "initial_climb_seconds": 8.833333333333334,
+            "descent_seconds": 9.5,
+            "return_climb_seconds": 3.1666666666666665,
             "horizontal_flight_seconds": 281.3514908120379,
             "scan_seconds": 660
           },
@@ -4322,13 +4322,13 @@
         "phase": "ready",
         "return_reason": null,
         "last_error": null,
-        "assignment_checksum": "143e8be83136929571b307512514cd227cc746fe0638a702331293656bab6549",
+        "assignment_checksum": "3a4258ce05158ad9cc48fe9e877d3216a47250ac785c0a7fbfb9b08b0b22f734",
         "landing_point_m": null,
         "landing_sequence": 4
       },
       "5": {
         "uav_id": 5,
-        "target_altitude_m": 50.0,
+        "target_altitude_m": 55.0,
         "task": {
           "type": "lawnmower_search",
           "sector": 5,
@@ -4391,8 +4391,8 @@
           "execution_mode": "upper_roundtrip_then_lower_roundtrip",
           "partition_group": "all",
           "takeoff_speed_mps": 6.0,
-          "timing_altitude_m": 50,
-          "mission_time_s": 907.2099515029225,
+          "timing_altitude_m": 55.0,
+          "mission_time_s": 911.3766181695892,
           "mission_time_limit_s": null,
           "entry_path_m": [
             [
@@ -5168,7 +5168,7 @@
           "layers": [
             {
               "layer_id": "upper",
-              "altitude_m": 50,
+              "altitude_m": 55.0,
               "reconnaissance_radius_m": 50,
               "speed_mps": 5,
               "hover_scan_seconds": 30.0,
@@ -5319,10 +5319,10 @@
             "from_waypoint_id": "UAV5_upper_001",
             "to_waypoint_id": "UAV5_lower_001",
             "horizontal_distance_m": 0.0,
-            "vertical_distance_m": 13,
+            "vertical_distance_m": 18.0,
             "descent_speed_mps": 2.0,
             "descent_speed_status": "accepted_provisional",
-            "duration_s": 6.5,
+            "duration_s": 9.0,
             "preferred_horizontal_limit_m": 20.0,
             "preferred_limit_met": true,
             "note": "上层正逆两趟回到上层首点后原位下降；下层首点与上层首点重合。"
@@ -5380,9 +5380,9 @@
           "scan_pass_order": "forward_then_reverse",
           "mission_budget_seconds": 960.0,
           "timing_components": {
-            "initial_climb_seconds": 8.333333333333334,
-            "descent_seconds": 6.5,
-            "return_climb_seconds": 2.1666666666666665,
+            "initial_climb_seconds": 9.166666666666666,
+            "descent_seconds": 9.0,
+            "return_climb_seconds": 3.0,
             "horizontal_flight_seconds": 290.2099515029225,
             "scan_seconds": 600
           },
@@ -5429,13 +5429,13 @@
         "phase": "ready",
         "return_reason": null,
         "last_error": null,
-        "assignment_checksum": "cb8b7f6e2405740d8fc1a566064b71790048e07c57d30ff5342ec68eae0ba004",
+        "assignment_checksum": "5ba83d98a6849e2a41d336e7b9720dcb0e85f130cfc039bf93edee942014b2ae",
         "landing_point_m": null,
         "landing_sequence": 5
       },
       "6": {
         "uav_id": 6,
-        "target_altitude_m": 53.0,
+        "target_altitude_m": 57.0,
         "task": {
           "type": "lawnmower_search",
           "sector": 6,
@@ -5506,8 +5506,8 @@
           "execution_mode": "upper_roundtrip_then_lower_roundtrip",
           "partition_group": "all",
           "takeoff_speed_mps": 6.0,
-          "timing_altitude_m": 53,
-          "mission_time_s": 955.5563223780641,
+          "timing_altitude_m": 57.0,
+          "mission_time_s": 958.8896557113976,
           "mission_time_limit_s": null,
           "entry_path_m": [
             [
@@ -6307,7 +6307,7 @@
           "layers": [
             {
               "layer_id": "upper",
-              "altitude_m": 53,
+              "altitude_m": 57.0,
               "reconnaissance_radius_m": 50,
               "speed_mps": 5,
               "hover_scan_seconds": 30.0,
@@ -6469,10 +6469,10 @@
             "from_waypoint_id": "UAV6_upper_001",
             "to_waypoint_id": "UAV6_lower_001",
             "horizontal_distance_m": 0.0,
-            "vertical_distance_m": 13,
+            "vertical_distance_m": 17.0,
             "descent_speed_mps": 2.0,
             "descent_speed_status": "accepted_provisional",
-            "duration_s": 6.5,
+            "duration_s": 8.5,
             "preferred_horizontal_limit_m": 20.0,
             "preferred_limit_met": true,
             "note": "上层正逆两趟回到上层首点后原位下降；下层首点与上层首点重合。"
@@ -6534,9 +6534,9 @@
           "scan_pass_order": "forward_then_reverse",
           "mission_budget_seconds": 960.0,
           "timing_components": {
-            "initial_climb_seconds": 8.833333333333334,
-            "descent_seconds": 6.5,
-            "return_climb_seconds": 2.1666666666666665,
+            "initial_climb_seconds": 9.5,
+            "descent_seconds": 8.5,
+            "return_climb_seconds": 2.8333333333333335,
             "horizontal_flight_seconds": 278.05632237806424,
             "scan_seconds": 660
           },
@@ -6583,7 +6583,7 @@
         "phase": "ready",
         "return_reason": null,
         "last_error": null,
-        "assignment_checksum": "bac0851841e4c8a52541bdf9aade10f8e41f3af3b178675c0e830d2fad4d5596",
+        "assignment_checksum": "0959edb86579b56d829088a92c6d71d91bdf432baa00e1c7ec1891cdfb88a2b4",
         "landing_point_m": null,
         "landing_sequence": 6
       }
@@ -6662,7 +6662,7 @@
           "execution_mode": "upper_roundtrip_then_lower_roundtrip",
           "partition_group": "all",
           "takeoff_speed_mps": 6.0,
-          "timing_altitude_m": 47,
+          "timing_altitude_m": 47.0,
           "mission_time_s": 782.2198337714542,
           "mission_time_limit_s": null,
           "entry_path_m": [
@@ -7203,7 +7203,7 @@
           "layers": [
             {
               "layer_id": "upper",
-              "altitude_m": 47,
+              "altitude_m": 47.0,
               "reconnaissance_radius_m": 50,
               "speed_mps": 5,
               "hover_scan_seconds": 30.0,
@@ -7343,7 +7343,7 @@
             "from_waypoint_id": "UAV1_upper_001",
             "to_waypoint_id": "UAV1_lower_001",
             "horizontal_distance_m": 0.0,
-            "vertical_distance_m": 13,
+            "vertical_distance_m": 13.0,
             "descent_speed_mps": 2.0,
             "descent_speed_status": "accepted_provisional",
             "duration_s": 6.5,
@@ -7457,13 +7457,13 @@
         "phase": "ready",
         "return_reason": null,
         "last_error": null,
-        "assignment_checksum": "54dc594b22d47b0b386436a28695c673de8863e72ee84e77566c14de5cd9c60f",
+        "assignment_checksum": "932aeec75e0c79d5980240dbb4ba2c56df6c327e262d83e27bfa0be429da3721",
         "landing_point_m": null,
         "landing_sequence": 1
       },
       "2": {
         "uav_id": 2,
-        "target_altitude_m": 50.0,
+        "target_altitude_m": 49.0,
         "task": {
           "type": "lawnmower_search",
           "sector": 2,
@@ -7534,8 +7534,8 @@
           "execution_mode": "upper_roundtrip_then_lower_roundtrip",
           "partition_group": "all",
           "takeoff_speed_mps": 6.0,
-          "timing_altitude_m": 50,
-          "mission_time_s": 842.9021541768988,
+          "timing_altitude_m": 49.0,
+          "mission_time_s": 842.0688208435654,
           "mission_time_limit_s": null,
           "entry_path_m": [
             [
@@ -8311,7 +8311,7 @@
           "layers": [
             {
               "layer_id": "upper",
-              "altitude_m": 50,
+              "altitude_m": 49.0,
               "reconnaissance_radius_m": 50,
               "speed_mps": 5,
               "hover_scan_seconds": 30.0,
@@ -8462,10 +8462,10 @@
             "from_waypoint_id": "UAV2_upper_001",
             "to_waypoint_id": "UAV2_lower_001",
             "horizontal_distance_m": 0.0,
-            "vertical_distance_m": 13,
+            "vertical_distance_m": 12.0,
             "descent_speed_mps": 2.0,
             "descent_speed_status": "accepted_provisional",
-            "duration_s": 6.5,
+            "duration_s": 6.0,
             "preferred_horizontal_limit_m": 20.0,
             "preferred_limit_met": true,
             "note": "上层正逆两趟回到上层首点后原位下降；下层首点与上层首点重合。"
@@ -8523,9 +8523,9 @@
           "scan_pass_order": "forward_then_reverse",
           "mission_budget_seconds": 960.0,
           "timing_components": {
-            "initial_climb_seconds": 8.333333333333334,
-            "descent_seconds": 6.5,
-            "return_climb_seconds": 2.1666666666666665,
+            "initial_climb_seconds": 8.166666666666666,
+            "descent_seconds": 6.0,
+            "return_climb_seconds": 2.0,
             "horizontal_flight_seconds": 225.9021541768988,
             "scan_seconds": 600.0
           },
@@ -8580,13 +8580,13 @@
         "phase": "ready",
         "return_reason": null,
         "last_error": null,
-        "assignment_checksum": "443cfcd25f5f0d839ac2a5bc140a0a328d387c35217dd7d0eaaa5e0c47a9ca9d",
+        "assignment_checksum": "c455ee51a192a98f657f0547aefaa000537dd4a3150a7193e582a6f47d639fa4",
         "landing_point_m": null,
         "landing_sequence": 2
       },
       "3": {
         "uav_id": 3,
-        "target_altitude_m": 53.0,
+        "target_altitude_m": 51.0,
         "task": {
           "type": "lawnmower_search",
           "sector": 3,
@@ -8661,8 +8661,8 @@
           "execution_mode": "upper_roundtrip_then_lower_roundtrip",
           "partition_group": "all",
           "takeoff_speed_mps": 6.0,
-          "timing_altitude_m": 53,
-          "mission_time_s": 956.2147834955267,
+          "timing_altitude_m": 51.0,
+          "mission_time_s": 954.5481168288601,
           "mission_time_limit_s": null,
           "entry_path_m": [
             [
@@ -9458,7 +9458,7 @@
           "layers": [
             {
               "layer_id": "upper",
-              "altitude_m": 53,
+              "altitude_m": 51.0,
               "reconnaissance_radius_m": 50,
               "speed_mps": 5,
               "hover_scan_seconds": 30.0,
@@ -9620,10 +9620,10 @@
             "from_waypoint_id": "UAV3_upper_001",
             "to_waypoint_id": "UAV3_lower_001",
             "horizontal_distance_m": 0.0,
-            "vertical_distance_m": 13,
+            "vertical_distance_m": 11.0,
             "descent_speed_mps": 2.0,
             "descent_speed_status": "accepted_provisional",
-            "duration_s": 6.5,
+            "duration_s": 5.5,
             "preferred_horizontal_limit_m": 20.0,
             "preferred_limit_met": true,
             "note": "上层正逆两趟回到上层首点后原位下降；下层首点与上层首点重合。"
@@ -9685,9 +9685,9 @@
           "scan_pass_order": "forward_then_reverse",
           "mission_budget_seconds": 960.0,
           "timing_components": {
-            "initial_climb_seconds": 8.833333333333334,
-            "descent_seconds": 6.5,
-            "return_climb_seconds": 2.1666666666666665,
+            "initial_climb_seconds": 8.5,
+            "descent_seconds": 5.5,
+            "return_climb_seconds": 1.8333333333333333,
             "horizontal_flight_seconds": 278.7147834955268,
             "scan_seconds": 660
           },
@@ -9738,13 +9738,13 @@
         "phase": "ready",
         "return_reason": null,
         "last_error": null,
-        "assignment_checksum": "fed0cd988e18636c6d748b665a390f9ff3114f7c5141a9fd548173a8603dec50",
+        "assignment_checksum": "55718be08187a0594f72e5fda76f0ba41a12a2465b07fb637b36dc1ba513ad37",
         "landing_point_m": null,
         "landing_sequence": 3
       },
       "4": {
         "uav_id": 4,
-        "target_altitude_m": 47.0,
+        "target_altitude_m": 53.0,
         "task": {
           "type": "lawnmower_search",
           "sector": 4,
@@ -9819,8 +9819,8 @@
           "execution_mode": "upper_roundtrip_then_lower_roundtrip",
           "partition_group": "all",
           "takeoff_speed_mps": 6.0,
-          "timing_altitude_m": 47,
-          "mission_time_s": 957.8514908120379,
+          "timing_altitude_m": 53.0,
+          "mission_time_s": 962.8514908120379,
           "mission_time_limit_s": null,
           "entry_path_m": [
             [
@@ -10616,7 +10616,7 @@
           "layers": [
             {
               "layer_id": "upper",
-              "altitude_m": 47,
+              "altitude_m": 53.0,
               "reconnaissance_radius_m": 50,
               "speed_mps": 5,
               "hover_scan_seconds": 30.0,
@@ -10778,10 +10778,10 @@
             "from_waypoint_id": "UAV4_upper_001",
             "to_waypoint_id": "UAV4_lower_001",
             "horizontal_distance_m": 0.0,
-            "vertical_distance_m": 13,
+            "vertical_distance_m": 19.0,
             "descent_speed_mps": 2.0,
             "descent_speed_status": "accepted_provisional",
-            "duration_s": 6.5,
+            "duration_s": 9.5,
             "preferred_horizontal_limit_m": 20.0,
             "preferred_limit_met": true,
             "note": "上层正逆两趟回到上层首点后原位下降；下层首点与上层首点重合。"
@@ -10843,9 +10843,9 @@
           "scan_pass_order": "forward_then_reverse",
           "mission_budget_seconds": 960.0,
           "timing_components": {
-            "initial_climb_seconds": 7.833333333333333,
-            "descent_seconds": 6.5,
-            "return_climb_seconds": 2.1666666666666665,
+            "initial_climb_seconds": 8.833333333333334,
+            "descent_seconds": 9.5,
+            "return_climb_seconds": 3.1666666666666665,
             "horizontal_flight_seconds": 281.3514908120379,
             "scan_seconds": 660
           },
@@ -10896,13 +10896,13 @@
         "phase": "ready",
         "return_reason": null,
         "last_error": null,
-        "assignment_checksum": "143e8be83136929571b307512514cd227cc746fe0638a702331293656bab6549",
+        "assignment_checksum": "3a4258ce05158ad9cc48fe9e877d3216a47250ac785c0a7fbfb9b08b0b22f734",
         "landing_point_m": null,
         "landing_sequence": 4
       },
       "5": {
         "uav_id": 5,
-        "target_altitude_m": 50.0,
+        "target_altitude_m": 55.0,
         "task": {
           "type": "lawnmower_search",
           "sector": 5,
@@ -10965,8 +10965,8 @@
           "execution_mode": "upper_roundtrip_then_lower_roundtrip",
           "partition_group": "all",
           "takeoff_speed_mps": 6.0,
-          "timing_altitude_m": 50,
-          "mission_time_s": 907.2099515029225,
+          "timing_altitude_m": 55.0,
+          "mission_time_s": 911.3766181695892,
           "mission_time_limit_s": null,
           "entry_path_m": [
             [
@@ -11742,7 +11742,7 @@
           "layers": [
             {
               "layer_id": "upper",
-              "altitude_m": 50,
+              "altitude_m": 55.0,
               "reconnaissance_radius_m": 50,
               "speed_mps": 5,
               "hover_scan_seconds": 30.0,
@@ -11893,10 +11893,10 @@
             "from_waypoint_id": "UAV5_upper_001",
             "to_waypoint_id": "UAV5_lower_001",
             "horizontal_distance_m": 0.0,
-            "vertical_distance_m": 13,
+            "vertical_distance_m": 18.0,
             "descent_speed_mps": 2.0,
             "descent_speed_status": "accepted_provisional",
-            "duration_s": 6.5,
+            "duration_s": 9.0,
             "preferred_horizontal_limit_m": 20.0,
             "preferred_limit_met": true,
             "note": "上层正逆两趟回到上层首点后原位下降；下层首点与上层首点重合。"
@@ -11954,9 +11954,9 @@
           "scan_pass_order": "forward_then_reverse",
           "mission_budget_seconds": 960.0,
           "timing_components": {
-            "initial_climb_seconds": 8.333333333333334,
-            "descent_seconds": 6.5,
-            "return_climb_seconds": 2.1666666666666665,
+            "initial_climb_seconds": 9.166666666666666,
+            "descent_seconds": 9.0,
+            "return_climb_seconds": 3.0,
             "horizontal_flight_seconds": 290.2099515029225,
             "scan_seconds": 600
           },
@@ -12003,13 +12003,13 @@
         "phase": "ready",
         "return_reason": null,
         "last_error": null,
-        "assignment_checksum": "cb8b7f6e2405740d8fc1a566064b71790048e07c57d30ff5342ec68eae0ba004",
+        "assignment_checksum": "5ba83d98a6849e2a41d336e7b9720dcb0e85f130cfc039bf93edee942014b2ae",
         "landing_point_m": null,
         "landing_sequence": 5
       },
       "6": {
         "uav_id": 6,
-        "target_altitude_m": 53.0,
+        "target_altitude_m": 57.0,
         "task": {
           "type": "lawnmower_search",
           "sector": 6,
@@ -12080,8 +12080,8 @@
           "execution_mode": "upper_roundtrip_then_lower_roundtrip",
           "partition_group": "all",
           "takeoff_speed_mps": 6.0,
-          "timing_altitude_m": 53,
-          "mission_time_s": 955.5563223780641,
+          "timing_altitude_m": 57.0,
+          "mission_time_s": 958.8896557113976,
           "mission_time_limit_s": null,
           "entry_path_m": [
             [
@@ -12881,7 +12881,7 @@
           "layers": [
             {
               "layer_id": "upper",
-              "altitude_m": 53,
+              "altitude_m": 57.0,
               "reconnaissance_radius_m": 50,
               "speed_mps": 5,
               "hover_scan_seconds": 30.0,
@@ -13043,10 +13043,10 @@
             "from_waypoint_id": "UAV6_upper_001",
             "to_waypoint_id": "UAV6_lower_001",
             "horizontal_distance_m": 0.0,
-            "vertical_distance_m": 13,
+            "vertical_distance_m": 17.0,
             "descent_speed_mps": 2.0,
             "descent_speed_status": "accepted_provisional",
-            "duration_s": 6.5,
+            "duration_s": 8.5,
             "preferred_horizontal_limit_m": 20.0,
             "preferred_limit_met": true,
             "note": "上层正逆两趟回到上层首点后原位下降；下层首点与上层首点重合。"
@@ -13108,9 +13108,9 @@
           "scan_pass_order": "forward_then_reverse",
           "mission_budget_seconds": 960.0,
           "timing_components": {
-            "initial_climb_seconds": 8.833333333333334,
-            "descent_seconds": 6.5,
-            "return_climb_seconds": 2.1666666666666665,
+            "initial_climb_seconds": 9.5,
+            "descent_seconds": 8.5,
+            "return_climb_seconds": 2.8333333333333335,
             "horizontal_flight_seconds": 278.05632237806424,
             "scan_seconds": 660
           },
@@ -13157,7 +13157,7 @@
         "phase": "ready",
         "return_reason": null,
         "last_error": null,
-        "assignment_checksum": "bac0851841e4c8a52541bdf9aade10f8e41f3af3b178675c0e830d2fad4d5596",
+        "assignment_checksum": "0959edb86579b56d829088a92c6d71d91bdf432baa00e1c7ec1891cdfb88a2b4",
         "landing_point_m": null,
         "landing_sequence": 6
       }
@@ -16390,8 +16390,8 @@
         "total_scan_count": 62,
         "total_distance_m": 7899.772680684522,
         "total_scan_visit_count": 124,
-        "maximum_completion_time_s": 957.8514908120379,
-        "total_mission_time_s": 5401.954536136904,
+        "maximum_completion_time_s": 962.8514908120379,
+        "total_mission_time_s": 5411.954536136905,
         "mission_budget_seconds": 960.0
       },
       "imported_plan_id": "offline_20261017_coverage_priority_v2",
@@ -16594,55 +16594,56 @@
         ],
         "area_m2": 3069.103658312497,
         "policy": "omit_scan_centers_allow_transit_and_incidental_scan_overlap"
-      }
+      },
+      "upper_height_revision": "final2-47-49-51-53-55-57m-20261019"
     },
     "events": [
       {
-        "time": 1792329609.2636926,
+        "time": 1792365738.9744809,
         "kind": "task_assignment_sent",
         "uav_id": 1,
         "elapsed_seconds": 0.0,
-        "mission_id": "subject2-85e9cb95ee"
+        "mission_id": "subject2-9c658ebf8e"
       },
       {
-        "time": 1792329609.2810488,
+        "time": 1792365739.0564926,
         "kind": "task_assignment_sent",
         "uav_id": 2,
-        "elapsed_seconds": 0.016,
-        "mission_id": "subject2-85e9cb95ee"
+        "elapsed_seconds": 0.046,
+        "mission_id": "subject2-9c658ebf8e"
       },
       {
-        "time": 1792329609.3011553,
+        "time": 1792365739.1510272,
         "kind": "task_assignment_sent",
         "uav_id": 3,
-        "elapsed_seconds": 0.015,
-        "mission_id": "subject2-85e9cb95ee"
+        "elapsed_seconds": 0.062,
+        "mission_id": "subject2-9c658ebf8e"
       },
       {
-        "time": 1792329609.3161604,
+        "time": 1792365739.2448707,
         "kind": "task_assignment_sent",
         "uav_id": 4,
-        "elapsed_seconds": 0.016,
-        "mission_id": "subject2-85e9cb95ee"
+        "elapsed_seconds": 0.063,
+        "mission_id": "subject2-9c658ebf8e"
       },
       {
-        "time": 1792329609.3338282,
+        "time": 1792365739.342872,
         "kind": "task_assignment_sent",
         "uav_id": 5,
-        "elapsed_seconds": 0.016,
-        "mission_id": "subject2-85e9cb95ee"
+        "elapsed_seconds": 0.062,
+        "mission_id": "subject2-9c658ebf8e"
       },
       {
-        "time": 1792329609.352356,
+        "time": 1792365739.424182,
         "kind": "task_assignment_sent",
         "uav_id": 6,
-        "elapsed_seconds": 0.015,
-        "mission_id": "subject2-85e9cb95ee"
+        "elapsed_seconds": 0.062,
+        "mission_id": "subject2-9c658ebf8e"
       },
       {
-        "time": 1792329609.353355,
+        "time": 1792365739.4330153,
         "kind": "mission_planned",
-        "mission_id": "subject2-85e9cb95ee",
+        "mission_id": "subject2-9c658ebf8e",
         "subject": "subject2"
       }
     ],

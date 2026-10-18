@@ -9,10 +9,29 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'competition_backend'))
-from competition_backend.final_scenes import PATH, NAMES, altitude_profile, departure_for, digest
+from competition_backend.final_scenes import PATH, NAMES, altitude_profile, departure_for, digest, FINAL_SCENE_2_UPPER_HEIGHTS
 from refine_dual_roundtrip import refine_scenes
 from exempt_final_takeoff_area import exclude_takeoff_area
 from refine_final_pond_north import refine_pond_north
+
+
+def update_final_scene2_heights(scenes):
+    """只改既有决赛2上层高度与相关估时；在所有选点步骤后应用，保留平面方案。"""
+    plan = scenes['final_scene_2']['plan']
+    for uid, item in plan['planned_uavs'].items():
+        height = FINAL_SCENE_2_UPPER_HEIGHTS[int(uid)]
+        task = item['task']; upper, lower = task['layers']
+        item['target_altitude_m'] = upper['altitude_m'] = task['timing_altitude_m'] = height
+        delta = height-lower['altitude_m']
+        transition = task['layer_transition']
+        transition.update(vertical_distance_m=delta, duration_s=delta/transition['descent_speed_mps'])
+        task['timing_components'].update(initial_climb_seconds=height/task['takeoff_speed_mps'],
+            descent_seconds=transition['duration_s'], return_climb_seconds=delta/task['takeoff_speed_mps'])
+        task['mission_time_s'] = sum(task['timing_components'].values())
+    plan['search_area']['coverage'].update(
+        maximum_completion_time_s=max(u['task']['mission_time_s'] for u in plan['planned_uavs'].values()),
+        total_mission_time_s=sum(u['task']['mission_time_s'] for u in plan['planned_uavs'].values()))
+    plan['prepared_plan']['upper_height_revision'] = 'final2-47-49-51-53-55-57m-20261019'
 
 
 def swap_xuchang_uav3_uav6(scene):
@@ -166,6 +185,7 @@ def compile_bundle(archive):
     refine_pond_north(scenes)
     exclude_takeoff_area(scenes, source)
     scenes['xuchang_small_2'] = swap_xuchang_uav3_uav6(scenes['xuchang_small_2'])
+    update_final_scene2_heights(scenes)
     return dict(schema_version=1, source_archive_sha256=hashlib.sha256(Path(archive).read_bytes()).hexdigest(),
                 source_plan_sha256=sha, sha256=digest(scenes), scenes=scenes)
 

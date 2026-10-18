@@ -925,6 +925,7 @@ $('simReady').onclick=()=>模拟遥测('ready').then(()=>提示('六机模拟就
      select.disabled=isFinal;for(const option of select.options)option.disabled=!isFinal&&['final_fixed','final_dual'].includes(option.value);
      if(isFinal)select.value=profile==='final_scene_1'?'final_fixed':'final_dual';
      else if(['final_fixed','final_dual'].includes(select.value))select.value='default';
+     select.querySelector('option[value="final_dual"]').textContent='双层：上'+(profile==='final_scene_2'?'47/49/51/53/55/57':'47/50/53/47/50/53')+'米，下34/37/40/34/37/40米';
      select.querySelector('option[value="default"]').textContent='场景默认分层高度：'+(profile==='subject2_actual'?'59/56/53/50/47/44 米':profile==='lab'||profile==='lab10'?'0.5/1/1.5 米':profile==='outdoor5'?'4.5/5/5.5 米':'40/45/50 米');
      $('controllerMode').disabled=isFinal;if(isFinal){$('subject').value='subject2';$('controllerMode').value='external'}$('subject').disabled=isFinal;
    }

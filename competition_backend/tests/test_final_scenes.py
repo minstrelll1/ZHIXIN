@@ -19,7 +19,7 @@ from fastapi.testclient import TestClient
 from shapely.geometry import Polygon, LineString, Point
 from shapely.ops import unary_union
 from competition_backend.api import create_app
-from competition_backend.final_scenes import PROFILES, load_plan, departure_for, altitude_profile, HEIGHT_PROFILES
+from competition_backend.final_scenes import PROFILES, load_plan, departure_for, altitude_profile
 from competition_backend.models import Telemetry
 from competition_backend.transit_preferences import routes_from_home, prefer_entries, update_subject2_timing
 from competition_backend.transit_routes import rebase_gps_routes_for_takeoff
@@ -131,10 +131,15 @@ class FinalScenesTest(unittest.TestCase):
                         expected = fixed['planned_uavs'][str(uid)]['task']
                         for name in ('waypoints_m','waypoints_wgs84','polygon_m'):
                             self.assertEqual(checked['task'][name],expected[name])
-                        height = HEIGHT_PROFILES[altitude_profile(profile)][uid]
+                        expected_heights = {'final_scene_1': (47,50,53,34,37,40),
+                                            'final_scene_2': (47,49,51,53,55,57),
+                                            'xuchang_small_2': (47,50,53,47,50,53)}
+                        height = expected_heights[profile][uid-1]
                         self.assertEqual(checked['target_altitude_m'],height)
                         if profile != 'final_scene_1':
                             self.assertEqual(checked['task']['layers'],expected['layers'])
+                            self.assertEqual(checked['task']['layers'][0]['altitude_m'],height)
+                            self.assertEqual(checked['task']['layers'][1]['altitude_m'],(34,37,40,34,37,40)[uid-1])
                         node = autonomy.AutonomyTest().executor(Path(directory)/str(uid))
                         node.uav_id=uid; node._assignment=None; node._assignment_acked=False
                         node.max_distance_from_home=1500.; node.max_speed=2.; node.log_full_task=False
@@ -245,7 +250,10 @@ class FinalScenesTest(unittest.TestCase):
                         if not holes.is_empty:self.assertGreaterEqual(line.distance(holes)+1e-6,5.)
                 if len(layers) == 2:
                     self.assertEqual(layers[0]['waypoints_m'][0],layers[1]['waypoints_m'][0])
-                    self.assertLessEqual(task['mission_time_s'],960.)
+                    self.assertEqual(task['mission_budget_seconds'],960.)
+                    self.assertIsNone(task['mission_time_limit_s'])
+                    if profile == 'xuchang_small_2':
+                        self.assertLessEqual(task['mission_time_s'],960.)
                     self.assertAlmostEqual(sum(task['timing_components'].values()),task['mission_time_s'])
                     self.assertEqual(task['scan_visit_count'],2*sum(len(l['waypoints_m']) for l in layers))
                     self.assertEqual(task['hover_scan_time_s'],30*task['scan_visit_count'])

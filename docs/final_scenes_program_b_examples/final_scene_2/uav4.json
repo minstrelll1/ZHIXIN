@@ -5,7 +5,7 @@
   "uav_id": 4,
   "note": "空 fixed_targets 与空 recognition_categories 是本次离线测试输入，现场按任务发布端配置下发。",
   "plan_and_assign_to_onboard": {
-    "mission_id": "subject2-85e9cb95ee",
+    "mission_id": "subject2-9c658ebf8e",
     "subject": "subject2",
     "flight_profile": "final_scene_2",
     "task": {
@@ -81,8 +81,8 @@
       "execution_mode": "upper_roundtrip_then_lower_roundtrip",
       "partition_group": "all",
       "takeoff_speed_mps": 6.0,
-      "timing_altitude_m": 47,
-      "mission_time_s": 957.8514908120379,
+      "timing_altitude_m": 53.0,
+      "mission_time_s": 962.8514908120379,
       "mission_time_limit_s": null,
       "entry_path_m": [
         [
@@ -878,7 +878,7 @@
       "layers": [
         {
           "layer_id": "upper",
-          "altitude_m": 47,
+          "altitude_m": 53.0,
           "reconnaissance_radius_m": 50,
           "speed_mps": 5,
           "hover_scan_seconds": 30.0,
@@ -1040,10 +1040,10 @@
         "from_waypoint_id": "UAV4_upper_001",
         "to_waypoint_id": "UAV4_lower_001",
         "horizontal_distance_m": 0.0,
-        "vertical_distance_m": 13,
+        "vertical_distance_m": 19.0,
         "descent_speed_mps": 2.0,
         "descent_speed_status": "accepted_provisional",
-        "duration_s": 6.5,
+        "duration_s": 9.5,
         "preferred_horizontal_limit_m": 20.0,
         "preferred_limit_met": true,
         "note": "上层正逆两趟回到上层首点后原位下降；下层首点与上层首点重合。"
@@ -1105,9 +1105,9 @@
       "scan_pass_order": "forward_then_reverse",
       "mission_budget_seconds": 960.0,
       "timing_components": {
-        "initial_climb_seconds": 7.833333333333333,
-        "descent_seconds": 6.5,
-        "return_climb_seconds": 2.1666666666666665,
+        "initial_climb_seconds": 8.833333333333334,
+        "descent_seconds": 9.5,
+        "return_climb_seconds": 3.1666666666666665,
         "horizontal_flight_seconds": 281.3514908120379,
         "scan_seconds": 660
       },
@@ -1155,7 +1155,7 @@
         ]
       }
     },
-    "target_altitude_m": 47.0,
+    "target_altitude_m": 53.0,
     "controller_mode": "external",
     "coordinate_frame": "WGS84",
     "landing_point_m": null,
@@ -1170,26 +1170,26 @@
     "landing_point_wgs84": [
       33.8644690155121,
       113.70563,
-      47.0
+      53.0
     ],
     "competition_time": {
       "schema_version": 1,
-      "mission_id": "subject2-85e9cb95ee",
+      "mission_id": "subject2-9c658ebf8e",
       "running": true,
       "synchronized": true,
-      "elapsed_seconds": 0.35899999999674037,
-      "session_id": "19b82d88068644808304d62664882445",
+      "elapsed_seconds": 2.062999999994645,
+      "session_id": "0856cc85dda04044872c1fa0e96546e3",
       "revision": 0,
       "publisher_terminal_id": 1,
       "updated_by": 1
     },
-    "assignment_checksum": "143e8be83136929571b307512514cd227cc746fe0638a702331293656bab6549",
+    "assignment_checksum": "3a4258ce05158ad9cc48fe9e877d3216a47250ac785c0a7fbfb9b08b0b22f734",
     "type": "assign_task",
     "uav_id": 4
   },
   "one_click_takeoff_to_onboard": {
-    "mission_id": "subject2-85e9cb95ee",
-    "target_altitude_m": 47.0,
+    "mission_id": "subject2-9c658ebf8e",
+    "target_altitude_m": 53.0,
     "deadline_at": null,
     "return_battery_threshold": 0.3
   },
@@ -1198,14 +1198,14 @@
       "topic": "/uav4/competition/task_region",
       "message_type": "std_msgs/String",
       "message": {
-        "data": "{\"schema_version\":1,\"uav_id\":4,\"coordinate_frame\":\"WGS84\",\"coordinate_order\":\"longitude_latitude\",\"polygons\":[{\"outer\":[[113.70550410842583,33.86310619816048],[113.70550410842583,33.86194538947701],[113.70365864006098,33.86194538947701],[113.70373888888889,33.86281388888889],[113.70376168364861,33.86310619816048],[113.70550410842583,33.86310619816048]],\"holes\":[]}],\"mission_id\":\"subject2-85e9cb95ee\",\"assignment_checksum\":\"143e8be83136929571b307512514cd227cc746fe0638a702331293656bab6549\",\"relative_altitude_m\":47.0,\"altitude_frame\":\"RELATIVE_TO_TAKEOFF\"}"
+        "data": "{\"schema_version\":1,\"uav_id\":4,\"coordinate_frame\":\"WGS84\",\"coordinate_order\":\"longitude_latitude\",\"polygons\":[{\"outer\":[[113.70550410842583,33.86310619816048],[113.70550410842583,33.86194538947701],[113.70365864006098,33.86194538947701],[113.70373888888889,33.86281388888889],[113.70376168364861,33.86310619816048],[113.70550410842583,33.86310619816048]],\"holes\":[]}],\"mission_id\":\"subject2-9c658ebf8e\",\"assignment_checksum\":\"3a4258ce05158ad9cc48fe9e877d3216a47250ac785c0a7fbfb9b08b0b22f734\",\"relative_altitude_m\":53.0,\"altitude_frame\":\"RELATIVE_TO_TAKEOFF\"}"
       }
     },
     {
       "topic": "/uav4/competition/fixed_targets",
       "message_type": "std_msgs/String",
       "message": {
-        "data": "{\"schema_version\":1,\"coordinate_frame\":\"WGS84\",\"source_mission_id\":\"\",\"targets\":[],\"mission_id\":\"subject2-85e9cb95ee\",\"uav_id\":4,\"assignment_checksum\":\"143e8be83136929571b307512514cd227cc746fe0638a702331293656bab6549\"}"
+        "data": "{\"schema_version\":1,\"coordinate_frame\":\"WGS84\",\"source_mission_id\":\"\",\"targets\":[],\"mission_id\":\"subject2-9c658ebf8e\",\"uav_id\":4,\"assignment_checksum\":\"3a4258ce05158ad9cc48fe9e877d3216a47250ac785c0a7fbfb9b08b0b22f734\"}"
       }
     },
     {
@@ -1223,7 +1223,7 @@
       "topic": "/uav4/competition/competition_time",
       "message_type": "std_msgs/String",
       "message": {
-        "data": "{\"schema_version\":1,\"mission_id\":\"subject2-85e9cb95ee\",\"running\":true,\"synchronized\":true,\"elapsed_seconds\":0.359,\"session_id\":\"19b82d88068644808304d62664882445\",\"revision\":0,\"publisher_terminal_id\":1,\"updated_by\":1}"
+        "data": "{\"schema_version\":1,\"mission_id\":\"subject2-9c658ebf8e\",\"running\":true,\"synchronized\":true,\"elapsed_seconds\":2.079,\"session_id\":\"0856cc85dda04044872c1fa0e96546e3\",\"revision\":0,\"publisher_terminal_id\":1,\"updated_by\":1}"
       }
     }
   ],
@@ -1232,14 +1232,14 @@
       "topic": "/ground_mission_planner/vehicle_4/entry_path",
       "message_type": "std_msgs/String",
       "message": {
-        "data": "{\"schema_version\":1,\"mission_id\":\"subject2-85e9cb95ee\",\"uav_id\":4,\"assignment_checksum\":\"143e8be83136929571b307512514cd227cc746fe0638a702331293656bab6549\",\"coordinate_frame\":\"WGS84\",\"coordinate_order\":\"longitude_latitude_relative_altitude\",\"altitude_frame\":\"RELATIVE_TO_TAKEOFF\",\"plan_sha256\":\"60c52b29986a25ddc51da5a601dd5c3b2dd105ec2dc049d3bee2209c460adb14\",\"boundary_clearance_m\":5.0,\"endpoint_clearance_policy\":\"takeoff_landing_connector_only\",\"path\":[[113.70563,33.8644690155121,47.0],[113.7056214409171,33.864463351611036,47.0],[113.70561517523353,33.86445812464977,47.0],[113.70561288183418,33.8644509844879,47.0],[113.70518682249919,33.86303788277568,47.0]]}"
+        "data": "{\"schema_version\":1,\"mission_id\":\"subject2-9c658ebf8e\",\"uav_id\":4,\"assignment_checksum\":\"3a4258ce05158ad9cc48fe9e877d3216a47250ac785c0a7fbfb9b08b0b22f734\",\"coordinate_frame\":\"WGS84\",\"coordinate_order\":\"longitude_latitude_relative_altitude\",\"altitude_frame\":\"RELATIVE_TO_TAKEOFF\",\"plan_sha256\":\"60c52b29986a25ddc51da5a601dd5c3b2dd105ec2dc049d3bee2209c460adb14\",\"boundary_clearance_m\":5.0,\"endpoint_clearance_policy\":\"takeoff_landing_connector_only\",\"path\":[[113.70563,33.8644690155121,53.0],[113.7056214409171,33.864463351611036,53.0],[113.70561517523353,33.86445812464977,53.0],[113.70561288183418,33.8644509844879,53.0],[113.70518682249919,33.86303788277568,53.0]]}"
       }
     },
     {
       "topic": "/ground_mission_planner/vehicle_4/return_paths",
       "message_type": "std_msgs/String",
       "message": {
-        "data": "{\"schema_version\":2,\"mission_id\":\"subject2-85e9cb95ee\",\"uav_id\":4,\"assignment_checksum\":\"143e8be83136929571b307512514cd227cc746fe0638a702331293656bab6549\",\"coordinate_frame\":\"WGS84\",\"coordinate_order\":\"longitude_latitude_relative_altitude\",\"altitude_frame\":\"RELATIVE_TO_TAKEOFF\",\"plan_sha256\":\"60c52b29986a25ddc51da5a601dd5c3b2dd105ec2dc049d3bee2209c460adb14\",\"boundary_clearance_m\":5.0,\"endpoint_clearance_policy\":\"takeoff_landing_connector_only\",\"routes\":[{\"waypoint_index\":1,\"path\":[[113.70691596011581,33.863398503259496,47.0],[113.70584919725393,33.86417002418217,47.0],[113.70564482476647,33.86445812464977,47.0],[113.7056385590829,33.864463351611036,47.0],[113.70563,33.8644690155121,47.0]],\"source_uav_id\":1},{\"waypoint_index\":2,\"path\":[[113.70691596011581,33.86384927886428,47.0],[113.70584919725393,33.86417002418217,47.0],[113.70564482476647,33.86445812464977,47.0],[113.7056385590829,33.864463351611036,47.0],[113.70563,33.8644690155121,47.0]],\"source_uav_id\":1},{\"waypoint_index\":3,\"path\":[[113.7060513913075,33.863398503259496,47.0],[113.70564482476647,33.86445812464977,47.0],[113.7056385590829,33.864463351611036,47.0],[113.70563,33.8644690155121,47.0]],\"source_uav_id\":1},{\"waypoint_index\":1,\"path\":[[113.70518682249919,33.863488658380454,47.0],[113.70561517523353,33.86445812464977,47.0],[113.7056214409171,33.864463351611036,47.0],[113.70563,33.8644690155121,47.0]],\"source_uav_id\":2},{\"waypoint_index\":2,\"path\":[[113.70540296470126,33.863488658380454,47.0],[113.70561288183418,33.8644509844879,47.0],[113.70561517523353,33.86445812464977,47.0],[113.7056214409171,33.864463351611036,47.0],[113.70563,33.8644690155121,47.0]],\"source_uav_id\":2},{\"waypoint_index\":3,\"path\":[[113.70421418258982,33.86357881350141,47.0],[113.70545974195937,33.86412654589189,47.0],[113.70561517523353,33.86445812464977,47.0],[113.7056214409171,33.864463351611036,47.0],[113.70563,33.8644690155121,47.0]],\"source_uav_id\":2},{\"waypoint_index\":1,\"path\":[[113.70680788901477,33.86303788277568,47.0],[113.70584919725393,33.86417002418217,47.0],[113.70564482476647,33.86445812464977,47.0],[113.7056385590829,33.864463351611036,47.0],[113.70563,33.8644690155121,47.0]],\"source_uav_id\":3},{\"waypoint_index\":2,\"path\":[[113.70691596011581,33.86231664180803,47.0],[113.70564482476647,33.86445812464977,47.0],[113.7056385590829,33.864463351611036,47.0],[113.70563,33.8644690155121,47.0]],\"source_uav_id\":3},{\"waypoint_index\":3,\"path\":[[113.7060513913075,33.86222648668708,47.0],[113.70564711816581,33.8644509844879,47.0],[113.70564482476647,33.86445812464977,47.0],[113.7056385590829,33.864463351611036,47.0],[113.70563,33.8644690155121,47.0]],\"source_uav_id\":3},{\"waypoint_index\":4,\"path\":[[113.70594020795565,33.86270492241587,47.0],[113.70564711816581,33.8644509844879,47.0],[113.70564482476647,33.86445812464977,47.0],[113.7056385590829,33.864463351611036,47.0],[113.70563,33.8644690155121,47.0]],\"source_uav_id\":3},{\"waypoint_index\":1,\"path\":[[113.70518682249919,33.86303788277568,47.0],[113.70561288183418,33.8644509844879,47.0],[113.70561517523353,33.86445812464977,47.0],[113.7056214409171,33.864463351611036,47.0],[113.70563,33.8644690155121,47.0]],\"source_uav_id\":4},{\"waypoint_index\":2,\"path\":[[113.70507875139815,33.86222648668708,47.0],[113.70561288183418,33.8644509844879,47.0],[113.70561517523353,33.86445812464977,47.0],[113.7056214409171,33.864463351611036,47.0],[113.70563,33.8644690155121,47.0]],\"source_uav_id\":4},{\"waypoint_index\":3,\"path\":[[113.70407369015848,33.8621814091266,47.0],[113.70545974195937,33.86412654589189,47.0],[113.70561517523353,33.86445812464977,47.0],[113.7056214409171,33.864463351611036,47.0],[113.70563,33.8644690155121,47.0]],\"source_uav_id\":4},{\"waypoint_index\":4,\"path\":[[113.70421418258982,33.86285757253376,47.0],[113.70545974195937,33.86412654589189,47.0],[113.70561517523353,33.86445812464977,47.0],[113.7056214409171,33.864463351611036,47.0],[113.70563,33.8644690155121,47.0]],\"source_uav_id\":4},{\"waypoint_index\":1,\"path\":[[113.70697818469404,33.861816725781786,47.0],[113.70564482476647,33.86445812464977,47.0],[113.7056385590829,33.864463351611036,47.0],[113.70563,33.8644690155121,47.0]],\"source_uav_id\":5},{\"waypoint_index\":2,\"path\":[[113.7060513913075,33.86150524571943,47.0],[113.70564711816581,33.8644509844879,47.0],[113.70564482476647,33.86445812464977,47.0],[113.7056385590829,33.864463351611036,47.0],[113.70563,33.8644690155121,47.0]],\"source_uav_id\":5},{\"waypoint_index\":3,\"path\":[[113.70572717800438,33.86114462523561,47.0],[113.70564711816581,33.8644509844879,47.0],[113.70564482476647,33.86445812464977,47.0],[113.7056385590829,33.864463351611036,47.0],[113.70563,33.8644690155121,47.0]],\"source_uav_id\":5},{\"waypoint_index\":1,\"path\":[[113.7048302143823,33.86189002917623,47.0],[113.70561288183418,33.8644509844879,47.0],[113.70561517523353,33.86445812464977,47.0],[113.7056214409171,33.864463351611036,47.0],[113.70563,33.8644690155121,47.0]],\"source_uav_id\":6},{\"waypoint_index\":2,\"path\":[[113.70540296470126,33.86150524571943,47.0],[113.70561288183418,33.8644509844879,47.0],[113.70561517523353,33.86445812464977,47.0],[113.7056214409171,33.864463351611036,47.0],[113.70563,33.8644690155121,47.0]],\"source_uav_id\":6},{\"waypoint_index\":3,\"path\":[[113.70489481763376,33.86122654487857,47.0],[113.70561288183418,33.8644509844879,47.0],[113.70561517523353,33.86445812464977,47.0],[113.7056214409171,33.864463351611036,47.0],[113.70563,33.8644690155121,47.0]],\"source_uav_id\":6},{\"waypoint_index\":4,\"path\":[[113.70497068029711,33.86087415987274,47.0],[113.70561288183418,33.8644509844879,47.0],[113.70561517523353,33.86445812464977,47.0],[113.7056214409171,33.864463351611036,47.0],[113.70563,33.8644690155121,47.0]],\"source_uav_id\":6}],\"route_scope\":\"all_uav_waypoints\",\"landing_point\":[113.70563,33.8644690155121,47.0],\"waypoint_counts_by_uav\":{\"1\":3,\"2\":3,\"3\":4,\"4\":4,\"5\":3,\"6\":4},\"waypoint_layer\":\"upper\",\"return_altitude_m\":47.0,\"return_policy\":\"climb_to_upper_then_return\"}"
+        "data": "{\"schema_version\":2,\"mission_id\":\"subject2-9c658ebf8e\",\"uav_id\":4,\"assignment_checksum\":\"3a4258ce05158ad9cc48fe9e877d3216a47250ac785c0a7fbfb9b08b0b22f734\",\"coordinate_frame\":\"WGS84\",\"coordinate_order\":\"longitude_latitude_relative_altitude\",\"altitude_frame\":\"RELATIVE_TO_TAKEOFF\",\"plan_sha256\":\"60c52b29986a25ddc51da5a601dd5c3b2dd105ec2dc049d3bee2209c460adb14\",\"boundary_clearance_m\":5.0,\"endpoint_clearance_policy\":\"takeoff_landing_connector_only\",\"routes\":[{\"waypoint_index\":1,\"path\":[[113.70691596011581,33.863398503259496,53.0],[113.70584919725393,33.86417002418217,53.0],[113.70564482476647,33.86445812464977,53.0],[113.7056385590829,33.864463351611036,53.0],[113.70563,33.8644690155121,53.0]],\"source_uav_id\":1},{\"waypoint_index\":2,\"path\":[[113.70691596011581,33.86384927886428,53.0],[113.70584919725393,33.86417002418217,53.0],[113.70564482476647,33.86445812464977,53.0],[113.7056385590829,33.864463351611036,53.0],[113.70563,33.8644690155121,53.0]],\"source_uav_id\":1},{\"waypoint_index\":3,\"path\":[[113.7060513913075,33.863398503259496,53.0],[113.70564482476647,33.86445812464977,53.0],[113.7056385590829,33.864463351611036,53.0],[113.70563,33.8644690155121,53.0]],\"source_uav_id\":1},{\"waypoint_index\":1,\"path\":[[113.70518682249919,33.863488658380454,53.0],[113.70561517523353,33.86445812464977,53.0],[113.7056214409171,33.864463351611036,53.0],[113.70563,33.8644690155121,53.0]],\"source_uav_id\":2},{\"waypoint_index\":2,\"path\":[[113.70540296470126,33.863488658380454,53.0],[113.70561288183418,33.8644509844879,53.0],[113.70561517523353,33.86445812464977,53.0],[113.7056214409171,33.864463351611036,53.0],[113.70563,33.8644690155121,53.0]],\"source_uav_id\":2},{\"waypoint_index\":3,\"path\":[[113.70421418258982,33.86357881350141,53.0],[113.70545974195937,33.86412654589189,53.0],[113.70561517523353,33.86445812464977,53.0],[113.7056214409171,33.864463351611036,53.0],[113.70563,33.8644690155121,53.0]],\"source_uav_id\":2},{\"waypoint_index\":1,\"path\":[[113.70680788901477,33.86303788277568,53.0],[113.70584919725393,33.86417002418217,53.0],[113.70564482476647,33.86445812464977,53.0],[113.7056385590829,33.864463351611036,53.0],[113.70563,33.8644690155121,53.0]],\"source_uav_id\":3},{\"waypoint_index\":2,\"path\":[[113.70691596011581,33.86231664180803,53.0],[113.70564482476647,33.86445812464977,53.0],[113.7056385590829,33.864463351611036,53.0],[113.70563,33.8644690155121,53.0]],\"source_uav_id\":3},{\"waypoint_index\":3,\"path\":[[113.7060513913075,33.86222648668708,53.0],[113.70564711816581,33.8644509844879,53.0],[113.70564482476647,33.86445812464977,53.0],[113.7056385590829,33.864463351611036,53.0],[113.70563,33.8644690155121,53.0]],\"source_uav_id\":3},{\"waypoint_index\":4,\"path\":[[113.70594020795565,33.86270492241587,53.0],[113.70564711816581,33.8644509844879,53.0],[113.70564482476647,33.86445812464977,53.0],[113.7056385590829,33.864463351611036,53.0],[113.70563,33.8644690155121,53.0]],\"source_uav_id\":3},{\"waypoint_index\":1,\"path\":[[113.70518682249919,33.86303788277568,53.0],[113.70561288183418,33.8644509844879,53.0],[113.70561517523353,33.86445812464977,53.0],[113.7056214409171,33.864463351611036,53.0],[113.70563,33.8644690155121,53.0]],\"source_uav_id\":4},{\"waypoint_index\":2,\"path\":[[113.70507875139815,33.86222648668708,53.0],[113.70561288183418,33.8644509844879,53.0],[113.70561517523353,33.86445812464977,53.0],[113.7056214409171,33.864463351611036,53.0],[113.70563,33.8644690155121,53.0]],\"source_uav_id\":4},{\"waypoint_index\":3,\"path\":[[113.70407369015848,33.8621814091266,53.0],[113.70545974195937,33.86412654589189,53.0],[113.70561517523353,33.86445812464977,53.0],[113.7056214409171,33.864463351611036,53.0],[113.70563,33.8644690155121,53.0]],\"source_uav_id\":4},{\"waypoint_index\":4,\"path\":[[113.70421418258982,33.86285757253376,53.0],[113.70545974195937,33.86412654589189,53.0],[113.70561517523353,33.86445812464977,53.0],[113.7056214409171,33.864463351611036,53.0],[113.70563,33.8644690155121,53.0]],\"source_uav_id\":4},{\"waypoint_index\":1,\"path\":[[113.70697818469404,33.861816725781786,53.0],[113.70564482476647,33.86445812464977,53.0],[113.7056385590829,33.864463351611036,53.0],[113.70563,33.8644690155121,53.0]],\"source_uav_id\":5},{\"waypoint_index\":2,\"path\":[[113.7060513913075,33.86150524571943,53.0],[113.70564711816581,33.8644509844879,53.0],[113.70564482476647,33.86445812464977,53.0],[113.7056385590829,33.864463351611036,53.0],[113.70563,33.8644690155121,53.0]],\"source_uav_id\":5},{\"waypoint_index\":3,\"path\":[[113.70572717800438,33.86114462523561,53.0],[113.70564711816581,33.8644509844879,53.0],[113.70564482476647,33.86445812464977,53.0],[113.7056385590829,33.864463351611036,53.0],[113.70563,33.8644690155121,53.0]],\"source_uav_id\":5},{\"waypoint_index\":1,\"path\":[[113.7048302143823,33.86189002917623,53.0],[113.70561288183418,33.8644509844879,53.0],[113.70561517523353,33.86445812464977,53.0],[113.7056214409171,33.864463351611036,53.0],[113.70563,33.8644690155121,53.0]],\"source_uav_id\":6},{\"waypoint_index\":2,\"path\":[[113.70540296470126,33.86150524571943,53.0],[113.70561288183418,33.8644509844879,53.0],[113.70561517523353,33.86445812464977,53.0],[113.7056214409171,33.864463351611036,53.0],[113.70563,33.8644690155121,53.0]],\"source_uav_id\":6},{\"waypoint_index\":3,\"path\":[[113.70489481763376,33.86122654487857,53.0],[113.70561288183418,33.8644509844879,53.0],[113.70561517523353,33.86445812464977,53.0],[113.7056214409171,33.864463351611036,53.0],[113.70563,33.8644690155121,53.0]],\"source_uav_id\":6},{\"waypoint_index\":4,\"path\":[[113.70497068029711,33.86087415987274,53.0],[113.70561288183418,33.8644509844879,53.0],[113.70561517523353,33.86445812464977,53.0],[113.7056214409171,33.864463351611036,53.0],[113.70563,33.8644690155121,53.0]],\"source_uav_id\":6}],\"route_scope\":\"all_uav_waypoints\",\"landing_point\":[113.70563,33.8644690155121,53.0],\"waypoint_counts_by_uav\":{\"1\":3,\"2\":3,\"3\":4,\"4\":4,\"5\":3,\"6\":4},\"waypoint_layer\":\"upper\",\"return_altitude_m\":53.0,\"return_policy\":\"climb_to_upper_then_return\"}"
       }
     },
     {
@@ -1253,16 +1253,16 @@
         "data": [
           113.70518682249919,
           33.86303788277568,
-          47.0,
+          53.0,
           113.70507875139815,
           33.86222648668708,
-          47.0,
+          53.0,
           113.70407369015848,
           33.8621814091266,
-          47.0,
+          53.0,
           113.70421418258982,
           33.86285757253376,
-          47.0
+          53.0
         ]
       }
     },
@@ -1310,7 +1310,7 @@
         "data": [
           113.70563,
           33.8644690155121,
-          47.0
+          53.0
         ]
       }
     },
@@ -1318,7 +1318,7 @@
       "topic": "/uav4/competition/external_mission",
       "message_type": "std_msgs/String",
       "message": {
-        "data": "{\"type\":\"external_mission\",\"uav_id\":4,\"mission_id\":\"subject2-85e9cb95ee\",\"assignment_checksum\":\"143e8be83136929571b307512514cd227cc746fe0638a702331293656bab6549\",\"flight_profile\":\"final_scene_2\",\"coordinate_frame\":\"WGS84\",\"altitude_frame\":\"RELATIVE_TO_TAKEOFF\",\"target_altitude_m\":47.0,\"relative_altitude_m\":47.0,\"waypoints\":[{\"latitude\":33.86303788277568,\"longitude\":113.70518682249919,\"altitude_m\":47.0},{\"latitude\":33.86222648668708,\"longitude\":113.70507875139815,\"altitude_m\":47.0},{\"latitude\":33.8621814091266,\"longitude\":113.70407369015848,\"altitude_m\":47.0},{\"latitude\":33.86285757253376,\"longitude\":113.70421418258982,\"altitude_m\":47.0}],\"speed_mps\":5.0,\"waypoint_actions\":[],\"reconnaissance_mode\":\"hover_scan\",\"hover_scan_seconds\":30.0,\"return_home\":{\"latitude\":33.8644690155121,\"longitude\":113.70563,\"altitude_m\":47.0},\"deadline_at\":null,\"return_battery_threshold\":0.3,\"subject\":\"subject2\",\"path_contract_version\":2,\"execution_mode\":\"upper_roundtrip_then_lower_roundtrip\",\"layer_order\":[\"upper\",\"lower\"],\"return_waypoint_layer\":\"upper\",\"return_altitude_m\":47.0,\"return_policy\":\"climb_to_upper_then_return\",\"layers\":[{\"layer_id\":\"upper\",\"topic\":\"/ground_mission_planner/vehicle_4/path_stage_1\",\"altitude_m\":47.0,\"waypoint_count\":4,\"waypoints\":[{\"latitude\":33.86303788277568,\"longitude\":113.70518682249919,\"altitude_m\":47.0},{\"latitude\":33.86222648668708,\"longitude\":113.70507875139815,\"altitude_m\":47.0},{\"latitude\":33.8621814091266,\"longitude\":113.70407369015848,\"altitude_m\":47.0},{\"latitude\":33.86285757253376,\"longitude\":113.70421418258982,\"altitude_m\":47.0}],\"scan_passes\":2,\"hover_scan_seconds\":30.0,\"scan_pass_order\":\"forward_then_reverse\",\"scan_execution_order\":[0,1,2,3,3,2,1,0],\"physical_layer\":\"upper\"},{\"layer_id\":\"lower\",\"topic\":\"/ground_mission_planner/vehicle_4/path_stage_2\",\"altitude_m\":34.0,\"waypoint_count\":7,\"waypoints\":[{\"latitude\":33.86303788277568,\"longitude\":113.70518682249919,\"altitude_m\":34.0},{\"latitude\":33.86285757253376,\"longitude\":113.70464646699398,\"altitude_m\":34.0},{\"latitude\":33.86240679692899,\"longitude\":113.70518682249919,\"altitude_m\":34.0},{\"latitude\":33.86222648668708,\"longitude\":113.70507875139815,\"altitude_m\":34.0},{\"latitude\":33.86240679692899,\"longitude\":113.70453839589294,\"altitude_m\":34.0},{\"latitude\":33.86222648668708,\"longitude\":113.70399804038775,\"altitude_m\":34.0},{\"latitude\":33.86200109888469,\"longitude\":113.70407369015848,\"altitude_m\":34.0}],\"scan_passes\":2,\"hover_scan_seconds\":30.0,\"scan_pass_order\":\"forward_then_reverse\",\"scan_execution_order\":[0,1,2,3,4,5,6,6,5,4,3,2,1,0]}],\"mission_budget_seconds\":960.0,\"layer_transition\":{\"from_waypoint_id\":\"UAV4_upper_001\",\"to_waypoint_id\":\"UAV4_lower_001\",\"horizontal_distance_m\":0.0,\"vertical_distance_m\":13,\"descent_speed_mps\":2.0,\"descent_speed_status\":\"accepted_provisional\",\"duration_s\":6.5,\"preferred_horizontal_limit_m\":20.0,\"preferred_limit_met\":true,\"note\":\"上层正逆两趟回到上层首点后原位下降；下层首点与上层首点重合。\"},\"scan_pass_order\":\"forward_then_reverse\"}"
+        "data": "{\"type\":\"external_mission\",\"uav_id\":4,\"mission_id\":\"subject2-9c658ebf8e\",\"assignment_checksum\":\"3a4258ce05158ad9cc48fe9e877d3216a47250ac785c0a7fbfb9b08b0b22f734\",\"flight_profile\":\"final_scene_2\",\"coordinate_frame\":\"WGS84\",\"altitude_frame\":\"RELATIVE_TO_TAKEOFF\",\"target_altitude_m\":53.0,\"relative_altitude_m\":53.0,\"waypoints\":[{\"latitude\":33.86303788277568,\"longitude\":113.70518682249919,\"altitude_m\":53.0},{\"latitude\":33.86222648668708,\"longitude\":113.70507875139815,\"altitude_m\":53.0},{\"latitude\":33.8621814091266,\"longitude\":113.70407369015848,\"altitude_m\":53.0},{\"latitude\":33.86285757253376,\"longitude\":113.70421418258982,\"altitude_m\":53.0}],\"speed_mps\":5.0,\"waypoint_actions\":[],\"reconnaissance_mode\":\"hover_scan\",\"hover_scan_seconds\":30.0,\"return_home\":{\"latitude\":33.8644690155121,\"longitude\":113.70563,\"altitude_m\":53.0},\"deadline_at\":null,\"return_battery_threshold\":0.3,\"subject\":\"subject2\",\"path_contract_version\":2,\"execution_mode\":\"upper_roundtrip_then_lower_roundtrip\",\"layer_order\":[\"upper\",\"lower\"],\"return_waypoint_layer\":\"upper\",\"return_altitude_m\":53.0,\"return_policy\":\"climb_to_upper_then_return\",\"layers\":[{\"layer_id\":\"upper\",\"topic\":\"/ground_mission_planner/vehicle_4/path_stage_1\",\"altitude_m\":53.0,\"waypoint_count\":4,\"waypoints\":[{\"latitude\":33.86303788277568,\"longitude\":113.70518682249919,\"altitude_m\":53.0},{\"latitude\":33.86222648668708,\"longitude\":113.70507875139815,\"altitude_m\":53.0},{\"latitude\":33.8621814091266,\"longitude\":113.70407369015848,\"altitude_m\":53.0},{\"latitude\":33.86285757253376,\"longitude\":113.70421418258982,\"altitude_m\":53.0}],\"scan_passes\":2,\"hover_scan_seconds\":30.0,\"scan_pass_order\":\"forward_then_reverse\",\"scan_execution_order\":[0,1,2,3,3,2,1,0],\"physical_layer\":\"upper\"},{\"layer_id\":\"lower\",\"topic\":\"/ground_mission_planner/vehicle_4/path_stage_2\",\"altitude_m\":34.0,\"waypoint_count\":7,\"waypoints\":[{\"latitude\":33.86303788277568,\"longitude\":113.70518682249919,\"altitude_m\":34.0},{\"latitude\":33.86285757253376,\"longitude\":113.70464646699398,\"altitude_m\":34.0},{\"latitude\":33.86240679692899,\"longitude\":113.70518682249919,\"altitude_m\":34.0},{\"latitude\":33.86222648668708,\"longitude\":113.70507875139815,\"altitude_m\":34.0},{\"latitude\":33.86240679692899,\"longitude\":113.70453839589294,\"altitude_m\":34.0},{\"latitude\":33.86222648668708,\"longitude\":113.70399804038775,\"altitude_m\":34.0},{\"latitude\":33.86200109888469,\"longitude\":113.70407369015848,\"altitude_m\":34.0}],\"scan_passes\":2,\"hover_scan_seconds\":30.0,\"scan_pass_order\":\"forward_then_reverse\",\"scan_execution_order\":[0,1,2,3,4,5,6,6,5,4,3,2,1,0]}],\"mission_budget_seconds\":960.0,\"layer_transition\":{\"from_waypoint_id\":\"UAV4_upper_001\",\"to_waypoint_id\":\"UAV4_lower_001\",\"horizontal_distance_m\":0.0,\"vertical_distance_m\":19.0,\"descent_speed_mps\":2.0,\"descent_speed_status\":\"accepted_provisional\",\"duration_s\":9.5,\"preferred_horizontal_limit_m\":20.0,\"preferred_limit_met\":true,\"note\":\"上层正逆两趟回到上层首点后原位下降；下层首点与上层首点重合。\"},\"scan_pass_order\":\"forward_then_reverse\"}"
       }
     },
     {

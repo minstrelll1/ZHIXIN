@@ -6,7 +6,12 @@ new vm.Script(html.match(/<script>([\s\S]*?)<\/script>/)[1]);
 const profiles=['final_scene_1','final_scene_2','xuchang_small_2'];
 const elements=new Map();
 function element(id){
-  if(!elements.has(id))elements.set(id,{value:'',dataset:{},options:[],disabled:false,querySelector:()=>({textContent:''})});
+  if(!elements.has(id)){
+    const options=new Map();
+    elements.set(id,{value:'',dataset:{},options:[],disabled:false,querySelector(selector){
+      if(!options.has(selector))options.set(selector,{textContent:''});return options.get(selector);
+    }});
+  }
   return elements.get(id);
 }
 element('coordinateMode').value='xyz';element('subject').value='subject1';
@@ -21,6 +26,8 @@ for(const profile of profiles){
   assert.equal(element('departurePoint').value,profile==='xuchang_small_2'?'fixed_xuchang':'stadium_center');
   assert.equal(element('flightAltitudePlan').value,profile==='final_scene_1'?'final_fixed':'final_dual');
   assert.equal(element('flightAltitudePlan').disabled,true);
+  if(profile!=='final_scene_1')assert.equal(element('flightAltitudePlan').querySelector('option[value="final_dual"]').textContent,
+    '双层：上'+(profile==='final_scene_2'?'47/49/51/53/55/57':'47/50/53/47/50/53')+'米，下34/37/40/34/37/40米');
   assert.equal(element('subject').value,'subject2');assert.equal(element('controllerMode').value,'external');
   assert.equal(element('scoutRadius').value,'50');assert.equal(element('hoverScanSeconds').value,profile==='final_scene_1'?'50':'30');
   assert.equal(element('hoverScanSeconds').disabled,true);

@@ -45,6 +45,11 @@ def build(source, destination):
             if assignment['task']['source_plan_sha256'] != prepared['source_plan_sha256']:
                 raise ValueError('示例与当前固定航点来源不一致')
             assert assignment['task']['waypoints_m'] == prepared['scenes'][sid]['plan']['planned_uavs'][str(uid)]['task']['waypoints_m']
+            fixed_uav = prepared['scenes'][sid]['plan']['planned_uavs'][str(uid)]
+            if (assignment['target_altitude_m'] != fixed_uav['target_altitude_m']
+                    or aircraft['takeoff']['target_altitude_m'] != fixed_uav['target_altitude_m']
+                    or assignment['task'].get('layers') != fixed_uav['task'].get('layers')):
+                raise ValueError('示例层高或分层航点与当前固定方案不一致，请重跑离线分派测试')
             row = dict(offline_only=True, simulated_homes=True, scene_id=sid, uav_id=uid,
                        note='空 fixed_targets 与空 recognition_categories 是本次离线测试输入，现场按任务发布端配置下发。',
                        plan_and_assign_to_onboard=assignment, one_click_takeoff_to_onboard=aircraft['takeoff'],
