@@ -41,5 +41,12 @@ def load_plan(profile):
     return copy.deepcopy(_prepared()['scenes'][profile]['plan'])
 
 
+def planning_parameters(profile):
+    """API 校验与省略字段的默认值跟随固定文件，避免与网页/下发任务脱节。"""
+    coverage = _prepared()['scenes'][profile]['plan']['search_area']['coverage']
+    return dict(reconnaissance_radius_m=50., speed_mps=coverage['speed_mps'],
+                hover_scan_seconds=coverage['hover_scan_seconds'])
+
+
 def transit_geometry(profile):
     return _prepared()['scenes'][profile]['transit_geometry']

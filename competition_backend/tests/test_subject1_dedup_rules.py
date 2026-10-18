@@ -206,7 +206,7 @@ class DedupRulesTest(unittest.TestCase):
             specs += [('person%d'%i, True, 15, i*100, 1000, i+1) for i in range(4)]
             specs += [('car%d'%i, True, 0, i*100, 2000, i+1) for i in range(5)]
             for target, moving, cid, east, north, count in specs:
-                for seconds in ((0,12,15) if moving else (0,)):
+                for seconds in ((0,6,12,15) if moving else (0,)):
                     # 第4个人员目标80%的时间低速，转换后成为最高识别次数的静目标。
                     offset = (0 if seconds < 15 else 6) if target=='person3' else seconds*2
                     coords = point(east+offset, north)

@@ -10,6 +10,33 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'competition_backend'))
 from competition_backend.final_scenes import PATH, NAMES, altitude_profile, departure_for, digest
+from refine_dual_roundtrip import refine_scenes
+
+
+def swap_xuchang_uav3_uav6(scene):
+    """离线交换任务归属，同时重标六机返航目录的来源及接收机编号。"""
+    permutation = {3: 6, 6: 3}
+    def remap(value, field=None):
+        if isinstance(value, dict):
+            result = {str(permutation.get(int(k), int(k))) if field in
+                      ('planned_uavs', 'vehicles', 'waypoints_by_uav') else k: remap(v, k)
+                      for k, v in value.items()}
+            if field in ('planned_uavs', 'vehicles', 'waypoints_by_uav'):
+                result = dict(sorted(result.items(), key=lambda pair: int(pair[0])))
+            return result
+        if isinstance(value, list):
+            result = [remap(v) for v in value]
+            if field in ('return_paths', 'fleet_return_paths_m'):
+                result.sort(key=lambda r: (r['source_uav_id'], r['waypoint_index']))
+            return result
+        if field in ('uav_id', 'sector', 'source_uav_id', 'recipient_uav_id'):
+            return permutation.get(value, value)
+        if isinstance(value, str) and value.startswith(('UAV3_', 'UAV6_')):
+            return 'UAV%d_' % permutation[int(value[3])] + value[5:]
+        return value
+    updated = remap(scene)
+    updated['plan']['prepared_plan']['assignment_permutation'] = {'3': 6, '6': 3}
+    return updated
 
 
 def compile_bundle(archive):
@@ -133,6 +160,8 @@ def compile_bundle(archive):
                 prepared_transit_sha256=sha, search_area=area, planned_uavs=planned),
                 transit_geometry=dict(boundary_m=boundary, departure_m=home['home_nw_m'], excluded_polygons_m=holes,
                                       boundary_clearance_m=5., vehicles=vehicles))
+    refine_scenes(scenes, source)
+    scenes['xuchang_small_2'] = swap_xuchang_uav3_uav6(scenes['xuchang_small_2'])
     return dict(schema_version=1, source_archive_sha256=hashlib.sha256(Path(archive).read_bytes()).hexdigest(),
                 source_plan_sha256=sha, sha256=digest(scenes), scenes=scenes)
 

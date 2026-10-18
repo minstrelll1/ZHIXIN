@@ -1796,7 +1796,7 @@ class OnboardTaskExecutor:
             upper_layer = layers[0] if layers else task
             message.update(
                 subject="subject2", path_contract_version=2,
-                execution_mode="upper_once_then_lower_once" if layers else "legacy_single_layer",
+                execution_mode=task['execution_mode'] if layers else "legacy_single_layer",
                 layer_order=["upper", "lower"] if layers else ["upper"],
                 return_waypoint_layer=task.get('transit_routes', {}).get('waypoint_layer', 'upper'), return_altitude_m=target_relative_alt,
                 return_policy="climb_to_upper_then_return" if layers else "at_task_altitude",
@@ -1807,8 +1807,14 @@ class OnboardTaskExecutor:
                         dict(layer_id="lower", topic=self.external_lower_path_topic,
                              altitude_m=float(layers[1]["altitude_m"]) if layers else None,
                              waypoint_count=len(lower_points), waypoints=lower_points,
-                             scan_passes=1 if layers else 0,
+                             scan_passes=layers[1]['scan_passes'] if layers else 0,
                              hover_scan_seconds=layers[1]["hover_scan_seconds"] if layers else 0)])
+            if layers and task['execution_mode'] == 'upper_roundtrip_then_lower_roundtrip':
+                message['mission_budget_seconds'] = task.get('mission_budget_seconds')
+                message['layer_transition'] = task.get('layer_transition')
+                for published, layer in zip(message['layers'], layers):
+                    published['scan_pass_order'] = layer['scan_pass_order']
+                    published['scan_execution_order'] = layer['scan_execution_order']
             if task.get('physical_layer'):
                 message['layers'][0]['physical_layer'] = task['physical_layer']
                 message['scan_pass_order'] = task.get('scan_pass_order', 'upper_then_lower')

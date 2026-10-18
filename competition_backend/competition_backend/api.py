@@ -34,7 +34,7 @@ from .subject1_actual_scene import (
     HOVER_SECONDS as ACTUAL_HOVER_SECONDS,
 )
 from .subject2_actual_scene import HOVER_SECONDS as SUBJECT2_HOVER_SECONDS
-from .final_scenes import PROFILES as FINAL_PROFILES, altitude_profile as final_altitude_profile, departure_for
+from .final_scenes import PROFILES as FINAL_PROFILES, altitude_profile as final_altitude_profile, departure_for, planning_parameters as final_planning_parameters
 from .distributed_adapter import DistributedFleetAdapter, parse_ground_peers
 from .image_aggregation import (
     PeerImageCollector,
@@ -1366,9 +1366,10 @@ def create_app(environment=None, audit=None) -> FastAPI:
                     raise HTTPException(status_code=422, detail='本场景使用固定规划参考起飞点')
                 if flight_altitude_plan not in ('default', final_altitude_profile(flight_profile)):
                     raise HTTPException(status_code=422, detail='本固定场景必须使用配套高度方案')
-                if any(float(payload.get(key, value)) != value for key,value in
-                       (('reconnaissance_radius_m', 50.), ('speed_mps', 5.), ('hover_scan_seconds', 50.))):
-                    raise HTTPException(status_code=422, detail='本场景固定为上层半径50m、下层30m、5m/s、50秒/点')
+                parameters = final_planning_parameters(flight_profile)
+                if any(float(payload.get(key, value)) != value for key, value in parameters.items()):
+                    raise HTTPException(status_code=422, detail='本场景固定为上层半径50m、下层30m、{:g}m/s、{:g}秒/点'.format(
+                        parameters['speed_mps'], parameters['hover_scan_seconds']))
                 result = load_plan(flight_profile)
                 result['search_area']['takeoff_gps_by_uav'] = boot_scene_homes(connected_ids) if connected_ids else {}
                 return result
@@ -1584,7 +1585,7 @@ def create_app(environment=None, audit=None) -> FastAPI:
                 "flight_altitude_plan": requested_altitude_plan,
                 "reconnaissance_radius_m": payload.get("reconnaissance_radius_m", 50.0 if requested_profile in FINAL_PROFILES else 1.0 if requested_profile in ("lab", "lab10", "outdoor5") else ACTUAL_RADIUS_M if requested_profile in ("subject1_actual", "subject2_actual") else XUCHANG_RADIUS_M if requested_profile == "xuchang_small" else 75.0),
                 "speed_mps": payload.get("speed_mps", 0.2 if requested_profile in ("lab", "outdoor5") else (0.5 if requested_profile == "lab10" else 5.0)),
-                "hover_scan_seconds": payload.get("hover_scan_seconds", 50.0 if requested_profile in FINAL_PROFILES else SUBJECT2_HOVER_SECONDS if requested_profile == "subject2_actual" else ACTUAL_HOVER_SECONDS if requested_profile in ("subject1_actual", "subject2_actual") else 10.0),
+                "hover_scan_seconds": payload.get("hover_scan_seconds", final_planning_parameters(requested_profile)['hover_scan_seconds'] if requested_profile in FINAL_PROFILES else SUBJECT2_HOVER_SECONDS if requested_profile == "subject2_actual" else ACTUAL_HOVER_SECONDS if requested_profile in ("subject1_actual", "subject2_actual") else 10.0),
                 "max_region_aspect_ratio": payload.get("max_region_aspect_ratio", 2.0),
                 "forest_edge_m": payload.get("forest_edge_m", 5.0),
                 "terrain_exclusions_enabled": payload.get("terrain_exclusions_enabled", True),

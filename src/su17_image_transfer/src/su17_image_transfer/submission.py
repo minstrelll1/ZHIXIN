@@ -92,6 +92,19 @@ def _confidence(metadata):
     return value if value is not None and 0 <= value <= 1 else None
 
 
+def _static_position_record(observations):
+    """同机同ID选择最近的有效定位；距离相同取后收到者，旧消息沿用最后记录。"""
+    candidates = []
+    for observation, image, rank in observations:
+        distance = observation.get('horizontal_distance_m')
+        if (type(distance) in (int, float) and math.isfinite(distance) and distance >= 0
+                and _position(observation) is not None and _iso_from_metadata(observation) is not None):
+            candidates.append((observation, image, rank))
+    if candidates:
+        return max(candidates, key=lambda entry: (-entry[0]['horizontal_distance_m'], entry[2])), 'minimum_horizontal_distance'
+    return max(observations, key=lambda entry: entry[2]), 'latest_receipt_fallback'
+
+
 def _iso_from_metadata(metadata):
     """坐标与时间取自同一定位结果；绝不以图片、接收或上传时间补值。"""
     stamp = metadata.get("localization_time")
@@ -217,6 +230,7 @@ def _update_subject1_submission_locked(output_root, mission_dir, mission_id, tea
     time_mappings = []
     category_records = []
     motion_classification = []
+    static_position_selection = []
     references, reference_error = load_time_references(output_root)
     for source_json, metadata in _all_metadata(output_root, mission_id):
         if str(metadata.get("mission_id", "")) != str(mission_id):
@@ -341,9 +355,17 @@ def _update_subject1_submission_locked(output_root, mission_dir, mission_id, tea
                 key=lambda entry: (quality_rank(entry[0], _confidence(entry[0])), entry[2]),
             )
         else:
-            # 同一静目标 ID 多次上报时，最终结果只采用最后收到的一整条记录。
+            # 类别、置信度、累计识别质量沿用最后反馈，定位单独按最近距离选取。
             metadata = item["latest"]
             best_observation, best_image, _ = max(item["observations"], key=lambda entry: entry[2])
+            (position_metadata, position_image, position_rank), position_rule = _static_position_record(item['observations'])
+            static_position_selection.append(dict(source_uav=item['source_uav'], target_id=target_id,
+                rule=position_rule, horizontal_distance_m=position_metadata.get('horizontal_distance_m')
+                    if position_rule=='minimum_horizontal_distance' else None,
+                coordinates=_position(position_metadata), timestamp=_iso_from_metadata(position_metadata),
+                source_json=str(Path(position_rank[2]).relative_to(output_root)),
+                latest_source_json=str(Path(item['latest_rank'][2]).relative_to(output_root)),
+                converted_to_static=motion_audit['converted_to_static']))
         broad = dedup_category(metadata)
         formal_type, formal_model = category_fields(metadata)
         category_records.append({
@@ -358,17 +380,17 @@ def _update_subject1_submission_locked(output_root, mission_dir, mission_id, tea
             "targetCategory": "移动" if moving else "固定",
             "targetType": category_fields(metadata)[0],
             "targetModel": _target_model(metadata),
-            "imagePath": (best_image or item["image"]) if moving else best_image,
+            "imagePath": (best_image or item["image"]) if moving else position_image,
             "confidence": confidence,
         }
         # 可选字段没有值时省略，不向赛事接口发送 null。
         properties = {key: value for key, value in properties.items() if value is not None}
         if item.get("local_positions"):
-            local = _local_position(metadata)
+            local = _local_position(metadata if moving else position_metadata)
             if moving:
                 properties["localPosition"] = item["local_positions"]
             elif local:
-                properties["localPosition"] = [dict(local, timestamp=_iso_from_metadata(metadata))]
+                properties["localPosition"] = [dict(local, timestamp=_iso_from_metadata(position_metadata))]
         if moving:
             if len(points) < 2:
                 # 轨迹不足时保留原始反馈，但不伪造符合模板的 LineString。
@@ -380,15 +402,15 @@ def _update_subject1_submission_locked(output_root, mission_dir, mission_id, tea
             properties["trackPoints"] = points
             geometry = {"type": "LineString", "coordinates": [p["coordinates"] for p in points]}
         else:
-            position = _position(metadata)
-            timestamp = _iso_from_metadata(metadata)
+            position = _position(position_metadata)
+            timestamp = _iso_from_metadata(position_metadata)
             if not position or not timestamp:
                 reason = ("缺少有效 localization_time 定位源时间戳或对应的机地时间参考，不能以图像或接收时间代替" if not timestamp else
                           "室内 XYZ 或无效 WGS84 坐标不能写入 EPSG:4326 几何")
                 skipped_indoor.append({"id": target_id, "reason": reason,
                                        "localPosition": item.get("local_positions", [])})
                 continue
-            # 静目标的坐标、时间、类别、置信度及图片均来自同一条最后反馈。
+            # 定位坐标、定位时间与图片使用同一条所选记录，避免新时间配旧位置。
             properties["timestamp"] = timestamp
             geometry = {"type": "Point", "coordinates": position}
         feature = {"type": "Feature", "id": target_id, "geometry": geometry, "properties": properties}
@@ -431,6 +453,7 @@ def _update_subject1_submission_locked(output_root, mission_dir, mission_id, tea
     format_audit["image_copy_errors"] = image_copy_errors
     format_audit["category_records"] = category_records
     format_audit["motion_classification"] = motion_classification
+    format_audit["static_position_selection"] = static_position_selection
     format_audit["target_time"] = dict(source="localization_time", timezone="Asia/Shanghai",
                                      utc_offset="+08:00", invalid_records=invalid_localization_times,
                                      mapping_method="publisher_epoch_from_onboard_monotonic",

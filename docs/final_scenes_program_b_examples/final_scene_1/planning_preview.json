@@ -2,11 +2,11 @@
   "offline_only": true,
   "simulated_homes": true,
   "mission": {
-    "mission_id": "subject2-d1b797ad94",
+    "mission_id": "subject2-6b4db402e9",
     "subject": "subject2",
     "duration_seconds": 0.0,
     "phase": "planned",
-    "planned_at": 1792287792.3389611,
+    "planned_at": 1792302457.217615,
     "flight_profile": "final_scene_1",
     "flight_altitude_plan": "final_fixed",
     "controller_mode": "external",
@@ -1622,7 +1622,7 @@
         "phase": "ready",
         "return_reason": null,
         "last_error": null,
-        "assignment_checksum": "307b24780de042ed85816227386de341e28dd3dd2de00d0703b3ba4f572da02a",
+        "assignment_checksum": "7140e9e60366cf6ca881ad281c0f3fee95da473e86075967d8cf3376e591bb55",
         "landing_point_m": null,
         "landing_sequence": 1
       },
@@ -3229,7 +3229,7 @@
         "phase": "ready",
         "return_reason": null,
         "last_error": null,
-        "assignment_checksum": "0133766b71910db28f2b8245fcfe492fd941817e4e85bbb9724b1048c29f97ba",
+        "assignment_checksum": "e6dca9f53a35a49048fbb0d9c91ce934686b913e3cd995c66fcebb3a18834437",
         "landing_point_m": null,
         "landing_sequence": 2
       },
@@ -4828,7 +4828,7 @@
         "phase": "ready",
         "return_reason": null,
         "last_error": null,
-        "assignment_checksum": "62f1e63f2027397c25fdacc686e9986c1c3bd8f4d59cc0f14a2b749c0733b086",
+        "assignment_checksum": "b6edbfb2dd53b9d4816c231acdbbbf89dcbaa57351a9d7d120b48c3bbbc92238",
         "landing_point_m": null,
         "landing_sequence": 3
       },
@@ -6473,7 +6473,7 @@
         "phase": "ready",
         "return_reason": null,
         "last_error": null,
-        "assignment_checksum": "ebfc58cf0a280f7018275898376ad4f0aabd86235cddc9a5d25dba5048977c61",
+        "assignment_checksum": "9383bd25692318dd083eb3e2d2771352b5b2563ae5843a73857c54045e9b0fb1",
         "landing_point_m": null,
         "landing_sequence": 4
       },
@@ -8720,7 +8720,7 @@
         "phase": "ready",
         "return_reason": null,
         "last_error": null,
-        "assignment_checksum": "59086a08c294fe90ecc7cec415f2f9d1d43c5134111ed80fed44f10bf0200df6",
+        "assignment_checksum": "46eeee9abc72fe0eedb94f53b2b03fdb8dc27bcc2b2807d1e5dbc578818a4b8c",
         "landing_point_m": null,
         "landing_sequence": 5
       },
@@ -10339,7 +10339,7 @@
         "phase": "ready",
         "return_reason": null,
         "last_error": null,
-        "assignment_checksum": "64b197f76784b9652180f6459c625c7d1603aa41d800de16758cec03307bc14c",
+        "assignment_checksum": "b0d13764d5251f554b66d50748f0ebd0b9f3dfcdea6791060e95ac620476bcb2",
         "landing_point_m": null,
         "landing_sequence": 6
       }
@@ -11952,7 +11952,7 @@
         "phase": "ready",
         "return_reason": null,
         "last_error": null,
-        "assignment_checksum": "307b24780de042ed85816227386de341e28dd3dd2de00d0703b3ba4f572da02a",
+        "assignment_checksum": "7140e9e60366cf6ca881ad281c0f3fee95da473e86075967d8cf3376e591bb55",
         "landing_point_m": null,
         "landing_sequence": 1
       },
@@ -13559,7 +13559,7 @@
         "phase": "ready",
         "return_reason": null,
         "last_error": null,
-        "assignment_checksum": "0133766b71910db28f2b8245fcfe492fd941817e4e85bbb9724b1048c29f97ba",
+        "assignment_checksum": "e6dca9f53a35a49048fbb0d9c91ce934686b913e3cd995c66fcebb3a18834437",
         "landing_point_m": null,
         "landing_sequence": 2
       },
@@ -15158,7 +15158,7 @@
         "phase": "ready",
         "return_reason": null,
         "last_error": null,
-        "assignment_checksum": "62f1e63f2027397c25fdacc686e9986c1c3bd8f4d59cc0f14a2b749c0733b086",
+        "assignment_checksum": "b6edbfb2dd53b9d4816c231acdbbbf89dcbaa57351a9d7d120b48c3bbbc92238",
         "landing_point_m": null,
         "landing_sequence": 3
       },
@@ -16803,7 +16803,7 @@
         "phase": "ready",
         "return_reason": null,
         "last_error": null,
-        "assignment_checksum": "ebfc58cf0a280f7018275898376ad4f0aabd86235cddc9a5d25dba5048977c61",
+        "assignment_checksum": "9383bd25692318dd083eb3e2d2771352b5b2563ae5843a73857c54045e9b0fb1",
         "landing_point_m": null,
         "landing_sequence": 4
       },
@@ -19050,7 +19050,7 @@
         "phase": "ready",
         "return_reason": null,
         "last_error": null,
-        "assignment_checksum": "59086a08c294fe90ecc7cec415f2f9d1d43c5134111ed80fed44f10bf0200df6",
+        "assignment_checksum": "46eeee9abc72fe0eedb94f53b2b03fdb8dc27bcc2b2807d1e5dbc578818a4b8c",
         "landing_point_m": null,
         "landing_sequence": 5
       },
@@ -20669,7 +20669,7 @@
         "phase": "ready",
         "return_reason": null,
         "last_error": null,
-        "assignment_checksum": "64b197f76784b9652180f6459c625c7d1603aa41d800de16758cec03307bc14c",
+        "assignment_checksum": "b0d13764d5251f554b66d50748f0ebd0b9f3dfcdea6791060e95ac620476bcb2",
         "landing_point_m": null,
         "landing_sequence": 6
       }
@@ -23957,51 +23957,51 @@
     },
     "events": [
       {
-        "time": 1792287792.5396917,
+        "time": 1792302457.3943143,
         "kind": "task_assignment_sent",
         "uav_id": 1,
         "elapsed_seconds": 0.0,
-        "mission_id": "subject2-d1b797ad94"
+        "mission_id": "subject2-6b4db402e9"
       },
       {
-        "time": 1792287792.5948925,
+        "time": 1792302457.4142866,
         "kind": "task_assignment_sent",
         "uav_id": 2,
-        "elapsed_seconds": 0.015,
-        "mission_id": "subject2-d1b797ad94"
+        "elapsed_seconds": 0.016,
+        "mission_id": "subject2-6b4db402e9"
       },
       {
-        "time": 1792287792.6271634,
+        "time": 1792302457.4348497,
         "kind": "task_assignment_sent",
         "uav_id": 3,
-        "elapsed_seconds": 0.032,
-        "mission_id": "subject2-d1b797ad94"
+        "elapsed_seconds": 0.0,
+        "mission_id": "subject2-6b4db402e9"
       },
       {
-        "time": 1792287792.6568704,
+        "time": 1792302457.4611042,
         "kind": "task_assignment_sent",
         "uav_id": 4,
         "elapsed_seconds": 0.016,
-        "mission_id": "subject2-d1b797ad94"
+        "mission_id": "subject2-6b4db402e9"
       },
       {
-        "time": 1792287792.6864822,
+        "time": 1792302457.4855654,
         "kind": "task_assignment_sent",
         "uav_id": 5,
         "elapsed_seconds": 0.016,
-        "mission_id": "subject2-d1b797ad94"
+        "mission_id": "subject2-6b4db402e9"
       },
       {
-        "time": 1792287792.7132497,
+        "time": 1792302457.5101843,
         "kind": "task_assignment_sent",
         "uav_id": 6,
         "elapsed_seconds": 0.016,
-        "mission_id": "subject2-d1b797ad94"
+        "mission_id": "subject2-6b4db402e9"
       },
       {
-        "time": 1792287792.7162452,
+        "time": 1792302457.5112019,
         "kind": "mission_planned",
-        "mission_id": "subject2-d1b797ad94",
+        "mission_id": "subject2-6b4db402e9",
         "subject": "subject2"
       }
     ]

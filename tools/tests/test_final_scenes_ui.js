@@ -22,8 +22,10 @@ for(const profile of profiles){
   assert.equal(element('flightAltitudePlan').value,profile==='final_scene_1'?'final_fixed':'final_dual');
   assert.equal(element('flightAltitudePlan').disabled,true);
   assert.equal(element('subject').value,'subject2');assert.equal(element('controllerMode').value,'external');
-  assert.equal(element('scoutRadius').value,'50');assert.equal(element('hoverScanSeconds').value,'50');
-  assert.equal(element('duration').disabled,true);assert.equal(element('duration').value,'');
+  assert.equal(element('scoutRadius').value,'50');assert.equal(element('hoverScanSeconds').value,profile==='final_scene_1'?'50':'30');
+  assert.equal(element('hoverScanSeconds').disabled,true);
+  assert.equal(element('duration').disabled,true);assert.equal(element('duration').value,profile==='final_scene_1'?'':'960');
+  if(profile!=='final_scene_1')assert.match(element('durationLabel').textContent,/规划预算/);
 }
 element('flightProfile').value='subject1_actual';ground.应用飞行环境默认值();
 assert.equal(element('flightAltitudePlan').disabled,false);assert.equal(element('flightAltitudePlan').value,'default');
@@ -37,6 +39,7 @@ for(const profile of legacyProfiles){
   assert.equal(element('flightAltitudePlan').disabled,false);
   assert.equal(element('flightAltitudePlan').options[0].disabled,false);
   assert.equal(element('flightAltitudePlan').value,'ascending34m');
+  assert.equal(element('hoverScanSeconds').disabled,true);
 }
 
 // Execute the ground map against the actual compiled polygons and both layers.
@@ -62,7 +65,7 @@ for(const profile of profiles){
   if(profile!=='final_scene_1')assert.match(node('assignmentList').innerHTML,/上层 47米.*下层 34米/);
 }
 
-const report=fs.readFileSync(path.join(root,'docs/competition_plans_3d.html'),'utf8');
+const report=fs.readFileSync(path.join(root,'docs/competition_plans_legacy_3d.html'),'utf8');
 const data=report.match(/<script id="planning-data" type="application\/json">([\s\S]*?)<\/script>/)[1];
 const script=report.match(/<script>\s*([\s\S]*?)<\/script>/)[1];
 new vm.Script(script);

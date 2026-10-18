@@ -11,7 +11,7 @@ def target(**kwargs):
     data = dict(header=NS(stamp=stamp), global_id="42", detection_count=2**63 + 7,
                 tracking_success=True, target_type="solider3", timestamp=stamp, image_stamp=stamp,
                 localization_time=stamp, cx=.5, cy=.5, w=.25, h=.25, score=.7,
-                category_id=13, speed_mps=0., category="人", is_moving=False,
+                category_id=13, speed_mps=0., horizontal_distance_m=18.7, category="人", is_moving=False,
                 indoor_position=False, latitude_deg=34., longitude_deg=113., altitude_gps_m=55.)
     data.update(kwargs)
     return NS(**data)
@@ -31,7 +31,17 @@ class CompletedTargetV2Test(unittest.TestCase):
         self.assertEqual(metadata["bbox"]["units"], "normalized")
         self.assertEqual(metadata["detection_count"], 2**63 + 7)
         self.assertTrue(metadata["tracking_success"])
+        self.assertEqual(metadata['horizontal_distance_m'],18.7)
         json.dumps(metadata, allow_nan=False)
+
+    def test_distance_is_optional_nonnegative_and_finite(self):
+        for value in (None, -1., float('nan'), float('inf'), True, 'bad'):
+            _, metadata=completed_target_metadata(target(horizontal_distance_m=value))
+            self.assertNotIn('horizontal_distance_m',metadata)
+            json.dumps(metadata,allow_nan=False)
+        old=target();del old.horizontal_distance_m
+        self.assertNotIn('horizontal_distance_m',completed_target_metadata(old)[1])
+        self.assertEqual(completed_target_metadata(target(horizontal_distance_m=0.))[1]['horizontal_distance_m'],0.)
 
     def test_missing_box_does_not_lose_json_or_image(self):
         self.sender.input_mode = "completed_target_array"

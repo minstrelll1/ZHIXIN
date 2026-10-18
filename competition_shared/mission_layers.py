@@ -32,8 +32,10 @@ def validate_layers(assignment, maximum_waypoints=10000):
             or [layer.get('layer_id') for layer in layers] != ['upper', 'lower']
             or task.get('layer_order') != ['upper', 'lower']):
         raise ValueError('双层任务必须按 upper、lower 顺序提供两层和 layer_order')
-    if task.get('execution_mode') != 'upper_once_then_lower_once':
-        raise ValueError('双层任务必须上层一趟、下层一趟')
+    mode = task.get('execution_mode')
+    passes = {'upper_once_then_lower_once': 1, 'upper_roundtrip_then_lower_roundtrip': 2}.get(mode)
+    if passes is None:
+        raise ValueError('双层任务执行模式无效')
     frame = assignment.get('coordinate_frame', 'WGS84')
     if frame not in ('WGS84', 'ENU'):
         raise ValueError('双层任务外部坐标系无效')
@@ -48,8 +50,13 @@ def validate_layers(assignment, maximum_waypoints=10000):
             _points(layer.get('waypoints_wgs84'), label + 'GPS航点', maximum_waypoints, gps=True)
             if len(layer['waypoints_wgs84']) != len(layer['waypoints_m']):
                 raise ValueError('每层 GPS 和平面航点必须逐一对应')
-        if type(layer.get('scan_passes')) is not int or layer['scan_passes'] != 1:
-            raise ValueError('双层任务每层只扫描一趟')
+        if type(layer.get('scan_passes')) is not int or layer['scan_passes'] != passes:
+            raise ValueError('双层任务每层趟数与执行模式不一致')
+        if passes == 2:
+            count = len(layer['waypoints_m'])
+            if (layer.get('scan_pass_order') != 'forward_then_reverse'
+                    or layer.get('scan_execution_order') != list(range(count))+list(reversed(range(count)))):
+                raise ValueError('双层往返任务必须按正序、逆序扫描，转折点扫描两次')
         if _number(layer.get('hover_scan_seconds'), label + '扫描时长') <= 0:
             raise ValueError('每层扫描时长必须为正数')
     if total > maximum_waypoints:

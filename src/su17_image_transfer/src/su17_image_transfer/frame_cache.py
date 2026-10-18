@@ -187,6 +187,10 @@ def completed_target_metadata(target):
             raise ValueError("WGS84 经纬度超出有效范围")
         metadata.update({"target_latitude": latitude, "target_longitude": longitude,
                          "target_altitude": altitude, "coordinate_system": "WGS84"})
+    # 旧数据缺失距离不能补成0，否则会错误覆盖真实近距离定位。
+    distance = getattr(target, "horizontal_distance_m", None)
+    if type(distance) in (int, float) and math.isfinite(distance) and distance >= 0:
+        metadata['horizontal_distance_m'] = float(distance)
     return key, metadata
 
 

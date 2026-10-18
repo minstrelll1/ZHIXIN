@@ -256,6 +256,10 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\stop_ground.ps1
 
 机载竞赛程序只读采集程序 B 的当前目标、上次识别、调度/机动/云台/循线状态及侦察点序号，在网页‘实时任务详情 → 实时数据’展示。需将最新程序 B 的三个消息编译到机载 ~/recon_ws 后更新竞赛机载端。详见 [程序 B 遥测接入](docs/program_b_telemetry.md)。
 
+### 场景预览
+
+以后统一使用 `docs/competition_plans_3d.html` 的左侧参数面板、三维图层和时间轴播放格式。更新固定场景后运行 `competition_backend/.venv/Scripts/python.exe tools/build_plans_3d.py`，从当前运行数据重建航点、覆盖率、往返扫描、换层及返航动画，并同步更新 `docs/planning_preview.html` 和原交接目录中的 `planning_preview.html`。模板为 `tools/templates/planning_preview.html`，不要手改生成页的内嵌数据。其他场景、高度方案及实飞任务 JSON 导入保留在页面链接的 `docs/competition_plans_legacy_3d.html` 中。原交接包 JSON 保留为来源档案，最新时间轴数据为 `docs/planning_preview_data.json`。
+
 ### 固定目标记录与下发
 
 `config/fixed_targets.json` 保存最新一轮科目一最终去重排序结果中的全部固定目标，包括车辆、工事、人员及其他类型，按成果顺序记录类型和经纬度；移动目标不写入。实际起飞的任务结束后由任务发布端覆盖更新；科目二和普通地面端不生成这份记录。赛后可在当前任务发布端直接编辑该 JSON，同一轮后台整理会保留人工修正。下一轮科目一飞行结束后再用新结果覆盖；地面端重连时同步当前发布端版本，增量代码更新保留已有文件。当前仓库文件仅供联调，编号遵循赛事 `target-001` 格式，坐标不是真实侦察结果。

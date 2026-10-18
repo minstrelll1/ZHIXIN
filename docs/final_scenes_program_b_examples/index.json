@@ -2,12 +2,12 @@
   "offline_only": true,
   "simulated_homes": true,
   "source_plan_sha256": "60c52b29986a25ddc51da5a601dd5c3b2dd105ec2dc049d3bee2209c460adb14",
-  "fixed_bundle_sha256": "2a14040f353ab23697a012c3153258704daf363f20741edfd296a335efdb3305",
+  "fixed_bundle_sha256": "dcbb47acdeb998fe13e980f0986a290c985f14ed09ce3f20628b1a52bb6cb872",
   "description": "来自实际代码的离线 API→六地面端→机载缓存→起飞成功发布。所有起降点为模拟值，不用于实飞。",
   "scenes": [
     {
       "scene_id": "final_scene_1",
-      "dispatch_seconds": 0.5620000000053551,
+      "dispatch_seconds": 0.46899999999732245,
       "planning_preview": "final_scene_1/planning_preview.json",
       "aircraft": [
         {
@@ -62,136 +62,136 @@
     },
     {
       "scene_id": "final_scene_2",
-      "dispatch_seconds": 0.7030000000086147,
+      "dispatch_seconds": 2.1560000000026776,
       "planning_preview": "final_scene_2/planning_preview.json",
       "aircraft": [
         {
           "uav_id": 1,
           "file": "final_scene_2/uav1.json",
-          "stage_1_count": 7,
-          "stage_2_count": 15,
+          "stage_1_count": 4,
+          "stage_2_count": 7,
           "task_altitude_m": 47.0,
-          "return_route_count": 43
+          "return_route_count": 23
         },
         {
           "uav_id": 2,
           "file": "final_scene_2/uav2.json",
-          "stage_1_count": 7,
-          "stage_2_count": 16,
+          "stage_1_count": 4,
+          "stage_2_count": 8,
           "task_altitude_m": 50.0,
-          "return_route_count": 43
+          "return_route_count": 23
         },
         {
           "uav_id": 3,
           "file": "final_scene_2/uav3.json",
-          "stage_1_count": 7,
-          "stage_2_count": 13,
+          "stage_1_count": 4,
+          "stage_2_count": 7,
           "task_altitude_m": 53.0,
-          "return_route_count": 43
+          "return_route_count": 23
         },
         {
           "uav_id": 4,
           "file": "final_scene_2/uav4.json",
-          "stage_1_count": 6,
-          "stage_2_count": 16,
+          "stage_1_count": 4,
+          "stage_2_count": 7,
           "task_altitude_m": 47.0,
-          "return_route_count": 43
+          "return_route_count": 23
         },
         {
           "uav_id": 5,
           "file": "final_scene_2/uav5.json",
-          "stage_1_count": 7,
-          "stage_2_count": 13,
+          "stage_1_count": 3,
+          "stage_2_count": 7,
           "task_altitude_m": 50.0,
-          "return_route_count": 43
+          "return_route_count": 23
         },
         {
           "uav_id": 6,
           "file": "final_scene_2/uav6.json",
-          "stage_1_count": 9,
-          "stage_2_count": 12,
+          "stage_1_count": 4,
+          "stage_2_count": 7,
           "task_altitude_m": 53.0,
-          "return_route_count": 43
+          "return_route_count": 23
         }
       ]
     },
     {
       "scene_id": "xuchang_small_2",
-      "dispatch_seconds": 0.625,
+      "dispatch_seconds": 2.327999999994063,
       "planning_preview": "xuchang_small_2/planning_preview.json",
       "aircraft": [
         {
           "uav_id": 1,
           "file": "xuchang_small_2/uav1.json",
           "stage_1_count": 4,
-          "stage_2_count": 12,
+          "stage_2_count": 8,
           "task_altitude_m": 47.0,
-          "return_route_count": 34
+          "return_route_count": 25
         },
         {
           "uav_id": 2,
           "file": "xuchang_small_2/uav2.json",
-          "stage_1_count": 5,
-          "stage_2_count": 10,
+          "stage_1_count": 3,
+          "stage_2_count": 8,
           "task_altitude_m": 50.0,
-          "return_route_count": 34
+          "return_route_count": 25
         },
         {
           "uav_id": 3,
           "file": "xuchang_small_2/uav3.json",
-          "stage_1_count": 7,
-          "stage_2_count": 14,
+          "stage_1_count": 3,
+          "stage_2_count": 9,
           "task_altitude_m": 53.0,
-          "return_route_count": 34
+          "return_route_count": 25
         },
         {
           "uav_id": 4,
           "file": "xuchang_small_2/uav4.json",
-          "stage_1_count": 6,
-          "stage_2_count": 16,
+          "stage_1_count": 4,
+          "stage_2_count": 7,
           "task_altitude_m": 47.0,
-          "return_route_count": 34
+          "return_route_count": 25
         },
         {
           "uav_id": 5,
           "file": "xuchang_small_2/uav5.json",
-          "stage_1_count": 9,
-          "stage_2_count": 9,
+          "stage_1_count": 7,
+          "stage_2_count": 2,
           "task_altitude_m": 50.0,
-          "return_route_count": 34
+          "return_route_count": 25
         },
         {
           "uav_id": 6,
           "file": "xuchang_small_2/uav6.json",
-          "stage_1_count": 3,
-          "stage_2_count": 10,
+          "stage_1_count": 4,
+          "stage_2_count": 7,
           "task_altitude_m": 53.0,
-          "return_route_count": 34
+          "return_route_count": 25
         }
       ]
     }
   ],
   "files": {
-    "final_scene_1/planning_preview.json": "9f75caaa7738d20ce093a7e9d6932da536b5ff56892b26c8187cbdb362e15925",
-    "final_scene_1/uav1.json": "e3e051c29e96927854521084f8d6ba44e0609486f5f893e9bc526386d5f4c56f",
-    "final_scene_1/uav2.json": "2510afb6fdcd8c525fdb40694ed5301ce0427387a9fc5e72dd050675584978ab",
-    "final_scene_1/uav3.json": "5684cdd9312b767309ab89c08c425114164a8802fa076411d04f0def3227ee68",
-    "final_scene_1/uav4.json": "7bffdaf371acc258642bbdcc36af4bcb6f411ceb109dc5ffb71660ded0299ce3",
-    "final_scene_1/uav5.json": "77802d692d883b0cdfa55d6377f58b9a99bb5449fddd84243fd43613df9d0527",
-    "final_scene_1/uav6.json": "5fff76a54de2422981860ca052a3541b9dbdb72591581991354ef9924d0b5e9f",
-    "final_scene_2/planning_preview.json": "92e2c2d9342fb3e7bf4373fd98571d2b5c3af509c7a913d1ee96d249431e0715",
-    "final_scene_2/uav1.json": "f379ab02d6a557569a84136fb4bc234b294c9581cae14122e3d4f26e18b5e9e6",
-    "final_scene_2/uav2.json": "e6acc65b1652b36474da2ca224d88dd19c78c7ea63f483bec52dcf015d7ed2a6",
-    "final_scene_2/uav3.json": "415d1c4067578b5b31ac55976dee95c0c051d4cf7f05f9100510f6996dc9e7d0",
-    "final_scene_2/uav4.json": "b25b775f334e7cc0b9c7d56fdfa67d5793c8523560c133297d31cb8877097644",
-    "final_scene_2/uav5.json": "4c76b92e834952299c3a7f66923f0931ea1cb6ea29c43174e90ea875928c936a",
-    "final_scene_2/uav6.json": "ee236eae86656c8b98d9f6bbbe9bcb46e84b6a702655d14a45b1ccecbfdf646d",
-    "xuchang_small_2/planning_preview.json": "4ccb3d43e7ba1480570e18bf2642cba0a3a9953e88822e0e02ccb39d1ec4c819",
-    "xuchang_small_2/uav1.json": "75f3bcc32235d4a7948d87f86214a71b494eb52f89a981e5e869b49b69e6db97",
-    "xuchang_small_2/uav2.json": "cea505ef1312ecf7efabed5f6e4918a10c0d3f7ff9cc7fa43e11fb5e7b97abd0",
-    "xuchang_small_2/uav3.json": "2b0ea7d33d3bb31592e6e84feb23ee5f055237c9d1b83b1036e3c56c96b8c907",
-    "xuchang_small_2/uav4.json": "e74346db2b4928c5d27ea73c8bee5f04668a4c8cc4e8f7426dd2811122a8828b",
-    "xuchang_small_2/uav5.json": "d9994830c3c4090d84cd003f9257b2abfb1446c1e1cd5e17111f1cd0d81fe13b",
-    "xuchang_small_2/uav6.json": "7839cc1b1fe4d573ea76e5d56c8cd9c7afd030d24e265700e155893f323125c0"
+    "final_scene_1/planning_preview.json": "c954952ad1e31551205ca6ca84ff4d320a83646cd431bb30aa45a01ca8916519",
+    "final_scene_1/uav1.json": "c8eb6246d168c67f11ee5a878d99f8b18c01e64f3dba72027a34bbb1e3b413f4",
+    "final_scene_1/uav2.json": "07528eb69c899753ab1c0f07f113eb6ecef4804de589ba62269b1a3c782ed6aa",
+    "final_scene_1/uav3.json": "7179003d061f777fb1ffc64c0d3b3f69c92e4694e70c25b47320c500d46abaed",
+    "final_scene_1/uav4.json": "d89b893bcfe1b58152b3f5931fd1c954ccad2bdeea2944161eb2ffecbafe9d0e",
+    "final_scene_1/uav5.json": "a84731b8f28bdd4bd4200c442ac5f0fbea6608d8d4989c979d930f3f34721163",
+    "final_scene_1/uav6.json": "a6b796bb446a21b2b4a899a05e10c4b9b3e5469dd747eef83a47d9381c797d6f",
+    "final_scene_2/planning_preview.json": "8f8924e5a53e5bcd94266216c1c1ce86f0f220654c709c448d5acde673cbc167",
+    "final_scene_2/uav1.json": "0d7603e61cbf7b2e618906cda0e089b3061de2054c3fdfd779ca93f7a560760e",
+    "final_scene_2/uav2.json": "2ef9bc10d1f39315c2919a32fb540e28a52444dfc8b1adcb441cbaef9c14cfd4",
+    "final_scene_2/uav3.json": "61d0f2b667cf3a9ea059d81b6ddff7e26cf52cd9e8e2f5b7bb8b32bbe8e73e27",
+    "final_scene_2/uav4.json": "b994e6588e2f1fe405eeb0a3205236ceac9fd688e60bec809ddd5e5882128077",
+    "final_scene_2/uav5.json": "ff5146b82bb0e75afbc82610bbc83442e5a617adb49109d49c1d7fc0602e7a1e",
+    "final_scene_2/uav6.json": "fa28f4ded414b2cf15eb1c6798b5467baaffb327165d300b4768a14cb870a4df",
+    "xuchang_small_2/planning_preview.json": "b17bd2d9a66994e0fb79f135a321bbf5810e5f5d92e8970fce3d8067f7db5a14",
+    "xuchang_small_2/uav1.json": "def6a6e93fd559988cc20e5e54a1e52ef6bcbbde0749bae948779bc463dd9e33",
+    "xuchang_small_2/uav2.json": "5cdb0eb419dee632da295067bcd751e32de81c35b85c0ad1af15f2110f3754f9",
+    "xuchang_small_2/uav3.json": "7ac613eddc563563ea7ddf9103f4443faf7718553c8da81364249fe52b71690f",
+    "xuchang_small_2/uav4.json": "5211bc26890889fa226f700e9697de051a4cb1575c57deb4f671f1402f5a52e1",
+    "xuchang_small_2/uav5.json": "2f77c9ba7099d33340e7fb5458406622673485b8fd473e45c23687abdabbd6df",
+    "xuchang_small_2/uav6.json": "13c4075902a9e3c181ca2678deabf12053b293fcd117879ceea4c3b25970d7e6"
   }
 }

@@ -1,4 +1,4 @@
-"""首次动静标记锁定、15秒低速复核及赛事副本可追溯性。"""
+"""首次动静标记锁定、10秒低速复核及赛事副本可追溯性。"""
 import datetime as dt
 import json
 import math
@@ -34,51 +34,76 @@ class TargetMotionTest(unittest.TestCase):
                 self.assertTrue(classify_motion(dict(is_moving=True, **fields),
                                                [point(0), point(20, 40)])[0])
                 self.assertFalse(classify_motion(dict(is_moving=True, **fields),
-                                                [point(0), point(15, .1)])[0])
+                                                [point(0), point(10, .1)])[0])
                 self.assertFalse(classify_motion(dict(is_moving=False, **fields),
                                                 [point(0), point(20, 40)])[0])
 
     def test_exact_duration_and_speed_thresholds(self):
-        for seconds, speed, expected in ((14.999, 0., True), (15., 0., False),
+        for seconds, speed, expected in ((9.999, 0., True), (10., 0., False),
                                          (15., .8, False), (15., 1., True), (15., MIN_MOVING_SPEED_MPS, True),
                                          (30., 2., True)):
             with self.subTest(seconds=seconds, speed=speed):
-                moving, _ = self.moving([point(0), point(seconds, seconds * speed)])
+                times = sorted(set([0., seconds] + list(range(5, int(seconds), 5))))
+                moving, _ = self.moving([point(t, t * speed) for t in times])
                 self.assertEqual(expected, moving)
 
     def test_uses_segment_motion_instead_of_start_end_displacement(self):
-        moving, _ = self.moving([point(0), point(15, 30), point(30, 0)])
+        moving, _ = self.moving([point(0), point(10, 20), point(20, 0)])
         self.assertTrue(moving)
-        moving, audit = self.moving([point(0), point(3, 9), point(6, 9), point(18, 9)])
+        moving, audit = self.moving([point(0), point(3, 9), point(6, 9), point(12, 9), point(18, 9)])
         self.assertFalse(moving)
         self.assertEqual(15., audit["low_speed_duration_seconds"])
-        self.assertTrue(self.moving([point(0), point(3, 9), point(6, 9), point(18, 9), point(22, 18)])[0])
+        self.assertTrue(self.moving([point(0), point(3, 9), point(6, 9), point(12, 9), point(18, 9), point(22, 18)])[0])
 
     def test_low_speed_fraction_is_strictly_greater_than_seventy_percent(self):
         for low_seconds, expected in ((13.99, True), (14., True), (14.01, False)):
             with self.subTest(low_seconds=low_seconds):
-                moving, audit = self.moving([point(0), point(low_seconds), point(20, 20)])
+                moving, audit = self.moving([point(0), point(7), point(low_seconds), point(20, 20)])
                 self.assertEqual(expected, moving)
                 self.assertAlmostEqual(low_seconds / 20, audit["low_speed_time_fraction"])
                 self.assertEqual(20., audit["valid_duration_seconds"])
-        # 至少15秒是总有效观测时间，不是要求低速本身满15秒。
-        self.assertFalse(self.moving([point(0), point(11), point(15, 20)])[0])
+        # 至少10秒是总有效观测时间，不是要求低速本身满10秒。
+        self.assertFalse(self.moving([point(0), point(7.1), point(10, 20)])[0])
 
     def test_time_weighted_fraction_is_not_point_count_or_average_speed(self):
-        # 一个长低速区间占75%，即便多数采样间隔高速、整体均速也较高，仍转静态。
-        points = [point(0), point(15)] + [point(15+i, i*10) for i in range(1, 6)]
+        # 两个低速区间占75%，即便多数采样间隔高速、整体均速也较高，仍转静态。
+        points = [point(0), point(7), point(15)] + [point(15+i, i*10) for i in range(1, 6)]
         moving, audit = self.moving(points)
         self.assertFalse(moving)
         self.assertEqual(.75, audit["low_speed_time_fraction"])
         # 多个短低速区间只占25%，不能因低速点数多而转静态。
-        self.assertTrue(self.moving([point(i) for i in range(6)] + [point(20, 30)])[0])
+        self.assertTrue(self.moving([point(i) for i in range(6)] + [point(12.5, 15), point(20, 30)])[0])
 
-    def test_sparse_observations_are_audited_as_observations_not_continuous_proof(self):
+    def test_sparse_observation_gap_is_excluded_from_both_durations(self):
         moving, audit = self.moving([point(0), point(498, 1.4)])
-        self.assertFalse(moving)
+        self.assertTrue(moving)
         self.assertTrue(audit["sparse_observations"])
         self.assertEqual(498., audit["max_observation_gap_seconds"])
-        self.assertAlmostEqual(1.4 / 498, audit["low_speed_average_mps"], places=6)
+        self.assertEqual(498., audit["excluded_gap_duration_seconds"])
+        self.assertEqual(1, audit["excluded_gap_count"])
+        self.assertEqual(0, audit["valid_interval_count"])
+        self.assertEqual(0., audit["valid_duration_seconds"])
+        self.assertEqual(0., audit["low_speed_duration_seconds"])
+        self.assertIsNone(audit["low_speed_average_mps"])
+
+    def test_gap_boundary_and_disconnected_observations_accumulate(self):
+        self.assertFalse(self.moving([point(0), point(10)])[0])
+        self.assertTrue(self.moving([point(0), point(10.001)])[0])
+        moving, audit = self.moving([point(0), point(5), point(1000, 100), point(1005, 100)])
+        self.assertFalse(moving)
+        self.assertEqual(10., audit['valid_duration_seconds'])
+        self.assertEqual(10., audit['low_speed_duration_seconds'])
+        self.assertEqual(995., audit['excluded_gap_duration_seconds'])
+        self.assertEqual(2, audit['valid_interval_count'])
+
+    def test_delayed_samples_bridge_gap_by_localization_time(self):
+        endpoints = [point(0), point(20)]
+        self.assertTrue(self.moving(endpoints)[0])
+        moving, audit = self.moving(endpoints + [point(15), point(5), point(10), point(5)])
+        self.assertFalse(moving)
+        self.assertEqual(20., audit['valid_duration_seconds'])
+        self.assertEqual(0, audit['excluded_gap_count'])
+        self.assertEqual(4, audit['valid_interval_count'])
 
     def test_duplicate_and_invalid_timestamps_do_not_accumulate_time(self):
         moving, audit = self.moving([point(0), point(0), point(0, 1),
@@ -88,7 +113,7 @@ class TargetMotionTest(unittest.TestCase):
         self.assertEqual(1, audit["valid_position_count"])
 
     def test_geographic_boundaries_and_out_of_order_points(self):
-        points = [point(30, 0.5), point(0), point(15, 0.3)]
+        points = [point(20, 0.5), point(0), point(10, 0.3)]
         self.assertFalse(self.moving(points)[0])
         self.assertTrue(self.moving([point(0), dict(timestamp=point(20)["timestamp"], coordinates=[181., 0.])])[0])
 
@@ -96,7 +121,7 @@ class TargetMotionTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory); mission = "subject1-low-speed"
             folder = root / "UAV2" / mission; folder.mkdir(parents=True)
-            for i, seconds, success, score in ((1, 0, True, .99), (2, 15, False, .2)):
+            for i, seconds, success, score in ((1, 0, True, .99), (2, 10, False, .2)):
                 metadata = dict(mission_id=mission, target_id="raw-13", category_id=15,
                     category="人", target_type="dsolider1", is_moving=True,
                     localization_time=dict(secs=int(BASE.timestamp()) + seconds, nsecs=0),
@@ -114,8 +139,8 @@ class TargetMotionTest(unittest.TestCase):
             self.assertEqual("固定", props["targetCategory"])
             self.assertEqual("人员1", props["targetModel"])
             self.assertEqual(.2, props["confidence"])
-            self.assertEqual(point(15, 1)["coordinates"], feature["geometry"]["coordinates"])
-            self.assertEqual("2026-10-10T08:00:15.000+08:00", props["timestamp"])
+            self.assertEqual(point(10, 1)["coordinates"], feature["geometry"]["coordinates"])
+            self.assertEqual("2026-10-10T08:00:10.000+08:00", props["timestamp"])
             self.assertNotIn("trackPoints", props)
             self.assertNotIn("imagePath", props)
             audit = json.loads(path.with_name("submission-format.json").read_text(encoding="utf-8"))

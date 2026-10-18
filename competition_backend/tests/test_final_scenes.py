@@ -28,6 +28,39 @@ from su17_competition_executor.task_protocol import validate_assignment, load_as
 
 
 class FinalScenesTest(unittest.TestCase):
+    def test_scene_parameters_default_dispatch_and_stale_values(self):
+        for profile in PROFILES:
+            with self.subTest(profile=profile), tempfile.TemporaryDirectory() as directory:
+                app = create_app(dict(COMPETITION_ADAPTER='sim',COMPETITION_DATA_DIR=directory,
+                    COMPETITION_DIAGNOSTICS_DIR=directory,COMPETITION_IMAGE_ROOT=directory))
+                try:
+                    client = TestClient(app)
+                    seconds = 50. if profile == 'final_scene_1' else 30.
+                    selection = dict(subject='subject2',planning_mode='competition',flight_profile=profile,
+                        coordinate_mode='gps',departure_point=departure_for(profile),controller_mode='external',
+                        flight_altitude_plan=altitude_profile(profile))
+                    for stale in (dict(hover_scan_seconds=30. if seconds==50. else 50.),
+                                  dict(speed_mps=4.),dict(reconnaissance_radius_m=30.)):
+                        for endpoint in ('/api/v1/planning/competition-coverage','/api/v1/plan'):
+                            rejected=client.post(endpoint,json=dict(selection,**stale))
+                            self.assertEqual(rejected.status_code,422,rejected.text)
+                            self.assertIn('{:g}秒/点'.format(seconds),rejected.json()['detail'])
+                    self.assertFalse(any(c['type']=='assign_task' for c in app.state.adapter.snapshot()))
+                    preview=client.post('/api/v1/planning/competition-coverage',json=selection)
+                    self.assertEqual(preview.status_code,200,preview.text)
+                    self.assertEqual(preview.json()['search_area']['coverage']['hover_scan_seconds'],seconds)
+                    result=client.post('/api/v1/plan',json=selection)
+                    self.assertEqual(result.status_code,200,result.text)
+                    sent=[c for c in app.state.adapter.snapshot() if c['type']=='assign_task']
+                    self.assertEqual(len(sent),6)
+                    for command in sent:
+                        task=command['payload']['task']
+                        self.assertEqual(task['hover_scan_seconds'],seconds)
+                        for layer in task.get('layers',[]):
+                            self.assertEqual(layer['hover_scan_seconds'],seconds)
+                finally:
+                    app.state.audit.close()
+
     def test_three_scenes_six_ground_assign_takeoff_ros(self):
         evidence = []
         for profile in PROFILES:
@@ -75,10 +108,11 @@ class FinalScenesTest(unittest.TestCase):
                             capabilities=dict(boot_id=home['boot_id'],boot_gps_home=home)))
                     selection = dict(subject='subject2',planning_mode='competition',flight_profile=profile,coordinate_mode='gps',
                         departure_point=departure_for(profile),controller_mode='external',flight_altitude_plan=altitude_profile(profile),
-                        reconnaissance_radius_m=50.,speed_mps=5.,hover_scan_seconds=50.,duration_seconds=1.,
+                        reconnaissance_radius_m=50.,speed_mps=5.,hover_scan_seconds=50. if profile=='final_scene_1' else 30.,duration_seconds=1.,
                         recognition_selection={'category_ids':[],'category_count':0})
                     preview = clients[1].post('/api/v1/planning/competition-coverage',json=selection)
                     self.assertEqual(preview.status_code,200,preview.text)
+                    self.assertEqual(preview.json()['search_area']['coverage']['hover_scan_seconds'],selection['hover_scan_seconds'])
                     started = time.monotonic()
                     r = clients[1].post('/api/v1/plan/jobs',json=dict(selection,request_id='final-'+profile))
                     self.assertEqual(r.status_code,200,r.text); job = r.json()
@@ -156,9 +190,16 @@ class FinalScenesTest(unittest.TestCase):
                             self.assertTrue(all(p[2]==height for p in route['path']))
                         manifest=json.loads(node.external_mission_pub.publish.call_args.args[0].data)
                         self.assertEqual(manifest['speed_mps'],5.)
-                        self.assertEqual(manifest['hover_scan_seconds'],50.)
+                        self.assertEqual(manifest['hover_scan_seconds'],50. if not lower else 30.)
                         self.assertIsNone(manifest['deadline_at'])
-                        self.assertEqual(manifest['layers'][0]['scan_passes'],2 if not lower else 1)
+                        self.assertEqual(manifest['layers'][0]['scan_passes'],2)
+                        if lower:
+                            self.assertEqual(manifest['execution_mode'],'upper_roundtrip_then_lower_roundtrip')
+                            self.assertEqual(manifest['layers'][1]['scan_passes'],2)
+                            self.assertEqual(manifest['mission_budget_seconds'],960.)
+                            for layer in manifest['layers']:
+                                n=layer['waypoint_count']
+                                self.assertEqual(layer['scan_execution_order'],list(range(n))+list(reversed(range(n))))
                         self.assertEqual(manifest['return_policy'],'climb_to_upper_then_return' if lower else 'at_task_altitude')
                         self.assertEqual(node.recon_start_mode_pub.publish.call_args.args[0].data,0)
                         node._fly_to.assert_not_called();node._land.assert_not_called()
@@ -203,7 +244,16 @@ class FinalScenesTest(unittest.TestCase):
                         self.assertGreaterEqual(line.distance(boundary.boundary)+1e-6,5.)
                         if not holes.is_empty:self.assertGreaterEqual(line.distance(holes)+1e-6,5.)
                 if len(layers) == 2:
-                    connection=LineString([layers[0]['waypoints_m'][-1],layers[1]['waypoints_m'][0]])
+                    self.assertEqual(layers[0]['waypoints_m'][0],layers[1]['waypoints_m'][0])
+                    self.assertLessEqual(task['mission_time_s'],960.)
+                    self.assertAlmostEqual(sum(task['timing_components'].values()),task['mission_time_s'])
+                    self.assertEqual(task['scan_visit_count'],2*sum(len(l['waypoints_m']) for l in layers))
+                    self.assertEqual(task['hover_scan_time_s'],30*task['scan_visit_count'])
+                    self.assertEqual(task['layer_transition']['from_waypoint_id'],layers[0]['waypoint_ids'][0])
+                    self.assertEqual(task['normal_return_source'],dict(source_uav_id=task['sector'],waypoint_index=1))
+                    for layer in layers:
+                        self.assertGreaterEqual(len(layer['waypoints_m']),2)
+                    connection=Point(layers[0]['waypoints_m'][0])
                     self.assertTrue(boundary.covers(connection))
                     self.assertGreaterEqual(connection.distance(boundary.boundary)+1e-6,5.)
                     if not holes.is_empty:self.assertGreaterEqual(connection.distance(holes)+1e-6,5.)

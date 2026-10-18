@@ -210,7 +210,7 @@ class Subject1Reporter:
                         [entry['source_id'] for entry in format_audit['id_mapping']]):
                     format_audit['id_mapping'] = local_audit['id_mapping']
                 format_audit['excluded_targets'] = local_audit.get('excluded_targets', format_audit['excluded_targets'])
-                for key in ('target_time', 'category_records', 'motion_classification', 'deduplication'):
+                for key in ('target_time', 'category_records', 'motion_classification', 'static_position_selection', 'deduplication'):
                     if isinstance(local_audit.get(key), (dict, list)):
                         format_audit[key] = local_audit[key]
             except (OSError, ValueError, TypeError, KeyError):

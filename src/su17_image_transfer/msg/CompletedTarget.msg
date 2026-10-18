@@ -15,6 +15,8 @@ float32 h
 float32 score
 int32 category_id
 float32 speed_mps
+# 定位时刻无人机与目标的水平距离（米）；0有效，NaN表示不可用。
+float32 horizontal_distance_m
 string category
 bool is_moving
 bool indoor_position
