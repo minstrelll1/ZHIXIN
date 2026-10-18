@@ -1,5 +1,6 @@
 """本机程序状态与 SSH 机载启动。故障隔离，不发送任何飞行或解锁指令。"""
 import base64
+import errno
 import json
 import os
 from pathlib import Path
@@ -7,6 +8,7 @@ import re
 import subprocess
 import threading
 import time
+import zlib
 
 from .ssh_identity import ssh_identity_args
 from .program_logs import LatestProgramLog
@@ -15,6 +17,22 @@ from .prometheus_connection import PrometheusConnection
 NAMES = {'ground': '竞赛程序地面端', 'onboard': '竞赛程序机载端',
          'detection': '车辆工事检测程序', 'detection_person': '人员检测程序',
          'flight': '自主飞行指令程序', 'drop': '抛投程序'}
+
+
+class SSHTransportError(RuntimeError):
+    """请求是否执行未知；恢复后先查询机载记录，不能据此禁止自动启动。"""
+
+
+def transient_connection_error(error):
+    if isinstance(error, (SSHTransportError, TimeoutError, ConnectionError, subprocess.TimeoutExpired)):
+        return True
+    if isinstance(error, OSError) and error.errno in (
+            errno.ENETDOWN, errno.ENETUNREACH, errno.EHOSTUNREACH, errno.ECONNRESET,
+            errno.ECONNREFUSED, errno.EPIPE, errno.ETIMEDOUT):
+        return True
+    return bool(re.search(
+        r'(?i)\btimeout\b|timed out|server .+ not responding|connection (?:reset|closed|refused|aborted)'
+        r'|broken pipe|no route to host|network is (?:unreachable|down)|connection lost', str(error)))
 
 
 def redact(text, secrets=()):
@@ -115,7 +133,8 @@ class ProgramManager:
                       "    print(json.dumps(dict(boot_id=boot, remote_monotonic=time.monotonic(), remote_wall=time.time())))\n")
         else:
             source = (self.root / 'tools' / 'remote_programs.py').read_text(encoding='utf-8-sig')
-        payload = dict(action=action, uav_id=self.local['uav_id'], model=self.local['model'], offsets=offsets, program=program, latest_log=True)
+        payload = dict(action=action, uav_id=self.local['uav_id'], model=self.local['model'], offsets=offsets,
+                       program=program, latest_log=True, log_limit=8192 if action == 'status' else 0)
         if action == 'prometheus_gps':
             payload['expected_boot_id'] = program
         if action == 'auto_start':
@@ -134,33 +153,48 @@ class ProgramManager:
                     raise RuntimeError('读取机载启动配置 config/onboard_programs.json 失败：%s' % error) from error
         # Windows OpenSSH/远端终端的编码设置可能不同。stdin 只传 ASCII，
         # 由远端 Python 明确按 UTF-8 还原含中文的管理脚本。
-        source_b64 = base64.b64encode(source.encode('utf-8')).decode('ascii')
+        source_b64 = base64.b64encode(zlib.compress(source.encode('utf-8'))).decode('ascii')
         payload_json = json.dumps(payload, ensure_ascii=True, separators=(',', ':'))
-        code = ("import base64, json\n"
-                f"PROGRAM_SOURCE = base64.b64decode('{source_b64}').decode('utf-8')\n"
+        code = ("import base64, json, zlib, io, contextlib\n"
+                f"PROGRAM_SOURCE = zlib.decompress(base64.b64decode('{source_b64}')).decode('utf-8')\n"
                 "exec(compile(PROGRAM_SOURCE, %r, 'exec'))\n" % (
                     'remote_prometheus.py' if action.startswith('prometheus_') else 'remote_programs.py') +
-                f"rpc(json.loads({payload_json!r}))\n")
+                "_rpc_output = io.StringIO()\n"
+                "with contextlib.redirect_stdout(_rpc_output):\n"
+                f"    rpc(json.loads({payload_json!r}))\n"
+                "print('ZHX1:' + base64.b64encode(zlib.compress(_rpc_output.getvalue().encode('utf-8'))).decode('ascii'))\n")
         user = self.env.get('COMPETITION_SSH_USER', 'amov')
         # accept-new 只接受初次连接，不覆盖已改变的主机密钥。
-        command = ['ssh', *ssh_identity_args(), '-T', '-o', 'BatchMode=yes', '-o', 'StrictHostKeyChecking=accept-new',
-                   '-o', 'ConnectTimeout=4', '-o', 'ServerAliveInterval=4', '-o', 'ServerAliveCountMax=1',
+        binding = ['-b', self.local['ground_host']] if self.local.get('ground_host') else []
+        command = ['ssh', *ssh_identity_args(), *binding, '-T', '-o', 'BatchMode=yes', '-o', 'StrictHostKeyChecking=accept-new',
+                   '-o', 'ConnectTimeout=8', '-o', 'ServerAliveInterval=5', '-o', 'ServerAliveCountMax=3',
                    '%s@%s' % (user, self.local['onboard_host']), 'python3 -']
         if action in ('prometheus_probe', 'prometheus_gps'):
             command[-1] = "bash -c 'source /opt/ros/noetic/setup.bash && source ~/p600_experiment/devel/setup.bash && exec python3 -'"
         started = time.monotonic()
         try:
-            result = subprocess.run(command, input=code.encode('ascii'), capture_output=True, timeout=25 if action == 'stop' else (4 if action == 'clock_probe' else 16),
+            result = subprocess.run(command, input=code.encode('ascii'), capture_output=True, timeout=4 if action == 'clock_probe' else 45,
                                     creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
             if result.returncode:
                 detail = (result.stderr or result.stdout).decode('utf-8', errors='replace').strip()
+                # OpenSSH 255 是连接失败；认证/主机密钥错误仍需明确处理，不伪装成弱网。
+                authentication_error = re.search(r'(?i)permission denied|host key verification failed|'
+                                                 r'remote host identification has changed|bad permissions', detail)
+                if (result.returncode == 255 and not authentication_error) or transient_connection_error(RuntimeError(detail)):
+                    raise SSHTransportError('SSH 连接暂时中断：' + detail)
                 raise RuntimeError('SSH 连接或机载程序管理失败：' + detail)
-            answer = json.loads(result.stdout.decode('utf-8'))
+            try:
+                response = result.stdout.strip()
+                if response.startswith(b'ZHX1:'):
+                    response = zlib.decompress(base64.b64decode(response[5:], validate=True))
+                answer = json.loads(response.decode('utf-8'))
+            except (ValueError, UnicodeError, zlib.error) as error:
+                raise SSHTransportError('SSH 响应不完整，将重新查询机载实际状态') from error
         except Exception as error:
             detail = str(error)
             stage = ('ros_master' if '[ros_master]' in detail else
                      'ssh_authentication' if 'Permission denied' in detail else
-                     'ssh_transport' if re.search(r'(?i)connect to host|banner exchange|connection (?:reset|closed)', detail) else
+                     'ssh_transport' if isinstance(error, SSHTransportError) else
                      'ssh_request_timeout' if isinstance(error, subprocess.TimeoutExpired) else 'remote_execution')
             self._request_diagnostic(action, program, stage, started, detail)
             raise
@@ -199,7 +233,9 @@ class ProgramManager:
                 return dict(ready=False, auto_start_allowed=False, detail='地面端正在关闭')
             status = self.connection.step(probe, lambda boot: self._request('prometheus_gps', {}, program=boot))
         except Exception as error:
-            status = dict(ready=False, auto_start_allowed=False, state='error', detail=str(error))
+            transient = transient_connection_error(error)
+            status = dict(ready=False, auto_start_allowed=False, state='starting' if transient else 'error',
+                          detail=('连接暂时中断，正在自动重试：' if transient else '') + str(error))
         previous = self.connection_status.get('detail')
         self.connection_status = status
         self.connection_checked = time.monotonic()
@@ -351,6 +387,7 @@ class ProgramManager:
             offsets = {key: self._mirror(key).offset for key in NAMES if key != 'ground'}
         # 先读本次开机标识与机载持久记录。不能把首次 SSH 失败或链路恢复当作启动依据。
         action, failed_once, authorization_attempted = 'status', False, False
+        retry_delay = 1
         while not self.stop_event.is_set():
             if self.restart_request.is_set():
                 self.restart_request.clear()
@@ -394,14 +431,12 @@ class ProgramManager:
                             self._append(key, '\nSSH 已恢复，继续读取原程序状态与日志。\n')
                     pending = [key for key in lifecycle.get('auto_start_pending', [])
                                if key in offsets and key not in self.operator_stopped]
-                    if action == 'auto_start' and pending:
-                        # 标记无法落盘等管理错误需要人工处理；继续监控，不无限尝试启动。
-                        self.auto_blocked_boot = current_boot
                     if action == 'auto_start' and getattr(self, 'audit', None):
                         self.audit.record('机载开机自动启动结果', uav_id=self.local['uav_id'], boot_id=current_boot,
                                           reason=lifecycle.get('auto_start_reason'),
                                           states={key: result[key].get('state') for key in offsets})
                     action, failed_once = 'status', False
+                    retry_delay = 1
                     if (current_boot and pending and self.auto_blocked_boot != current_boot
                             and connection.get('ready') and connection.get('auto_start_allowed', True)):
                         action = 'auto_start'
@@ -447,14 +482,13 @@ class ProgramManager:
                         error = auth_error
                         with self.lock:
                             self.auth = dict(state='error', detail=str(error))
-                transient = isinstance(error, (OSError, subprocess.TimeoutExpired)) or re.search(
-                    r'(?i)timed out|connection (?:reset|closed|refused)|broken pipe|no route to host|network is unreachable',
-                    str(error))
+                transient = transient_connection_error(error)
+                retry_delay = min(retry_delay * 2, 8) if transient else 1
                 for key in offsets:
                     with self.lock:
-                        waiting = transient and not self.boot_id
+                        waiting = transient
                         self.states[key] = dict(state='starting' if waiting else 'error',
-                                                detail=('等待无人机开机及 SSH 就绪：' if waiting else '') + str(error),
+                                                detail=('连接暂时中断，持续自动重试并核对启动进度：' if waiting else '') + str(error),
                                                 checked_at=time.time())
                     if not failed_once:
                         self._append(key, '\n%s\n' % error)
@@ -464,8 +498,8 @@ class ProgramManager:
                 if action in ('start', 'auto_start') and not transient:
                     self.auto_blocked_boot = self.boot_id
                 action = 'status'
-            # 同次开机只有只读查询；新开机才允许发起一批自动启动。
-            if self.stop_event.wait(1):
+            # 弱网恢复后先查询，再按机载逐项记录继续本次开机尚未执行的启动。
+            if self.stop_event.wait(retry_delay):
                 break
 
     def snapshot(self):

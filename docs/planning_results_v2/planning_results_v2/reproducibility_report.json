@@ -1,0 +1,122 @@
+{
+  "passed": true,
+  "method": "Actual full re-optimization in an isolated temporary directory, then regenerate all-recipient return catalog, topic mappings, schema and self-contained preview. Same immutable merged input, exclusions and timestamp snapshot; not reuse-candidates.",
+  "source_inputs_sha256": "79b40ab264f8973822be5173eb4feea087c8d55edde6052aa2c6a4b002f4fdc3",
+  "planning_result_sha256": "60c52b29986a25ddc51da5a601dd5c3b2dd105ec2dc049d3bee2209c460adb14",
+  "checks": [
+    {
+      "file": "planning_result.json",
+      "original_sha256": "60c52b29986a25ddc51da5a601dd5c3b2dd105ec2dc049d3bee2209c460adb14",
+      "reproduced_sha256": "60c52b29986a25ddc51da5a601dd5c3b2dd105ec2dc049d3bee2209c460adb14",
+      "byte_identical": true
+    },
+    {
+      "file": "planning_result.geojson",
+      "original_sha256": "1da97b7ec39f08ce3c2c757da3c1d8deb656a161305d7b6c349d465a9e04dd5a",
+      "reproduced_sha256": "1da97b7ec39f08ce3c2c757da3c1d8deb656a161305d7b6c349d465a9e04dd5a",
+      "byte_identical": true
+    },
+    {
+      "file": "waypoints.csv",
+      "original_sha256": "dc2efaa21f7f3b9315b896fb28e97a7c47fd6737a89cd9c4e85c5712c9497f74",
+      "reproduced_sha256": "dc2efaa21f7f3b9315b896fb28e97a7c47fd6737a89cd9c4e85c5712c9497f74",
+      "byte_identical": true
+    },
+    {
+      "file": "scan_visits.csv",
+      "original_sha256": "108c4f83880533eb64232519c18f3c5580b1f9df8413bd3714f05a94ff326120",
+      "reproduced_sha256": "108c4f83880533eb64232519c18f3c5580b1f9df8413bd3714f05a94ff326120",
+      "byte_identical": true
+    },
+    {
+      "file": "candidate_comparison.json",
+      "original_sha256": "303f21bf6c10e57c803aa3206b3dbb3e51dbdafb5552457e3136f08f58126ee1",
+      "reproduced_sha256": "303f21bf6c10e57c803aa3206b3dbb3e51dbdafb5552457e3136f08f58126ee1",
+      "byte_identical": true
+    },
+    {
+      "file": "feasibility_bounds.json",
+      "original_sha256": "51e772310e860b1d2be6243ed79a722184d4a15a19485111f836720dd2c571cc",
+      "reproduced_sha256": "51e772310e860b1d2be6243ed79a722184d4a15a19485111f836720dd2c571cc",
+      "byte_identical": true
+    },
+    {
+      "file": "planner_config.json",
+      "original_sha256": "55689abb5d727e551e0e8896d9a42f661319e1620b35d5f6e1bbf92231088a5b",
+      "reproduced_sha256": "55689abb5d727e551e0e8896d9a42f661319e1620b35d5f6e1bbf92231088a5b",
+      "byte_identical": true
+    },
+    {
+      "file": "return_selections.json",
+      "original_sha256": "1aec860de3619892a0ffe4654c9cca229da5234f538d810b298c54f232a0b26f",
+      "reproduced_sha256": "1aec860de3619892a0ffe4654c9cca229da5234f538d810b298c54f232a0b26f",
+      "byte_identical": true
+    },
+    {
+      "file": "redundancy_audit.json",
+      "original_sha256": "11d140606dfb3969bb9b7274b5b15b0ba94ca261f2fd3016b74037963808c888",
+      "reproduced_sha256": "11d140606dfb3969bb9b7274b5b15b0ba94ca261f2fd3016b74037963808c888",
+      "byte_identical": true
+    },
+    {
+      "file": "candidates/coverage_priority.json",
+      "original_sha256": "60c52b29986a25ddc51da5a601dd5c3b2dd105ec2dc049d3bee2209c460adb14",
+      "reproduced_sha256": "60c52b29986a25ddc51da5a601dd5c3b2dd105ec2dc049d3bee2209c460adb14",
+      "byte_identical": true
+    },
+    {
+      "file": "candidates/more_reserve.json",
+      "original_sha256": "f832b44cac3ae136969431557855f4b43c772058a2fbab0613e2331cf5143dc8",
+      "reproduced_sha256": "f832b44cac3ae136969431557855f4b43c772058a2fbab0613e2331cf5143dc8",
+      "byte_identical": true
+    },
+    {
+      "file": "candidates/coverage_priority_return_selections.json",
+      "original_sha256": "1aec860de3619892a0ffe4654c9cca229da5234f538d810b298c54f232a0b26f",
+      "reproduced_sha256": "1aec860de3619892a0ffe4654c9cca229da5234f538d810b298c54f232a0b26f",
+      "byte_identical": true
+    },
+    {
+      "file": "candidates/more_reserve_return_selections.json",
+      "original_sha256": "5f32d70fbbc9afa9d931a7e8a31ed3fa3001905c2829d456b6a6ffeed564650d",
+      "reproduced_sha256": "5f32d70fbbc9afa9d931a7e8a31ed3fa3001905c2829d456b6a6ffeed564650d",
+      "byte_identical": true
+    },
+    {
+      "file": "candidates/coverage_priority_redundancy_audit.json",
+      "original_sha256": "11d140606dfb3969bb9b7274b5b15b0ba94ca261f2fd3016b74037963808c888",
+      "reproduced_sha256": "11d140606dfb3969bb9b7274b5b15b0ba94ca261f2fd3016b74037963808c888",
+      "byte_identical": true
+    },
+    {
+      "file": "candidates/more_reserve_redundancy_audit.json",
+      "original_sha256": "e4b86fbea3b76421f4689815d7803d0c459b58c6ff0ccb82753002e557b9a308",
+      "reproduced_sha256": "e4b86fbea3b76421f4689815d7803d0c459b58c6ff0ccb82753002e557b9a308",
+      "byte_identical": true
+    },
+    {
+      "file": "return_catalog.json",
+      "original_sha256": "ea22749b138982ec65fa2c67ce114c41953f35c0a13a77515215dc07db23ad29",
+      "reproduced_sha256": "ea22749b138982ec65fa2c67ce114c41953f35c0a13a77515215dc07db23ad29",
+      "byte_identical": true
+    },
+    {
+      "file": "return_catalog.schema.json",
+      "original_sha256": "46ddcf37f801c3ec305fe172f0fb773c349348164b67c9b41c5931148973f365",
+      "reproduced_sha256": "46ddcf37f801c3ec305fe172f0fb773c349348164b67c9b41c5931148973f365",
+      "byte_identical": true
+    },
+    {
+      "file": "topic_mapping.json",
+      "original_sha256": "7c0d5f417840daa353aafc94c81aceab452d4d5f90444cda19f82267740a979c",
+      "reproduced_sha256": "7c0d5f417840daa353aafc94c81aceab452d4d5f90444cda19f82267740a979c",
+      "byte_identical": true
+    },
+    {
+      "file": "planning_preview.html",
+      "original_sha256": "04d5cdeab3eaa2459e5d5dd2492dfc0a2b5caf192ea9ce339c9952b34fcced4e",
+      "reproduced_sha256": "04d5cdeab3eaa2459e5d5dd2492dfc0a2b5caf192ea9ce339c9952b34fcced4e",
+      "byte_identical": true
+    }
+  ]
+}

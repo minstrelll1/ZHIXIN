@@ -1,0 +1,625 @@
+{
+  "type": "object",
+  "properties": {
+    "catalog_schema_version": {
+      "const": 1
+    },
+    "artifact_type": {
+      "const": "offline_return_catalog"
+    },
+    "plan_id": {
+      "type": "string"
+    },
+    "source_inputs_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "planning_result_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "return_selections_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "proposed_only": {
+      "const": true
+    },
+    "publishes_messages": {
+      "const": false
+    },
+    "scenes": {
+      "type": "object",
+      "properties": {
+        "final_scene_1": {
+          "type": "object",
+          "properties": {
+            "1": {
+              "$ref": "#/$defs/recipient"
+            },
+            "2": {
+              "$ref": "#/$defs/recipient"
+            },
+            "3": {
+              "$ref": "#/$defs/recipient"
+            },
+            "4": {
+              "$ref": "#/$defs/recipient"
+            },
+            "5": {
+              "$ref": "#/$defs/recipient"
+            },
+            "6": {
+              "$ref": "#/$defs/recipient"
+            }
+          },
+          "required": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6"
+          ],
+          "additionalProperties": false
+        },
+        "final_scene_2": {
+          "type": "object",
+          "properties": {
+            "1": {
+              "$ref": "#/$defs/recipient"
+            },
+            "2": {
+              "$ref": "#/$defs/recipient"
+            },
+            "3": {
+              "$ref": "#/$defs/recipient"
+            },
+            "4": {
+              "$ref": "#/$defs/recipient"
+            },
+            "5": {
+              "$ref": "#/$defs/recipient"
+            },
+            "6": {
+              "$ref": "#/$defs/recipient"
+            }
+          },
+          "required": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6"
+          ],
+          "additionalProperties": false
+        },
+        "xuchang_small_2": {
+          "type": "object",
+          "properties": {
+            "1": {
+              "$ref": "#/$defs/recipient"
+            },
+            "2": {
+              "$ref": "#/$defs/recipient"
+            },
+            "3": {
+              "$ref": "#/$defs/recipient"
+            },
+            "4": {
+              "$ref": "#/$defs/recipient"
+            },
+            "5": {
+              "$ref": "#/$defs/recipient"
+            },
+            "6": {
+              "$ref": "#/$defs/recipient"
+            }
+          },
+          "required": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "final_scene_1",
+        "final_scene_2",
+        "xuchang_small_2"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "catalog_schema_version",
+    "artifact_type",
+    "plan_id",
+    "source_inputs_sha256",
+    "planning_result_sha256",
+    "return_selections_sha256",
+    "proposed_only",
+    "publishes_messages",
+    "scenes"
+  ],
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:planning:offline-return-catalog:1",
+  "title": "Offline all-source recipient-height return catalog; not a runtime mission",
+  "$defs": {
+    "recipient": {
+      "type": "object",
+      "properties": {
+        "recipient_uav_id": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 6
+        },
+        "coordinate_frame": {
+          "const": "WGS84"
+        },
+        "local_frame": {
+          "const": "LOCAL_NORTH_WEST"
+        },
+        "coordinate_order": {
+          "const": "longitude_latitude_relative_altitude"
+        },
+        "altitude_frame": {
+          "const": "RELATIVE_TO_RECIPIENT_TAKEOFF"
+        },
+        "runtime_schema_version": {
+          "const": 2
+        },
+        "route_scope": {
+          "const": "all_uav_waypoints"
+        },
+        "waypoint_layer": {
+          "enum": [
+            "upper",
+            "assigned_physical_layer"
+          ]
+        },
+        "return_policy": {
+          "enum": [
+            "climb_to_upper_then_return",
+            "at_task_altitude"
+          ]
+        },
+        "recipient_return_altitude_m": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "reference_home": {
+          "type": "object",
+          "properties": {
+            "latitude": {
+              "type": "number"
+            },
+            "longitude": {
+              "type": "number"
+            },
+            "home_nw_m": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "minItems": 2,
+              "maxItems": 2
+            },
+            "source": {
+              "const": "nominal_reference_home"
+            },
+            "is_nominal": {
+              "const": true
+            }
+          },
+          "required": [
+            "latitude",
+            "longitude",
+            "home_nw_m",
+            "source",
+            "is_nominal"
+          ],
+          "additionalProperties": false
+        },
+        "entry_path": {
+          "type": "object",
+          "properties": {
+            "path_nwz_m": {
+              "type": "array",
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 3,
+                "maxItems": 3
+              },
+              "minItems": 2
+            },
+            "path_lon_lat_alt": {
+              "type": "array",
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 3,
+                "maxItems": 3
+              },
+              "minItems": 2
+            },
+            "horizontal_distance_m": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "path_nwz_m",
+            "path_lon_lat_alt",
+            "horizontal_distance_m"
+          ],
+          "additionalProperties": false
+        },
+        "retained_return_gate_points_m": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 2,
+            "maxItems": 2
+          }
+        },
+        "waypoint_counts_by_uav": {
+          "type": "object",
+          "properties": {
+            "1": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "2": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "3": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "4": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "5": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "6": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          "required": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6"
+          ],
+          "additionalProperties": false
+        },
+        "return_paths": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "source_uav_id": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 6
+              },
+              "source_physical_layer": {
+                "enum": [
+                  "upper",
+                  "lower"
+                ]
+              },
+              "waypoint_index": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "waypoint_id": {
+                "type": "string"
+              },
+              "path_nwz_m": {
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "number"
+                  },
+                  "minItems": 3,
+                  "maxItems": 3
+                },
+                "minItems": 2
+              },
+              "path_lon_lat_alt": {
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "number"
+                  },
+                  "minItems": 3,
+                  "maxItems": 3
+                },
+                "minItems": 2
+              },
+              "horizontal_distance_m": {
+                "type": "number",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "source_uav_id",
+              "source_physical_layer",
+              "waypoint_index",
+              "waypoint_id",
+              "path_nwz_m",
+              "path_lon_lat_alt",
+              "horizontal_distance_m"
+            ],
+            "additionalProperties": false
+          },
+          "minItems": 6
+        },
+        "normal_return_connection": {
+          "type": "object",
+          "properties": {
+            "source_uav_id": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 6
+            },
+            "source_physical_layer": {
+              "enum": [
+                "upper",
+                "lower"
+              ]
+            },
+            "waypoint_index": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "waypoint_id": {
+              "type": "string"
+            },
+            "last_scan_waypoint_id": {
+              "type": "string"
+            },
+            "climb_start_nwz_m": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "minItems": 3,
+              "maxItems": 3
+            },
+            "climb_end_nwz_m": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "minItems": 3,
+              "maxItems": 3
+            },
+            "return_climb_mps": {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "return_climb_status": {
+              "enum": [
+                "planner_provisional_unconfirmed",
+                "not_required"
+              ]
+            },
+            "return_climb_s": {
+              "type": "number",
+              "minimum": 0
+            },
+            "connection_path": {
+              "type": "object",
+              "properties": {
+                "path_nwz_m": {
+                  "type": "array",
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    },
+                    "minItems": 3,
+                    "maxItems": 3
+                  },
+                  "minItems": 2
+                },
+                "path_lon_lat_alt": {
+                  "type": "array",
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    },
+                    "minItems": 3,
+                    "maxItems": 3
+                  },
+                  "minItems": 2
+                },
+                "horizontal_distance_m": {
+                  "type": "number",
+                  "minimum": 0
+                }
+              },
+              "required": [
+                "path_nwz_m",
+                "path_lon_lat_alt",
+                "horizontal_distance_m"
+              ],
+              "additionalProperties": false
+            },
+            "return_route_distance_m": {
+              "type": "number",
+              "minimum": 0
+            },
+            "total_return_horizontal_distance_m": {
+              "type": "number",
+              "minimum": 0
+            },
+            "total_return_time_s": {
+              "type": "number",
+              "minimum": 0
+            },
+            "sensitivity_climb_speed_1_2_3_mps": {
+              "type": "object",
+              "properties": {
+                "1": {
+                  "type": "object",
+                  "properties": {
+                    "return_time_s": {
+                      "type": "number",
+                      "minimum": 0
+                    },
+                    "mission_time_s": {
+                      "type": "number",
+                      "minimum": 0
+                    },
+                    "within_1380_s": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "return_time_s",
+                    "mission_time_s",
+                    "within_1380_s"
+                  ],
+                  "additionalProperties": false
+                },
+                "2": {
+                  "type": "object",
+                  "properties": {
+                    "return_time_s": {
+                      "type": "number",
+                      "minimum": 0
+                    },
+                    "mission_time_s": {
+                      "type": "number",
+                      "minimum": 0
+                    },
+                    "within_1380_s": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "return_time_s",
+                    "mission_time_s",
+                    "within_1380_s"
+                  ],
+                  "additionalProperties": false
+                },
+                "3": {
+                  "type": "object",
+                  "properties": {
+                    "return_time_s": {
+                      "type": "number",
+                      "minimum": 0
+                    },
+                    "mission_time_s": {
+                      "type": "number",
+                      "minimum": 0
+                    },
+                    "within_1380_s": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "return_time_s",
+                    "mission_time_s",
+                    "within_1380_s"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "1",
+                "2",
+                "3"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "source_uav_id",
+            "source_physical_layer",
+            "waypoint_index",
+            "waypoint_id",
+            "last_scan_waypoint_id",
+            "climb_start_nwz_m",
+            "climb_end_nwz_m",
+            "return_climb_mps",
+            "return_climb_status",
+            "return_climb_s",
+            "connection_path",
+            "return_route_distance_m",
+            "total_return_horizontal_distance_m",
+            "total_return_time_s",
+            "sensitivity_climb_speed_1_2_3_mps"
+          ],
+          "additionalProperties": false
+        },
+        "status": {
+          "const": "offline_geometry_requires_runtime_adapter"
+        },
+        "limitations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "recipient_uav_id",
+        "coordinate_frame",
+        "local_frame",
+        "coordinate_order",
+        "altitude_frame",
+        "runtime_schema_version",
+        "route_scope",
+        "waypoint_layer",
+        "return_policy",
+        "recipient_return_altitude_m",
+        "reference_home",
+        "entry_path",
+        "retained_return_gate_points_m",
+        "waypoint_counts_by_uav",
+        "return_paths",
+        "normal_return_connection",
+        "status",
+        "limitations"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

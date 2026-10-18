@@ -1,0 +1,918 @@
+{
+  "artifact_type": "fixed_geometry_return_climb_speed_sensitivity",
+  "planning_result_sha256": "60c52b29986a25ddc51da5a601dd5c3b2dd105ec2dc049d3bee2209c460adb14",
+  "nominal_speed_mps": 2,
+  "nominal_status": "planner_provisional_unconfirmed",
+  "speeds_mps": [
+    1,
+    2,
+    3
+  ],
+  "reoptimized": false,
+  "is_flight_guarantee": false,
+  "method": "Replace only actual return-ascent duration by height/speed. Keep all waypoints, horizontal routes, scans and other vertical actions unchanged. Do not subtract reserve from task duration.",
+  "aircraft": [
+    {
+      "scene_id": "final_scene_1",
+      "uav_id": 1,
+      "applicable": false,
+      "ascent_height_m": 0,
+      "nominal_ascent_s": 0,
+      "nominal_mission_time_s": 1253.0426757028172,
+      "scenarios": [
+        {
+          "return_climb_mps": 1,
+          "return_climb_s": 0.0,
+          "mission_time_delta_s": 0.0,
+          "mission_time_s": 1253.0426757028172,
+          "return_s": 2.373033612217988,
+          "remaining_s": 126.95732429718282,
+          "planning_reserve_s": 30,
+          "time_plus_reserve_s": 1283.0426757028172,
+          "within_hard_limit": true,
+          "within_planning_target": true
+        },
+        {
+          "return_climb_mps": 2,
+          "return_climb_s": 0.0,
+          "mission_time_delta_s": 0.0,
+          "mission_time_s": 1253.0426757028172,
+          "return_s": 2.373033612217988,
+          "remaining_s": 126.95732429718282,
+          "planning_reserve_s": 30,
+          "time_plus_reserve_s": 1283.0426757028172,
+          "within_hard_limit": true,
+          "within_planning_target": true
+        },
+        {
+          "return_climb_mps": 3,
+          "return_climb_s": 0.0,
+          "mission_time_delta_s": 0.0,
+          "mission_time_s": 1253.0426757028172,
+          "return_s": 2.373033612217988,
+          "remaining_s": 126.95732429718282,
+          "planning_reserve_s": 30,
+          "time_plus_reserve_s": 1283.0426757028172,
+          "within_hard_limit": true,
+          "within_planning_target": true
+        }
+      ]
+    },
+    {
+      "scene_id": "final_scene_1",
+      "uav_id": 2,
+      "applicable": false,
+      "ascent_height_m": 0,
+      "nominal_ascent_s": 0,
+      "nominal_mission_time_s": 1287.4285994474117,
+      "scenarios": [
+        {
+          "return_climb_mps": 1,
+          "return_climb_s": 0.0,
+          "mission_time_delta_s": 0.0,
+          "mission_time_s": 1287.4285994474117,
+          "return_s": 37.99330314495744,
+          "remaining_s": 92.57140055258833,
+          "planning_reserve_s": 30,
+          "time_plus_reserve_s": 1317.4285994474117,
+          "within_hard_limit": true,
+          "within_planning_target": true
+        },
+        {
+          "return_climb_mps": 2,
+          "return_climb_s": 0.0,
+          "mission_time_delta_s": 0.0,
+          "mission_time_s": 1287.4285994474117,
+          "return_s": 37.99330314495744,
+          "remaining_s": 92.57140055258833,
+          "planning_reserve_s": 30,
+          "time_plus_reserve_s": 1317.4285994474117,
+          "within_hard_limit": true,
+          "within_planning_target": true
+        },
+        {
+          "return_climb_mps": 3,
+          "return_climb_s": 0.0,
+          "mission_time_delta_s": 0.0,
+          "mission_time_s": 1287.4285994474117,
+          "return_s": 37.99330314495744,
+          "remaining_s": 92.57140055258833,
+          "planning_reserve_s": 30,
+          "time_plus_reserve_s": 1317.4285994474117,
+          "within_hard_limit": true,
+          "within_planning_target": true
+        }
+      ]
+    },
+    {
+      "scene_id": "final_scene_1",
+      "uav_id": 3,
+      "applicable": false,
+      "ascent_height_m": 0,
+      "nominal_ascent_s": 0,
+      "nominal_mission_time_s": 1249.9792944270707,
+      "scenarios": [
+        {
+          "return_climb_mps": 1,
+          "return_climb_s": 0.0,
+          "mission_time_delta_s": 0.0,
+          "mission_time_s": 1249.9792944270707,
+          "return_s": 36.9830919102503,
+          "remaining_s": 130.02070557292927,
+          "planning_reserve_s": 30,
+          "time_plus_reserve_s": 1279.9792944270707,
+          "within_hard_limit": true,
+          "within_planning_target": true
+        },
+        {
+          "return_climb_mps": 2,
+          "return_climb_s": 0.0,
+          "mission_time_delta_s": 0.0,
+          "mission_time_s": 1249.9792944270707,
+          "return_s": 36.9830919102503,
+          "remaining_s": 130.02070557292927,
+          "planning_reserve_s": 30,
+          "time_plus_reserve_s": 1279.9792944270707,
+          "within_hard_limit": true,
+          "within_planning_target": true
+        },
+        {
+          "return_climb_mps": 3,
+          "return_climb_s": 0.0,
+          "mission_time_delta_s": 0.0,
+          "mission_time_s": 1249.9792944270707,
+          "return_s": 36.9830919102503,
+          "remaining_s": 130.02070557292927,
+          "planning_reserve_s": 30,
+          "time_plus_reserve_s": 1279.9792944270707,
+          "within_hard_limit": true,
+          "within_planning_target": true
+        }
+      ]
+    },
+    {
+      "scene_id": "final_scene_1",
+      "uav_id": 4,
+      "applicable": false,
+      "ascent_height_m": 0,
+      "nominal_ascent_s": 0,
+      "nominal_mission_time_s": 1331.861540375292,
+      "scenarios": [
+        {
+          "return_climb_mps": 1,
+          "return_climb_s": 0.0,
+          "mission_time_delta_s": 0.0,
+          "mission_time_s": 1331.861540375292,
+          "return_s": 0.4947076044118207,
+          "remaining_s": 48.13845962470805,
+          "planning_reserve_s": 30,
+          "time_plus_reserve_s": 1361.861540375292,
+          "within_hard_limit": true,
+          "within_planning_target": true
+        },
+        {
+          "return_climb_mps": 2,
+          "return_climb_s": 0.0,
+          "mission_time_delta_s": 0.0,
+          "mission_time_s": 1331.861540375292,
+          "return_s": 0.4947076044118207,
+          "remaining_s": 48.13845962470805,
+          "planning_reserve_s": 30,
+          "time_plus_reserve_s": 1361.861540375292,
+          "within_hard_limit": true,
+          "within_planning_target": true
+        },
+        {
+          "return_climb_mps": 3,
+          "return_climb_s": 0.0,
+          "mission_time_delta_s": 0.0,
+          "mission_time_s": 1331.861540375292,
+          "return_s": 0.4947076044118207,
+          "remaining_s": 48.13845962470805,
+          "planning_reserve_s": 30,
+          "time_plus_reserve_s": 1361.861540375292,
+          "within_hard_limit": true,
+          "within_planning_target": true
+        }
+      ]
+    },
+    {
+      "scene_id": "final_scene_1",
+      "uav_id": 5,
+      "applicable": false,
+      "ascent_height_m": 0,
+      "nominal_ascent_s": 0,
+      "nominal_mission_time_s": 1314.7502452698045,
+      "scenarios": [
+        {
+          "return_climb_mps": 1,
+          "return_climb_s": 0.0,
+          "mission_time_delta_s": 0.0,
+          "mission_time_s": 1314.7502452698045,
+          "return_s": 35.750587840674434,
+          "remaining_s": 65.24975473019549,
+          "planning_reserve_s": 30,
+          "time_plus_reserve_s": 1344.7502452698045,
+          "within_hard_limit": true,
+          "within_planning_target": true
+        },
+        {
+          "return_climb_mps": 2,
+          "return_climb_s": 0.0,
+          "mission_time_delta_s": 0.0,
+          "mission_time_s": 1314.7502452698045,
+          "return_s": 35.750587840674434,
+          "remaining_s": 65.24975473019549,
+          "planning_reserve_s": 30,
+          "time_plus_reserve_s": 1344.7502452698045,
+          "within_hard_limit": true,
+          "within_planning_target": true
+        },
+        {
+          "return_climb_mps": 3,
+          "return_climb_s": 0.0,
+          "mission_time_delta_s": 0.0,
+          "mission_time_s": 1314.7502452698045,
+          "return_s": 35.750587840674434,
+          "remaining_s": 65.24975473019549,
+          "planning_reserve_s": 30,
+          "time_plus_reserve_s": 1344.7502452698045,
+          "within_hard_limit": true,
+          "within_planning_target": true
+        }
+      ]
+    },
+    {
+      "scene_id": "final_scene_1",
+      "uav_id": 6,
+      "applicable": false,
+      "ascent_height_m": 0,
+      "nominal_ascent_s": 0,
+      "nominal_mission_time_s": 1288.378497491857,
+      "scenarios": [
+        {
+          "return_climb_mps": 1,
+          "return_climb_s": 0.0,
+          "mission_time_delta_s": 0.0,
+          "mission_time_s": 1288.378497491857,
+          "return_s": 36.48208768776791,
+          "remaining_s": 91.62150250814307,
+          "planning_reserve_s": 30,
+          "time_plus_reserve_s": 1318.378497491857,
+          "within_hard_limit": true,
+          "within_planning_target": true
+        },
+        {
+          "return_climb_mps": 2,
+          "return_climb_s": 0.0,
+          "mission_time_delta_s": 0.0,
+          "mission_time_s": 1288.378497491857,
+          "return_s": 36.48208768776791,
+          "remaining_s": 91.62150250814307,
+          "planning_reserve_s": 30,
+          "time_plus_reserve_s": 1318.378497491857,
+          "within_hard_limit": true,
+          "within_planning_target": true
+        },
+        {
+          "return_climb_mps": 3,
+          "return_climb_s": 0.0,
+          "mission_time_delta_s": 0.0,
+          "mission_time_s": 1288.378497491857,
+          "return_s": 36.48208768776791,
+          "remaining_s": 91.62150250814307,
+          "planning_reserve_s": 30,
+          "time_plus_reserve_s": 1318.378497491857,
+          "within_hard_limit": true,
+          "within_planning_target": true
+        }
+      ]
+    },
+    {
+      "scene_id": "final_scene_2",
+      "uav_id": 1,
+      "applicable": true,
+      "ascent_height_m": 13,
+      "nominal_ascent_s": 6.5,
+      "nominal_mission_time_s": 1309.4459203186575,
+      "scenarios": [
+        {
+          "return_climb_mps": 1,
+          "return_climb_s": 13.0,
+          "mission_time_delta_s": 6.5,
+          "mission_time_s": 1315.9459203186575,
+          "return_s": 19.373033612217988,
+          "remaining_s": 64.0540796813425,
+          "planning_reserve_s": 30,
+          "time_plus_reserve_s": 1345.9459203186575,
+          "within_hard_limit": true,
+          "within_planning_target": true
+        },
+        {
+          "return_climb_mps": 2,
+          "return_climb_s": 6.5,
+          "mission_time_delta_s": 0.0,
+          "mission_time_s": 1309.4459203186575,
+          "return_s": 12.873033612217988,
+          "remaining_s": 70.5540796813425,
+          "planning_reserve_s": 30,
+          "time_plus_reserve_s": 1339.4459203186575,
+          "within_hard_limit": true,
+          "within_planning_target": true
+        },
+        {
+          "return_climb_mps": 3,
+          "return_climb_s": 4.333333333333333,
+          "mission_time_delta_s": -2.166666666666667,
+          "mission_time_s": 1307.2792536519908,
+          "return_s": 10.70636694555132,
+          "remaining_s": 72.72074634800924,
+          "planning_reserve_s": 30,
+          "time_plus_reserve_s": 1337.2792536519908,
+          "within_hard_limit": true,
+          "within_planning_target": true
+        }
+      ]
+    },
+    {
+      "scene_id": "final_scene_2",
+      "uav_id": 2,
+      "applicable": true,
+      "ascent_height_m": 13,
+      "nominal_ascent_s": 6.5,
+      "nominal_mission_time_s": 1345.7585117234823,
+      "scenarios": [
+        {
+          "return_climb_mps": 1,
+          "return_climb_s": 13.0,
+          "mission_time_delta_s": 6.5,
+          "mission_time_s": 1352.2585117234823,
+          "return_s": 19.69147151067693,
+          "remaining_s": 27.741488276517657,
+          "planning_reserve_s": 30,
+          "time_plus_reserve_s": 1382.2585117234823,
+          "within_hard_limit": true,
+          "within_planning_target": false
+        },
+        {
+          "return_climb_mps": 2,
+          "return_climb_s": 6.5,
+          "mission_time_delta_s": 0.0,
+          "mission_time_s": 1345.7585117234823,
+          "return_s": 13.19147151067693,
+          "remaining_s": 34.24148827651766,
+          "planning_reserve_s": 30,
+          "time_plus_reserve_s": 1375.7585117234823,
+          "within_hard_limit": true,
+          "within_planning_target": true
+        },
+        {
+          "return_climb_mps": 3,
+          "return_climb_s": 4.333333333333333,
+          "mission_time_delta_s": -2.166666666666667,
+          "mission_time_s": 1343.5918450568156,
+          "return_s": 11.024804844010262,
+          "remaining_s": 36.4081549431844,
+          "planning_reserve_s": 30,
+          "time_plus_reserve_s": 1373.5918450568156,
+          "within_hard_limit": true,
+          "within_planning_target": true
+        }
+      ]
+    },
+    {
+      "scene_id": "final_scene_2",
+      "uav_id": 3,
+      "applicable": true,
+      "ascent_height_m": 13,
+      "nominal_ascent_s": 6.5,
+      "nominal_mission_time_s": 1235.9262813745368,
+      "scenarios": [
+        {
+          "return_climb_mps": 1,
+          "return_climb_s": 13.0,
+          "mission_time_delta_s": 6.5,
+          "mission_time_s": 1242.4262813745368,
+          "return_s": 55.01802556734259,
+          "remaining_s": 137.57371862546324,
+          "planning_reserve_s": 30,
+          "time_plus_reserve_s": 1272.4262813745368,
+          "within_hard_limit": true,
+          "within_planning_target": true
+        },
+        {
+          "return_climb_mps": 2,
+          "return_climb_s": 6.5,
+          "mission_time_delta_s": 0.0,
+          "mission_time_s": 1235.9262813745368,
+          "return_s": 48.51802556734259,
+          "remaining_s": 144.07371862546324,
+          "planning_reserve_s": 30,
+          "time_plus_reserve_s": 1265.9262813745368,
+          "within_hard_limit": true,
+          "within_planning_target": true
+        },
+        {
+          "return_climb_mps": 3,
+          "return_climb_s": 4.333333333333333,
+          "mission_time_delta_s": -2.166666666666667,
+          "mission_time_s": 1233.75961470787,
+          "return_s": 46.351358900675926,
+          "remaining_s": 146.24038529213,
+          "planning_reserve_s": 30,
+          "time_plus_reserve_s": 1263.75961470787,
+          "within_hard_limit": true,
+          "within_planning_target": true
+        }
+      ]
+    },
+    {
+      "scene_id": "final_scene_2",
+      "uav_id": 4,
+      "applicable": true,
+      "ascent_height_m": 13,
+      "nominal_ascent_s": 6.5,
+      "nominal_mission_time_s": 1343.9625444223886,
+      "scenarios": [
+        {
+          "return_climb_mps": 1,
+          "return_climb_s": 13.0,
+          "mission_time_delta_s": 6.5,
+          "mission_time_s": 1350.4625444223886,
+          "return_s": 49.59688460371958,
+          "remaining_s": 29.537455577611354,
+          "planning_reserve_s": 30,
+          "time_plus_reserve_s": 1380.4625444223886,
+          "within_hard_limit": true,
+          "within_planning_target": false
+        },
+        {
+          "return_climb_mps": 2,
+          "return_climb_s": 6.5,
+          "mission_time_delta_s": 0.0,
+          "mission_time_s": 1343.9625444223886,
+          "return_s": 43.09688460371958,
+          "remaining_s": 36.037455577611354,
+          "planning_reserve_s": 30,
+          "time_plus_reserve_s": 1373.9625444223886,
+          "within_hard_limit": true,
+          "within_planning_target": true
+        },
+        {
+          "return_climb_mps": 3,
+          "return_climb_s": 4.333333333333333,
+          "mission_time_delta_s": -2.166666666666667,
+          "mission_time_s": 1341.795877755722,
+          "return_s": 40.930217937052916,
+          "remaining_s": 38.204122244278096,
+          "planning_reserve_s": 30,
+          "time_plus_reserve_s": 1371.795877755722,
+          "within_hard_limit": true,
+          "within_planning_target": true
+        }
+      ]
+    },
+    {
+      "scene_id": "final_scene_2",
+      "uav_id": 5,
+      "applicable": true,
+      "ascent_height_m": 13,
+      "nominal_ascent_s": 6.5,
+      "nominal_mission_time_s": 1263.2281407374214,
+      "scenarios": [
+        {
+          "return_climb_mps": 1,
+          "return_climb_s": 13.0,
+          "mission_time_delta_s": 6.5,
+          "mission_time_s": 1269.7281407374214,
+          "return_s": 78.31134504361434,
+          "remaining_s": 110.27185926257857,
+          "planning_reserve_s": 30,
+          "time_plus_reserve_s": 1299.7281407374214,
+          "within_hard_limit": true,
+          "within_planning_target": true
+        },
+        {
+          "return_climb_mps": 2,
+          "return_climb_s": 6.5,
+          "mission_time_delta_s": 0.0,
+          "mission_time_s": 1263.2281407374214,
+          "return_s": 71.81134504361434,
+          "remaining_s": 116.77185926257857,
+          "planning_reserve_s": 30,
+          "time_plus_reserve_s": 1293.2281407374214,
+          "within_hard_limit": true,
+          "within_planning_target": true
+        },
+        {
+          "return_climb_mps": 3,
+          "return_climb_s": 4.333333333333333,
+          "mission_time_delta_s": -2.166666666666667,
+          "mission_time_s": 1261.0614740707547,
+          "return_s": 69.64467837694767,
+          "remaining_s": 118.93852592924532,
+          "planning_reserve_s": 30,
+          "time_plus_reserve_s": 1291.0614740707547,
+          "within_hard_limit": true,
+          "within_planning_target": true
+        }
+      ]
+    },
+    {
+      "scene_id": "final_scene_2",
+      "uav_id": 6,
+      "applicable": true,
+      "ascent_height_m": 13,
+      "nominal_ascent_s": 6.5,
+      "nominal_mission_time_s": 1307.7810277900064,
+      "scenarios": [
+        {
+          "return_climb_mps": 1,
+          "return_climb_s": 13.0,
+          "mission_time_delta_s": 6.5,
+          "mission_time_s": 1314.2810277900064,
+          "return_s": 77.79584895380239,
+          "remaining_s": 65.71897220999358,
+          "planning_reserve_s": 30,
+          "time_plus_reserve_s": 1344.2810277900064,
+          "within_hard_limit": true,
+          "within_planning_target": true
+        },
+        {
+          "return_climb_mps": 2,
+          "return_climb_s": 6.5,
+          "mission_time_delta_s": 0.0,
+          "mission_time_s": 1307.7810277900064,
+          "return_s": 71.29584895380239,
+          "remaining_s": 72.21897220999358,
+          "planning_reserve_s": 30,
+          "time_plus_reserve_s": 1337.7810277900064,
+          "within_hard_limit": true,
+          "within_planning_target": true
+        },
+        {
+          "return_climb_mps": 3,
+          "return_climb_s": 4.333333333333333,
+          "mission_time_delta_s": -2.166666666666667,
+          "mission_time_s": 1305.6143611233397,
+          "return_s": 69.12918228713572,
+          "remaining_s": 74.38563887666032,
+          "planning_reserve_s": 30,
+          "time_plus_reserve_s": 1335.6143611233397,
+          "within_hard_limit": true,
+          "within_planning_target": true
+        }
+      ]
+    },
+    {
+      "scene_id": "xuchang_small_2",
+      "uav_id": 1,
+      "applicable": true,
+      "ascent_height_m": 13,
+      "nominal_ascent_s": 6.5,
+      "nominal_mission_time_s": 918.7483001047517,
+      "scenarios": [
+        {
+          "return_climb_mps": 1,
+          "return_climb_s": 13.0,
+          "mission_time_delta_s": 6.5,
+          "mission_time_s": 925.2483001047517,
+          "return_s": 18.414213562373096,
+          "remaining_s": 454.7516998952483,
+          "planning_reserve_s": 30,
+          "time_plus_reserve_s": 955.2483001047517,
+          "within_hard_limit": true,
+          "within_planning_target": true
+        },
+        {
+          "return_climb_mps": 2,
+          "return_climb_s": 6.5,
+          "mission_time_delta_s": 0.0,
+          "mission_time_s": 918.7483001047517,
+          "return_s": 11.914213562373096,
+          "remaining_s": 461.2516998952483,
+          "planning_reserve_s": 30,
+          "time_plus_reserve_s": 948.7483001047517,
+          "within_hard_limit": true,
+          "within_planning_target": true
+        },
+        {
+          "return_climb_mps": 3,
+          "return_climb_s": 4.333333333333333,
+          "mission_time_delta_s": -2.166666666666667,
+          "mission_time_s": 916.5816334380851,
+          "return_s": 9.747546895706428,
+          "remaining_s": 463.4183665619149,
+          "planning_reserve_s": 30,
+          "time_plus_reserve_s": 946.5816334380851,
+          "within_hard_limit": true,
+          "within_planning_target": true
+        }
+      ]
+    },
+    {
+      "scene_id": "xuchang_small_2",
+      "uav_id": 2,
+      "applicable": true,
+      "ascent_height_m": 13,
+      "nominal_ascent_s": 6.5,
+      "nominal_mission_time_s": 975.3583428168585,
+      "scenarios": [
+        {
+          "return_climb_mps": 1,
+          "return_climb_s": 13.0,
+          "mission_time_delta_s": 6.5,
+          "mission_time_s": 981.8583428168585,
+          "return_s": 83.40699545261602,
+          "remaining_s": 398.14165718314155,
+          "planning_reserve_s": 30,
+          "time_plus_reserve_s": 1011.8583428168585,
+          "within_hard_limit": true,
+          "within_planning_target": true
+        },
+        {
+          "return_climb_mps": 2,
+          "return_climb_s": 6.5,
+          "mission_time_delta_s": 0.0,
+          "mission_time_s": 975.3583428168585,
+          "return_s": 76.90699545261602,
+          "remaining_s": 404.64165718314155,
+          "planning_reserve_s": 30,
+          "time_plus_reserve_s": 1005.3583428168585,
+          "within_hard_limit": true,
+          "within_planning_target": true
+        },
+        {
+          "return_climb_mps": 3,
+          "return_climb_s": 4.333333333333333,
+          "mission_time_delta_s": -2.166666666666667,
+          "mission_time_s": 973.1916761501918,
+          "return_s": 74.74032878594934,
+          "remaining_s": 406.8083238498082,
+          "planning_reserve_s": 30,
+          "time_plus_reserve_s": 1003.1916761501918,
+          "within_hard_limit": true,
+          "within_planning_target": true
+        }
+      ]
+    },
+    {
+      "scene_id": "xuchang_small_2",
+      "uav_id": 3,
+      "applicable": true,
+      "ascent_height_m": 13,
+      "nominal_ascent_s": 6.5,
+      "nominal_mission_time_s": 1317.39556180138,
+      "scenarios": [
+        {
+          "return_climb_mps": 1,
+          "return_climb_s": 13.0,
+          "mission_time_delta_s": 6.5,
+          "mission_time_s": 1323.89556180138,
+          "return_s": 62.238868838224775,
+          "remaining_s": 56.10443819862007,
+          "planning_reserve_s": 30,
+          "time_plus_reserve_s": 1353.89556180138,
+          "within_hard_limit": true,
+          "within_planning_target": true
+        },
+        {
+          "return_climb_mps": 2,
+          "return_climb_s": 6.5,
+          "mission_time_delta_s": 0.0,
+          "mission_time_s": 1317.39556180138,
+          "return_s": 55.738868838224775,
+          "remaining_s": 62.60443819862007,
+          "planning_reserve_s": 30,
+          "time_plus_reserve_s": 1347.39556180138,
+          "within_hard_limit": true,
+          "within_planning_target": true
+        },
+        {
+          "return_climb_mps": 3,
+          "return_climb_s": 4.333333333333333,
+          "mission_time_delta_s": -2.166666666666667,
+          "mission_time_s": 1315.2288951347132,
+          "return_s": 53.57220217155811,
+          "remaining_s": 64.77110486528682,
+          "planning_reserve_s": 30,
+          "time_plus_reserve_s": 1345.2288951347132,
+          "within_hard_limit": true,
+          "within_planning_target": true
+        }
+      ]
+    },
+    {
+      "scene_id": "xuchang_small_2",
+      "uav_id": 4,
+      "applicable": true,
+      "ascent_height_m": 13,
+      "nominal_ascent_s": 6.5,
+      "nominal_mission_time_s": 1338.5813435960206,
+      "scenarios": [
+        {
+          "return_climb_mps": 1,
+          "return_climb_s": 13.0,
+          "mission_time_delta_s": 6.5,
+          "mission_time_s": 1345.0813435960206,
+          "return_s": 38.07278387694875,
+          "remaining_s": 34.91865640397941,
+          "planning_reserve_s": 30,
+          "time_plus_reserve_s": 1375.0813435960206,
+          "within_hard_limit": true,
+          "within_planning_target": true
+        },
+        {
+          "return_climb_mps": 2,
+          "return_climb_s": 6.5,
+          "mission_time_delta_s": 0.0,
+          "mission_time_s": 1338.5813435960206,
+          "return_s": 31.57278387694875,
+          "remaining_s": 41.41865640397941,
+          "planning_reserve_s": 30,
+          "time_plus_reserve_s": 1368.5813435960206,
+          "within_hard_limit": true,
+          "within_planning_target": true
+        },
+        {
+          "return_climb_mps": 3,
+          "return_climb_s": 4.333333333333333,
+          "mission_time_delta_s": -2.166666666666667,
+          "mission_time_s": 1336.4146769293538,
+          "return_s": 29.406117210282083,
+          "remaining_s": 43.585323070646155,
+          "planning_reserve_s": 30,
+          "time_plus_reserve_s": 1366.4146769293538,
+          "within_hard_limit": true,
+          "within_planning_target": true
+        }
+      ]
+    },
+    {
+      "scene_id": "xuchang_small_2",
+      "uav_id": 5,
+      "applicable": true,
+      "ascent_height_m": 13,
+      "nominal_ascent_s": 6.5,
+      "nominal_mission_time_s": 1297.1809811333646,
+      "scenarios": [
+        {
+          "return_climb_mps": 1,
+          "return_climb_s": 13.0,
+          "mission_time_delta_s": 6.5,
+          "mission_time_s": 1303.6809811333646,
+          "return_s": 79.70701424656292,
+          "remaining_s": 76.31901886663536,
+          "planning_reserve_s": 30,
+          "time_plus_reserve_s": 1333.6809811333646,
+          "within_hard_limit": true,
+          "within_planning_target": true
+        },
+        {
+          "return_climb_mps": 2,
+          "return_climb_s": 6.5,
+          "mission_time_delta_s": 0.0,
+          "mission_time_s": 1297.1809811333646,
+          "return_s": 73.20701424656292,
+          "remaining_s": 82.81901886663536,
+          "planning_reserve_s": 30,
+          "time_plus_reserve_s": 1327.1809811333646,
+          "within_hard_limit": true,
+          "within_planning_target": true
+        },
+        {
+          "return_climb_mps": 3,
+          "return_climb_s": 4.333333333333333,
+          "mission_time_delta_s": -2.166666666666667,
+          "mission_time_s": 1295.014314466698,
+          "return_s": 71.04034757989625,
+          "remaining_s": 84.9856855333021,
+          "planning_reserve_s": 30,
+          "time_plus_reserve_s": 1325.014314466698,
+          "within_hard_limit": true,
+          "within_planning_target": true
+        }
+      ]
+    },
+    {
+      "scene_id": "xuchang_small_2",
+      "uav_id": 6,
+      "applicable": true,
+      "ascent_height_m": 13,
+      "nominal_ascent_s": 6.5,
+      "nominal_mission_time_s": 776.5938353251843,
+      "scenarios": [
+        {
+          "return_climb_mps": 1,
+          "return_climb_s": 13.0,
+          "mission_time_delta_s": 6.5,
+          "mission_time_s": 783.0938353251843,
+          "return_s": 30.492855684535897,
+          "remaining_s": 596.9061646748157,
+          "planning_reserve_s": 30,
+          "time_plus_reserve_s": 813.0938353251843,
+          "within_hard_limit": true,
+          "within_planning_target": true
+        },
+        {
+          "return_climb_mps": 2,
+          "return_climb_s": 6.5,
+          "mission_time_delta_s": 0.0,
+          "mission_time_s": 776.5938353251843,
+          "return_s": 23.992855684535897,
+          "remaining_s": 603.4061646748157,
+          "planning_reserve_s": 30,
+          "time_plus_reserve_s": 806.5938353251843,
+          "within_hard_limit": true,
+          "within_planning_target": true
+        },
+        {
+          "return_climb_mps": 3,
+          "return_climb_s": 4.333333333333333,
+          "mission_time_delta_s": -2.166666666666667,
+          "mission_time_s": 774.4271686585176,
+          "return_s": 21.82618901786923,
+          "remaining_s": 605.5728313414824,
+          "planning_reserve_s": 30,
+          "time_plus_reserve_s": 804.4271686585176,
+          "within_hard_limit": true,
+          "within_planning_target": true
+        }
+      ]
+    }
+  ],
+  "scenes": [
+    {
+      "scene_id": "final_scene_1",
+      "return_climb_mps": 1,
+      "maximum_completion_time_s": 1331.861540375292,
+      "total_aircraft_time_s": 7725.440852714253,
+      "all_aircraft_within_limit": true,
+      "all_aircraft_within_planning_target": true
+    },
+    {
+      "scene_id": "final_scene_1",
+      "return_climb_mps": 2,
+      "maximum_completion_time_s": 1331.861540375292,
+      "total_aircraft_time_s": 7725.440852714253,
+      "all_aircraft_within_limit": true,
+      "all_aircraft_within_planning_target": true
+    },
+    {
+      "scene_id": "final_scene_1",
+      "return_climb_mps": 3,
+      "maximum_completion_time_s": 1331.861540375292,
+      "total_aircraft_time_s": 7725.440852714253,
+      "all_aircraft_within_limit": true,
+      "all_aircraft_within_planning_target": true
+    },
+    {
+      "scene_id": "final_scene_2",
+      "return_climb_mps": 1,
+      "maximum_completion_time_s": 1352.2585117234823,
+      "total_aircraft_time_s": 7845.102426366493,
+      "all_aircraft_within_limit": true,
+      "all_aircraft_within_planning_target": false
+    },
+    {
+      "scene_id": "final_scene_2",
+      "return_climb_mps": 2,
+      "maximum_completion_time_s": 1345.7585117234823,
+      "total_aircraft_time_s": 7806.102426366493,
+      "all_aircraft_within_limit": true,
+      "all_aircraft_within_planning_target": true
+    },
+    {
+      "scene_id": "final_scene_2",
+      "return_climb_mps": 3,
+      "maximum_completion_time_s": 1343.5918450568156,
+      "total_aircraft_time_s": 7793.102426366493,
+      "all_aircraft_within_limit": true,
+      "all_aircraft_within_planning_target": true
+    },
+    {
+      "scene_id": "xuchang_small_2",
+      "return_climb_mps": 1,
+      "maximum_completion_time_s": 1345.0813435960206,
+      "total_aircraft_time_s": 6662.8583647775595,
+      "all_aircraft_within_limit": true,
+      "all_aircraft_within_planning_target": true
+    },
+    {
+      "scene_id": "xuchang_small_2",
+      "return_climb_mps": 2,
+      "maximum_completion_time_s": 1338.5813435960206,
+      "total_aircraft_time_s": 6623.8583647775595,
+      "all_aircraft_within_limit": true,
+      "all_aircraft_within_planning_target": true
+    },
+    {
+      "scene_id": "xuchang_small_2",
+      "return_climb_mps": 3,
+      "maximum_completion_time_s": 1336.4146769293538,
+      "total_aircraft_time_s": 6610.8583647775595,
+      "all_aircraft_within_limit": true,
+      "all_aircraft_within_planning_target": true
+    }
+  ]
+}

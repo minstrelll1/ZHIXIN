@@ -665,17 +665,18 @@ class OrchestratorTest(unittest.TestCase):
         self.assertEqual(runtime["phase"], "return_commanded")
         self.assertEqual(runtime["return_reason"], "low_battery")
 
-    def test_time_limit_marks_all_onboard_autonomous_return(self):
+    def test_scene_has_no_deadline_or_time_limit_return(self):
         self.launch_and_start_tasks()
         self.clock.advance(101.0)
         self.backend.tick()
         returns = [c for c in self.adapter.commands if c["type"] == "return_home"]
         self.assertEqual(returns, [])
+        self.assertIsNone(self.backend.snapshot()['mission']['deadline_at'])
         self.assertTrue(all(
-            runtime["return_reason"] == "time_limit"
+            runtime["return_reason"] is None
             for runtime in self.backend.snapshot()["mission"]["uavs"].values()
         ))
-        self.assertEqual(self.backend.snapshot()["mission"]["phase"], "returning")
+        self.assertEqual(self.backend.snapshot()["mission"]["phase"], "running")
 
     def test_mission_completes_after_all_returned_uavs_disarm(self):
         self.launch_and_start_tasks()

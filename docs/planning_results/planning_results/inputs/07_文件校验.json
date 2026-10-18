@@ -1,0 +1,12 @@
+{
+  "algorithm": "SHA256",
+  "files": {
+    "00_使用说明.txt": "05e16793e7421537517b265c42f5a217606e5e146a12b559e57b96faae26cd96",
+    "01_完整提示词.txt": "f13f7c65d14ebd79c9257bc29af858207d2de2ce079098894b0b0c93aeccb46d",
+    "02_规划输入.json": "758aaa7ca3b3e536a7d167eef1c5552ed965e8108e058ce9b56de8b381c8a27c",
+    "03_规划输出.schema.json": "25b022cba3c538ba2695e8416d6f0a5edbe0900bdf3c0a4d57627d5b39ab0cda",
+    "04_原始附件.docx": "d15c16925a692a78471a4ad650584048dfb70957daf55f2c03cf6c6a601be154",
+    "05_历史底图.jpg": "817f1da5d1cf35b845ab66f51f4ce62236967ac49f1f8d6a40731da1b643cbb2",
+    "06_输入数据核验.json": "5f41e9cb9b93f055e6cafd02d62fe9c6512ea8b6d27bff68f9e68b2cb961b024"
+  }
+}

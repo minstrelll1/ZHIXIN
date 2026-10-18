@@ -1,0 +1,30 @@
+{
+  "passed": true,
+  "method": "Copy only merge_inputs.py and immutable inputs/v1 + inputs/revision into a fresh temporary directory; actually recompute Q projections, local terrain audit and merged parameter input.",
+  "checks": [
+    {
+      "file": "inputs/02_规划输入_v2.json",
+      "expected_sha256": "79b40ab264f8973822be5173eb4feea087c8d55edde6052aa2c6a4b002f4fdc3",
+      "reproduced_sha256": "79b40ab264f8973822be5173eb4feea087c8d55edde6052aa2c6a4b002f4fdc3",
+      "identical": true
+    },
+    {
+      "file": "exclusions_draft.json",
+      "expected_sha256": "cc25edb919fd6a61d93d7d5df6429211325bf30f963e0005b80377ad9ea7bb9c",
+      "reproduced_sha256": "cc25edb919fd6a61d93d7d5df6429211325bf30f963e0005b80377ad9ea7bb9c",
+      "identical": true
+    },
+    {
+      "file": "terrain_mask_audit.json",
+      "expected_sha256": "ea30a9aeb5189eb76456dc68c2848de858af3a6e69c170e3abf4cb7e7067a9d8",
+      "reproduced_sha256": "ea30a9aeb5189eb76456dc68c2848de858af3a6e69c170e3abf4cb7e7067a9d8",
+      "identical": true
+    },
+    {
+      "file": "exclusions_notes.txt",
+      "expected_sha256": "c3d83655ba7175c283fbeeab42a0a62b4863d7f105ba501939a7047ebcfe1181",
+      "reproduced_sha256": "c3d83655ba7175c283fbeeab42a0a62b4863d7f105ba501939a7047ebcfe1181",
+      "identical": true
+    }
+  ]
+}

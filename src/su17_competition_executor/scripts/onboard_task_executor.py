@@ -23,6 +23,7 @@ from competition_shared.navigation import resolve_waypoints
 from competition_shared.competition_time import normalize_competition_time
 from competition_shared.recognition import optional_recognition_selection
 from competition_shared.scan import ScanSession
+from competition_shared.mission_layers import validate_layers
 import uuid
 from su17_competition_executor.tcp_link import OnboardTcpLink
 from su17_competition_executor.pengfei_bridge import PengfeiReadOnlyBridge
@@ -101,6 +102,11 @@ class OnboardTaskExecutor:
         self.external_path_topic = str(
             rospy.get_param("~external_path_topic", "")
         ).strip() or "/ground_mission_planner/vehicle_{}/path_stage_1".format(self.local_ros_uav_id)
+        self.external_lower_path_topic = str(
+            rospy.get_param("~external_lower_path_topic", "")
+        ).strip() or "/ground_mission_planner/vehicle_{}/path_stage_2".format(self.local_ros_uav_id)
+        if self.external_lower_path_topic == self.external_path_topic:
+            raise ValueError("上下层航点话题不能相同")
         self.external_landing_topic = str(
             rospy.get_param("~external_landing_topic", "")
         ).strip() or "/ground_mission_planner/vehicle_{}/jiangluodian".format(self.local_ros_uav_id)
@@ -203,6 +209,9 @@ class OnboardTaskExecutor:
         )
         self.external_path_pub = rospy.Publisher(
             self.external_path_topic, Float64MultiArray, queue_size=1, latch=True
+        )
+        self.external_lower_path_pub = rospy.Publisher(
+            self.external_lower_path_topic, Float64MultiArray, queue_size=1, latch=True
         )
         self.external_landing_pub = rospy.Publisher(
             self.external_landing_topic, Float64MultiArray, queue_size=1, latch=True
@@ -1713,6 +1722,7 @@ class OnboardTaskExecutor:
         lat0, lon0, _ = gps_home if gps_home is not None else (0.0, 0.0, 0.0)
         target_relative_alt = float(assignment["target_altitude_m"])
         task = assignment["task"]
+        layers = validate_layers(assignment)
         transit_messages = route_messages(assignment)
         points = []
         direct = task.get("waypoints_gps") or task.get("waypoints_wgs84")
@@ -1747,7 +1757,7 @@ class OnboardTaskExecutor:
             "target_altitude_m": target_relative_alt,
             "relative_altitude_m": target_relative_alt,
             "waypoints": points,
-            "speed_mps": task.get("speed_mps", self.search_speed),
+            "speed_mps": task.get("external_speed_mps", task.get("speed_mps", self.search_speed)),
             "waypoint_actions": task.get("waypoint_actions", []),
             "reconnaissance_mode": task.get("reconnaissance_mode", "continuous"),
             "hover_scan_seconds": task.get("hover_scan_seconds", 0),
@@ -1768,11 +1778,53 @@ class OnboardTaskExecutor:
             path_msg.data = [value for point in points for value in (
                 point["x_m"], point["y_m"], point["z_m"]
             )]
+        lower_msg = Float64MultiArray()
+        lower_msg.data = []
+        if assignment.get("subject") == "subject2":
+            lower_points = []
+            if layers:
+                lower = layers[1]
+                height = float(lower["altitude_m"])
+                if frame == "WGS84":
+                    lower_points = [{"latitude": float(p[0]), "longitude": float(p[1]), "altitude_m": height}
+                                    for p in lower["waypoints_wgs84"]]
+                    lower_msg.data = [v for p in lower_points for v in (p["longitude"], p["latitude"], p["altitude_m"])]
+                else:
+                    lower_points = [{"x_m": float(p[0]), "y_m": float(p[1]), "z_m": height}
+                                    for p in lower["waypoints_m"]]
+                    lower_msg.data = [v for p in lower_points for v in (p["x_m"], p["y_m"], p["z_m"])]
+            upper_layer = layers[0] if layers else task
+            message.update(
+                subject="subject2", path_contract_version=2,
+                execution_mode="upper_once_then_lower_once" if layers else "legacy_single_layer",
+                layer_order=["upper", "lower"] if layers else ["upper"],
+                return_waypoint_layer=task.get('transit_routes', {}).get('waypoint_layer', 'upper'), return_altitude_m=target_relative_alt,
+                return_policy="climb_to_upper_then_return" if layers else "at_task_altitude",
+                layers=[dict(layer_id="upper", topic=self.external_path_topic,
+                             altitude_m=target_relative_alt, waypoint_count=len(points), waypoints=points,
+                             scan_passes=upper_layer.get("scan_passes"),
+                             hover_scan_seconds=upper_layer.get("hover_scan_seconds", 0)),
+                        dict(layer_id="lower", topic=self.external_lower_path_topic,
+                             altitude_m=float(layers[1]["altitude_m"]) if layers else None,
+                             waypoint_count=len(lower_points), waypoints=lower_points,
+                             scan_passes=1 if layers else 0,
+                             hover_scan_seconds=layers[1]["hover_scan_seconds"] if layers else 0)])
+            if task.get('physical_layer'):
+                message['layers'][0]['physical_layer'] = task['physical_layer']
+                message['scan_pass_order'] = task.get('scan_pass_order', 'upper_then_lower')
         # 在程序 B 启动信号之前发布全部航线，带任务编号供接收方核对同一批次。
         if transit_messages:
             for publisher, document in zip((self.external_entry_path_pub, self.external_return_paths_pub), transit_messages):
                 publisher.publish(String(data=json.dumps(document, ensure_ascii=False, separators=(",", ":"))))
         self.external_path_pub.publish(path_msg)
+        if assignment.get("subject") == "subject2":
+            # 即便是旧单层任务，也必须发布空数组覆盖上一次双层任务的锁存下层。
+            self.external_lower_path_pub.publish(lower_msg)
+            self._external_lower_path_used = True
+        elif getattr(self, "_external_lower_path_used", False):
+            # 从科目二切回科目一时清空新增话题，原有科目一航点接口保持不变。
+            self.external_lower_path_pub.publish(lower_msg)
+            self._external_lower_path_used = False
         landing = assignment.get("landing_point_wgs84") if frame == "WGS84" else assignment.get("landing_point_m")
         if frame == "WGS84" and landing is None and assignment.get("landing_point_m") is not None:
             px, py = assignment["landing_point_m"]

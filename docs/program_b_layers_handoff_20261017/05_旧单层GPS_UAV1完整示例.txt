@@ -1,0 +1,433 @@
+﻿旧单层GPS六机接口示例；测试坐标，不代表当前固定规划或实飞任务。
+
+UAV1 全部八类消息完整示例（不省略返航路线或任务说明字段）
+其他五机完整数据在同名 JSON 的 uavs 数组中。
+JSON 中的 decoded_data 仅供阅读；ROS String 线上只有一个 data 字符串字段。
+return_home 是按需返航时的消息，不是起飞后立即发送的消息。
+
+==============================================================================
+1. /ground_mission_planner/vehicle_1/entry_path
+类型：std_msgs/String
+发布时间：after_successful_takeoff_before_start
+本次接口变更：否，供流程联调
+ROS 消息各字段（JSON 表达）：
+{
+  "data": "{\"schema_version\":1,\"mission_id\":\"subject2-legacy-interface-example\",\"uav_id\":1,\"assignment_checksum\":\"c354bd3910a6c1adfebc400e5245392d7d0ed1c117e59be4d5cd384e55c55ce0\",\"coordinate_frame\":\"WGS84\",\"coordinate_order\":\"longitude_latitude_relative_altitude\",\"altitude_frame\":\"RELATIVE_TO_TAKEOFF\",\"plan_sha256\":\"offline-example-not-a-flight-plan\",\"path\":[[113.70561000000001,33.8644,47.0],[113.70578260869566,33.86309000009,47.0]]}"
+}
+
+将 String.data 用 json.loads 等解码一次后的完整内容：
+{
+  "schema_version": 1,
+  "mission_id": "subject2-legacy-interface-example",
+  "uav_id": 1,
+  "assignment_checksum": "c354bd3910a6c1adfebc400e5245392d7d0ed1c117e59be4d5cd384e55c55ce0",
+  "coordinate_frame": "WGS84",
+  "coordinate_order": "longitude_latitude_relative_altitude",
+  "altitude_frame": "RELATIVE_TO_TAKEOFF",
+  "plan_sha256": "offline-example-not-a-flight-plan",
+  "path": [
+    [
+      113.70561000000001,
+      33.8644,
+      47.0
+    ],
+    [
+      113.70578260869566,
+      33.86309000009,
+      47.0
+    ]
+  ]
+}
+
+==============================================================================
+2. /ground_mission_planner/vehicle_1/return_paths
+类型：std_msgs/String
+发布时间：after_successful_takeoff_before_start
+本次接口变更：是
+ROS 消息各字段（JSON 表达）：
+{
+  "data": "{\"schema_version\":2,\"mission_id\":\"subject2-legacy-interface-example\",\"uav_id\":1,\"assignment_checksum\":\"c354bd3910a6c1adfebc400e5245392d7d0ed1c117e59be4d5cd384e55c55ce0\",\"coordinate_frame\":\"WGS84\",\"coordinate_order\":\"longitude_latitude_relative_altitude\",\"altitude_frame\":\"RELATIVE_TO_TAKEOFF\",\"plan_sha256\":\"offline-example-not-a-flight-plan\",\"routes\":[{\"waypoint_index\":1,\"path\":[[113.70578260869566,33.86309000009,47.0],[113.70561000000001,33.8644,47.0]],\"source_uav_id\":1},{\"waypoint_index\":2,\"path\":[[113.70567391304348,33.863135000135,47.0],[113.70561000000001,33.8644,47.0]],\"source_uav_id\":1},{\"waypoint_index\":1,\"path\":[[113.70578260869566,33.86318000018,47.0],[113.70561000000001,33.8644,47.0]],\"source_uav_id\":2},{\"waypoint_index\":2,\"path\":[[113.70567391304348,33.863225000225,47.0],[113.70561000000001,33.8644,47.0]],\"source_uav_id\":2},{\"waypoint_index\":1,\"path\":[[113.70578260869566,33.86327000027,47.0],[113.70561000000001,33.8644,47.0]],\"source_uav_id\":3},{\"waypoint_index\":2,\"path\":[[113.70567391304348,33.863315000315,47.0],[113.70561000000001,33.8644,47.0]],\"source_uav_id\":3},{\"waypoint_index\":1,\"path\":[[113.70578260869566,33.86336000036,47.0],[113.70561000000001,33.8644,47.0]],\"source_uav_id\":4},{\"waypoint_index\":2,\"path\":[[113.70567391304348,33.863405000405,47.0],[113.70561000000001,33.8644,47.0]],\"source_uav_id\":4},{\"waypoint_index\":1,\"path\":[[113.70578260869566,33.86345000045,47.0],[113.70561000000001,33.8644,47.0]],\"source_uav_id\":5},{\"waypoint_index\":2,\"path\":[[113.70567391304348,33.863495000495,47.0],[113.70561000000001,33.8644,47.0]],\"source_uav_id\":5},{\"waypoint_index\":1,\"path\":[[113.70578260869566,33.86354000054,47.0],[113.70561000000001,33.8644,47.0]],\"source_uav_id\":6},{\"waypoint_index\":2,\"path\":[[113.70567391304348,33.863585000585,47.0],[113.70561000000001,33.8644,47.0]],\"source_uav_id\":6}],\"route_scope\":\"all_uav_waypoints\",\"landing_point\":[113.70561000000001,33.8644,47.0],\"waypoint_counts_by_uav\":{\"1\":2,\"2\":2,\"3\":2,\"4\":2,\"5\":2,\"6\":2},\"waypoint_layer\":\"upper\",\"return_altitude_m\":47.0,\"return_policy\":\"at_task_altitude\"}"
+}
+
+将 String.data 用 json.loads 等解码一次后的完整内容：
+{
+  "schema_version": 2,
+  "mission_id": "subject2-legacy-interface-example",
+  "uav_id": 1,
+  "assignment_checksum": "c354bd3910a6c1adfebc400e5245392d7d0ed1c117e59be4d5cd384e55c55ce0",
+  "coordinate_frame": "WGS84",
+  "coordinate_order": "longitude_latitude_relative_altitude",
+  "altitude_frame": "RELATIVE_TO_TAKEOFF",
+  "plan_sha256": "offline-example-not-a-flight-plan",
+  "routes": [
+    {
+      "waypoint_index": 1,
+      "path": [
+        [
+          113.70578260869566,
+          33.86309000009,
+          47.0
+        ],
+        [
+          113.70561000000001,
+          33.8644,
+          47.0
+        ]
+      ],
+      "source_uav_id": 1
+    },
+    {
+      "waypoint_index": 2,
+      "path": [
+        [
+          113.70567391304348,
+          33.863135000135,
+          47.0
+        ],
+        [
+          113.70561000000001,
+          33.8644,
+          47.0
+        ]
+      ],
+      "source_uav_id": 1
+    },
+    {
+      "waypoint_index": 1,
+      "path": [
+        [
+          113.70578260869566,
+          33.86318000018,
+          47.0
+        ],
+        [
+          113.70561000000001,
+          33.8644,
+          47.0
+        ]
+      ],
+      "source_uav_id": 2
+    },
+    {
+      "waypoint_index": 2,
+      "path": [
+        [
+          113.70567391304348,
+          33.863225000225,
+          47.0
+        ],
+        [
+          113.70561000000001,
+          33.8644,
+          47.0
+        ]
+      ],
+      "source_uav_id": 2
+    },
+    {
+      "waypoint_index": 1,
+      "path": [
+        [
+          113.70578260869566,
+          33.86327000027,
+          47.0
+        ],
+        [
+          113.70561000000001,
+          33.8644,
+          47.0
+        ]
+      ],
+      "source_uav_id": 3
+    },
+    {
+      "waypoint_index": 2,
+      "path": [
+        [
+          113.70567391304348,
+          33.863315000315,
+          47.0
+        ],
+        [
+          113.70561000000001,
+          33.8644,
+          47.0
+        ]
+      ],
+      "source_uav_id": 3
+    },
+    {
+      "waypoint_index": 1,
+      "path": [
+        [
+          113.70578260869566,
+          33.86336000036,
+          47.0
+        ],
+        [
+          113.70561000000001,
+          33.8644,
+          47.0
+        ]
+      ],
+      "source_uav_id": 4
+    },
+    {
+      "waypoint_index": 2,
+      "path": [
+        [
+          113.70567391304348,
+          33.863405000405,
+          47.0
+        ],
+        [
+          113.70561000000001,
+          33.8644,
+          47.0
+        ]
+      ],
+      "source_uav_id": 4
+    },
+    {
+      "waypoint_index": 1,
+      "path": [
+        [
+          113.70578260869566,
+          33.86345000045,
+          47.0
+        ],
+        [
+          113.70561000000001,
+          33.8644,
+          47.0
+        ]
+      ],
+      "source_uav_id": 5
+    },
+    {
+      "waypoint_index": 2,
+      "path": [
+        [
+          113.70567391304348,
+          33.863495000495,
+          47.0
+        ],
+        [
+          113.70561000000001,
+          33.8644,
+          47.0
+        ]
+      ],
+      "source_uav_id": 5
+    },
+    {
+      "waypoint_index": 1,
+      "path": [
+        [
+          113.70578260869566,
+          33.86354000054,
+          47.0
+        ],
+        [
+          113.70561000000001,
+          33.8644,
+          47.0
+        ]
+      ],
+      "source_uav_id": 6
+    },
+    {
+      "waypoint_index": 2,
+      "path": [
+        [
+          113.70567391304348,
+          33.863585000585,
+          47.0
+        ],
+        [
+          113.70561000000001,
+          33.8644,
+          47.0
+        ]
+      ],
+      "source_uav_id": 6
+    }
+  ],
+  "route_scope": "all_uav_waypoints",
+  "landing_point": [
+    113.70561000000001,
+    33.8644,
+    47.0
+  ],
+  "waypoint_counts_by_uav": {
+    "1": 2,
+    "2": 2,
+    "3": 2,
+    "4": 2,
+    "5": 2,
+    "6": 2
+  },
+  "waypoint_layer": "upper",
+  "return_altitude_m": 47.0,
+  "return_policy": "at_task_altitude"
+}
+
+==============================================================================
+3. /ground_mission_planner/vehicle_1/path_stage_1
+类型：std_msgs/Float64MultiArray
+发布时间：after_successful_takeoff_before_start
+本次接口变更：是
+ROS 消息各字段（JSON 表达）：
+{
+  "layout": {
+    "dim": [],
+    "data_offset": 0
+  },
+  "data": [
+    113.70578260869566,
+    33.86309000009,
+    47.0,
+    113.70567391304348,
+    33.863135000135,
+    47.0
+  ]
+}
+
+==============================================================================
+4. /ground_mission_planner/vehicle_1/path_stage_2
+类型：std_msgs/Float64MultiArray
+发布时间：after_successful_takeoff_before_start
+本次接口变更：是
+ROS 消息各字段（JSON 表达）：
+{
+  "layout": {
+    "dim": [],
+    "data_offset": 0
+  },
+  "data": []
+}
+
+==============================================================================
+5. /ground_mission_planner/vehicle_1/jiangluodian
+类型：std_msgs/Float64MultiArray
+发布时间：after_successful_takeoff_before_start
+本次接口变更：否，供流程联调
+ROS 消息各字段（JSON 表达）：
+{
+  "layout": {
+    "dim": [],
+    "data_offset": 0
+  },
+  "data": [
+    113.70561000000001,
+    33.8644,
+    47.0
+  ]
+}
+
+==============================================================================
+6. /uav1/competition/external_mission
+类型：std_msgs/String
+发布时间：after_successful_takeoff_before_start
+本次接口变更：是
+ROS 消息各字段（JSON 表达）：
+{
+  "data": "{\"type\":\"external_mission\",\"uav_id\":1,\"mission_id\":\"subject2-legacy-interface-example\",\"assignment_checksum\":\"c354bd3910a6c1adfebc400e5245392d7d0ed1c117e59be4d5cd384e55c55ce0\",\"flight_profile\":\"lab\",\"coordinate_frame\":\"WGS84\",\"altitude_frame\":\"RELATIVE_TO_TAKEOFF\",\"target_altitude_m\":47.0,\"relative_altitude_m\":47.0,\"waypoints\":[{\"latitude\":33.86309000009,\"longitude\":113.70578260869566,\"altitude_m\":47.0},{\"latitude\":33.863135000135,\"longitude\":113.70567391304348,\"altitude_m\":47.0}],\"speed_mps\":0.3,\"waypoint_actions\":[],\"reconnaissance_mode\":\"hover_scan\",\"hover_scan_seconds\":30.0,\"return_home\":{\"latitude\":33.8644,\"longitude\":113.70561000000001,\"altitude_m\":47.0},\"deadline_at\":null,\"return_battery_threshold\":null,\"subject\":\"subject2\",\"path_contract_version\":2,\"execution_mode\":\"legacy_single_layer\",\"layer_order\":[\"upper\"],\"return_waypoint_layer\":\"upper\",\"return_altitude_m\":47.0,\"return_policy\":\"at_task_altitude\",\"layers\":[{\"layer_id\":\"upper\",\"topic\":\"/ground_mission_planner/vehicle_1/path_stage_1\",\"altitude_m\":47.0,\"waypoint_count\":2,\"waypoints\":[{\"latitude\":33.86309000009,\"longitude\":113.70578260869566,\"altitude_m\":47.0},{\"latitude\":33.863135000135,\"longitude\":113.70567391304348,\"altitude_m\":47.0}],\"scan_passes\":2,\"hover_scan_seconds\":30.0},{\"layer_id\":\"lower\",\"topic\":\"/ground_mission_planner/vehicle_1/path_stage_2\",\"altitude_m\":null,\"waypoint_count\":0,\"waypoints\":[],\"scan_passes\":0,\"hover_scan_seconds\":0}]}"
+}
+
+将 String.data 用 json.loads 等解码一次后的完整内容：
+{
+  "type": "external_mission",
+  "uav_id": 1,
+  "mission_id": "subject2-legacy-interface-example",
+  "assignment_checksum": "c354bd3910a6c1adfebc400e5245392d7d0ed1c117e59be4d5cd384e55c55ce0",
+  "flight_profile": "lab",
+  "coordinate_frame": "WGS84",
+  "altitude_frame": "RELATIVE_TO_TAKEOFF",
+  "target_altitude_m": 47.0,
+  "relative_altitude_m": 47.0,
+  "waypoints": [
+    {
+      "latitude": 33.86309000009,
+      "longitude": 113.70578260869566,
+      "altitude_m": 47.0
+    },
+    {
+      "latitude": 33.863135000135,
+      "longitude": 113.70567391304348,
+      "altitude_m": 47.0
+    }
+  ],
+  "speed_mps": 0.3,
+  "waypoint_actions": [],
+  "reconnaissance_mode": "hover_scan",
+  "hover_scan_seconds": 30.0,
+  "return_home": {
+    "latitude": 33.8644,
+    "longitude": 113.70561000000001,
+    "altitude_m": 47.0
+  },
+  "deadline_at": null,
+  "return_battery_threshold": null,
+  "subject": "subject2",
+  "path_contract_version": 2,
+  "execution_mode": "legacy_single_layer",
+  "layer_order": [
+    "upper"
+  ],
+  "return_waypoint_layer": "upper",
+  "return_altitude_m": 47.0,
+  "return_policy": "at_task_altitude",
+  "layers": [
+    {
+      "layer_id": "upper",
+      "topic": "/ground_mission_planner/vehicle_1/path_stage_1",
+      "altitude_m": 47.0,
+      "waypoint_count": 2,
+      "waypoints": [
+        {
+          "latitude": 33.86309000009,
+          "longitude": 113.70578260869566,
+          "altitude_m": 47.0
+        },
+        {
+          "latitude": 33.863135000135,
+          "longitude": 113.70567391304348,
+          "altitude_m": 47.0
+        }
+      ],
+      "scan_passes": 2,
+      "hover_scan_seconds": 30.0
+    },
+    {
+      "layer_id": "lower",
+      "topic": "/ground_mission_planner/vehicle_1/path_stage_2",
+      "altitude_m": null,
+      "waypoint_count": 0,
+      "waypoints": [],
+      "scan_passes": 0,
+      "hover_scan_seconds": 0
+    }
+  ]
+}
+
+==============================================================================
+7. /ground_mission_planner/recon_start_mode
+类型：std_msgs/Int32
+发布时间：after_all_mission_data
+本次接口变更：否，供流程联调
+ROS 消息各字段（JSON 表达）：
+{
+  "data": 0
+}
+
+==============================================================================
+8. /ground_mission_planner/vehicle_1/return_home
+类型：std_msgs/Bool
+发布时间：only_when_return_is_requested
+本次接口变更：否，供流程联调
+ROS 消息各字段（JSON 表达）：
+{
+  "data": true
+}
+

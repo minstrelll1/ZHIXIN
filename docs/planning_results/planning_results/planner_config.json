@@ -1,0 +1,29 @@
+{
+  "generated_at": "2026-10-17T22:49:26+08:00",
+  "parameters": {
+    "circle_quad_segs": 128,
+    "random_seed": 20261017,
+    "candidate_grid_step_m": 10.0,
+    "target_sample_step_m": 4.0,
+    "clearance_generation_m": 5.03,
+    "disk_clearance_extra_m": 0.05,
+    "greedy_shortlist_per_layer": 12,
+    "minimum_sample_gain_ratio": 0.001,
+    "marginal_time_exponent": 0.6,
+    "layer_balance_offset": 0.25,
+    "coverage_priority_budget_s": 1350.0,
+    "reserve_priority_budget_s": 1230.0,
+    "partition_candidates": [
+      "effective_area_balanced",
+      "gross_area_balanced"
+    ],
+    "termination": "No shortlisted candidate with >=0.1% new sampled area (minimum 2 samples) fits budget; finite candidates; deterministic 2-opt until no improvement, max 8 sweeps. This is a heuristic, not proof of global optimality.",
+    "objective": "Feasible first; greedy layer area fraction gain / (0.25+current_layer_coverage) / incremental_seconds^0.6 to avoid starving the small-radius layer; partition by largest summed per-layer field coverage, ties shortest makespan; route length and soft transition penalty.",
+    "altitude_status": "accepted_provisional_not_measured",
+    "descent_status": "accepted_provisional_not_measured",
+    "coordinate_precision": "No intentional rounding; full IEEE double JSON; revalidate serialized artifact.",
+    "geometry_model": "Planar metres; 128 segments per circle quadrant; optimization samples 4m grid, final metrics exact polygon Boolean operations with 512-edge disks."
+  },
+  "exclusion_input": "exclusions_draft.json",
+  "description": "Timestamp is persisted for byte-reproducible reruns. Algorithm parameters are explicitly versioned in planner.py; this file records the exact run configuration."
+}

@@ -1,0 +1,37 @@
+v2 返航目录与当前程序 B 接口适配说明
+
+本文件与 return_catalog.json、topic_mapping.json 均为离线几何和适配提案；本轮未修改、连接、部署或测试实际地面端、机载端或程序 B，未发送任何消息或飞行指令。
+
+1. 文件组织与坐标
+return_catalog.json 使用 catalog_schema_version=1，保持独立于主规划 schema_version=1。顶层 scenes[scene_id][recipient_uav_id字符串] 定位接收机。runtime_schema_version=2 只说明已提供的程序 B 返航消息契约版本，不表示离线文件就是可直接发布的运行消息。
+每项 path_nwz_m 为 [北,西,相对高度]；path_lon_lat_alt 为 WGS84 [经度,纬度,相对高度]。相对高度以接收机起飞点为参考。所有目录路线全部使用 recipient_return_altitude_m，不使用来源机高度。reference_home 是名义参考点，不是六机实测落点。
+source_uav_id + waypoint_index 为唯一索引；waypoint_index 从 1 开始，准确对应来源机唯一扫描数组顺序。waypoint_id 与主 JSON 一致，不对正逆执行展开重复编号。
+
+2. 双层场景 final_scene_2 / xuchang_small_2
+waypoint_layer=upper，return_policy=climb_to_upper_then_return。每个接收机包含全部六机上层唯一点到自身 home 上方的完整返航路线，条数严格等于六机上层点数之和。每条路线包括绕障辅助点；这些辅助点只用于 entry_path/return_paths 路线，不混入扫描数组，也不产生扫描开销。
+normal_return_connection 明确保存最后下层扫描点、原位回升起终点、未确认的回升速度、回升时间、接入所选上层点的完整路线，以及被选中的 source_uav_id / waypoint_index / waypoint_id。选中的目录路线与 return_selections.json 的 return_path_m 完全一致。其全部3D几何与主 JSON 的实际 return segments 一一复核，没有遗漏接入距离，也没有瞬移。
+回升速度 2m/s 是本轮规划者暂估，不是用户确认或实测值；每机另列 1/2/3m/s 总返航和总任务时间敏感性。返航终点高度为本机上层高度，不包括最终落地下降。
+许昌每条目录路线保留接收机原 old_return_path_from_last_waypoint_m[1:-1] 全部中间门点/辅助点及其顺序；不能误用来源机通道。entry_path 从该机最终 entry segments 直接重组，不含起飞竖直段。
+
+3. 固定层场景 final_scene_1
+物理层语义保留 UAV1–3 upper、UAV4–6 lower，返航高度始终是各机自己的固定任务高度；不额外回升。
+其目录 waypoint_layer=assigned_physical_layer，包含全部六机各自唯一物理层的所有扫描点，并用 source_physical_layer 区分来源。每条目录路线仍全部使用接收机自己的固定高度。这是明确的 scene1 离线目录适配提案，当前程序对话仍需实现/确认导入，不能宣称现有双层 upper 目录直接兼容这种模式。
+当前运行接口采用 legacy_single_layer 方式：每机唯一层发送到 path_stage_1，即使该层物理上叫 lower；path_stage_2 必须明确为空数组 []，以清除缓存。每点 50 秒，B 执行正序一趟再逆序一趟，转折点两次各 50 秒。只发送唯一点数组，不发送已展开的 execution_order 再要求 B 重复。
+task_proposal 中明确不提供 task.layers。现有 task.layers 校验器仅接受真实 upper+lower 两层，不能传单元素数组，也不能用空数组冒充旧单层。
+
+4. 已明确的话题名称
+N 表示接收机 1–6；topic_mapping.json 已逐场景、逐机给出下列具体话题及扫描数据：
+/ground_mission_planner/vehicle_N/path_stage_1：std_msgs/Float64MultiArray，上层或旧单层唯一点。
+/ground_mission_planner/vehicle_N/path_stage_2：std_msgs/Float64MultiArray，下层唯一点；scene1为空。
+/ground_mission_planner/vehicle_N/entry_path：std_msgs/String，进入上层首点/唯一层首点的路线。
+/ground_mission_planner/vehicle_N/return_paths：std_msgs/String，完整接收机返航目录。
+/ground_mission_planner/vehicle_N/jiangluodian：std_msgs/Float64MultiArray，[经度,纬度,接收机返航相对高度]。
+/uavN/competition/external_mission：std_msgs/String，由原分派程序生成实际任务封装。
+扫描数组均按 [经度,纬度,相对高度] 逐点展平，一层只有唯一扫描点，未混入任何不扫描辅助点。主 JSON 仍严格保持 external_program_b_proposal.ros_topics=null，已知话题放在独立 topic_mapping.json，不改主 schema。
+return_paths.geometry_payload_only 中不伪造 mission_id、assignment_checksum 等实际运行标识；原程序未来适配时必须生成并核对实际任务标识。不能将缺少实际任务封装的离线几何直接作为已可发布消息。
+
+5. 验证边界与复现
+生成：PYTHONPATH=/适当依赖目录 python3 build_return_catalog.py。默认使用 inputs/02_规划输入_v2.json、exclusions_draft.json、planning_result.json 和 return_selections.json；均可通过命令行路径参数调整。
+独立验证：python3 validate_return_catalog.py。需要 Shapely 和 jsonschema，但不导入 planner.py 或目录生成器。检查schema、全部来源索引/条数、GPS互转、接收机高度、源/终点、全线5m净距、旧门点顺序、正常回升与接入、完整返航时间和敏感性、实际topic数组直连合法性，以及A/双层映射差异。数值容差不替代5m硬约束。
+return_catalog_validation_report.json 的通过表示离线目录几何、名义参数及显式话题映射一致。它不表示实际 ROS 收发、B 的执行策略、动态避碰或实飞已经测试；这些状态与离线几何验证必须分别记录。
+test_return_catalog_tamper.py 通过对临时副本施加缺失路线、接收机高度错误、错误来源索引、遗漏门点、瞬移接入和扫描数组漏点等负例，确认独立校验器拒绝它们。负例不修改正式文件。

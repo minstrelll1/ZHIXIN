@@ -1,0 +1,13 @@
+{
+  "original_plan_archive": {
+    "filename": "planning_results.zip",
+    "sha256": "3a4004506481cff00326acee55e084bc3268be403123df7a43e91132dad356ed",
+    "bytes": 8618069
+  },
+  "revision_request_archive": {
+    "filename": "规划修改意见_20261017.zip",
+    "sha256": "8b75fc787925175ad405f1e29cda8b23b36782aa602a7abbe1ca050ff073a83b",
+    "bytes": 251309
+  },
+  "note": "Original desktop archives were read only. Their extracted planning/revision sources are preserved under inputs/; no runtime code or mission interfaces were called."
+}

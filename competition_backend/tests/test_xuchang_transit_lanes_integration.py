@@ -108,7 +108,7 @@ class XuchangTransitLanesIntegrationTest(unittest.TestCase):
             for actual, expected in zip(routes['return_paths'], vehicle['fleet_return_paths_m']):
                 self.assert_local_path(actual['path'], expected['path'])
 
-    def test_ten_meter_home_rebase_preserves_fixed_lane_interior_for_all_sources(self):
+    def test_ten_meter_home_rebase_keeps_scan_endpoints_and_safe_routes_for_all_sources(self):
         for uid in self.LANE_UIDS:
             with self.subTest(uav=uid):
                 task = self.plan['planned_uavs'][str(uid)]['task']
@@ -119,12 +119,12 @@ class XuchangTransitLanesIntegrationTest(unittest.TestCase):
                 self.assertEqual(task, before)
                 self.assertEqual(routes['departure'], [home['longitude'], home['latitude']])
                 self.assertEqual(routes['entry_path'][0], routes['departure'])
-                fixed_entry = vehicle['entry_path_m'][1:]
-                self.assert_local_path(routes['entry_path'][-len(fixed_entry):], fixed_entry)
+                self.assert_local_path([routes['entry_path'][-1]], [vehicle['waypoints_m'][0]])
+                self.assertEqual(routes['transit_constraints'],'soft_preferences')
+                self.assertEqual(routes['other_home_clearance_m'],1.5)
                 self.assertEqual([(r['source_uav_id'], r['waypoint_index']) for r in routes['return_paths']], self.expected_keys)
                 for actual, fixed in zip(routes['return_paths'], vehicle['fleet_return_paths_m']):
-                    fixed_interior = fixed['path'][:-1]
-                    self.assert_local_path(actual['path'][:len(fixed_interior)], fixed_interior)
+                    self.assert_local_path([actual['path'][0]], [fixed['path'][0]])
                     self.assertEqual(actual['path'][-1], routes['departure'])
                 for path in [routes['entry_path'], *(r['path'] for r in routes['return_paths'])]:
                     local_line = LineString([self.local(point) for point in path])

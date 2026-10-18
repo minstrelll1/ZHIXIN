@@ -1,0 +1,194 @@
+{
+  "calculation_order": "Computed before candidate optimization",
+  "limitations": "Ideal disk areas ignore overlaps, boundary spills, strict disk exclusion restrictions and all horizontal flight. These are necessary conditions, never a full-coverage guarantee.",
+  "scenes": [
+    {
+      "scene_id": "final_scene_1",
+      "effective_area_m2": 99857.71727651944,
+      "bounds": [
+        {
+          "layer_id": "upper",
+          "ideal_max_independent_points": 39,
+          "ideal_area_ceiling_m2": 110269.90214100174,
+          "ideal_coverage_ratio_ceiling": 1,
+          "description": "upper三机各至多13点，39πR²理想面积上界110269.902141㎡；对当前候选有效面积上界100.0000%；尚未扣飞行、外溢、重叠。"
+        },
+        {
+          "layer_id": "lower",
+          "ideal_max_independent_points": 39,
+          "ideal_area_ceiling_m2": 306305.2837250048,
+          "ideal_coverage_ratio_ceiling": 1,
+          "description": "lower三机各至多13点，39πR²理想面积上界306305.283725㎡；对当前候选有效面积上界100.0000%；尚未扣飞行、外溢、重叠。"
+        },
+        {
+          "uav_id": 1,
+          "layer_id": "upper",
+          "effective_area_m2": 33285.905758839894,
+          "minimum_independent_points_for_full_area": 12,
+          "full_coverage_time_lower_bound_s": 1207.8333333333333,
+          "not_ruled_out_by_time_lower_bound": true
+        },
+        {
+          "uav_id": 2,
+          "layer_id": "upper",
+          "effective_area_m2": 33285.90575883981,
+          "minimum_independent_points_for_full_area": 12,
+          "full_coverage_time_lower_bound_s": 1208.3333333333333,
+          "not_ruled_out_by_time_lower_bound": true
+        },
+        {
+          "uav_id": 3,
+          "layer_id": "upper",
+          "effective_area_m2": 33285.9057588398,
+          "minimum_independent_points_for_full_area": 12,
+          "full_coverage_time_lower_bound_s": 1208.8333333333333,
+          "not_ruled_out_by_time_lower_bound": true
+        },
+        {
+          "uav_id": 4,
+          "layer_id": "lower",
+          "effective_area_m2": 33285.905758839894,
+          "minimum_independent_points_for_full_area": 5,
+          "full_coverage_time_lower_bound_s": 505.6666666666667,
+          "not_ruled_out_by_time_lower_bound": true
+        },
+        {
+          "uav_id": 5,
+          "layer_id": "lower",
+          "effective_area_m2": 33285.90575883981,
+          "minimum_independent_points_for_full_area": 5,
+          "full_coverage_time_lower_bound_s": 506.1666666666667,
+          "not_ruled_out_by_time_lower_bound": true
+        },
+        {
+          "uav_id": 6,
+          "layer_id": "lower",
+          "effective_area_m2": 33285.9057588398,
+          "minimum_independent_points_for_full_area": 5,
+          "full_coverage_time_lower_bound_s": 506.6666666666667,
+          "not_ruled_out_by_time_lower_bound": true
+        }
+      ]
+    },
+    {
+      "scene_id": "final_scene_2",
+      "effective_area_m2": 99857.71727651944,
+      "bounds": [
+        {
+          "uav_id": 1,
+          "effective_area_m2": 16642.9528794199,
+          "minimum_upper_points_for_full_area": 6,
+          "minimum_lower_points_for_full_area": 3,
+          "full_coverage_time_lower_bound_s": 464.3333333333333,
+          "not_ruled_out_by_time_lower_bound": true,
+          "max_combined_scan_count_ignoring_horizontal_flight": 27
+        },
+        {
+          "uav_id": 2,
+          "effective_area_m2": 16642.952879419925,
+          "minimum_upper_points_for_full_area": 6,
+          "minimum_lower_points_for_full_area": 3,
+          "full_coverage_time_lower_bound_s": 464.8333333333333,
+          "not_ruled_out_by_time_lower_bound": true,
+          "max_combined_scan_count_ignoring_horizontal_flight": 27
+        },
+        {
+          "uav_id": 3,
+          "effective_area_m2": 16642.952879419936,
+          "minimum_upper_points_for_full_area": 6,
+          "minimum_lower_points_for_full_area": 3,
+          "full_coverage_time_lower_bound_s": 465.3333333333333,
+          "not_ruled_out_by_time_lower_bound": true,
+          "max_combined_scan_count_ignoring_horizontal_flight": 27
+        },
+        {
+          "uav_id": 4,
+          "effective_area_m2": 16642.952879419936,
+          "minimum_upper_points_for_full_area": 6,
+          "minimum_lower_points_for_full_area": 3,
+          "full_coverage_time_lower_bound_s": 464.3333333333333,
+          "not_ruled_out_by_time_lower_bound": true,
+          "max_combined_scan_count_ignoring_horizontal_flight": 27
+        },
+        {
+          "uav_id": 5,
+          "effective_area_m2": 16642.952879419907,
+          "minimum_upper_points_for_full_area": 6,
+          "minimum_lower_points_for_full_area": 3,
+          "full_coverage_time_lower_bound_s": 464.8333333333333,
+          "not_ruled_out_by_time_lower_bound": true,
+          "max_combined_scan_count_ignoring_horizontal_flight": 27
+        },
+        {
+          "uav_id": 6,
+          "effective_area_m2": 16642.95287941992,
+          "minimum_upper_points_for_full_area": 6,
+          "minimum_lower_points_for_full_area": 3,
+          "full_coverage_time_lower_bound_s": 465.3333333333333,
+          "not_ruled_out_by_time_lower_bound": true,
+          "max_combined_scan_count_ignoring_horizontal_flight": 27
+        }
+      ]
+    },
+    {
+      "scene_id": "xuchang_small_2",
+      "effective_area_m2": 164688.90038310815,
+      "bounds": [
+        {
+          "uav_id": 1,
+          "effective_area_m2": 12895.60902021896,
+          "minimum_upper_points_for_full_area": 5,
+          "minimum_lower_points_for_full_area": 2,
+          "full_coverage_time_lower_bound_s": 364.3333333333333,
+          "not_ruled_out_by_time_lower_bound": true,
+          "max_combined_scan_count_ignoring_horizontal_flight": 27
+        },
+        {
+          "uav_id": 2,
+          "effective_area_m2": 12679.072422554838,
+          "minimum_upper_points_for_full_area": 5,
+          "minimum_lower_points_for_full_area": 2,
+          "full_coverage_time_lower_bound_s": 364.8333333333333,
+          "not_ruled_out_by_time_lower_bound": true,
+          "max_combined_scan_count_ignoring_horizontal_flight": 27
+        },
+        {
+          "uav_id": 3,
+          "effective_area_m2": 22182.771140373254,
+          "minimum_upper_points_for_full_area": 8,
+          "minimum_lower_points_for_full_area": 3,
+          "full_coverage_time_lower_bound_s": 565.3333333333334,
+          "not_ruled_out_by_time_lower_bound": true,
+          "max_combined_scan_count_ignoring_horizontal_flight": 27
+        },
+        {
+          "uav_id": 4,
+          "effective_area_m2": 22149.849394730543,
+          "minimum_upper_points_for_full_area": 8,
+          "minimum_lower_points_for_full_area": 3,
+          "full_coverage_time_lower_bound_s": 564.3333333333334,
+          "not_ruled_out_by_time_lower_bound": true,
+          "max_combined_scan_count_ignoring_horizontal_flight": 27
+        },
+        {
+          "uav_id": 5,
+          "effective_area_m2": 83978.13804049083,
+          "minimum_upper_points_for_full_area": 30,
+          "minimum_lower_points_for_full_area": 11,
+          "full_coverage_time_lower_bound_s": 2064.8333333333335,
+          "not_ruled_out_by_time_lower_bound": false,
+          "max_combined_scan_count_ignoring_horizontal_flight": 27
+        },
+        {
+          "uav_id": 6,
+          "effective_area_m2": 10803.459886036584,
+          "minimum_upper_points_for_full_area": 4,
+          "minimum_lower_points_for_full_area": 2,
+          "full_coverage_time_lower_bound_s": 315.3333333333333,
+          "not_ruled_out_by_time_lower_bound": true,
+          "max_combined_scan_count_ignoring_horizontal_flight": 27
+        }
+      ]
+    }
+  ]
+}

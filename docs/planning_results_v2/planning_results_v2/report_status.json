@@ -1,0 +1,21 @@
+{
+  "planning_result_sha256": "60c52b29986a25ddc51da5a601dd5c3b2dd105ec2dc049d3bee2209c460adb14",
+  "offline_plan": {
+    "file": "validation_report.json",
+    "available": true,
+    "matches_current_result": true,
+    "passed_for_current_result": true,
+    "total_checks": 33480,
+    "failure_count": 0
+  },
+  "offline_catalog_and_mapping": {
+    "file": "return_catalog_validation_report.json",
+    "available": true,
+    "matches_current_result": true,
+    "passed_for_current_result": true,
+    "total_checks": 32453,
+    "failure_count": 0
+  },
+  "runtime_integration_tested": false,
+  "real_flight_validated": false
+}

@@ -1,0 +1,3408 @@
+{
+  "scenes": {
+    "final_scene_1": {
+      "method": "Sequential deletion, reordering and recomputation after each accepted removal; both own-layer and field-layer exclusive areas <0.01m2; finite legal direct arrays and budget required.",
+      "before": [
+        {
+          "uav_id": 1,
+          "counts": [
+            10
+          ],
+          "time_s": 1253.0426757028172
+        },
+        {
+          "uav_id": 2,
+          "counts": [
+            10
+          ],
+          "time_s": 1274.3009301899192
+        },
+        {
+          "uav_id": 3,
+          "counts": [
+            10
+          ],
+          "time_s": 1249.9792944270705
+        },
+        {
+          "uav_id": 4,
+          "counts": [
+            11
+          ],
+          "time_s": 1331.861540375292
+        },
+        {
+          "uav_id": 5,
+          "counts": [
+            10
+          ],
+          "time_s": 1314.7502452698045
+        },
+        {
+          "uav_id": 6,
+          "counts": [
+            10
+          ],
+          "time_s": 1288.3784974918567
+        }
+      ],
+      "after": [
+        {
+          "uav_id": 1,
+          "counts": [
+            10
+          ],
+          "time_s": 1253.0426757028172
+        },
+        {
+          "uav_id": 2,
+          "counts": [
+            10
+          ],
+          "time_s": 1287.4285994474117
+        },
+        {
+          "uav_id": 3,
+          "counts": [
+            10
+          ],
+          "time_s": 1249.9792944270705
+        },
+        {
+          "uav_id": 4,
+          "counts": [
+            11
+          ],
+          "time_s": 1331.861540375292
+        },
+        {
+          "uav_id": 5,
+          "counts": [
+            10
+          ],
+          "time_s": 1314.7502452698045
+        },
+        {
+          "uav_id": 6,
+          "counts": [
+            10
+          ],
+          "time_s": 1288.3784974918567
+        }
+      ],
+      "removed": [
+        {
+          "uav_id": 2,
+          "layer_id": "upper",
+          "candidate_index": 24,
+          "coordinate_m": [
+            -285.0,
+            185.0
+          ],
+          "own_exclusive_area_m2": 0.0,
+          "field_exclusive_area_m2": 0.0,
+          "before_time_s": 1274.3009301899192,
+          "after_time_s": 1173.396878742892,
+          "scan_time_saved_s": 100
+        }
+      ],
+      "final_points": [
+        {
+          "uav_id": 1,
+          "layer_id": "upper",
+          "waypoint_index": 1,
+          "waypoint_id": "UAV1_upper_001",
+          "own_exclusive_area_m2": 2740.5744817842246,
+          "field_exclusive_area_m2": 2740.574481784225,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 1,
+          "layer_id": "upper",
+          "waypoint_index": 2,
+          "waypoint_id": "UAV1_upper_002",
+          "own_exclusive_area_m2": 3325.18003992593,
+          "field_exclusive_area_m2": 3325.18003992593,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 1,
+          "layer_id": "upper",
+          "waypoint_index": 3,
+          "waypoint_id": "UAV1_upper_003",
+          "own_exclusive_area_m2": 740.086624245969,
+          "field_exclusive_area_m2": 740.0866242459691,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 1,
+          "layer_id": "upper",
+          "waypoint_index": 4,
+          "waypoint_id": "UAV1_upper_004",
+          "own_exclusive_area_m2": 3340.336498074335,
+          "field_exclusive_area_m2": 2804.61897748221,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 1,
+          "layer_id": "upper",
+          "waypoint_index": 5,
+          "waypoint_id": "UAV1_upper_005",
+          "own_exclusive_area_m2": 3418.1933631771403,
+          "field_exclusive_area_m2": 2417.4789644223997,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 1,
+          "layer_id": "upper",
+          "waypoint_index": 6,
+          "waypoint_id": "UAV1_upper_006",
+          "own_exclusive_area_m2": 3592.785039391039,
+          "field_exclusive_area_m2": 2842.0742155510084,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 1,
+          "layer_id": "upper",
+          "waypoint_index": 7,
+          "waypoint_id": "UAV1_upper_007",
+          "own_exclusive_area_m2": 971.9182868310622,
+          "field_exclusive_area_m2": 726.5418293441853,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 1,
+          "layer_id": "upper",
+          "waypoint_index": 8,
+          "waypoint_id": "UAV1_upper_008",
+          "own_exclusive_area_m2": 315.74613303181815,
+          "field_exclusive_area_m2": 315.74613303181815,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 1,
+          "layer_id": "upper",
+          "waypoint_index": 9,
+          "waypoint_id": "UAV1_upper_009",
+          "own_exclusive_area_m2": 2100.1299727750265,
+          "field_exclusive_area_m2": 2100.129972775028,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 1,
+          "layer_id": "upper",
+          "waypoint_index": 10,
+          "waypoint_id": "UAV1_upper_010",
+          "own_exclusive_area_m2": 497.9343073337555,
+          "field_exclusive_area_m2": 497.9343073517734,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 2,
+          "layer_id": "upper",
+          "waypoint_index": 1,
+          "waypoint_id": "UAV2_upper_001",
+          "own_exclusive_area_m2": 3711.6489832713974,
+          "field_exclusive_area_m2": 1835.5968616126067,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 2,
+          "layer_id": "upper",
+          "waypoint_index": 2,
+          "waypoint_id": "UAV2_upper_002",
+          "own_exclusive_area_m2": 1033.5531537638587,
+          "field_exclusive_area_m2": 322.5324651443446,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 2,
+          "layer_id": "upper",
+          "waypoint_index": 3,
+          "waypoint_id": "UAV2_upper_003",
+          "own_exclusive_area_m2": 412.79089609405673,
+          "field_exclusive_area_m2": 369.1593093428978,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 2,
+          "layer_id": "upper",
+          "waypoint_index": 4,
+          "waypoint_id": "UAV2_upper_004",
+          "own_exclusive_area_m2": 826.2323709406905,
+          "field_exclusive_area_m2": 826.2323709406905,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 2,
+          "layer_id": "upper",
+          "waypoint_index": 5,
+          "waypoint_id": "UAV2_upper_005",
+          "own_exclusive_area_m2": 1264.1167897803812,
+          "field_exclusive_area_m2": 1264.1167897803812,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 2,
+          "layer_id": "upper",
+          "waypoint_index": 6,
+          "waypoint_id": "UAV2_upper_006",
+          "own_exclusive_area_m2": 1907.00296411922,
+          "field_exclusive_area_m2": 1907.00296411922,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 2,
+          "layer_id": "upper",
+          "waypoint_index": 7,
+          "waypoint_id": "UAV2_upper_007",
+          "own_exclusive_area_m2": 123.2863605507744,
+          "field_exclusive_area_m2": 28.19173264606228,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 2,
+          "layer_id": "upper",
+          "waypoint_index": 8,
+          "waypoint_id": "UAV2_upper_008",
+          "own_exclusive_area_m2": 450.19525970818455,
+          "field_exclusive_area_m2": 393.55379491795185,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 2,
+          "layer_id": "upper",
+          "waypoint_index": 9,
+          "waypoint_id": "UAV2_upper_009",
+          "own_exclusive_area_m2": 763.7958401561093,
+          "field_exclusive_area_m2": 829.2370715019956,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 2,
+          "layer_id": "upper",
+          "waypoint_index": 10,
+          "waypoint_id": "UAV2_upper_010",
+          "own_exclusive_area_m2": 153.9512756613571,
+          "field_exclusive_area_m2": 153.95127566135716,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 3,
+          "layer_id": "upper",
+          "waypoint_index": 1,
+          "waypoint_id": "UAV3_upper_001",
+          "own_exclusive_area_m2": 3701.94751940839,
+          "field_exclusive_area_m2": 3260.815467844442,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 3,
+          "layer_id": "upper",
+          "waypoint_index": 2,
+          "waypoint_id": "UAV3_upper_002",
+          "own_exclusive_area_m2": 318.41946742789753,
+          "field_exclusive_area_m2": 548.0813625407454,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 3,
+          "layer_id": "upper",
+          "waypoint_index": 3,
+          "waypoint_id": "UAV3_upper_003",
+          "own_exclusive_area_m2": 91.34794689069795,
+          "field_exclusive_area_m2": 91.34794689069795,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 3,
+          "layer_id": "upper",
+          "waypoint_index": 4,
+          "waypoint_id": "UAV3_upper_004",
+          "own_exclusive_area_m2": 4183.563646402161,
+          "field_exclusive_area_m2": 4183.563646402161,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 3,
+          "layer_id": "upper",
+          "waypoint_index": 5,
+          "waypoint_id": "UAV3_upper_005",
+          "own_exclusive_area_m2": 614.1548178207811,
+          "field_exclusive_area_m2": 614.1548178207807,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 3,
+          "layer_id": "upper",
+          "waypoint_index": 6,
+          "waypoint_id": "UAV3_upper_006",
+          "own_exclusive_area_m2": 379.0776268763066,
+          "field_exclusive_area_m2": 123.40096672812334,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 3,
+          "layer_id": "upper",
+          "waypoint_index": 7,
+          "waypoint_id": "UAV3_upper_007",
+          "own_exclusive_area_m2": 994.5653117432998,
+          "field_exclusive_area_m2": 912.5929945366548,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 3,
+          "layer_id": "upper",
+          "waypoint_index": 8,
+          "waypoint_id": "UAV3_upper_008",
+          "own_exclusive_area_m2": 731.0640315084329,
+          "field_exclusive_area_m2": 358.681027341467,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 3,
+          "layer_id": "upper",
+          "waypoint_index": 9,
+          "waypoint_id": "UAV3_upper_009",
+          "own_exclusive_area_m2": 311.6523047846937,
+          "field_exclusive_area_m2": 0.0,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 3,
+          "layer_id": "upper",
+          "waypoint_index": 10,
+          "waypoint_id": "UAV3_upper_010",
+          "own_exclusive_area_m2": 215.84777510281683,
+          "field_exclusive_area_m2": 215.84777510281683,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 4,
+          "layer_id": "lower",
+          "waypoint_index": 1,
+          "waypoint_id": "UAV4_lower_001",
+          "own_exclusive_area_m2": 2274.7840605289566,
+          "field_exclusive_area_m2": 2274.7840605289557,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 4,
+          "layer_id": "lower",
+          "waypoint_index": 2,
+          "waypoint_id": "UAV4_lower_002",
+          "own_exclusive_area_m2": 2620.9583060529626,
+          "field_exclusive_area_m2": 2620.9583060529626,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 4,
+          "layer_id": "lower",
+          "waypoint_index": 3,
+          "waypoint_id": "UAV4_lower_003",
+          "own_exclusive_area_m2": 2827.362421029868,
+          "field_exclusive_area_m2": 2827.3624210298713,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 4,
+          "layer_id": "lower",
+          "waypoint_index": 4,
+          "waypoint_id": "UAV4_lower_004",
+          "own_exclusive_area_m2": 2827.362421029869,
+          "field_exclusive_area_m2": 2827.362421029873,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 4,
+          "layer_id": "lower",
+          "waypoint_index": 5,
+          "waypoint_id": "UAV4_lower_005",
+          "own_exclusive_area_m2": 2827.3624210298685,
+          "field_exclusive_area_m2": 2827.3624210298735,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 4,
+          "layer_id": "lower",
+          "waypoint_index": 6,
+          "waypoint_id": "UAV4_lower_006",
+          "own_exclusive_area_m2": 2827.362421029868,
+          "field_exclusive_area_m2": 2827.3624210298717,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 4,
+          "layer_id": "lower",
+          "waypoint_index": 7,
+          "waypoint_id": "UAV4_lower_007",
+          "own_exclusive_area_m2": 2811.387920394092,
+          "field_exclusive_area_m2": 2811.387920394095,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 4,
+          "layer_id": "lower",
+          "waypoint_index": 8,
+          "waypoint_id": "UAV4_lower_008",
+          "own_exclusive_area_m2": 1556.0662718145454,
+          "field_exclusive_area_m2": 1626.835546930556,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 4,
+          "layer_id": "lower",
+          "waypoint_index": 9,
+          "waypoint_id": "UAV4_lower_009",
+          "own_exclusive_area_m2": 2262.266697918029,
+          "field_exclusive_area_m2": 2262.266697918029,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 4,
+          "layer_id": "lower",
+          "waypoint_index": 10,
+          "waypoint_id": "UAV4_lower_010",
+          "own_exclusive_area_m2": 2524.153035110985,
+          "field_exclusive_area_m2": 2524.153035110985,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 4,
+          "layer_id": "lower",
+          "waypoint_index": 11,
+          "waypoint_id": "UAV4_lower_011",
+          "own_exclusive_area_m2": 2268.954257031796,
+          "field_exclusive_area_m2": 2268.9542570317926,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 5,
+          "layer_id": "lower",
+          "waypoint_index": 1,
+          "waypoint_id": "UAV5_lower_001",
+          "own_exclusive_area_m2": 2266.1953116856776,
+          "field_exclusive_area_m2": 2309.107414516218,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 5,
+          "layer_id": "lower",
+          "waypoint_index": 2,
+          "waypoint_id": "UAV5_lower_002",
+          "own_exclusive_area_m2": 2799.2897642389194,
+          "field_exclusive_area_m2": 2803.745777894976,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 5,
+          "layer_id": "lower",
+          "waypoint_index": 3,
+          "waypoint_id": "UAV5_lower_003",
+          "own_exclusive_area_m2": 2514.307935648348,
+          "field_exclusive_area_m2": 2514.307935648348,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 5,
+          "layer_id": "lower",
+          "waypoint_index": 4,
+          "waypoint_id": "UAV5_lower_004",
+          "own_exclusive_area_m2": 2037.0786623974668,
+          "field_exclusive_area_m2": 2075.534751571952,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 5,
+          "layer_id": "lower",
+          "waypoint_index": 5,
+          "waypoint_id": "UAV5_lower_005",
+          "own_exclusive_area_m2": 2466.227153794266,
+          "field_exclusive_area_m2": 2504.6832429687497,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 5,
+          "layer_id": "lower",
+          "waypoint_index": 6,
+          "waypoint_id": "UAV5_lower_006",
+          "own_exclusive_area_m2": 2547.319332731147,
+          "field_exclusive_area_m2": 2547.319332731147,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 5,
+          "layer_id": "lower",
+          "waypoint_index": 7,
+          "waypoint_id": "UAV5_lower_007",
+          "own_exclusive_area_m2": 2284.2780707662055,
+          "field_exclusive_area_m2": 2284.2780707662055,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 5,
+          "layer_id": "lower",
+          "waypoint_index": 8,
+          "waypoint_id": "UAV5_lower_008",
+          "own_exclusive_area_m2": 2062.1609022007856,
+          "field_exclusive_area_m2": 2062.1609022007856,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 5,
+          "layer_id": "lower",
+          "waypoint_index": 9,
+          "waypoint_id": "UAV5_lower_009",
+          "own_exclusive_area_m2": 2267.675596100725,
+          "field_exclusive_area_m2": 2267.675596100725,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 5,
+          "layer_id": "lower",
+          "waypoint_index": 10,
+          "waypoint_id": "UAV5_lower_010",
+          "own_exclusive_area_m2": 2806.9336641800082,
+          "field_exclusive_area_m2": 2811.389677836065,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 6,
+          "layer_id": "lower",
+          "waypoint_index": 1,
+          "waypoint_id": "UAV6_lower_001",
+          "own_exclusive_area_m2": 2784.8256240197497,
+          "field_exclusive_area_m2": 2203.8233054005673,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 6,
+          "layer_id": "lower",
+          "waypoint_index": 2,
+          "waypoint_id": "UAV6_lower_002",
+          "own_exclusive_area_m2": 2827.3624210298703,
+          "field_exclusive_area_m2": 2827.3624210298703,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 6,
+          "layer_id": "lower",
+          "waypoint_index": 3,
+          "waypoint_id": "UAV6_lower_003",
+          "own_exclusive_area_m2": 2438.520932546794,
+          "field_exclusive_area_m2": 2438.520932546794,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 6,
+          "layer_id": "lower",
+          "waypoint_index": 4,
+          "waypoint_id": "UAV6_lower_004",
+          "own_exclusive_area_m2": 2165.434747100926,
+          "field_exclusive_area_m2": 2588.389512841223,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 6,
+          "layer_id": "lower",
+          "waypoint_index": 5,
+          "waypoint_id": "UAV6_lower_005",
+          "own_exclusive_area_m2": 2502.678700539631,
+          "field_exclusive_area_m2": 2502.678700539631,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 6,
+          "layer_id": "lower",
+          "waypoint_index": 6,
+          "waypoint_id": "UAV6_lower_006",
+          "own_exclusive_area_m2": 2827.36242102987,
+          "field_exclusive_area_m2": 2827.36242102987,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 6,
+          "layer_id": "lower",
+          "waypoint_index": 7,
+          "waypoint_id": "UAV6_lower_007",
+          "own_exclusive_area_m2": 2811.3896778360627,
+          "field_exclusive_area_m2": 2811.3896778360627,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 6,
+          "layer_id": "lower",
+          "waypoint_index": 8,
+          "waypoint_id": "UAV6_lower_008",
+          "own_exclusive_area_m2": 2318.0225308121994,
+          "field_exclusive_area_m2": 2602.4496408678224,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 6,
+          "layer_id": "lower",
+          "waypoint_index": 9,
+          "waypoint_id": "UAV6_lower_009",
+          "own_exclusive_area_m2": 2173.886960744022,
+          "field_exclusive_area_m2": 2173.886960744023,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 6,
+          "layer_id": "lower",
+          "waypoint_index": 10,
+          "waypoint_id": "UAV6_lower_010",
+          "own_exclusive_area_m2": 2392.3400513695765,
+          "field_exclusive_area_m2": 2392.3400513695765,
+          "zero_contribution_both": false
+        }
+      ],
+      "refill_rounds": [
+        {
+          "round": 1,
+          "added_points": 1,
+          "before_pruning": [
+            {
+              "uav_id": 1,
+              "counts": [
+                10
+              ],
+              "time_s": 1253.0426757028172
+            },
+            {
+              "uav_id": 2,
+              "counts": [
+                10
+              ],
+              "time_s": 1287.4285994474117
+            },
+            {
+              "uav_id": 3,
+              "counts": [
+                10
+              ],
+              "time_s": 1249.9792944270705
+            },
+            {
+              "uav_id": 4,
+              "counts": [
+                11
+              ],
+              "time_s": 1331.861540375292
+            },
+            {
+              "uav_id": 5,
+              "counts": [
+                10
+              ],
+              "time_s": 1314.7502452698045
+            },
+            {
+              "uav_id": 6,
+              "counts": [
+                10
+              ],
+              "time_s": 1288.3784974918567
+            }
+          ],
+          "after_pruning": [
+            {
+              "uav_id": 1,
+              "counts": [
+                10
+              ],
+              "time_s": 1253.0426757028172
+            },
+            {
+              "uav_id": 2,
+              "counts": [
+                10
+              ],
+              "time_s": 1287.4285994474117
+            },
+            {
+              "uav_id": 3,
+              "counts": [
+                10
+              ],
+              "time_s": 1249.9792944270705
+            },
+            {
+              "uav_id": 4,
+              "counts": [
+                11
+              ],
+              "time_s": 1331.861540375292
+            },
+            {
+              "uav_id": 5,
+              "counts": [
+                10
+              ],
+              "time_s": 1314.7502452698045
+            },
+            {
+              "uav_id": 6,
+              "counts": [
+                10
+              ],
+              "time_s": 1288.3784974918567
+            }
+          ],
+          "deleted_points": 0
+        }
+      ]
+    },
+    "final_scene_2": {
+      "method": "Sequential deletion, reordering and recomputation after each accepted removal; both own-layer and field-layer exclusive areas <0.01m2; finite legal direct arrays and budget required.",
+      "before": [
+        {
+          "uav_id": 1,
+          "counts": [
+            7,
+            15
+          ],
+          "time_s": 1309.4459203186575
+        },
+        {
+          "uav_id": 2,
+          "counts": [
+            7,
+            15
+          ],
+          "time_s": 1293.9192377773843
+        },
+        {
+          "uav_id": 3,
+          "counts": [
+            7,
+            13
+          ],
+          "time_s": 1235.9262813745368
+        },
+        {
+          "uav_id": 4,
+          "counts": [
+            6,
+            16
+          ],
+          "time_s": 1343.9625444223886
+        },
+        {
+          "uav_id": 5,
+          "counts": [
+            7,
+            14
+          ],
+          "time_s": 1321.6948316814887
+        },
+        {
+          "uav_id": 6,
+          "counts": [
+            9,
+            12
+          ],
+          "time_s": 1306.9984244749708
+        }
+      ],
+      "after": [
+        {
+          "uav_id": 1,
+          "counts": [
+            7,
+            15
+          ],
+          "time_s": 1309.4459203186575
+        },
+        {
+          "uav_id": 2,
+          "counts": [
+            7,
+            16
+          ],
+          "time_s": 1345.7585117234826
+        },
+        {
+          "uav_id": 3,
+          "counts": [
+            7,
+            13
+          ],
+          "time_s": 1235.9262813745368
+        },
+        {
+          "uav_id": 4,
+          "counts": [
+            6,
+            16
+          ],
+          "time_s": 1343.9625444223886
+        },
+        {
+          "uav_id": 5,
+          "counts": [
+            7,
+            13
+          ],
+          "time_s": 1263.2281407374212
+        },
+        {
+          "uav_id": 6,
+          "counts": [
+            9,
+            12
+          ],
+          "time_s": 1307.7810277900064
+        }
+      ],
+      "removed": [
+        {
+          "uav_id": 5,
+          "layer_id": "lower",
+          "candidate_index": 89,
+          "coordinate_m": [
+            -265.0,
+            225.0
+          ],
+          "own_exclusive_area_m2": 0.0,
+          "field_exclusive_area_m2": 0.0,
+          "before_time_s": 1321.6948316814887,
+          "after_time_s": 1263.2281407374212,
+          "scan_time_saved_s": 50
+        },
+        {
+          "uav_id": 6,
+          "layer_id": "upper",
+          "candidate_index": 63,
+          "coordinate_m": [
+            -285.0,
+            295.0
+          ],
+          "own_exclusive_area_m2": 0.0,
+          "field_exclusive_area_m2": 0.0,
+          "before_time_s": 1306.9984244749708,
+          "after_time_s": 1255.4027695576651,
+          "scan_time_saved_s": 50
+        }
+      ],
+      "final_points": [
+        {
+          "uav_id": 1,
+          "layer_id": "upper",
+          "waypoint_index": 1,
+          "waypoint_id": "UAV1_upper_001",
+          "own_exclusive_area_m2": 342.01873040672825,
+          "field_exclusive_area_m2": 19.459714420496393,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 1,
+          "layer_id": "upper",
+          "waypoint_index": 2,
+          "waypoint_id": "UAV1_upper_002",
+          "own_exclusive_area_m2": 1055.9085693705101,
+          "field_exclusive_area_m2": 0.0,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 1,
+          "layer_id": "upper",
+          "waypoint_index": 3,
+          "waypoint_id": "UAV1_upper_003",
+          "own_exclusive_area_m2": 39.034657629922606,
+          "field_exclusive_area_m2": 39.03465762992261,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 1,
+          "layer_id": "upper",
+          "waypoint_index": 4,
+          "waypoint_id": "UAV1_upper_004",
+          "own_exclusive_area_m2": 2431.7322835651357,
+          "field_exclusive_area_m2": 483.9824029569712,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 1,
+          "layer_id": "upper",
+          "waypoint_index": 5,
+          "waypoint_id": "UAV1_upper_005",
+          "own_exclusive_area_m2": 163.47427481948904,
+          "field_exclusive_area_m2": 163.4742748194889,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 1,
+          "layer_id": "upper",
+          "waypoint_index": 6,
+          "waypoint_id": "UAV1_upper_006",
+          "own_exclusive_area_m2": 449.0293217348084,
+          "field_exclusive_area_m2": 449.0293217348084,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 1,
+          "layer_id": "upper",
+          "waypoint_index": 7,
+          "waypoint_id": "UAV1_upper_007",
+          "own_exclusive_area_m2": 845.7162863053759,
+          "field_exclusive_area_m2": 603.5088331331774,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 1,
+          "layer_id": "lower",
+          "waypoint_index": 1,
+          "waypoint_id": "UAV1_lower_001",
+          "own_exclusive_area_m2": 1290.4949804895289,
+          "field_exclusive_area_m2": 1290.4949804895284,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 1,
+          "layer_id": "lower",
+          "waypoint_index": 2,
+          "waypoint_id": "UAV1_lower_002",
+          "own_exclusive_area_m2": 428.45420321582526,
+          "field_exclusive_area_m2": 428.45420321582526,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 1,
+          "layer_id": "lower",
+          "waypoint_index": 3,
+          "waypoint_id": "UAV1_lower_003",
+          "own_exclusive_area_m2": 319.02955714488814,
+          "field_exclusive_area_m2": 319.02955714488814,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 1,
+          "layer_id": "lower",
+          "waypoint_index": 4,
+          "waypoint_id": "UAV1_lower_004",
+          "own_exclusive_area_m2": 164.81105118684636,
+          "field_exclusive_area_m2": 164.81105118684638,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 1,
+          "layer_id": "lower",
+          "waypoint_index": 5,
+          "waypoint_id": "UAV1_lower_005",
+          "own_exclusive_area_m2": 3.128516754847506,
+          "field_exclusive_area_m2": 3.128516754847506,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 1,
+          "layer_id": "lower",
+          "waypoint_index": 6,
+          "waypoint_id": "UAV1_lower_006",
+          "own_exclusive_area_m2": 113.34202196586679,
+          "field_exclusive_area_m2": 113.34202196586679,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 1,
+          "layer_id": "lower",
+          "waypoint_index": 7,
+          "waypoint_id": "UAV1_lower_007",
+          "own_exclusive_area_m2": 719.1493244133455,
+          "field_exclusive_area_m2": 719.1493244144992,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 1,
+          "layer_id": "lower",
+          "waypoint_index": 8,
+          "waypoint_id": "UAV1_lower_008",
+          "own_exclusive_area_m2": 479.9703675976618,
+          "field_exclusive_area_m2": 479.9703675976618,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 1,
+          "layer_id": "lower",
+          "waypoint_index": 9,
+          "waypoint_id": "UAV1_lower_009",
+          "own_exclusive_area_m2": 306.89503814867084,
+          "field_exclusive_area_m2": 236.43245879412368,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 1,
+          "layer_id": "lower",
+          "waypoint_index": 10,
+          "waypoint_id": "UAV1_lower_010",
+          "own_exclusive_area_m2": 1078.502393092345,
+          "field_exclusive_area_m2": 1044.0969689603673,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 1,
+          "layer_id": "lower",
+          "waypoint_index": 11,
+          "waypoint_id": "UAV1_lower_011",
+          "own_exclusive_area_m2": 951.4532307543179,
+          "field_exclusive_area_m2": 951.453230754318,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 1,
+          "layer_id": "lower",
+          "waypoint_index": 12,
+          "waypoint_id": "UAV1_lower_012",
+          "own_exclusive_area_m2": 1677.0422949001663,
+          "field_exclusive_area_m2": 579.0901620145297,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 1,
+          "layer_id": "lower",
+          "waypoint_index": 13,
+          "waypoint_id": "UAV1_lower_013",
+          "own_exclusive_area_m2": 1594.94789824847,
+          "field_exclusive_area_m2": 809.9790172514338,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 1,
+          "layer_id": "lower",
+          "waypoint_index": 14,
+          "waypoint_id": "UAV1_lower_014",
+          "own_exclusive_area_m2": 542.9567224167498,
+          "field_exclusive_area_m2": 371.81824743154016,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 1,
+          "layer_id": "lower",
+          "waypoint_index": 15,
+          "waypoint_id": "UAV1_lower_015",
+          "own_exclusive_area_m2": 371.2130740423324,
+          "field_exclusive_area_m2": 82.48343927513882,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 2,
+          "layer_id": "upper",
+          "waypoint_index": 1,
+          "waypoint_id": "UAV2_upper_001",
+          "own_exclusive_area_m2": 193.48790810256128,
+          "field_exclusive_area_m2": 52.58432611699092,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 2,
+          "layer_id": "upper",
+          "waypoint_index": 2,
+          "waypoint_id": "UAV2_upper_002",
+          "own_exclusive_area_m2": 126.1234421692232,
+          "field_exclusive_area_m2": 64.2508823075359,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 2,
+          "layer_id": "upper",
+          "waypoint_index": 3,
+          "waypoint_id": "UAV2_upper_003",
+          "own_exclusive_area_m2": 308.0413454500104,
+          "field_exclusive_area_m2": 162.67471612187,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 2,
+          "layer_id": "upper",
+          "waypoint_index": 4,
+          "waypoint_id": "UAV2_upper_004",
+          "own_exclusive_area_m2": 686.5537556320852,
+          "field_exclusive_area_m2": 375.04716352307196,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 2,
+          "layer_id": "upper",
+          "waypoint_index": 5,
+          "waypoint_id": "UAV2_upper_005",
+          "own_exclusive_area_m2": 890.021761189822,
+          "field_exclusive_area_m2": 247.15121405181958,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 2,
+          "layer_id": "upper",
+          "waypoint_index": 6,
+          "waypoint_id": "UAV2_upper_006",
+          "own_exclusive_area_m2": 430.1104380717149,
+          "field_exclusive_area_m2": 430.1104380717149,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 2,
+          "layer_id": "upper",
+          "waypoint_index": 7,
+          "waypoint_id": "UAV2_upper_007",
+          "own_exclusive_area_m2": 675.3427178636337,
+          "field_exclusive_area_m2": 675.3427178636337,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 2,
+          "layer_id": "lower",
+          "waypoint_index": 1,
+          "waypoint_id": "UAV2_lower_001",
+          "own_exclusive_area_m2": 462.54695160969794,
+          "field_exclusive_area_m2": 462.54695160969794,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 2,
+          "layer_id": "lower",
+          "waypoint_index": 2,
+          "waypoint_id": "UAV2_lower_002",
+          "own_exclusive_area_m2": 468.9908165925934,
+          "field_exclusive_area_m2": 468.9908165925934,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 2,
+          "layer_id": "lower",
+          "waypoint_index": 3,
+          "waypoint_id": "UAV2_lower_003",
+          "own_exclusive_area_m2": 1946.816832459535,
+          "field_exclusive_area_m2": 1946.816832459535,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 2,
+          "layer_id": "lower",
+          "waypoint_index": 4,
+          "waypoint_id": "UAV2_lower_004",
+          "own_exclusive_area_m2": 310.785199392023,
+          "field_exclusive_area_m2": 266.73029417114515,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 2,
+          "layer_id": "lower",
+          "waypoint_index": 5,
+          "waypoint_id": "UAV2_lower_005",
+          "own_exclusive_area_m2": 649.6946535632723,
+          "field_exclusive_area_m2": 484.7271852933868,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 2,
+          "layer_id": "lower",
+          "waypoint_index": 6,
+          "waypoint_id": "UAV2_lower_006",
+          "own_exclusive_area_m2": 525.819758066752,
+          "field_exclusive_area_m2": 525.819758066752,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 2,
+          "layer_id": "lower",
+          "waypoint_index": 7,
+          "waypoint_id": "UAV2_lower_007",
+          "own_exclusive_area_m2": 158.4804511132727,
+          "field_exclusive_area_m2": 0.0,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 2,
+          "layer_id": "lower",
+          "waypoint_index": 8,
+          "waypoint_id": "UAV2_lower_008",
+          "own_exclusive_area_m2": 196.91399827629948,
+          "field_exclusive_area_m2": 212.74483829954787,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 2,
+          "layer_id": "lower",
+          "waypoint_index": 9,
+          "waypoint_id": "UAV2_lower_009",
+          "own_exclusive_area_m2": 292.28720905351213,
+          "field_exclusive_area_m2": 172.65673221282128,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 2,
+          "layer_id": "lower",
+          "waypoint_index": 10,
+          "waypoint_id": "UAV2_lower_010",
+          "own_exclusive_area_m2": 444.6818726469104,
+          "field_exclusive_area_m2": 488.20428681903485,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 2,
+          "layer_id": "lower",
+          "waypoint_index": 11,
+          "waypoint_id": "UAV2_lower_011",
+          "own_exclusive_area_m2": 918.1770278912531,
+          "field_exclusive_area_m2": 918.1770278912531,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 2,
+          "layer_id": "lower",
+          "waypoint_index": 12,
+          "waypoint_id": "UAV2_lower_012",
+          "own_exclusive_area_m2": 243.1978153880524,
+          "field_exclusive_area_m2": 243.1978153880524,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 2,
+          "layer_id": "lower",
+          "waypoint_index": 13,
+          "waypoint_id": "UAV2_lower_013",
+          "own_exclusive_area_m2": 86.19258546504707,
+          "field_exclusive_area_m2": 67.52653067311567,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 2,
+          "layer_id": "lower",
+          "waypoint_index": 14,
+          "waypoint_id": "UAV2_lower_014",
+          "own_exclusive_area_m2": 197.17892210833625,
+          "field_exclusive_area_m2": 12.497669113678917,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 2,
+          "layer_id": "lower",
+          "waypoint_index": 15,
+          "waypoint_id": "UAV2_lower_015",
+          "own_exclusive_area_m2": 244.74664893552585,
+          "field_exclusive_area_m2": 7.045843493669945,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 2,
+          "layer_id": "lower",
+          "waypoint_index": 16,
+          "waypoint_id": "UAV2_lower_016",
+          "own_exclusive_area_m2": 238.2156974240428,
+          "field_exclusive_area_m2": 152.13030067665406,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 3,
+          "layer_id": "upper",
+          "waypoint_index": 1,
+          "waypoint_id": "UAV3_upper_001",
+          "own_exclusive_area_m2": 399.4772117129792,
+          "field_exclusive_area_m2": 194.9876859311883,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 3,
+          "layer_id": "upper",
+          "waypoint_index": 2,
+          "waypoint_id": "UAV3_upper_002",
+          "own_exclusive_area_m2": 138.15934530548682,
+          "field_exclusive_area_m2": 138.15934530548682,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 3,
+          "layer_id": "upper",
+          "waypoint_index": 3,
+          "waypoint_id": "UAV3_upper_003",
+          "own_exclusive_area_m2": 1978.3787551070811,
+          "field_exclusive_area_m2": 326.84582079042707,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 3,
+          "layer_id": "upper",
+          "waypoint_index": 4,
+          "waypoint_id": "UAV3_upper_004",
+          "own_exclusive_area_m2": 133.91794852508295,
+          "field_exclusive_area_m2": 52.67808932200622,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 3,
+          "layer_id": "upper",
+          "waypoint_index": 5,
+          "waypoint_id": "UAV3_upper_005",
+          "own_exclusive_area_m2": 135.2343578117625,
+          "field_exclusive_area_m2": 7.754180762144421,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 3,
+          "layer_id": "upper",
+          "waypoint_index": 6,
+          "waypoint_id": "UAV3_upper_006",
+          "own_exclusive_area_m2": 123.20596409446154,
+          "field_exclusive_area_m2": 86.16923662680945,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 3,
+          "layer_id": "upper",
+          "waypoint_index": 7,
+          "waypoint_id": "UAV3_upper_007",
+          "own_exclusive_area_m2": 128.79136392999638,
+          "field_exclusive_area_m2": 0.0,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 3,
+          "layer_id": "lower",
+          "waypoint_index": 1,
+          "waypoint_id": "UAV3_lower_001",
+          "own_exclusive_area_m2": 132.6146250270434,
+          "field_exclusive_area_m2": 11.625082918499844,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 3,
+          "layer_id": "lower",
+          "waypoint_index": 2,
+          "waypoint_id": "UAV3_lower_002",
+          "own_exclusive_area_m2": 345.6788535580498,
+          "field_exclusive_area_m2": 87.14649513315491,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 3,
+          "layer_id": "lower",
+          "waypoint_index": 3,
+          "waypoint_id": "UAV3_lower_003",
+          "own_exclusive_area_m2": 491.3472077284797,
+          "field_exclusive_area_m2": 264.3548755628816,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 3,
+          "layer_id": "lower",
+          "waypoint_index": 4,
+          "waypoint_id": "UAV3_lower_004",
+          "own_exclusive_area_m2": 169.6224712820323,
+          "field_exclusive_area_m2": 97.71129026355545,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 3,
+          "layer_id": "lower",
+          "waypoint_index": 5,
+          "waypoint_id": "UAV3_lower_005",
+          "own_exclusive_area_m2": 329.89102823352766,
+          "field_exclusive_area_m2": 4.577780933209623,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 3,
+          "layer_id": "lower",
+          "waypoint_index": 6,
+          "waypoint_id": "UAV3_lower_006",
+          "own_exclusive_area_m2": 1674.2110566587048,
+          "field_exclusive_area_m2": 1013.6563741033178,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 3,
+          "layer_id": "lower",
+          "waypoint_index": 7,
+          "waypoint_id": "UAV3_lower_007",
+          "own_exclusive_area_m2": 536.2613445674707,
+          "field_exclusive_area_m2": 155.34741947286952,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 3,
+          "layer_id": "lower",
+          "waypoint_index": 8,
+          "waypoint_id": "UAV3_lower_008",
+          "own_exclusive_area_m2": 71.32342688190428,
+          "field_exclusive_area_m2": 71.32342688190428,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 3,
+          "layer_id": "lower",
+          "waypoint_index": 9,
+          "waypoint_id": "UAV3_lower_009",
+          "own_exclusive_area_m2": 136.88822261173317,
+          "field_exclusive_area_m2": 136.88822261173317,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 3,
+          "layer_id": "lower",
+          "waypoint_index": 10,
+          "waypoint_id": "UAV3_lower_010",
+          "own_exclusive_area_m2": 555.9763164371826,
+          "field_exclusive_area_m2": 404.4909991815576,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 3,
+          "layer_id": "lower",
+          "waypoint_index": 11,
+          "waypoint_id": "UAV3_lower_011",
+          "own_exclusive_area_m2": 158.14902686075374,
+          "field_exclusive_area_m2": 46.81536240318664,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 3,
+          "layer_id": "lower",
+          "waypoint_index": 12,
+          "waypoint_id": "UAV3_lower_012",
+          "own_exclusive_area_m2": 327.255695225472,
+          "field_exclusive_area_m2": 159.80756520354907,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 3,
+          "layer_id": "lower",
+          "waypoint_index": 13,
+          "waypoint_id": "UAV3_lower_013",
+          "own_exclusive_area_m2": 925.8742927562794,
+          "field_exclusive_area_m2": 956.6288010676577,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 4,
+          "layer_id": "upper",
+          "waypoint_index": 1,
+          "waypoint_id": "UAV4_upper_001",
+          "own_exclusive_area_m2": 1122.074586533539,
+          "field_exclusive_area_m2": 479.74445751598626,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 4,
+          "layer_id": "upper",
+          "waypoint_index": 2,
+          "waypoint_id": "UAV4_upper_002",
+          "own_exclusive_area_m2": 236.04390211542588,
+          "field_exclusive_area_m2": 140.2325826175277,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 4,
+          "layer_id": "upper",
+          "waypoint_index": 3,
+          "waypoint_id": "UAV4_upper_003",
+          "own_exclusive_area_m2": 2203.1996421898216,
+          "field_exclusive_area_m2": 826.1669717338648,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 4,
+          "layer_id": "upper",
+          "waypoint_index": 4,
+          "waypoint_id": "UAV4_upper_004",
+          "own_exclusive_area_m2": 2647.7658713141,
+          "field_exclusive_area_m2": 1051.260977504981,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 4,
+          "layer_id": "upper",
+          "waypoint_index": 5,
+          "waypoint_id": "UAV4_upper_005",
+          "own_exclusive_area_m2": 123.01665387004624,
+          "field_exclusive_area_m2": 123.0166538700463,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 4,
+          "layer_id": "upper",
+          "waypoint_index": 6,
+          "waypoint_id": "UAV4_upper_006",
+          "own_exclusive_area_m2": 791.2764256664265,
+          "field_exclusive_area_m2": 1649.7089385169277,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 4,
+          "layer_id": "lower",
+          "waypoint_index": 1,
+          "waypoint_id": "UAV4_lower_001",
+          "own_exclusive_area_m2": 684.0295321580128,
+          "field_exclusive_area_m2": 75.27797214163256,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 4,
+          "layer_id": "lower",
+          "waypoint_index": 2,
+          "waypoint_id": "UAV4_lower_002",
+          "own_exclusive_area_m2": 250.08435668651785,
+          "field_exclusive_area_m2": 506.8650120155853,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 4,
+          "layer_id": "lower",
+          "waypoint_index": 3,
+          "waypoint_id": "UAV4_lower_003",
+          "own_exclusive_area_m2": 8.44976537262104,
+          "field_exclusive_area_m2": 8.44976537262104,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 4,
+          "layer_id": "lower",
+          "waypoint_index": 4,
+          "waypoint_id": "UAV4_lower_004",
+          "own_exclusive_area_m2": 531.4247019911626,
+          "field_exclusive_area_m2": 531.4247019911626,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 4,
+          "layer_id": "lower",
+          "waypoint_index": 5,
+          "waypoint_id": "UAV4_lower_005",
+          "own_exclusive_area_m2": 456.2870320304565,
+          "field_exclusive_area_m2": 456.2870320304565,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 4,
+          "layer_id": "lower",
+          "waypoint_index": 6,
+          "waypoint_id": "UAV4_lower_006",
+          "own_exclusive_area_m2": 705.0847980624112,
+          "field_exclusive_area_m2": 427.90054628681264,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 4,
+          "layer_id": "lower",
+          "waypoint_index": 7,
+          "waypoint_id": "UAV4_lower_007",
+          "own_exclusive_area_m2": 220.76823904673785,
+          "field_exclusive_area_m2": 62.70511119371202,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 4,
+          "layer_id": "lower",
+          "waypoint_index": 8,
+          "waypoint_id": "UAV4_lower_008",
+          "own_exclusive_area_m2": 208.76442829393739,
+          "field_exclusive_area_m2": 208.76442829393739,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 4,
+          "layer_id": "lower",
+          "waypoint_index": 9,
+          "waypoint_id": "UAV4_lower_009",
+          "own_exclusive_area_m2": 176.90646589600482,
+          "field_exclusive_area_m2": 176.90646589600482,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 4,
+          "layer_id": "lower",
+          "waypoint_index": 10,
+          "waypoint_id": "UAV4_lower_010",
+          "own_exclusive_area_m2": 140.00555910882207,
+          "field_exclusive_area_m2": 140.00555910882207,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 4,
+          "layer_id": "lower",
+          "waypoint_index": 11,
+          "waypoint_id": "UAV4_lower_011",
+          "own_exclusive_area_m2": 1061.4386691985624,
+          "field_exclusive_area_m2": 532.3007164498647,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 4,
+          "layer_id": "lower",
+          "waypoint_index": 12,
+          "waypoint_id": "UAV4_lower_012",
+          "own_exclusive_area_m2": 811.9151517583645,
+          "field_exclusive_area_m2": 385.23657036595694,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 4,
+          "layer_id": "lower",
+          "waypoint_index": 13,
+          "waypoint_id": "UAV4_lower_013",
+          "own_exclusive_area_m2": 236.43678102403518,
+          "field_exclusive_area_m2": 230.9645021325972,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 4,
+          "layer_id": "lower",
+          "waypoint_index": 14,
+          "waypoint_id": "UAV4_lower_014",
+          "own_exclusive_area_m2": 48.89631176183801,
+          "field_exclusive_area_m2": 6.496615160141171,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 4,
+          "layer_id": "lower",
+          "waypoint_index": 15,
+          "waypoint_id": "UAV4_lower_015",
+          "own_exclusive_area_m2": 124.75327520612547,
+          "field_exclusive_area_m2": 0.0,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 4,
+          "layer_id": "lower",
+          "waypoint_index": 16,
+          "waypoint_id": "UAV4_lower_016",
+          "own_exclusive_area_m2": 591.4618973692599,
+          "field_exclusive_area_m2": 387.3299936186051,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 5,
+          "layer_id": "upper",
+          "waypoint_index": 1,
+          "waypoint_id": "UAV5_upper_001",
+          "own_exclusive_area_m2": 47.18982079534105,
+          "field_exclusive_area_m2": 47.18982079534105,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 5,
+          "layer_id": "upper",
+          "waypoint_index": 2,
+          "waypoint_id": "UAV5_upper_002",
+          "own_exclusive_area_m2": 41.888818514603415,
+          "field_exclusive_area_m2": 16.79339624315281,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 5,
+          "layer_id": "upper",
+          "waypoint_index": 3,
+          "waypoint_id": "UAV5_upper_003",
+          "own_exclusive_area_m2": 731.7323838842507,
+          "field_exclusive_area_m2": 718.369498659424,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 5,
+          "layer_id": "upper",
+          "waypoint_index": 4,
+          "waypoint_id": "UAV5_upper_004",
+          "own_exclusive_area_m2": 117.01636375592886,
+          "field_exclusive_area_m2": 0.0,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 5,
+          "layer_id": "upper",
+          "waypoint_index": 5,
+          "waypoint_id": "UAV5_upper_005",
+          "own_exclusive_area_m2": 402.9793139184947,
+          "field_exclusive_area_m2": 0.0,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 5,
+          "layer_id": "upper",
+          "waypoint_index": 6,
+          "waypoint_id": "UAV5_upper_006",
+          "own_exclusive_area_m2": 121.45417709857719,
+          "field_exclusive_area_m2": 121.45417709857719,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 5,
+          "layer_id": "upper",
+          "waypoint_index": 7,
+          "waypoint_id": "UAV5_upper_007",
+          "own_exclusive_area_m2": 120.30120728933774,
+          "field_exclusive_area_m2": 120.30120728933774,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 5,
+          "layer_id": "lower",
+          "waypoint_index": 1,
+          "waypoint_id": "UAV5_lower_001",
+          "own_exclusive_area_m2": 538.4677063642771,
+          "field_exclusive_area_m2": 473.9982086945255,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 5,
+          "layer_id": "lower",
+          "waypoint_index": 2,
+          "waypoint_id": "UAV5_lower_002",
+          "own_exclusive_area_m2": 130.42528391563295,
+          "field_exclusive_area_m2": 59.901939111903346,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 5,
+          "layer_id": "lower",
+          "waypoint_index": 3,
+          "waypoint_id": "UAV5_lower_003",
+          "own_exclusive_area_m2": 78.35940588717226,
+          "field_exclusive_area_m2": 78.35940588717226,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 5,
+          "layer_id": "lower",
+          "waypoint_index": 4,
+          "waypoint_id": "UAV5_lower_004",
+          "own_exclusive_area_m2": 551.8014569047492,
+          "field_exclusive_area_m2": 328.3113391409541,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 5,
+          "layer_id": "lower",
+          "waypoint_index": 5,
+          "waypoint_id": "UAV5_lower_005",
+          "own_exclusive_area_m2": 1091.2614393383885,
+          "field_exclusive_area_m2": 390.334943204312,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 5,
+          "layer_id": "lower",
+          "waypoint_index": 6,
+          "waypoint_id": "UAV5_lower_006",
+          "own_exclusive_area_m2": 1145.30201676987,
+          "field_exclusive_area_m2": 801.3206404757107,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 5,
+          "layer_id": "lower",
+          "waypoint_index": 7,
+          "waypoint_id": "UAV5_lower_007",
+          "own_exclusive_area_m2": 365.0847072016738,
+          "field_exclusive_area_m2": 365.08470720167395,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 5,
+          "layer_id": "lower",
+          "waypoint_index": 8,
+          "waypoint_id": "UAV5_lower_008",
+          "own_exclusive_area_m2": 231.96866002732366,
+          "field_exclusive_area_m2": 231.96866002732366,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 5,
+          "layer_id": "lower",
+          "waypoint_index": 9,
+          "waypoint_id": "UAV5_lower_009",
+          "own_exclusive_area_m2": 43.768029459097185,
+          "field_exclusive_area_m2": 43.768029459097185,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 5,
+          "layer_id": "lower",
+          "waypoint_index": 10,
+          "waypoint_id": "UAV5_lower_010",
+          "own_exclusive_area_m2": 289.0842268833843,
+          "field_exclusive_area_m2": 289.0842268833843,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 5,
+          "layer_id": "lower",
+          "waypoint_index": 11,
+          "waypoint_id": "UAV5_lower_011",
+          "own_exclusive_area_m2": 134.77177468272205,
+          "field_exclusive_area_m2": 134.77177468272205,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 5,
+          "layer_id": "lower",
+          "waypoint_index": 12,
+          "waypoint_id": "UAV5_lower_012",
+          "own_exclusive_area_m2": 3.4553826015942146,
+          "field_exclusive_area_m2": 3.4553826015942146,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 5,
+          "layer_id": "lower",
+          "waypoint_index": 13,
+          "waypoint_id": "UAV5_lower_013",
+          "own_exclusive_area_m2": 202.3004855960271,
+          "field_exclusive_area_m2": 54.57617942088045,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 6,
+          "layer_id": "upper",
+          "waypoint_index": 1,
+          "waypoint_id": "UAV6_upper_001",
+          "own_exclusive_area_m2": 159.17214604552865,
+          "field_exclusive_area_m2": 19.03211606440612,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 6,
+          "layer_id": "upper",
+          "waypoint_index": 2,
+          "waypoint_id": "UAV6_upper_002",
+          "own_exclusive_area_m2": 1.9953328092653773,
+          "field_exclusive_area_m2": 1.9953328092653773,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 6,
+          "layer_id": "upper",
+          "waypoint_index": 3,
+          "waypoint_id": "UAV6_upper_003",
+          "own_exclusive_area_m2": 774.4011345861832,
+          "field_exclusive_area_m2": 17.34911039601729,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 6,
+          "layer_id": "upper",
+          "waypoint_index": 4,
+          "waypoint_id": "UAV6_upper_004",
+          "own_exclusive_area_m2": 38.39872398374974,
+          "field_exclusive_area_m2": 38.39872398374974,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 6,
+          "layer_id": "upper",
+          "waypoint_index": 5,
+          "waypoint_id": "UAV6_upper_005",
+          "own_exclusive_area_m2": 17.169848721507083,
+          "field_exclusive_area_m2": 17.169848721507083,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 6,
+          "layer_id": "upper",
+          "waypoint_index": 6,
+          "waypoint_id": "UAV6_upper_006",
+          "own_exclusive_area_m2": 37.566279162108,
+          "field_exclusive_area_m2": 37.566279162108,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 6,
+          "layer_id": "upper",
+          "waypoint_index": 7,
+          "waypoint_id": "UAV6_upper_007",
+          "own_exclusive_area_m2": 23.355725899688412,
+          "field_exclusive_area_m2": 0.0,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 6,
+          "layer_id": "upper",
+          "waypoint_index": 8,
+          "waypoint_id": "UAV6_upper_008",
+          "own_exclusive_area_m2": 87.56522556994507,
+          "field_exclusive_area_m2": 0.0,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 6,
+          "layer_id": "upper",
+          "waypoint_index": 9,
+          "waypoint_id": "UAV6_upper_009",
+          "own_exclusive_area_m2": 212.0251008086677,
+          "field_exclusive_area_m2": 212.0251008086677,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 6,
+          "layer_id": "lower",
+          "waypoint_index": 1,
+          "waypoint_id": "UAV6_lower_001",
+          "own_exclusive_area_m2": 511.9189554511117,
+          "field_exclusive_area_m2": 511.9189554511117,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 6,
+          "layer_id": "lower",
+          "waypoint_index": 2,
+          "waypoint_id": "UAV6_lower_002",
+          "own_exclusive_area_m2": 40.68167116997389,
+          "field_exclusive_area_m2": 40.68167116997389,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 6,
+          "layer_id": "lower",
+          "waypoint_index": 3,
+          "waypoint_id": "UAV6_lower_003",
+          "own_exclusive_area_m2": 29.58516783214597,
+          "field_exclusive_area_m2": 29.58516783214597,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 6,
+          "layer_id": "lower",
+          "waypoint_index": 4,
+          "waypoint_id": "UAV6_lower_004",
+          "own_exclusive_area_m2": 91.34571482389647,
+          "field_exclusive_area_m2": 91.34571482389647,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 6,
+          "layer_id": "lower",
+          "waypoint_index": 5,
+          "waypoint_id": "UAV6_lower_005",
+          "own_exclusive_area_m2": 74.63883557242634,
+          "field_exclusive_area_m2": 74.63883557242634,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 6,
+          "layer_id": "lower",
+          "waypoint_index": 6,
+          "waypoint_id": "UAV6_lower_006",
+          "own_exclusive_area_m2": 254.72838192410651,
+          "field_exclusive_area_m2": 206.48187055783313,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 6,
+          "layer_id": "lower",
+          "waypoint_index": 7,
+          "waypoint_id": "UAV6_lower_007",
+          "own_exclusive_area_m2": 533.7345300708422,
+          "field_exclusive_area_m2": 286.22396666860504,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 6,
+          "layer_id": "lower",
+          "waypoint_index": 8,
+          "waypoint_id": "UAV6_lower_008",
+          "own_exclusive_area_m2": 309.37923502024535,
+          "field_exclusive_area_m2": 108.45494552754965,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 6,
+          "layer_id": "lower",
+          "waypoint_index": 9,
+          "waypoint_id": "UAV6_lower_009",
+          "own_exclusive_area_m2": 235.01618404290707,
+          "field_exclusive_area_m2": 0.5018153187663411,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 6,
+          "layer_id": "lower",
+          "waypoint_index": 10,
+          "waypoint_id": "UAV6_lower_010",
+          "own_exclusive_area_m2": 44.3218762053814,
+          "field_exclusive_area_m2": 44.32187620538141,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 6,
+          "layer_id": "lower",
+          "waypoint_index": 11,
+          "waypoint_id": "UAV6_lower_011",
+          "own_exclusive_area_m2": 252.51145946134335,
+          "field_exclusive_area_m2": 176.24286369109709,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 6,
+          "layer_id": "lower",
+          "waypoint_index": 12,
+          "waypoint_id": "UAV6_lower_012",
+          "own_exclusive_area_m2": 427.7417729538721,
+          "field_exclusive_area_m2": 212.35729038283125,
+          "zero_contribution_both": false
+        }
+      ],
+      "refill_rounds": [
+        {
+          "round": 1,
+          "added_points": 2,
+          "before_pruning": [
+            {
+              "uav_id": 1,
+              "counts": [
+                7,
+                15
+              ],
+              "time_s": 1309.4459203186575
+            },
+            {
+              "uav_id": 2,
+              "counts": [
+                7,
+                16
+              ],
+              "time_s": 1345.7585117234826
+            },
+            {
+              "uav_id": 3,
+              "counts": [
+                7,
+                13
+              ],
+              "time_s": 1235.9262813745368
+            },
+            {
+              "uav_id": 4,
+              "counts": [
+                6,
+                16
+              ],
+              "time_s": 1343.9625444223886
+            },
+            {
+              "uav_id": 5,
+              "counts": [
+                7,
+                13
+              ],
+              "time_s": 1263.2281407374212
+            },
+            {
+              "uav_id": 6,
+              "counts": [
+                9,
+                12
+              ],
+              "time_s": 1307.7810277900064
+            }
+          ],
+          "after_pruning": [
+            {
+              "uav_id": 1,
+              "counts": [
+                7,
+                15
+              ],
+              "time_s": 1309.4459203186575
+            },
+            {
+              "uav_id": 2,
+              "counts": [
+                7,
+                16
+              ],
+              "time_s": 1345.7585117234826
+            },
+            {
+              "uav_id": 3,
+              "counts": [
+                7,
+                13
+              ],
+              "time_s": 1235.9262813745368
+            },
+            {
+              "uav_id": 4,
+              "counts": [
+                6,
+                16
+              ],
+              "time_s": 1343.9625444223886
+            },
+            {
+              "uav_id": 5,
+              "counts": [
+                7,
+                13
+              ],
+              "time_s": 1263.2281407374212
+            },
+            {
+              "uav_id": 6,
+              "counts": [
+                9,
+                12
+              ],
+              "time_s": 1307.7810277900064
+            }
+          ],
+          "deleted_points": 0
+        }
+      ]
+    },
+    "xuchang_small_2": {
+      "method": "Sequential deletion, reordering and recomputation after each accepted removal; both own-layer and field-layer exclusive areas <0.01m2; finite legal direct arrays and budget required.",
+      "before": [
+        {
+          "uav_id": 1,
+          "counts": [
+            7,
+            12
+          ],
+          "time_s": 1073.2692609191884
+        },
+        {
+          "uav_id": 2,
+          "counts": [
+            5,
+            11
+          ],
+          "time_s": 1025.3583428168583
+        },
+        {
+          "uav_id": 3,
+          "counts": [
+            6,
+            15
+          ],
+          "time_s": 1318.5065097202241
+        },
+        {
+          "uav_id": 4,
+          "counts": [
+            6,
+            16
+          ],
+          "time_s": 1334.1510969932467
+        },
+        {
+          "uav_id": 5,
+          "counts": [
+            9,
+            9
+          ],
+          "time_s": 1297.1809811333649
+        },
+        {
+          "uav_id": 6,
+          "counts": [
+            3,
+            11
+          ],
+          "time_s": 826.5938353251844
+        }
+      ],
+      "after": [
+        {
+          "uav_id": 1,
+          "counts": [
+            4,
+            12
+          ],
+          "time_s": 918.7483001047517
+        },
+        {
+          "uav_id": 2,
+          "counts": [
+            5,
+            10
+          ],
+          "time_s": 975.3583428168583
+        },
+        {
+          "uav_id": 3,
+          "counts": [
+            7,
+            14
+          ],
+          "time_s": 1317.39556180138
+        },
+        {
+          "uav_id": 4,
+          "counts": [
+            6,
+            16
+          ],
+          "time_s": 1338.5813435960208
+        },
+        {
+          "uav_id": 5,
+          "counts": [
+            9,
+            9
+          ],
+          "time_s": 1297.1809811333649
+        },
+        {
+          "uav_id": 6,
+          "counts": [
+            3,
+            10
+          ],
+          "time_s": 776.5938353251844
+        }
+      ],
+      "removed": [
+        {
+          "uav_id": 1,
+          "layer_id": "upper",
+          "candidate_index": 62,
+          "coordinate_m": [
+            25.0,
+            -5.0
+          ],
+          "own_exclusive_area_m2": 0.0,
+          "field_exclusive_area_m2": 0.0,
+          "before_time_s": 1073.2692609191884,
+          "after_time_s": 1021.4967530682449,
+          "scan_time_saved_s": 50
+        },
+        {
+          "uav_id": 1,
+          "layer_id": "upper",
+          "candidate_index": 78,
+          "coordinate_m": [
+            35.0,
+            35.0
+          ],
+          "own_exclusive_area_m2": 0.0,
+          "field_exclusive_area_m2": 0.0,
+          "before_time_s": 1021.4967530682449,
+          "after_time_s": 969.1256556160099,
+          "scan_time_saved_s": 50
+        },
+        {
+          "uav_id": 1,
+          "layer_id": "upper",
+          "candidate_index": 98,
+          "coordinate_m": [
+            55.0,
+            -25.0
+          ],
+          "own_exclusive_area_m2": 9.158891526887147e-08,
+          "field_exclusive_area_m2": 9.158891526887147e-08,
+          "before_time_s": 969.1256556160099,
+          "after_time_s": 918.7483001047517,
+          "scan_time_saved_s": 50
+        },
+        {
+          "uav_id": 2,
+          "layer_id": "lower",
+          "candidate_index": 70,
+          "coordinate_m": [
+            125.0,
+            -195.0
+          ],
+          "own_exclusive_area_m2": 0.0,
+          "field_exclusive_area_m2": 0.0,
+          "before_time_s": 1025.3583428168583,
+          "after_time_s": 975.3583428168583,
+          "scan_time_saved_s": 50
+        },
+        {
+          "uav_id": 3,
+          "layer_id": "lower",
+          "candidate_index": 193,
+          "coordinate_m": [
+            -5.0,
+            -195.0
+          ],
+          "own_exclusive_area_m2": 0.0,
+          "field_exclusive_area_m2": 0.0,
+          "before_time_s": 1318.5065097202241,
+          "after_time_s": 1264.8232712142965,
+          "scan_time_saved_s": 50
+        },
+        {
+          "uav_id": 4,
+          "layer_id": "upper",
+          "candidate_index": 75,
+          "coordinate_m": [
+            135.0,
+            -5.0
+          ],
+          "own_exclusive_area_m2": 0.0,
+          "field_exclusive_area_m2": 0.0,
+          "before_time_s": 1334.1510969932467,
+          "after_time_s": 1282.2134365901472,
+          "scan_time_saved_s": 50
+        },
+        {
+          "uav_id": 6,
+          "layer_id": "lower",
+          "candidate_index": 95,
+          "coordinate_m": [
+            -35.0,
+            -35.0
+          ],
+          "own_exclusive_area_m2": 0.0,
+          "field_exclusive_area_m2": 0.0,
+          "before_time_s": 826.5938353251844,
+          "after_time_s": 776.5938353251844,
+          "scan_time_saved_s": 50
+        }
+      ],
+      "final_points": [
+        {
+          "uav_id": 1,
+          "layer_id": "upper",
+          "waypoint_index": 1,
+          "waypoint_id": "UAV1_upper_001",
+          "own_exclusive_area_m2": 419.8501337361922,
+          "field_exclusive_area_m2": 383.7099586677413,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 1,
+          "layer_id": "upper",
+          "waypoint_index": 2,
+          "waypoint_id": "UAV1_upper_002",
+          "own_exclusive_area_m2": 871.0648160788937,
+          "field_exclusive_area_m2": 825.1384705650892,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 1,
+          "layer_id": "upper",
+          "waypoint_index": 3,
+          "waypoint_id": "UAV1_upper_003",
+          "own_exclusive_area_m2": 2139.7738308227486,
+          "field_exclusive_area_m2": 1237.9948361402835,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 1,
+          "layer_id": "upper",
+          "waypoint_index": 4,
+          "waypoint_id": "UAV1_upper_004",
+          "own_exclusive_area_m2": 2575.0467226318356,
+          "field_exclusive_area_m2": 1270.815937467714,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 1,
+          "layer_id": "lower",
+          "waypoint_index": 1,
+          "waypoint_id": "UAV1_lower_001",
+          "own_exclusive_area_m2": 546.1765006086387,
+          "field_exclusive_area_m2": 435.3560893128766,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 1,
+          "layer_id": "lower",
+          "waypoint_index": 2,
+          "waypoint_id": "UAV1_lower_002",
+          "own_exclusive_area_m2": 135.25067553315822,
+          "field_exclusive_area_m2": 33.88762046936089,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 1,
+          "layer_id": "lower",
+          "waypoint_index": 3,
+          "waypoint_id": "UAV1_lower_003",
+          "own_exclusive_area_m2": 97.57732088441043,
+          "field_exclusive_area_m2": 97.57732088441044,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 1,
+          "layer_id": "lower",
+          "waypoint_index": 4,
+          "waypoint_id": "UAV1_lower_004",
+          "own_exclusive_area_m2": 25.469985007520428,
+          "field_exclusive_area_m2": 22.6392279965258,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 1,
+          "layer_id": "lower",
+          "waypoint_index": 5,
+          "waypoint_id": "UAV1_lower_005",
+          "own_exclusive_area_m2": 1.56965745497312,
+          "field_exclusive_area_m2": 0.0,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 1,
+          "layer_id": "lower",
+          "waypoint_index": 6,
+          "waypoint_id": "UAV1_lower_006",
+          "own_exclusive_area_m2": 233.22621880287,
+          "field_exclusive_area_m2": 56.51418229098638,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 1,
+          "layer_id": "lower",
+          "waypoint_index": 7,
+          "waypoint_id": "UAV1_lower_007",
+          "own_exclusive_area_m2": 226.42695119427287,
+          "field_exclusive_area_m2": 226.42695119427285,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 1,
+          "layer_id": "lower",
+          "waypoint_index": 8,
+          "waypoint_id": "UAV1_lower_008",
+          "own_exclusive_area_m2": 152.8918322341329,
+          "field_exclusive_area_m2": 130.4506263293399,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 1,
+          "layer_id": "lower",
+          "waypoint_index": 9,
+          "waypoint_id": "UAV1_lower_009",
+          "own_exclusive_area_m2": 54.05265363121614,
+          "field_exclusive_area_m2": 70.09464206599654,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 1,
+          "layer_id": "lower",
+          "waypoint_index": 10,
+          "waypoint_id": "UAV1_lower_010",
+          "own_exclusive_area_m2": 147.88023864658442,
+          "field_exclusive_area_m2": 147.88023864944927,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 1,
+          "layer_id": "lower",
+          "waypoint_index": 11,
+          "waypoint_id": "UAV1_lower_011",
+          "own_exclusive_area_m2": 19.455212342119413,
+          "field_exclusive_area_m2": 19.455212343707718,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 1,
+          "layer_id": "lower",
+          "waypoint_index": 12,
+          "waypoint_id": "UAV1_lower_012",
+          "own_exclusive_area_m2": 27.84546217071247,
+          "field_exclusive_area_m2": 15.46170643261851,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 2,
+          "layer_id": "upper",
+          "waypoint_index": 1,
+          "waypoint_id": "UAV2_upper_001",
+          "own_exclusive_area_m2": 4016.8920904398756,
+          "field_exclusive_area_m2": 3148.346590706686,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 2,
+          "layer_id": "upper",
+          "waypoint_index": 2,
+          "waypoint_id": "UAV2_upper_002",
+          "own_exclusive_area_m2": 20.613477061245288,
+          "field_exclusive_area_m2": 0.09619680946715989,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 2,
+          "layer_id": "upper",
+          "waypoint_index": 3,
+          "waypoint_id": "UAV2_upper_003",
+          "own_exclusive_area_m2": 113.33812699703496,
+          "field_exclusive_area_m2": 270.6154534853587,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 2,
+          "layer_id": "upper",
+          "waypoint_index": 4,
+          "waypoint_id": "UAV2_upper_004",
+          "own_exclusive_area_m2": 0.0,
+          "field_exclusive_area_m2": 7.4845703777778825,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 2,
+          "layer_id": "upper",
+          "waypoint_index": 5,
+          "waypoint_id": "UAV2_upper_005",
+          "own_exclusive_area_m2": 43.91545505980804,
+          "field_exclusive_area_m2": 235.89953106211215,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 2,
+          "layer_id": "lower",
+          "waypoint_index": 1,
+          "waypoint_id": "UAV2_lower_001",
+          "own_exclusive_area_m2": 503.3296167664109,
+          "field_exclusive_area_m2": 423.6930258248584,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 2,
+          "layer_id": "lower",
+          "waypoint_index": 2,
+          "waypoint_id": "UAV2_lower_002",
+          "own_exclusive_area_m2": 0.0008192960605780753,
+          "field_exclusive_area_m2": 73.42527550888181,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 2,
+          "layer_id": "lower",
+          "waypoint_index": 3,
+          "waypoint_id": "UAV2_lower_003",
+          "own_exclusive_area_m2": 138.77682806109667,
+          "field_exclusive_area_m2": 341.4165624426004,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 2,
+          "layer_id": "lower",
+          "waypoint_index": 4,
+          "waypoint_id": "UAV2_lower_004",
+          "own_exclusive_area_m2": 439.7830334783075,
+          "field_exclusive_area_m2": 888.483840751869,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 2,
+          "layer_id": "lower",
+          "waypoint_index": 5,
+          "waypoint_id": "UAV2_lower_005",
+          "own_exclusive_area_m2": 195.5477640027296,
+          "field_exclusive_area_m2": 284.2359954181907,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 2,
+          "layer_id": "lower",
+          "waypoint_index": 6,
+          "waypoint_id": "UAV2_lower_006",
+          "own_exclusive_area_m2": 626.8481337415486,
+          "field_exclusive_area_m2": 739.3737690620533,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 2,
+          "layer_id": "lower",
+          "waypoint_index": 7,
+          "waypoint_id": "UAV2_lower_007",
+          "own_exclusive_area_m2": 382.8686971431917,
+          "field_exclusive_area_m2": 200.7593367092726,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 2,
+          "layer_id": "lower",
+          "waypoint_index": 8,
+          "waypoint_id": "UAV2_lower_008",
+          "own_exclusive_area_m2": 850.6926762543796,
+          "field_exclusive_area_m2": 307.9259228644833,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 2,
+          "layer_id": "lower",
+          "waypoint_index": 9,
+          "waypoint_id": "UAV2_lower_009",
+          "own_exclusive_area_m2": 388.9681804745588,
+          "field_exclusive_area_m2": 388.9682295457873,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 2,
+          "layer_id": "lower",
+          "waypoint_index": 10,
+          "waypoint_id": "UAV2_lower_010",
+          "own_exclusive_area_m2": 568.2567368528818,
+          "field_exclusive_area_m2": 568.25690766554,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 3,
+          "layer_id": "upper",
+          "waypoint_index": 1,
+          "waypoint_id": "UAV3_upper_001",
+          "own_exclusive_area_m2": 1720.5881943501622,
+          "field_exclusive_area_m2": 957.2252566083698,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 3,
+          "layer_id": "upper",
+          "waypoint_index": 2,
+          "waypoint_id": "UAV3_upper_002",
+          "own_exclusive_area_m2": 2386.9397762401522,
+          "field_exclusive_area_m2": 2386.939789245353,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 3,
+          "layer_id": "upper",
+          "waypoint_index": 3,
+          "waypoint_id": "UAV3_upper_003",
+          "own_exclusive_area_m2": 769.4349342419277,
+          "field_exclusive_area_m2": 783.0769398216696,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 3,
+          "layer_id": "upper",
+          "waypoint_index": 4,
+          "waypoint_id": "UAV3_upper_004",
+          "own_exclusive_area_m2": 78.36559165988206,
+          "field_exclusive_area_m2": 559.9584185630287,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 3,
+          "layer_id": "upper",
+          "waypoint_index": 5,
+          "waypoint_id": "UAV3_upper_005",
+          "own_exclusive_area_m2": 47.02762278431185,
+          "field_exclusive_area_m2": 77.40039534001698,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 3,
+          "layer_id": "upper",
+          "waypoint_index": 6,
+          "waypoint_id": "UAV3_upper_006",
+          "own_exclusive_area_m2": 427.6839903040166,
+          "field_exclusive_area_m2": 423.5236871755539,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 3,
+          "layer_id": "upper",
+          "waypoint_index": 7,
+          "waypoint_id": "UAV3_upper_007",
+          "own_exclusive_area_m2": 497.60020762233296,
+          "field_exclusive_area_m2": 140.57260001420013,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 3,
+          "layer_id": "lower",
+          "waypoint_index": 1,
+          "waypoint_id": "UAV3_lower_001",
+          "own_exclusive_area_m2": 1328.8553960344664,
+          "field_exclusive_area_m2": 1328.3868502790415,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 3,
+          "layer_id": "lower",
+          "waypoint_index": 2,
+          "waypoint_id": "UAV3_lower_002",
+          "own_exclusive_area_m2": 1243.7984371984844,
+          "field_exclusive_area_m2": 1424.7763280199565,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 3,
+          "layer_id": "lower",
+          "waypoint_index": 3,
+          "waypoint_id": "UAV3_lower_003",
+          "own_exclusive_area_m2": 1160.4825003266772,
+          "field_exclusive_area_m2": 1468.786349048342,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 3,
+          "layer_id": "lower",
+          "waypoint_index": 4,
+          "waypoint_id": "UAV3_lower_004",
+          "own_exclusive_area_m2": 947.0072457216564,
+          "field_exclusive_area_m2": 1546.4188145949995,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 3,
+          "layer_id": "lower",
+          "waypoint_index": 5,
+          "waypoint_id": "UAV3_lower_005",
+          "own_exclusive_area_m2": 349.62917878690064,
+          "field_exclusive_area_m2": 349.62917878690064,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 3,
+          "layer_id": "lower",
+          "waypoint_index": 6,
+          "waypoint_id": "UAV3_lower_006",
+          "own_exclusive_area_m2": 1061.5223928008222,
+          "field_exclusive_area_m2": 1061.5223928008222,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 3,
+          "layer_id": "lower",
+          "waypoint_index": 7,
+          "waypoint_id": "UAV3_lower_007",
+          "own_exclusive_area_m2": 568.3789328396578,
+          "field_exclusive_area_m2": 568.3789328396578,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 3,
+          "layer_id": "lower",
+          "waypoint_index": 8,
+          "waypoint_id": "UAV3_lower_008",
+          "own_exclusive_area_m2": 583.4398539787028,
+          "field_exclusive_area_m2": 583.4398650638259,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 3,
+          "layer_id": "lower",
+          "waypoint_index": 9,
+          "waypoint_id": "UAV3_lower_009",
+          "own_exclusive_area_m2": 1151.8209315560096,
+          "field_exclusive_area_m2": 1151.8209490035931,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 3,
+          "layer_id": "lower",
+          "waypoint_index": 10,
+          "waypoint_id": "UAV3_lower_010",
+          "own_exclusive_area_m2": 619.9014396946322,
+          "field_exclusive_area_m2": 619.9014396946322,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 3,
+          "layer_id": "lower",
+          "waypoint_index": 11,
+          "waypoint_id": "UAV3_lower_011",
+          "own_exclusive_area_m2": 1221.2271341506157,
+          "field_exclusive_area_m2": 2067.1001042463904,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 3,
+          "layer_id": "lower",
+          "waypoint_index": 12,
+          "waypoint_id": "UAV3_lower_012",
+          "own_exclusive_area_m2": 345.8372857518666,
+          "field_exclusive_area_m2": 359.7829556125621,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 3,
+          "layer_id": "lower",
+          "waypoint_index": 13,
+          "waypoint_id": "UAV3_lower_013",
+          "own_exclusive_area_m2": 134.34111022108502,
+          "field_exclusive_area_m2": 160.09622033463668,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 3,
+          "layer_id": "lower",
+          "waypoint_index": 14,
+          "waypoint_id": "UAV3_lower_014",
+          "own_exclusive_area_m2": 355.1509136496563,
+          "field_exclusive_area_m2": 145.31864815337175,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 4,
+          "layer_id": "upper",
+          "waypoint_index": 1,
+          "waypoint_id": "UAV4_upper_001",
+          "own_exclusive_area_m2": 2646.253083967412,
+          "field_exclusive_area_m2": 2469.335748363843,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 4,
+          "layer_id": "upper",
+          "waypoint_index": 2,
+          "waypoint_id": "UAV4_upper_002",
+          "own_exclusive_area_m2": 3551.158776923359,
+          "field_exclusive_area_m2": 2169.1766941909727,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 4,
+          "layer_id": "upper",
+          "waypoint_index": 3,
+          "waypoint_id": "UAV4_upper_003",
+          "own_exclusive_area_m2": 991.7518004823943,
+          "field_exclusive_area_m2": 991.7518004911068,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 4,
+          "layer_id": "upper",
+          "waypoint_index": 4,
+          "waypoint_id": "UAV4_upper_004",
+          "own_exclusive_area_m2": 250.75385371256317,
+          "field_exclusive_area_m2": 250.75385372626494,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 4,
+          "layer_id": "upper",
+          "waypoint_index": 5,
+          "waypoint_id": "UAV4_upper_005",
+          "own_exclusive_area_m2": 390.30232636844045,
+          "field_exclusive_area_m2": 390.1730922648057,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 4,
+          "layer_id": "upper",
+          "waypoint_index": 6,
+          "waypoint_id": "UAV4_upper_006",
+          "own_exclusive_area_m2": 453.05254568089003,
+          "field_exclusive_area_m2": 242.56894043100803,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 4,
+          "layer_id": "lower",
+          "waypoint_index": 1,
+          "waypoint_id": "UAV4_lower_001",
+          "own_exclusive_area_m2": 722.0351185278417,
+          "field_exclusive_area_m2": 709.5427592179412,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 4,
+          "layer_id": "lower",
+          "waypoint_index": 2,
+          "waypoint_id": "UAV4_lower_002",
+          "own_exclusive_area_m2": 851.657077618345,
+          "field_exclusive_area_m2": 717.3083279711227,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 4,
+          "layer_id": "lower",
+          "waypoint_index": 3,
+          "waypoint_id": "UAV4_lower_003",
+          "own_exclusive_area_m2": 293.77236223152494,
+          "field_exclusive_area_m2": 433.934704092314,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 4,
+          "layer_id": "lower",
+          "waypoint_index": 4,
+          "waypoint_id": "UAV4_lower_004",
+          "own_exclusive_area_m2": 342.06696412276074,
+          "field_exclusive_area_m2": 342.0669641258538,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 4,
+          "layer_id": "lower",
+          "waypoint_index": 5,
+          "waypoint_id": "UAV4_lower_005",
+          "own_exclusive_area_m2": 316.8872865116042,
+          "field_exclusive_area_m2": 316.88728651835333,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 4,
+          "layer_id": "lower",
+          "waypoint_index": 6,
+          "waypoint_id": "UAV4_lower_006",
+          "own_exclusive_area_m2": 26.160258949534057,
+          "field_exclusive_area_m2": 26.160258949534057,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 4,
+          "layer_id": "lower",
+          "waypoint_index": 7,
+          "waypoint_id": "UAV4_lower_007",
+          "own_exclusive_area_m2": 214.014684538711,
+          "field_exclusive_area_m2": 214.014684538711,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 4,
+          "layer_id": "lower",
+          "waypoint_index": 8,
+          "waypoint_id": "UAV4_lower_008",
+          "own_exclusive_area_m2": 598.0548737752489,
+          "field_exclusive_area_m2": 598.0548737913747,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 4,
+          "layer_id": "lower",
+          "waypoint_index": 9,
+          "waypoint_id": "UAV4_lower_009",
+          "own_exclusive_area_m2": 465.17977717903824,
+          "field_exclusive_area_m2": 465.1797771846739,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 4,
+          "layer_id": "lower",
+          "waypoint_index": 10,
+          "waypoint_id": "UAV4_lower_010",
+          "own_exclusive_area_m2": 622.1428733367493,
+          "field_exclusive_area_m2": 622.1428733490563,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 4,
+          "layer_id": "lower",
+          "waypoint_index": 11,
+          "waypoint_id": "UAV4_lower_011",
+          "own_exclusive_area_m2": 514.3435914111934,
+          "field_exclusive_area_m2": 514.3435914111934,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 4,
+          "layer_id": "lower",
+          "waypoint_index": 12,
+          "waypoint_id": "UAV4_lower_012",
+          "own_exclusive_area_m2": 976.694210922081,
+          "field_exclusive_area_m2": 976.694210922081,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 4,
+          "layer_id": "lower",
+          "waypoint_index": 13,
+          "waypoint_id": "UAV4_lower_013",
+          "own_exclusive_area_m2": 357.32681586928146,
+          "field_exclusive_area_m2": 119.65927429874287,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 4,
+          "layer_id": "lower",
+          "waypoint_index": 14,
+          "waypoint_id": "UAV4_lower_014",
+          "own_exclusive_area_m2": 1031.0519719276265,
+          "field_exclusive_area_m2": 790.3972803173718,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 4,
+          "layer_id": "lower",
+          "waypoint_index": 15,
+          "waypoint_id": "UAV4_lower_015",
+          "own_exclusive_area_m2": 269.01049772182597,
+          "field_exclusive_area_m2": 132.6038173911581,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 4,
+          "layer_id": "lower",
+          "waypoint_index": 16,
+          "waypoint_id": "UAV4_lower_016",
+          "own_exclusive_area_m2": 1050.7492917706804,
+          "field_exclusive_area_m2": 913.6505516298649,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 5,
+          "layer_id": "upper",
+          "waypoint_index": 1,
+          "waypoint_id": "UAV5_upper_001",
+          "own_exclusive_area_m2": 5633.415133602372,
+          "field_exclusive_area_m2": 4011.190953806203,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 5,
+          "layer_id": "upper",
+          "waypoint_index": 2,
+          "waypoint_id": "UAV5_upper_002",
+          "own_exclusive_area_m2": 6262.138608012361,
+          "field_exclusive_area_m2": 5891.216573652418,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 5,
+          "layer_id": "upper",
+          "waypoint_index": 3,
+          "waypoint_id": "UAV5_upper_003",
+          "own_exclusive_area_m2": 6034.559436152988,
+          "field_exclusive_area_m2": 2965.470095330443,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 5,
+          "layer_id": "upper",
+          "waypoint_index": 4,
+          "waypoint_id": "UAV5_upper_004",
+          "own_exclusive_area_m2": 7469.156430946956,
+          "field_exclusive_area_m2": 7227.998964189915,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 5,
+          "layer_id": "upper",
+          "waypoint_index": 5,
+          "waypoint_id": "UAV5_upper_005",
+          "own_exclusive_area_m2": 6163.948577509315,
+          "field_exclusive_area_m2": 6146.491345709412,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 5,
+          "layer_id": "upper",
+          "waypoint_index": 6,
+          "waypoint_id": "UAV5_upper_006",
+          "own_exclusive_area_m2": 5693.635588042172,
+          "field_exclusive_area_m2": 5693.635588042172,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 5,
+          "layer_id": "upper",
+          "waypoint_index": 7,
+          "waypoint_id": "UAV5_upper_007",
+          "own_exclusive_area_m2": 7073.452818944638,
+          "field_exclusive_area_m2": 6779.880030217886,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 5,
+          "layer_id": "upper",
+          "waypoint_index": 8,
+          "waypoint_id": "UAV5_upper_008",
+          "own_exclusive_area_m2": 6399.587956166267,
+          "field_exclusive_area_m2": 6290.875538134248,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 5,
+          "layer_id": "upper",
+          "waypoint_index": 9,
+          "waypoint_id": "UAV5_upper_009",
+          "own_exclusive_area_m2": 7179.919640082379,
+          "field_exclusive_area_m2": 7179.919640082379,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 5,
+          "layer_id": "lower",
+          "waypoint_index": 1,
+          "waypoint_id": "UAV5_lower_001",
+          "own_exclusive_area_m2": 2827.362421029868,
+          "field_exclusive_area_m2": 2827.362421029868,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 5,
+          "layer_id": "lower",
+          "waypoint_index": 2,
+          "waypoint_id": "UAV5_lower_002",
+          "own_exclusive_area_m2": 2827.3624210298667,
+          "field_exclusive_area_m2": 2634.395127255437,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 5,
+          "layer_id": "lower",
+          "waypoint_index": 3,
+          "waypoint_id": "UAV5_lower_003",
+          "own_exclusive_area_m2": 2811.389677836064,
+          "field_exclusive_area_m2": 2811.389677836064,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 5,
+          "layer_id": "lower",
+          "waypoint_index": 4,
+          "waypoint_id": "UAV5_lower_004",
+          "own_exclusive_area_m2": 2811.3896778360668,
+          "field_exclusive_area_m2": 2811.3896778360668,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 5,
+          "layer_id": "lower",
+          "waypoint_index": 5,
+          "waypoint_id": "UAV5_lower_005",
+          "own_exclusive_area_m2": 2827.362421029871,
+          "field_exclusive_area_m2": 2827.362421029871,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 5,
+          "layer_id": "lower",
+          "waypoint_index": 6,
+          "waypoint_id": "UAV5_lower_006",
+          "own_exclusive_area_m2": 2827.362421029871,
+          "field_exclusive_area_m2": 2827.362421029871,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 5,
+          "layer_id": "lower",
+          "waypoint_index": 7,
+          "waypoint_id": "UAV5_lower_007",
+          "own_exclusive_area_m2": 2827.3624210298713,
+          "field_exclusive_area_m2": 2827.3624210298713,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 5,
+          "layer_id": "lower",
+          "waypoint_index": 8,
+          "waypoint_id": "UAV5_lower_008",
+          "own_exclusive_area_m2": 2827.362421029871,
+          "field_exclusive_area_m2": 2827.362421029871,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 5,
+          "layer_id": "lower",
+          "waypoint_index": 9,
+          "waypoint_id": "UAV5_lower_009",
+          "own_exclusive_area_m2": 2827.362421029871,
+          "field_exclusive_area_m2": 2827.362421029871,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 6,
+          "layer_id": "upper",
+          "waypoint_index": 1,
+          "waypoint_id": "UAV6_upper_001",
+          "own_exclusive_area_m2": 1296.6491208187576,
+          "field_exclusive_area_m2": 951.8942882693694,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 6,
+          "layer_id": "upper",
+          "waypoint_index": 2,
+          "waypoint_id": "UAV6_upper_002",
+          "own_exclusive_area_m2": 332.51847184888095,
+          "field_exclusive_area_m2": 234.2531297289459,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 6,
+          "layer_id": "upper",
+          "waypoint_index": 3,
+          "waypoint_id": "UAV6_upper_003",
+          "own_exclusive_area_m2": 1754.6997287611725,
+          "field_exclusive_area_m2": 86.19150293442682,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 6,
+          "layer_id": "lower",
+          "waypoint_index": 1,
+          "waypoint_id": "UAV6_lower_001",
+          "own_exclusive_area_m2": 192.98191974348023,
+          "field_exclusive_area_m2": 73.42445621282116,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 6,
+          "layer_id": "lower",
+          "waypoint_index": 2,
+          "waypoint_id": "UAV6_lower_002",
+          "own_exclusive_area_m2": 2.260996867417146,
+          "field_exclusive_area_m2": 12.4976691136789,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 6,
+          "layer_id": "lower",
+          "waypoint_index": 3,
+          "waypoint_id": "UAV6_lower_003",
+          "own_exclusive_area_m2": 261.89507010433977,
+          "field_exclusive_area_m2": 468.17252381022473,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 6,
+          "layer_id": "lower",
+          "waypoint_index": 4,
+          "waypoint_id": "UAV6_lower_004",
+          "own_exclusive_area_m2": 38.59945602129787,
+          "field_exclusive_area_m2": 62.53725018562498,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 6,
+          "layer_id": "lower",
+          "waypoint_index": 5,
+          "waypoint_id": "UAV6_lower_005",
+          "own_exclusive_area_m2": 60.50649766666359,
+          "field_exclusive_area_m2": 84.4442918334889,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 6,
+          "layer_id": "lower",
+          "waypoint_index": 6,
+          "waypoint_id": "UAV6_lower_006",
+          "own_exclusive_area_m2": 17.726453771228194,
+          "field_exclusive_area_m2": 17.726453772622403,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 6,
+          "layer_id": "lower",
+          "waypoint_index": 7,
+          "waypoint_id": "UAV6_lower_007",
+          "own_exclusive_area_m2": 80.8842028984812,
+          "field_exclusive_area_m2": 14.190588830413624,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 6,
+          "layer_id": "lower",
+          "waypoint_index": 8,
+          "waypoint_id": "UAV6_lower_008",
+          "own_exclusive_area_m2": 222.736476836408,
+          "field_exclusive_area_m2": 127.53236129948257,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 6,
+          "layer_id": "lower",
+          "waypoint_index": 9,
+          "waypoint_id": "UAV6_lower_009",
+          "own_exclusive_area_m2": 471.6087645130942,
+          "field_exclusive_area_m2": 398.20275738519683,
+          "zero_contribution_both": false
+        },
+        {
+          "uav_id": 6,
+          "layer_id": "lower",
+          "waypoint_index": 10,
+          "waypoint_id": "UAV6_lower_010",
+          "own_exclusive_area_m2": 102.93915154008519,
+          "field_exclusive_area_m2": 102.9391515400852,
+          "zero_contribution_both": false
+        }
+      ],
+      "refill_rounds": [
+        {
+          "round": 1,
+          "added_points": 2,
+          "before_pruning": [
+            {
+              "uav_id": 1,
+              "counts": [
+                4,
+                12
+              ],
+              "time_s": 918.7483001047517
+            },
+            {
+              "uav_id": 2,
+              "counts": [
+                5,
+                10
+              ],
+              "time_s": 975.3583428168583
+            },
+            {
+              "uav_id": 3,
+              "counts": [
+                7,
+                14
+              ],
+              "time_s": 1317.39556180138
+            },
+            {
+              "uav_id": 4,
+              "counts": [
+                6,
+                16
+              ],
+              "time_s": 1338.5813435960208
+            },
+            {
+              "uav_id": 5,
+              "counts": [
+                9,
+                9
+              ],
+              "time_s": 1297.1809811333649
+            },
+            {
+              "uav_id": 6,
+              "counts": [
+                3,
+                10
+              ],
+              "time_s": 776.5938353251844
+            }
+          ],
+          "after_pruning": [
+            {
+              "uav_id": 1,
+              "counts": [
+                4,
+                12
+              ],
+              "time_s": 918.7483001047517
+            },
+            {
+              "uav_id": 2,
+              "counts": [
+                5,
+                10
+              ],
+              "time_s": 975.3583428168583
+            },
+            {
+              "uav_id": 3,
+              "counts": [
+                7,
+                14
+              ],
+              "time_s": 1317.39556180138
+            },
+            {
+              "uav_id": 4,
+              "counts": [
+                6,
+                16
+              ],
+              "time_s": 1338.5813435960208
+            },
+            {
+              "uav_id": 5,
+              "counts": [
+                9,
+                9
+              ],
+              "time_s": 1297.1809811333649
+            },
+            {
+              "uav_id": 6,
+              "counts": [
+                3,
+                10
+              ],
+              "time_s": 776.5938353251844
+            }
+          ],
+          "deleted_points": 0
+        }
+      ]
+    }
+  }
+}

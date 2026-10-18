@@ -300,9 +300,9 @@ class XuchangSmallSceneTest(unittest.TestCase):
         from competition_backend.config import load_config
         root = Path(__file__).resolve().parents[2]
         config = load_config(str(root / "competition_backend/config/competition.example.json"))
-        expected = {"around54m": [59., 56., 53., 50., 47., 44.], "subject2_50m": [50.] * 6}
+        expected = {"around54m": [59., 56., 53., 50., 47., 44.], "ascending34m": [34., 37., 40., 47., 50., 53.], "subject2_50m": [50.] * 6}
         for profile in ("lab", "outdoor5", "lab10", "outdoor100", "outdoor200",
-                        "competition", "dalian_nanshan", "xuchang_small"):
+                        "competition", "dalian_nanshan", "xuchang_small", "subject1_actual", "subject2_actual"):
             for choice, heights in expected.items():
                 for subject, template in config.subjects.items():
                     with self.subTest(scene=profile, altitude=choice, subject=subject):

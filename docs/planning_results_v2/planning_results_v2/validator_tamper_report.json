@@ -1,0 +1,84 @@
+{
+  "passed": true,
+  "purpose": "Adversarial changes must be detected; does not establish real-world flight safety.",
+  "cases": [
+    {
+      "name": "scan_duration",
+      "expected_failure_category": "time",
+      "caught": true,
+      "matching_failure_count": 2
+    },
+    {
+      "name": "repeated_turn_scan_pass",
+      "expected_failure_category": "execution",
+      "caught": true,
+      "matching_failure_count": 1
+    },
+    {
+      "name": "strong_scan_circle",
+      "expected_failure_category": "strong_scan_exclusion",
+      "caught": true,
+      "matching_failure_count": 1
+    },
+    {
+      "name": "false_coverage_ratio",
+      "expected_failure_category": "coverage",
+      "caught": true,
+      "matching_failure_count": 1
+    },
+    {
+      "name": "swapped_fixed_xuchang_regions",
+      "expected_failure_category": "partition",
+      "caught": true,
+      "matching_failure_count": 2
+    },
+    {
+      "name": "segment_crosses_no_fly",
+      "expected_failure_category": "flight_clearance",
+      "caught": true,
+      "matching_failure_count": 1
+    },
+    {
+      "name": "internally_consistent_over_budget",
+      "expected_failure_category": "time_budget",
+      "caught": true,
+      "matching_failure_count": 1
+    },
+    {
+      "name": "unconfirmed_boundary_claimed_validated",
+      "expected_failure_category": "provisional_status",
+      "caught": true,
+      "matching_failure_count": 1
+    },
+    {
+      "name": "old_upper30_radius_restored",
+      "expected_failure_category": "semantics",
+      "caught": true,
+      "matching_failure_count": 1
+    },
+    {
+      "name": "old_southeast_block_restored",
+      "expected_failure_category": "forest_replacement",
+      "caught": true,
+      "matching_failure_count": 16
+    },
+    {
+      "name": "return_climb_omitted_with_consistent_timing",
+      "expected_failure_category": "return_climb",
+      "caught": true,
+      "matching_failure_count": 6
+    },
+    {
+      "name": "untransmitted_auxiliary_turn_in_segments",
+      "expected_failure_category": "scan_array_realization",
+      "caught": true,
+      "matching_failure_count": 1
+    },
+    {
+      "name": "unsafe_actual_array_despite_routed_segments",
+      "expected_failure_category": "actual_array_direct_links",
+      "caught": true,
+      "matching_failure_count": 2
+    }
+  ]
+}

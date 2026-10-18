@@ -1,0 +1,151 @@
+{
+  "scope": "Independent offline file:// browser rendering and interaction only; geometric validity is checked separately by validate_plan.py.",
+  "input_file": "planning_preview.html",
+  "input_json_sha256": "0f649e708b99acd5b197bc516dcd4a2349497d865e9819a7a1f139ff2778fb14",
+  "preview_html_sha256": "3818c7a181a44ae1224a88e5b9ddcf2bba2cf5d6a1de2aea18b8ca000bc0dfd5",
+  "browser": "130.0.6723.31",
+  "external_network_requests": [],
+  "javascript_errors": [],
+  "checks": [
+    {
+      "name": "default three scenes, six UAVs and true XY:Z = 1:1",
+      "passed": true
+    },
+    {
+      "name": "pointer rotation, wheel zoom, fit and local JSON import",
+      "passed": true
+    },
+    {
+      "name": "no external requests in an explicitly offline browser context",
+      "passed": true
+    },
+    {
+      "name": "no JavaScript runtime errors",
+      "passed": true
+    }
+  ],
+  "scenes": [
+    {
+      "scene_id": "final_scene_1",
+      "independent_points_drawn": 63,
+      "partition_components": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "partition_holes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "effective_components": 2,
+      "effective_holes": 5,
+      "exclusion_components": [
+        9,
+        1,
+        1
+      ],
+      "exclusion_holes": [
+        0,
+        0,
+        0
+      ],
+      "scene_switch": true,
+      "layer_filters": true,
+      "uav_filters": true,
+      "playback": true,
+      "uncovered_toggle": true,
+      "top_and_3d_views": true,
+      "z_scale": true
+    },
+    {
+      "scene_id": "final_scene_2",
+      "independent_points_drawn": 129,
+      "partition_components": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "partition_holes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "effective_components": 2,
+      "effective_holes": 5,
+      "exclusion_components": [
+        9,
+        1,
+        1
+      ],
+      "exclusion_holes": [
+        0,
+        0,
+        0
+      ],
+      "scene_switch": true,
+      "layer_filters": true,
+      "uav_filters": true,
+      "playback": true,
+      "uncovered_toggle": true,
+      "top_and_3d_views": true,
+      "z_scale": true
+    },
+    {
+      "scene_id": "xuchang_small_2",
+      "independent_points_drawn": 105,
+      "partition_components": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "partition_holes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "effective_components": 1,
+      "effective_holes": 1,
+      "exclusion_components": [
+        1
+      ],
+      "exclusion_holes": [
+        0
+      ],
+      "scene_switch": true,
+      "layer_filters": true,
+      "uav_filters": true,
+      "playback": true,
+      "uncovered_toggle": true,
+      "top_and_3d_views": true,
+      "z_scale": true
+    }
+  ],
+  "screenshots": [
+    "preview_evidence/final_scene_1_3d.png",
+    "preview_evidence/final_scene_1_top.png",
+    "preview_evidence/final_scene_2_3d.png",
+    "preview_evidence/final_scene_2_top.png",
+    "preview_evidence/xuchang_small_2_3d.png",
+    "preview_evidence/xuchang_small_2_top.png"
+  ],
+  "passed": true
+}

@@ -7,6 +7,8 @@ from typing import Any, Dict
 
 from .models import BackendConfig, SafetyConfig
 
+ASCENDING_34M_HEIGHTS = dict(zip(('1', '2', '3', '4', '5', '6'), (34., 37., 40., 47., 50., 53.)))
+
 
 def load_config(path: str) -> BackendConfig:
     source = Path(path).resolve()

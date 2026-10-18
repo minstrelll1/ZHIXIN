@@ -42,12 +42,13 @@ class XuchangBootHomeTest(unittest.TestCase):
         return [(q[1]-p['latitude'])*p['north_m_per_degree'],
                 -(q[0]-p['longitude'])*p['west_m_per_degree']]
 
-    def test_all_six_homes_all_75_returns_and_entry_avoid_every_other_landing(self):
+    def test_all_six_homes_all_75_returns_prefer_1_5m_other_home_clearance(self):
         for uid,routes in self.routes.items():
             home=self.homes[uid]; gps=[home['longitude'],home['latitude']]
             self.assertEqual(routes['entry_path'][0],gps)
             self.assertEqual(routes['avoided_home_count'],5)
-            self.assertEqual(routes['other_home_clearance_m'],2.5)
+            self.assertEqual(routes['other_home_clearance_m'],1.5)
+            self.assertEqual(routes['transit_constraints'],'soft_preferences')
             self.assertEqual(routes['home_reference_boot_id'],home['boot_id'])
             self.assertEqual(len(routes['return_paths']),75)
             for route in [routes['entry_path']]+[r['path'] for r in routes['return_paths']]:
@@ -56,12 +57,9 @@ class XuchangBootHomeTest(unittest.TestCase):
                 self.assertGreaterEqual(line.distance(self.flyable.boundary),5.)
                 for other,offset in OFFSETS.items():
                     if str(other)!=uid:
-                        self.assertGreaterEqual(line.distance(Point(offset)),2.5,(uid,other))
+                        self.assertGreaterEqual(line.distance(Point(offset)),1.5,(uid,other))
             self.assertTrue(all(r['path'][-1]==gps for r in routes['return_paths']))
-        # UAV1位于UAV2原起降点连接段上，必须新增绕行，而非只添加说明。
-        r=self.routes['2']; first=self.local(r['entry_path'][1])
-        self.assertGreater(len(r['entry_path']),len(self.plan['planned_uavs']['2']['task']['transit_routes']['entry_path']))
-        self.assertLess(abs(first[0]-OFFSETS[1][0]),5.)
+        # 新策略允许改变旧通道，实际几何必须满足已报告的可实现避让。
 
     def test_each_altitude_preserves_recipient_home_endpoints_and_protocol(self):
         for uid,item in self.plan['planned_uavs'].items():
@@ -125,9 +123,12 @@ class XuchangBootHomeTest(unittest.TestCase):
                     self.assertEqual(checked['task']['transit_routes']['avoided_home_count'],5)
                 app.state.adapter.commands.clear()
                 plan['search_area']['takeoff_gps_by_uav']['6']=dict(self.homes['1'])
-                with self.assertRaises(ValueError):
-                    o.plan('subject1',flight_profile='xuchang_small',prepared_plan=plan,controller_mode='external')
-                self.assertFalse(app.state.adapter.commands)
+                o.plan('subject1',flight_profile='xuchang_small',prepared_plan=plan,controller_mode='external')
+                commands=[c for c in app.state.adapter.snapshot() if c['type']=='assign_task']
+                self.assertEqual(len(commands),6)
+                for c in commands:
+                    if c['uav_id'] in (1,6):
+                        self.assertTrue(c['payload']['task']['transit_routes']['home_avoidance_relaxed'])
             finally:app.state.audit.close()
 
     def test_live_api_uses_boot_home_not_current_fix_and_rejects_old_boot(self):

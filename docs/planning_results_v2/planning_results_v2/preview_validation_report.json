@@ -1,0 +1,159 @@
+{
+  "scope": "Independent offline file:// browser rendering and interaction only; geometric validity is checked separately by validate_plan.py.",
+  "input_file": "planning_preview.html",
+  "input_json_sha256": "60c52b29986a25ddc51da5a601dd5c3b2dd105ec2dc049d3bee2209c460adb14",
+  "preview_html_sha256": "04d5cdeab3eaa2459e5d5dd2492dfc0a2b5caf192ea9ce339c9952b34fcced4e",
+  "browser": "130.0.6723.31",
+  "external_network_requests": [],
+  "javascript_errors": [],
+  "checks": [
+    {
+      "name": "default three scenes, six UAVs and true XY:Z = 1:1",
+      "passed": true
+    },
+    {
+      "name": "pointer rotation, wheel zoom, fit and local JSON import",
+      "passed": true
+    },
+    {
+      "name": "no external requests in an explicitly offline browser context",
+      "passed": true
+    },
+    {
+      "name": "no JavaScript runtime errors",
+      "passed": true
+    }
+  ],
+  "scenes": [
+    {
+      "scene_id": "final_scene_1",
+      "independent_points_drawn": 61,
+      "partition_components": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "partition_holes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "effective_components": 2,
+      "effective_holes": 6,
+      "exclusion_components": [
+        9,
+        1,
+        1
+      ],
+      "exclusion_holes": [
+        0,
+        0,
+        0
+      ],
+      "scene_switch": true,
+      "layer_filters": true,
+      "uav_filters": true,
+      "playback": true,
+      "uncovered_toggle": true,
+      "top_and_3d_views": true,
+      "z_scale": true,
+      "revised_upper50_lower30": true,
+      "correct_return_climb_events": true
+    },
+    {
+      "scene_id": "final_scene_2",
+      "independent_points_drawn": 128,
+      "partition_components": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "partition_holes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "effective_components": 2,
+      "effective_holes": 6,
+      "exclusion_components": [
+        9,
+        1,
+        1
+      ],
+      "exclusion_holes": [
+        0,
+        0,
+        0
+      ],
+      "scene_switch": true,
+      "layer_filters": true,
+      "uav_filters": true,
+      "playback": true,
+      "uncovered_toggle": true,
+      "top_and_3d_views": true,
+      "z_scale": true,
+      "revised_upper50_lower30": true,
+      "correct_return_climb_events": true
+    },
+    {
+      "scene_id": "xuchang_small_2",
+      "independent_points_drawn": 105,
+      "partition_components": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "partition_holes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "effective_components": 1,
+      "effective_holes": 1,
+      "exclusion_components": [
+        1
+      ],
+      "exclusion_holes": [
+        0
+      ],
+      "scene_switch": true,
+      "layer_filters": true,
+      "uav_filters": true,
+      "playback": true,
+      "uncovered_toggle": true,
+      "top_and_3d_views": true,
+      "z_scale": true,
+      "revised_upper50_lower30": true,
+      "correct_return_climb_events": true
+    }
+  ],
+  "screenshots": [
+    "preview_evidence/final_scene_1_3d.png",
+    "preview_evidence/final_scene_1_top.png",
+    "preview_evidence/final_scene_2_3d.png",
+    "preview_evidence/final_scene_2_top.png",
+    "preview_evidence/final_scene_2_return_climb.png",
+    "preview_evidence/xuchang_small_2_3d.png",
+    "preview_evidence/xuchang_small_2_top.png",
+    "preview_evidence/xuchang_small_2_return_climb.png"
+  ],
+  "passed": true
+}

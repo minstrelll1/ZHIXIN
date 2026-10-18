@@ -1,0 +1,588 @@
+{
+  "scenes": {
+    "final_scene_1": {
+      "1": {
+        "source_uav_id": 1,
+        "waypoint_index": 1,
+        "waypoint_id": "UAV1_upper_001",
+        "connection_path_m": [
+          [
+            35.0,
+            225.0
+          ],
+          [
+            35.0,
+            225.0
+          ]
+        ],
+        "return_path_m": [
+          [
+            35.0,
+            225.0
+          ],
+          [
+            42.741147618610086,
+            233.99204351995675
+          ]
+        ],
+        "return_climb_mps": null,
+        "return_climb_s": 0.0,
+        "return_connection_distance_m": 0.0,
+        "return_route_distance_m": 11.865168061089939
+      },
+      "2": {
+        "source_uav_id": 2,
+        "waypoint_index": 1,
+        "waypoint_id": "UAV2_upper_001",
+        "connection_path_m": [
+          [
+            -145.0,
+            205.0
+          ],
+          [
+            -145.0,
+            205.0
+          ]
+        ],
+        "return_path_m": [
+          [
+            -145.0,
+            205.0
+          ],
+          [
+            42.741147618610086,
+            233.99204351995675
+          ]
+        ],
+        "return_climb_mps": null,
+        "return_climb_s": 0.0,
+        "return_connection_distance_m": 0.0,
+        "return_route_distance_m": 189.9665157247872
+      },
+      "3": {
+        "source_uav_id": 3,
+        "waypoint_index": 1,
+        "waypoint_id": "UAV3_upper_001",
+        "connection_path_m": [
+          [
+            -135.0,
+            285.0
+          ],
+          [
+            -135.0,
+            285.0
+          ]
+        ],
+        "return_path_m": [
+          [
+            -135.0,
+            285.0
+          ],
+          [
+            42.741147618610086,
+            233.99204351995675
+          ]
+        ],
+        "return_climb_mps": null,
+        "return_climb_s": 0.0,
+        "return_connection_distance_m": 0.0,
+        "return_route_distance_m": 184.9154595512515
+      },
+      "4": {
+        "source_uav_id": 4,
+        "waypoint_index": 1,
+        "waypoint_id": "UAV4_lower_001",
+        "connection_path_m": [
+          [
+            45.0,
+            235.0
+          ],
+          [
+            45.0,
+            235.0
+          ]
+        ],
+        "return_path_m": [
+          [
+            45.0,
+            235.0
+          ],
+          [
+            42.741147618610086,
+            233.99204351995675
+          ]
+        ],
+        "return_climb_mps": null,
+        "return_climb_s": 0.0,
+        "return_connection_distance_m": 0.0,
+        "return_route_distance_m": 2.4735380220591034
+      },
+      "5": {
+        "source_uav_id": 5,
+        "waypoint_index": 1,
+        "waypoint_id": "UAV5_lower_001",
+        "connection_path_m": [
+          [
+            -135.0,
+            215.0
+          ],
+          [
+            -135.0,
+            215.0
+          ]
+        ],
+        "return_path_m": [
+          [
+            -135.0,
+            215.0
+          ],
+          [
+            42.741147618610086,
+            233.99204351995675
+          ]
+        ],
+        "return_climb_mps": null,
+        "return_climb_s": 0.0,
+        "return_connection_distance_m": 0.0,
+        "return_route_distance_m": 178.75293920337216
+      },
+      "6": {
+        "source_uav_id": 6,
+        "waypoint_index": 1,
+        "waypoint_id": "UAV6_lower_001",
+        "connection_path_m": [
+          [
+            -135.0,
+            275.0
+          ],
+          [
+            -135.0,
+            275.0
+          ]
+        ],
+        "return_path_m": [
+          [
+            -135.0,
+            275.0
+          ],
+          [
+            42.741147618610086,
+            233.99204351995675
+          ]
+        ],
+        "return_climb_mps": null,
+        "return_climb_s": 0.0,
+        "return_connection_distance_m": 0.0,
+        "return_route_distance_m": 182.41043843883955
+      }
+    },
+    "final_scene_2": {
+      "1": {
+        "source_uav_id": 1,
+        "waypoint_index": 1,
+        "waypoint_id": "UAV1_upper_001",
+        "connection_path_m": [
+          [
+            55.0,
+            225.0
+          ],
+          [
+            35.0,
+            225.0
+          ]
+        ],
+        "return_path_m": [
+          [
+            35.0,
+            225.0
+          ],
+          [
+            42.741147618610086,
+            233.99204351995675
+          ]
+        ],
+        "return_climb_mps": 2,
+        "return_climb_s": 6.5,
+        "return_connection_distance_m": 20.0,
+        "return_route_distance_m": 11.865168061089939
+      },
+      "2": {
+        "source_uav_id": 2,
+        "waypoint_index": 1,
+        "waypoint_id": "UAV2_upper_001",
+        "connection_path_m": [
+          [
+            55.0,
+            245.0
+          ],
+          [
+            35.0,
+            245.0
+          ]
+        ],
+        "return_path_m": [
+          [
+            35.0,
+            245.0
+          ],
+          [
+            42.741147618610086,
+            233.99204351995675
+          ]
+        ],
+        "return_climb_mps": 2,
+        "return_climb_s": 6.5,
+        "return_connection_distance_m": 20.0,
+        "return_route_distance_m": 13.457357553384645
+      },
+      "3": {
+        "source_uav_id": 3,
+        "waypoint_index": 7,
+        "waypoint_id": "UAV3_upper_007",
+        "connection_path_m": [
+          [
+            -135.0,
+            175.0
+          ],
+          [
+            -135.0,
+            205.0
+          ]
+        ],
+        "return_path_m": [
+          [
+            -135.0,
+            205.0
+          ],
+          [
+            42.741147618610086,
+            233.99204351995675
+          ]
+        ],
+        "return_climb_mps": 2,
+        "return_climb_s": 6.5,
+        "return_connection_distance_m": 30.0,
+        "return_route_distance_m": 180.09012783671295
+      },
+      "4": {
+        "source_uav_id": 4,
+        "waypoint_index": 1,
+        "waypoint_id": "UAV4_upper_001",
+        "connection_path_m": [
+          [
+            -135.0,
+            275.0
+          ],
+          [
+            -115.0,
+            275.0
+          ]
+        ],
+        "return_path_m": [
+          [
+            -115.0,
+            275.0
+          ],
+          [
+            42.741147618610086,
+            233.99204351995675
+          ]
+        ],
+        "return_climb_mps": 2,
+        "return_climb_s": 6.5,
+        "return_connection_distance_m": 20.0,
+        "return_route_distance_m": 162.9844230185979
+      },
+      "5": {
+        "source_uav_id": 5,
+        "waypoint_index": 1,
+        "waypoint_id": "UAV5_upper_001",
+        "connection_path_m": [
+          [
+            -245.0,
+            115.0
+          ],
+          [
+            -250.45065227,
+            109.24225555
+          ]
+        ],
+        "return_path_m": [
+          [
+            -250.45065227,
+            109.24225555
+          ],
+          [
+            42.741147618610086,
+            233.99204351995675
+          ]
+        ],
+        "return_climb_mps": 2,
+        "return_climb_s": 6.5,
+        "return_connection_distance_m": 7.928507508980619,
+        "return_route_distance_m": 318.6282177090911
+      },
+      "6": {
+        "source_uav_id": 6,
+        "waypoint_index": 1,
+        "waypoint_id": "UAV6_upper_001",
+        "connection_path_m": [
+          [
+            -236.17928981,
+            336.81916292
+          ],
+          [
+            -242.31984465,
+            307.99754638
+          ]
+        ],
+        "return_path_m": [
+          [
+            -242.31984465,
+            307.99754638
+          ],
+          [
+            42.741147618610086,
+            233.99204351995675
+          ]
+        ],
+        "return_climb_mps": 2,
+        "return_climb_s": 6.5,
+        "return_connection_distance_m": 29.468491541336956,
+        "return_route_distance_m": 294.51075322767497
+      }
+    },
+    "xuchang_small_2": {
+      "1": {
+        "source_uav_id": 1,
+        "waypoint_index": 1,
+        "waypoint_id": "UAV1_upper_001",
+        "connection_path_m": [
+          [
+            -5.0,
+            25.0
+          ],
+          [
+            -5.0,
+            5.0
+          ]
+        ],
+        "return_path_m": [
+          [
+            -5.0,
+            5.0
+          ],
+          [
+            0.0,
+            0.0
+          ]
+        ],
+        "return_climb_mps": 2,
+        "return_climb_s": 6.5,
+        "return_connection_distance_m": 20.0,
+        "return_route_distance_m": 7.0710678118654755
+      },
+      "2": {
+        "source_uav_id": 2,
+        "waypoint_index": 2,
+        "waypoint_id": "UAV2_upper_002",
+        "connection_path_m": [
+          [
+            105.0,
+            -175.0
+          ],
+          [
+            125.0,
+            -195.0
+          ]
+        ],
+        "return_path_m": [
+          [
+            125.0,
+            -195.0
+          ],
+          [
+            97.6195454598592,
+            -208.25463610474657
+          ],
+          [
+            130.0,
+            -65.0
+          ],
+          [
+            70.0,
+            -45.0
+          ],
+          [
+            0.0,
+            -0.0
+          ]
+        ],
+        "return_climb_mps": 2,
+        "return_climb_s": 6.5,
+        "return_connection_distance_m": 28.284271247461902,
+        "return_route_distance_m": 323.75070601561816
+      },
+      "3": {
+        "source_uav_id": 3,
+        "waypoint_index": 1,
+        "waypoint_id": "UAV3_upper_001",
+        "connection_path_m": [
+          [
+            -85.0,
+            -75.0
+          ],
+          [
+            -75.0,
+            -75.0
+          ]
+        ],
+        "return_path_m": [
+          [
+            -75.0,
+            -75.0
+          ],
+          [
+            -46.56838151412509,
+            -94.13684304298336
+          ],
+          [
+            -90.0,
+            -50.0
+          ],
+          [
+            0.0,
+            -50.0
+          ],
+          [
+            0.0,
+            -0.0
+          ]
+        ],
+        "return_climb_mps": 2,
+        "return_climb_s": 6.5,
+        "return_connection_distance_m": 10.0,
+        "return_route_distance_m": 236.1943441911239
+      },
+      "4": {
+        "source_uav_id": 4,
+        "waypoint_index": 1,
+        "waypoint_id": "UAV4_upper_001",
+        "connection_path_m": [
+          [
+            115.0,
+            25.0
+          ],
+          [
+            115.0,
+            25.0
+          ]
+        ],
+        "return_path_m": [
+          [
+            115.0,
+            25.0
+          ],
+          [
+            60.0,
+            35.0
+          ],
+          [
+            0.0,
+            -0.0
+          ]
+        ],
+        "return_climb_mps": 2,
+        "return_climb_s": 6.5,
+        "return_connection_distance_m": 0.0,
+        "return_route_distance_m": 125.36391938474375
+      },
+      "5": {
+        "source_uav_id": 5,
+        "waypoint_index": 4,
+        "waypoint_id": "UAV5_upper_004",
+        "connection_path_m": [
+          [
+            -45.0,
+            -285.0
+          ],
+          [
+            -25.0,
+            -285.0
+          ]
+        ],
+        "return_path_m": [
+          [
+            -25.0,
+            -285.0
+          ],
+          [
+            -62.41279934205405,
+            -66.28855114468263
+          ],
+          [
+            -62.45794998000466,
+            -65.31728947717416
+          ],
+          [
+            -62.31649646767616,
+            -64.35532341190545
+          ],
+          [
+            -61.99366183721229,
+            -63.43817260192275
+          ],
+          [
+            -61.50136644056662,
+            -62.599701940945195
+          ],
+          [
+            -60.857787802203354,
+            -61.8708711353935
+          ],
+          [
+            0.0,
+            0.0
+          ]
+        ],
+        "return_climb_mps": 2,
+        "return_climb_s": 6.5,
+        "return_connection_distance_m": 20.0,
+        "return_route_distance_m": 313.53507123281463
+      },
+      "6": {
+        "source_uav_id": 6,
+        "waypoint_index": 2,
+        "waypoint_id": "UAV6_upper_002",
+        "connection_path_m": [
+          [
+            -65.0,
+            -5.0
+          ],
+          [
+            -65.0,
+            -5.0
+          ]
+        ],
+        "return_path_m": [
+          [
+            -65.0,
+            -5.0
+          ],
+          [
+            -15.0,
+            25.0
+          ],
+          [
+            0.0,
+            0.0
+          ]
+        ],
+        "return_climb_mps": 2,
+        "return_climb_s": 6.5,
+        "return_connection_distance_m": 0.0,
+        "return_route_distance_m": 87.4642784226795
+      }
+    }
+  }
+}

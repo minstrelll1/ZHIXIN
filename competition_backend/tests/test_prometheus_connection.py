@@ -94,6 +94,17 @@ class ConnectionTests(unittest.TestCase):
             self.probe[key] = False
         self.connection._connect.assert_not_called()
 
+    def test_partial_business_batch_can_resume_only_with_confirmed_disarmed_state(self):
+        self.heartbeat()
+        self.probe.update(business_present=True, registered=True, prepared=True)
+        self.probe['flight'] = dict(connected=True, armed=False, location_source=4)
+        self.assertTrue(self.connection.step(self.probe, self.switch)['auto_start_allowed'])
+        del self.probe['flight']['armed']
+        self.assertFalse(self.connection.step(self.probe, self.switch)['auto_start_allowed'])
+        self.probe['flight']['armed'] = True
+        self.assertFalse(self.connection.step(self.probe, self.switch)['auto_start_allowed'])
+        self.switch.assert_not_called()
+
     def test_port_conflict_never_kills_or_takes_over_other_listener(self):
         self.connection._listen.side_effect = OSError(10048, 'in use')
         with self.assertRaisesRegex(RuntimeError, '占用'):

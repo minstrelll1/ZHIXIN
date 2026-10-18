@@ -1,0 +1,46 @@
+﻿程序 B 科目二上下层接口交接包
+日期：2026-10-17
+
+先看 01_接口约定.txt，再看 03_双层GPS_UAV1完整示例.txt。
+03 是可直接复制、阅读的 UAV1 八类完整消息，未省略任何返航条目或任务说明字段。
+02 提供六机 GPS 双层消息及原始 assign_task 数据。
+04/05 提供旧科目二单层的兼容例子，path_stage_2 为空数组，扫描仍为原高度正序、逆序两趟，每点30秒。
+06/07 提供 XYZ 双层的完整例子，字段仍使用既有 ENU 约定。
+
+本次新增/变更的四类话题（N=1～6）：
+1. /ground_mission_planner/vehicle_N/path_stage_1：已有话题，科目二双层时明确为上层航点。
+2. /ground_mission_planner/vehicle_N/path_stage_2：新增话题，下层航点。
+3. /ground_mission_planner/vehicle_N/return_paths：只包含六机上层航点返航路线，新增层、高度、策略说明字段。
+4. /uavN/competition/external_mission：增加两层完整点表、话题、扫描参数、执行顺序及返航策略。
+另附四类原接口：entry_path、jiangluodian、recon_start_mode、return_home。
+
+示例中每机上层2点、下层3点，足以说明两层点数不必相同。
+每架接收机有12条返航路线（六机上层各2点），不是30条，也不只包含自己的2点。
+UAV1/4 示例上47下34米，UAV2/5上50下37米，UAV3/6上53下40米。
+返航每条路线高度均为接收机上层高度，终点均为接收机自己的降落点上方。
+下层返航先原位升到本机上层高度，然后接入选择的上层返航路线；这两个动作由程序 B 完成。
+从当前位置到所选返航路线首点的连接由 B 处理，本接口没有提供下层点与上层点的一一映射。
+
+发布时间：规划与分派只传送并缓存任务；成功起飞到达上层高度后，发布六类任务数据，再发送 recon_start_mode=0。
+该顺序是发布端调用顺序，跨话题接收顺序可能不同。B 应缓存启动请求，等待同一任务数据完整且匹配后才执行。
+return_home=true 只在请求返航时发送，不是拿到路线就立即返航。
+本次没有增加地面到机载的网络接口，也没有修改科目一的旧接口语义。
+
+关于解析：
+std_msgs/Float64MultiArray：message 有 layout、data，GPS 每三个数是经度、纬度、相对起飞点高度。
+std_msgs/String：message 只有 data；将 data 解码一次得到完整JSON对象。
+本包的 decoded_data 仅为方便阅读提供的副本，不在线上单独发送。
+外层 topic、ros_type、publish_phase、latch 等是本包的标注，不是ROS消息字段。
+数组本身没有 mission_id，B 应与 external_mission.layers 的对应完整点表逐项核对。
+return_paths 的 route_scope 仍为 all_uav_waypoints，科目二再通过 waypoint_layer=upper 指明仅上层。
+返航路线唯一键为 (source_uav_id, waypoint_index)，索引从1开始；不是接收机编号加路线下标。
+
+本包由当前程序的真实校验和发布方法配合离线模拟发布器生成，没有实际发布ROS消息，没有连接或控制飞机。
+示例 mission_id、规划校验标记及坐标用于对接说明；assignment_checksum 为对应示例原始任务真实计算值。
+flight_profile=lab 是测试任务元数据，不能据此推断飞机只飞实验室高度；分层接口由 subject=subject2 决定。
+external_mission.speed_mps=0.3 是离线节点沿用的既有默认值，不代表决赛规划5m/s；本次未改变该字段，程序 B 航速仍按原有双方约定配置。
+deadline_at 和 return_battery_threshold 为 null，表示此接口示例未填执行参数，不代表实际飞行可以忽略时间或电量限制。
+当前固定场景尚无新双层规划，正常使用当前单层场景时，下层数组仍为空。
+更新需要：地面端、竞赛机载端，以及程序 B 对双层、空下层和先升高后返航的处理。
+
+文件完整性见 FILES_SHA256.json；包内没有登录凭据、机载日志或实际用户数据。

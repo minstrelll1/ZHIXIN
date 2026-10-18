@@ -1,0 +1,1113 @@
+{
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "contract_type": {
+      "const": "competition_multilayer_planning_handoff"
+    },
+    "compatibility": {
+      "const": "requires_future_ground_onboard_and_3d_adapter"
+    },
+    "plan_id": {
+      "type": "string"
+    },
+    "source_inputs_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "generated_at": {
+      "type": "string"
+    },
+    "planner": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "random_seed": {
+          "type": "integer"
+        },
+        "parameters": {
+          "type": "object"
+        },
+        "dependencies": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 0
+        }
+      },
+      "required": [
+        "name",
+        "version",
+        "random_seed",
+        "parameters",
+        "dependencies"
+      ],
+      "additionalProperties": false
+    },
+    "scenes": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/scene"
+      },
+      "minItems": 3,
+      "maxItems": 3,
+      "allOf": [
+        {
+          "contains": {
+            "type": "object",
+            "properties": {
+              "scene_id": {
+                "const": "final_scene_1"
+              }
+            },
+            "required": [
+              "scene_id"
+            ]
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "type": "object",
+            "properties": {
+              "scene_id": {
+                "const": "final_scene_2"
+              }
+            },
+            "required": [
+              "scene_id"
+            ]
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "type": "object",
+            "properties": {
+              "scene_id": {
+                "const": "xuchang_small_2"
+              }
+            },
+            "required": [
+              "scene_id"
+            ]
+          },
+          "minContains": 1,
+          "maxContains": 1
+        }
+      ]
+    }
+  },
+  "required": [
+    "schema_version",
+    "contract_type",
+    "compatibility",
+    "plan_id",
+    "source_inputs_sha256",
+    "generated_at",
+    "planner",
+    "scenes"
+  ],
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:zhixin:planning-handoff:1",
+  "title": "六机决赛及许昌双层离线规划交接格式",
+  "$defs": {
+    "geometry": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "Polygon"
+            },
+            "coordinates": {
+              "type": "array",
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "number"
+                  },
+                  "minItems": 2,
+                  "maxItems": 2
+                },
+                "minItems": 4
+              },
+              "minItems": 1
+            }
+          },
+          "required": [
+            "type",
+            "coordinates"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "MultiPolygon"
+            },
+            "coordinates": {
+              "type": "array",
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    },
+                    "minItems": 2,
+                    "maxItems": 2
+                  },
+                  "minItems": 4
+                },
+                "minItems": 1
+              },
+              "minItems": 1
+            }
+          },
+          "required": [
+            "type",
+            "coordinates"
+          ],
+          "additionalProperties": false
+        }
+      ],
+      "description": "GeoJSON WGS84 [longitude,latitude]；有洞和多面必须完整保留"
+    },
+    "projection": {
+      "type": "object",
+      "properties": {
+        "latitude": {
+          "type": "number"
+        },
+        "longitude": {
+          "type": "number"
+        },
+        "north_m_per_degree": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "west_m_per_degree": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "method": {
+          "const": "WGS84_local_midlatitude"
+        }
+      },
+      "required": [
+        "latitude",
+        "longitude",
+        "north_m_per_degree",
+        "west_m_per_degree",
+        "method"
+      ],
+      "additionalProperties": false
+    },
+    "home": {
+      "type": "object",
+      "properties": {
+        "latitude": {
+          "type": "number"
+        },
+        "longitude": {
+          "type": "number"
+        },
+        "home_nw_m": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "source": {
+          "const": "nominal_reference_home"
+        },
+        "is_nominal": {
+          "const": true
+        }
+      },
+      "required": [
+        "latitude",
+        "longitude",
+        "home_nw_m",
+        "source",
+        "is_nominal"
+      ],
+      "additionalProperties": false
+    },
+    "assumption": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "confirmed",
+            "accepted_provisional",
+            "unconfirmed"
+          ]
+        },
+        "impact": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "description",
+        "status",
+        "impact"
+      ],
+      "additionalProperties": false
+    },
+    "exclusion": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "coverage_exempt",
+            "scan_disk_forbidden",
+            "no_fly"
+          ]
+        },
+        "geometry_wgs84": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/geometry"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "geometry_status": {
+          "enum": [
+            "unresolved",
+            "provisional",
+            "confirmed"
+          ]
+        },
+        "source": {
+          "type": "string"
+        },
+        "source_date": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "clearance_m": {
+          "type": "number",
+          "minimum": 0
+        },
+        "scan_disk_intersection_forbidden": {
+          "type": "boolean"
+        },
+        "flight_prohibited": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "geometry_wgs84",
+        "geometry_status",
+        "source",
+        "source_date",
+        "clearance_m",
+        "scan_disk_intersection_forbidden",
+        "flight_prohibited"
+      ],
+      "additionalProperties": false
+    },
+    "coverage": {
+      "type": "object",
+      "properties": {
+        "effective_area_m2": {
+          "type": "number",
+          "minimum": 0
+        },
+        "covered_area_m2": {
+          "type": "number",
+          "minimum": 0
+        },
+        "uncovered_area_m2": {
+          "type": "number",
+          "minimum": 0
+        },
+        "coverage_ratio": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "independent_scan_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "redundant_area_m2": {
+          "type": "number",
+          "minimum": 0
+        },
+        "redundancy_ratio": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "uncovered_geometry_wgs84": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/geometry"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "effective_area_m2",
+        "covered_area_m2",
+        "uncovered_area_m2",
+        "coverage_ratio",
+        "independent_scan_count",
+        "redundant_area_m2",
+        "redundancy_ratio",
+        "uncovered_geometry_wgs84"
+      ],
+      "additionalProperties": false
+    },
+    "layer": {
+      "type": "object",
+      "properties": {
+        "layer_id": {
+          "enum": [
+            "upper",
+            "lower"
+          ]
+        },
+        "altitude_m": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "reconnaissance_radius_m": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "speed_mps": {
+          "const": 5
+        },
+        "hover_scan_seconds": {
+          "const": 50
+        },
+        "scan_passes": {
+          "enum": [
+            1,
+            2
+          ]
+        },
+        "waypoint_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        },
+        "waypoints_m": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 2,
+            "maxItems": 2
+          },
+          "minItems": 1
+        },
+        "waypoints_wgs84": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 2,
+            "maxItems": 2
+          },
+          "minItems": 1,
+          "description": "[latitude,longitude]，不是GeoJSON顺序"
+        },
+        "waypoints_lon_lat_alt": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 3,
+            "maxItems": 3
+          },
+          "minItems": 1,
+          "description": "[longitude,latitude,relative_altitude_m]，仅为未来接口适配提案"
+        },
+        "execution_order": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        },
+        "coverage": {
+          "$ref": "#/$defs/coverage"
+        }
+      },
+      "required": [
+        "layer_id",
+        "altitude_m",
+        "reconnaissance_radius_m",
+        "speed_mps",
+        "hover_scan_seconds",
+        "scan_passes",
+        "waypoint_ids",
+        "waypoints_m",
+        "waypoints_wgs84",
+        "waypoints_lon_lat_alt",
+        "execution_order",
+        "coverage"
+      ],
+      "additionalProperties": false
+    },
+    "segment": {
+      "type": "object",
+      "properties": {
+        "segment_id": {
+          "type": "string"
+        },
+        "phase": {
+          "enum": [
+            "takeoff",
+            "entry",
+            "scan_transit",
+            "scan",
+            "layer_transition",
+            "return"
+          ]
+        },
+        "layer_id": {
+          "enum": [
+            "upper",
+            "lower",
+            null
+          ]
+        },
+        "waypoint_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "pass_index": {
+          "enum": [
+            1,
+            2,
+            null
+          ]
+        },
+        "from_nwz_m": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "to_nwz_m": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "start_s": {
+          "type": "number",
+          "minimum": 0
+        },
+        "end_s": {
+          "type": "number",
+          "minimum": 0
+        },
+        "duration_s": {
+          "type": "number",
+          "minimum": 0
+        },
+        "horizontal_distance_m": {
+          "type": "number",
+          "minimum": 0
+        },
+        "vertical_distance_m": {
+          "type": "number",
+          "minimum": 0
+        },
+        "speed_mps": {
+          "anyOf": [
+            {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "segment_id",
+        "phase",
+        "layer_id",
+        "waypoint_id",
+        "pass_index",
+        "from_nwz_m",
+        "to_nwz_m",
+        "start_s",
+        "end_s",
+        "duration_s",
+        "horizontal_distance_m",
+        "vertical_distance_m",
+        "speed_mps"
+      ],
+      "additionalProperties": false
+    },
+    "timing": {
+      "type": "object",
+      "properties": {
+        "takeoff_s": {
+          "type": "number",
+          "minimum": 0
+        },
+        "entry_s": {
+          "type": "number",
+          "minimum": 0
+        },
+        "scan_transit_s": {
+          "type": "number",
+          "minimum": 0
+        },
+        "scan_s": {
+          "type": "number",
+          "minimum": 0
+        },
+        "layer_transition_s": {
+          "type": "number",
+          "minimum": 0
+        },
+        "return_s": {
+          "type": "number",
+          "minimum": 0
+        },
+        "mission_time_s": {
+          "type": "number",
+          "minimum": 0
+        },
+        "mission_limit_s": {
+          "const": 1380
+        },
+        "planning_reserve_s": {
+          "type": "number",
+          "minimum": 0
+        },
+        "budget_with_reserve_s": {
+          "type": "number",
+          "minimum": 0
+        },
+        "remaining_s": {
+          "type": "number"
+        },
+        "within_limit": {
+          "type": "boolean"
+        },
+        "within_planning_target": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "takeoff_s",
+        "entry_s",
+        "scan_transit_s",
+        "scan_s",
+        "layer_transition_s",
+        "return_s",
+        "mission_time_s",
+        "mission_limit_s",
+        "planning_reserve_s",
+        "budget_with_reserve_s",
+        "remaining_s",
+        "within_limit",
+        "within_planning_target"
+      ],
+      "additionalProperties": false
+    },
+    "transition": {
+      "type": "object",
+      "properties": {
+        "from_waypoint_id": {
+          "type": "string"
+        },
+        "to_waypoint_id": {
+          "type": "string"
+        },
+        "horizontal_distance_m": {
+          "type": "number",
+          "minimum": 0
+        },
+        "vertical_distance_m": {
+          "type": "number",
+          "minimum": 0
+        },
+        "descent_speed_mps": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "descent_speed_status": {
+          "const": "accepted_provisional"
+        },
+        "duration_s": {
+          "type": "number",
+          "minimum": 0
+        },
+        "preferred_horizontal_limit_m": {
+          "const": 20
+        },
+        "preferred_limit_met": {
+          "type": "boolean"
+        },
+        "note": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "from_waypoint_id",
+        "to_waypoint_id",
+        "horizontal_distance_m",
+        "vertical_distance_m",
+        "descent_speed_mps",
+        "descent_speed_status",
+        "duration_s",
+        "preferred_horizontal_limit_m",
+        "preferred_limit_met",
+        "note"
+      ],
+      "additionalProperties": false
+    },
+    "b_payload": {
+      "type": "object",
+      "properties": {
+        "waypoint_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        },
+        "waypoints_lon_lat_alt": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 3,
+            "maxItems": 3
+          },
+          "minItems": 1
+        },
+        "region_geometry_wgs84": {
+          "$ref": "#/$defs/geometry"
+        },
+        "scan_seconds": {
+          "const": 50
+        },
+        "scan_passes": {
+          "enum": [
+            1,
+            2
+          ]
+        },
+        "execution_order": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        }
+      },
+      "required": [
+        "waypoint_ids",
+        "waypoints_lon_lat_alt",
+        "region_geometry_wgs84",
+        "scan_seconds",
+        "scan_passes",
+        "execution_order"
+      ],
+      "additionalProperties": false
+    },
+    "b_proposal": {
+      "type": "object",
+      "properties": {
+        "proposed_only": {
+          "const": true
+        },
+        "ros_topics": {
+          "type": "null"
+        },
+        "upper": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/b_payload"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "lower": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/b_payload"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "proposed_only",
+        "ros_topics",
+        "upper",
+        "lower"
+      ],
+      "additionalProperties": false
+    },
+    "uav": {
+      "type": "object",
+      "properties": {
+        "uav_id": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 6
+        },
+        "subregion_id": {
+          "type": "string"
+        },
+        "partition_group": {
+          "enum": [
+            "upper",
+            "lower",
+            "all"
+          ]
+        },
+        "region_geometry_wgs84": {
+          "$ref": "#/$defs/geometry"
+        },
+        "polygon_m": {
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 2,
+                "maxItems": 2
+              },
+              "minItems": 3
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "reference_home": {
+          "$ref": "#/$defs/home"
+        },
+        "layer_order": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "upper",
+              "lower"
+            ]
+          },
+          "minItems": 1,
+          "maxItems": 2
+        },
+        "layers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/layer"
+          },
+          "minItems": 1,
+          "maxItems": 2,
+          "description": "A只有所属的一层、每层2遍；B/C必须upper和lower两层、每层1遍。ID/数组对应与执行语义由validate_plan.py核验。"
+        },
+        "segments": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/segment"
+          },
+          "minItems": 1
+        },
+        "timing": {
+          "$ref": "#/$defs/timing"
+        },
+        "layer_transition": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/transition"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "external_program_b_proposal": {
+          "$ref": "#/$defs/b_proposal"
+        },
+        "compatibility_notes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 0
+        }
+      },
+      "required": [
+        "uav_id",
+        "subregion_id",
+        "partition_group",
+        "region_geometry_wgs84",
+        "polygon_m",
+        "reference_home",
+        "layer_order",
+        "layers",
+        "segments",
+        "timing",
+        "layer_transition",
+        "external_program_b_proposal",
+        "compatibility_notes"
+      ],
+      "additionalProperties": false
+    },
+    "partition_check": {
+      "type": "object",
+      "properties": {
+        "group": {
+          "enum": [
+            "upper",
+            "lower",
+            "all"
+          ]
+        },
+        "overlap_area_m2": {
+          "type": "number",
+          "minimum": 0
+        },
+        "gap_area_m2": {
+          "type": "number",
+          "minimum": 0
+        },
+        "outside_area_m2": {
+          "type": "number",
+          "minimum": 0
+        },
+        "all_regions_valid": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "group",
+        "overlap_area_m2",
+        "gap_area_m2",
+        "outside_area_m2",
+        "all_regions_valid"
+      ],
+      "additionalProperties": false
+    },
+    "scene_metrics": {
+      "type": "object",
+      "properties": {
+        "upper": {
+          "$ref": "#/$defs/coverage"
+        },
+        "lower": {
+          "$ref": "#/$defs/coverage"
+        },
+        "both_layers_coverage_ratio": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "either_layer_coverage_ratio": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "maximum_completion_time_s": {
+          "type": "number",
+          "minimum": 0
+        },
+        "total_aircraft_time_s": {
+          "type": "number",
+          "minimum": 0
+        },
+        "all_aircraft_within_limit": {
+          "type": "boolean"
+        },
+        "partition_checks": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/partition_check"
+          },
+          "minItems": 1
+        }
+      },
+      "required": [
+        "upper",
+        "lower",
+        "both_layers_coverage_ratio",
+        "either_layer_coverage_ratio",
+        "maximum_completion_time_s",
+        "total_aircraft_time_s",
+        "all_aircraft_within_limit",
+        "partition_checks"
+      ],
+      "additionalProperties": false
+    },
+    "scene": {
+      "type": "object",
+      "properties": {
+        "scene_id": {
+          "enum": [
+            "final_scene_1",
+            "final_scene_2",
+            "xuchang_small_2"
+          ]
+        },
+        "display_name": {
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "draft",
+            "validated",
+            "infeasible"
+          ]
+        },
+        "execution_mode": {
+          "enum": [
+            "fixed_layer_forward_reverse",
+            "upper_once_then_lower_once"
+          ]
+        },
+        "coordinate_frame": {
+          "const": "WGS84"
+        },
+        "local_frame": {
+          "const": "LOCAL_NORTH_WEST"
+        },
+        "projection": {
+          "$ref": "#/$defs/projection"
+        },
+        "boundary_geometry_wgs84": {
+          "$ref": "#/$defs/geometry"
+        },
+        "reference_home": {
+          "$ref": "#/$defs/home"
+        },
+        "exclusions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/exclusion"
+          },
+          "minItems": 0
+        },
+        "effective_area_geometry_wgs84": {
+          "$ref": "#/$defs/geometry"
+        },
+        "assumptions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/assumption"
+          },
+          "minItems": 0
+        },
+        "pending_confirmations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 0
+        },
+        "uavs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/uav"
+          },
+          "minItems": 6,
+          "maxItems": 6
+        },
+        "scene_metrics": {
+          "$ref": "#/$defs/scene_metrics"
+        },
+        "validation_report_key": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "scene_id",
+        "display_name",
+        "status",
+        "execution_mode",
+        "coordinate_frame",
+        "local_frame",
+        "projection",
+        "boundary_geometry_wgs84",
+        "reference_home",
+        "exclusions",
+        "effective_area_geometry_wgs84",
+        "assumptions",
+        "pending_confirmations",
+        "uavs",
+        "scene_metrics",
+        "validation_report_key"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

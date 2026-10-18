@@ -1,0 +1,57 @@
+{
+  "generated_at": "2026-10-17T23:40:16+08:00",
+  "parameters": {
+    "circle_quad_segs": 128,
+    "random_seed": 20261017,
+    "candidate_grid_step_m": 10.0,
+    "target_sample_step_m": 4.0,
+    "clearance_generation_m": 5.03,
+    "disk_clearance_extra_m": 0.05,
+    "greedy_shortlist_per_layer": 12,
+    "post_pruning_refill_rounds": 3,
+    "minimum_sample_gain_ratio": 0.001,
+    "marginal_time_exponent": 0.6,
+    "layer_balance_offset": 0.25,
+    "coverage_priority_budget_s": 1350.0,
+    "reserve_priority_budget_s": 1230.0,
+    "return_connection_policy": "Shortest own-upper visible attachment plus recipient return gates; full all-source catalog also delivered",
+    "partition_candidates": [
+      "effective_area_balanced",
+      "gross_area_balanced"
+    ],
+    "termination": "No shortlisted candidate with >=0.1% new sampled area (minimum 2 samples) fits budget; finite candidates; deterministic 2-opt until no improvement, max 8 sweeps. This is a heuristic, not proof of global optimality.",
+    "objective": "Feasible first; greedy layer area fraction gain / (0.25+current_layer_coverage) / incremental_seconds^0.6 to avoid starving the small-radius layer; partition by largest summed per-layer field coverage, ties shortest makespan; route length and soft transition penalty.",
+    "altitude_status": "accepted_provisional_not_measured",
+    "descent_status": "accepted_provisional_not_measured",
+    "return_climb_status": "planner_provisional_unconfirmed",
+    "direct_scan_arrays_required": true,
+    "redundancy_deletion_threshold_m2": 0.01,
+    "coordinate_precision": "No intentional rounding; full IEEE double JSON; revalidate serialized artifact.",
+    "geometry_model": "Planar metres; 128 segments per circle quadrant; optimization samples 4m grid, final metrics exact polygon Boolean operations with 512-edge disks.",
+    "mission_parameters": {
+      "horizontal_speed_mps": 5,
+      "takeoff_vertical_speed_mps": 6,
+      "scan_seconds": 50,
+      "mission_limit_s": 1380,
+      "preferred_reserve_s": 30,
+      "return_endpoint": "above_own_home_at_own_upper_altitude_for_dual_layer_or_assigned_altitude_for_fixed_layer_no_landing",
+      "boundary_clearance_m": 5,
+      "recommended_generation_clearance_m": 5.03,
+      "upper_scan_radius_m": 50,
+      "lower_scan_radius_m": 30,
+      "interlayer_descent_mps": 2,
+      "interlayer_descent_status": "user_accepted_provisional_not_measured",
+      "return_climb_mps": 2,
+      "return_climb_status": "planner_provisional_unconfirmed",
+      "return_climb_sensitivity_mps": [
+        1,
+        2,
+        3
+      ],
+      "dual_layer_return_policy": "climb_to_own_upper_altitude_then_connect_to_upper_return_route",
+      "fixed_layer_return_policy": "return_at_own_assigned_height_without_extra_layer_change"
+    }
+  },
+  "exclusion_input": "exclusions_draft.json",
+  "description": "Timestamp is persisted for byte-reproducible reruns. Algorithm parameters are explicitly versioned in planner.py; this file records the exact run configuration."
+}

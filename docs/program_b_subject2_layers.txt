@@ -1,0 +1,139 @@
+科目二程序 B 上下层航点接口（2026-10-17）
+
+适用条件与兼容
+
+以任务的 subject="subject2" 为条件，与场景 flight_profile 的名称无关。
+保留 path_stage_1，新增 path_stage_2。两者均为 std_msgs/Float64MultiArray，queue_size=1，latch=true。
+2026-10-18 更新：决赛场景2和许昌试飞小场景2已导入真实双层航点；决赛场景1与旧单层规划仍为 path_stage_1 保留原航点和原高度、path_stage_2 发布 data: []，不自动复制或降高生成下层。完整的新场景说明及六机实发格式示例见 final_scenes_integration.txt 和 final_scenes_program_b_examples/。
+真正的双层任务为上层一趟→下层一趟，总共两趟。两层的航点数量和坐标可以不同，下层顺序按规划直接执行，不由接口自动逆序。
+科目一继续使用原 path_stage_1 和原任务结构。若同一执行器之前发布过科目二，切回科目一时仅清空新增的 path_stage_2，防止误用旧下层数据。
+
+话题名称
+
+N 为本机 ROS 编号（正常为 UAV1～6 对应 1～6）。
+上层：/ground_mission_planner/vehicle_N/path_stage_1
+下层：/ground_mission_planner/vehicle_N/path_stage_2
+进场：/ground_mission_planner/vehicle_N/entry_path（std_msgs/String，原接口）
+返航集合：/ground_mission_planner/vehicle_N/return_paths（std_msgs/String，原接口增加说明字段）
+降落点：/ground_mission_planner/vehicle_N/jiangluodian（std_msgs/Float64MultiArray，原接口）
+任务说明：/uavN/competition/external_mission（std_msgs/String，科目二增加层信息）
+开始执行：/ground_mission_planner/recon_start_mode（std_msgs/Int32，原接口，data: 0）
+返航请求：/ground_mission_planner/vehicle_N/return_home（std_msgs/Bool，原接口，data: true）
+
+六机上下层话题逐项如下：
+UAV1 /ground_mission_planner/vehicle_1/path_stage_1 与 /ground_mission_planner/vehicle_1/path_stage_2
+UAV2 /ground_mission_planner/vehicle_2/path_stage_1 与 /ground_mission_planner/vehicle_2/path_stage_2
+UAV3 /ground_mission_planner/vehicle_3/path_stage_1 与 /ground_mission_planner/vehicle_3/path_stage_2
+UAV4 /ground_mission_planner/vehicle_4/path_stage_1 与 /ground_mission_planner/vehicle_4/path_stage_2
+UAV5 /ground_mission_planner/vehicle_5/path_stage_1 与 /ground_mission_planner/vehicle_5/path_stage_2
+UAV6 /ground_mission_planner/vehicle_6/path_stage_1 与 /ground_mission_planner/vehicle_6/path_stage_2
+
+坐标约定
+
+GPS 模式每三个数为 [经度, 纬度, 相对起飞点高度米]，按航点顺序展平。
+XYZ 模式每三个数为 [X米, Y米, 相对起飞点高度米]，沿用现有局部坐标约定。
+高度不叠加 GPS 海拔。两个数组不含进场、返航或换层用的辅助点。
+
+以下为 UAV1 格式示意，坐标不能直接作为飞行方案：
+path_stage_1（上层 47m，2 点）：
+  layout: {dim: [], data_offset: 0}
+  data: [113.7060, 33.8630, 47.0, 113.7062, 33.8632, 47.0]
+path_stage_2（下层 34m，2 点）：
+  layout: {dim: [], data_offset: 0}
+  data: [113.7062, 33.8632, 34.0, 113.7060, 33.8630, 34.0]
+jiangluodian（返航到降落点上方的高度仍为 47m）：
+  data: [113.70563, 33.86446, 47.0]
+
+发布时间及程序 B 的处理
+
+1. 点击“规划与分派”：地面将完整两层数据装入原 assign_task 消息，沿用原 SHA-256、传输、回执和机载缓存。此时不发布新的航点话题、不开始运动。task_region、fixed_targets 等已有分派话题照常发布。
+2. 点击“一键起飞”：竞赛执行器仍使用 target_altitude_m 起飞；双层任务该值必须等于本机上层高度。
+3. 成功到达起飞高度后，依次发布 entry_path、return_paths、path_stage_1、path_stage_2、jiangluodian、external_mission，最后发送 recon_start_mode=0。起飞失败不发布本次任务的两层航点和启动信号。
+4. 程序 B 执行上层一趟，再执行下层一趟。各层扫描时长由 external_mission.layers 内 hover_scan_seconds 指定；新决赛规划为50秒/点，但此接口不把旧场景的30秒扫描改为50秒。
+5. 从下层返航时，程序 B 先在当前位置升至本机上层高度，再接入选定的上层返航航线；从当前位置到该航线首点的连接也由 B 处理。竞赛执行器不会另发升高指令，不会把升高动作当作扫描点。
+6. 多个 ROS 话题不是原子事务。程序 B 应利用 external_mission 和 return_paths 的 mission_id、assignment_checksum 以及完整层点表，确认本次数据一致后再响应启动信号。旧 Float64MultiArray 数组本身仍不含任务编号。
+7. 程序 B 必须处理空 path_stage_2：清空已缓存的下层数据，以 legacy_single_layer 模式执行旧任务；不得沿用上一任务的下层，也不得把空下层解释成规划异常而阻断旧单层任务。
+
+返航集合的具体语义
+
+保留 schema_version=2、route_scope="all_uav_waypoints"，仍按 source_uav_id、waypoint_index 排序。
+科目二新增：
+  waypoint_layer: "upper"
+  return_altitude_m: 47.0（示例接收机的上层高度）
+  return_policy: "climb_to_upper_then_return"（双层）或 "at_task_altitude"（旧单层）
+每架接收机收到六机所有上层航点的返航路线，不包含下层航点。不把上下层合并编号；waypoint_index 是来源无人机上层数组中从1开始的索引。
+所有返航路径的每个点都使用“接收机自己的上层高度”，终点是“接收机自己的降落点上方”，不是来源无人机的高度或降落点。
+例如 UAV1 上层47m、UAV2上层50m：UAV1 收到的 source_uav_id=2 路线，整条路径仍为47m。
+降落点取既有规划锁定的起降点，来源及进返场几何约束不在此次接口修改中改变。
+return_home=true 只是返航请求，没有新添第二个返航控制话题。
+
+返航 JSON 摘录（只展示一条；实际有六机全部上层点）：
+{
+  "schema_version": 2,
+  "mission_id": "subject2-example",
+  "uav_id": 1,
+  "assignment_checksum": "与完整任务一致的SHA256",
+  "plan_sha256": "固定规划校验值",
+  "coordinate_frame": "WGS84",
+  "coordinate_order": "longitude_latitude_relative_altitude",
+  "altitude_frame": "RELATIVE_TO_TAKEOFF",
+  "route_scope": "all_uav_waypoints",
+  "waypoint_layer": "upper",
+  "return_altitude_m": 47.0,
+  "return_policy": "climb_to_upper_then_return",
+  "landing_point": [113.70563, 33.86446, 47.0],
+  "waypoint_counts_by_uav": {"1": 2, "2": 2, "3": 2, "4": 2, "5": 2, "6": 2},
+  "routes": [
+    {"source_uav_id": 1, "waypoint_index": 1,
+     "path": [[113.7060, 33.8630, 47.0], [113.70563, 33.86446, 47.0]]}
+  ]
+}
+
+external_mission 的科目二扩展
+
+原 waypoints 字段保留为上层点表；原 target_altitude_m、relative_altitude_m、return_home 高度均为上层高度。
+新增 subject="subject2"、path_contract_version=2、execution_mode、layer_order、return_waypoint_layer、return_altitude_m、return_policy、layers。
+双层 execution_mode="upper_once_then_lower_once"，layer_order=["upper","lower"]。
+旧单层 execution_mode="legacy_single_layer"，layer_order=["upper"]；layers 仍描述两个话题，其中 lower 的 waypoint_count=0、waypoints=[]、altitude_m=null、scan_passes=0。
+layers 的每项包含 layer_id、topic、altitude_m、waypoint_count、waypoints、scan_passes、hover_scan_seconds。
+waypoints 在 WGS84 下是 {latitude, longitude, altitude_m} 对象，在 ENU 下是 {x_m, y_m, z_m} 对象；与相应展平数组数值一致。
+双层每层 scan_passes=1；旧单层保留原任务声明的 scan_passes，若旧任务未声明则为 null，不能据此擅自改变旧任务执行方式。
+
+地面到机载的双层数据契约（供之后固定规划接入）
+
+仍使用 assign_task，无新增网络端口、分派命令或起飞命令。新增字段放在 task 内，纳入原完整任务 SHA-256。
+task.execution_mode = "upper_once_then_lower_once"
+task.layer_order = ["upper", "lower"]
+task.layers = [
+  {"layer_id":"upper", "altitude_m":47.0,
+   "waypoints_m":[[0.0,0.0],[10.0,10.0]],
+   "waypoints_wgs84":[[33.8630,113.7060],[33.8632,113.7062]],
+   "scan_passes":1, "hover_scan_seconds":50.0},
+  {"layer_id":"lower", "altitude_m":34.0,
+   "waypoints_m":[[10.0,10.0],[0.0,0.0]],
+   "waypoints_wgs84":[[33.8632,113.7062],[33.8630,113.7060]],
+   "scan_passes":1, "hover_scan_seconds":50.0}
+]
+上面仅为字段格式示意，平面与经纬度坐标未经投影匹配，不能用于规划或飞行。
+task.waypoints_m 必须等于 upper.waypoints_m；GPS任务 task.waypoints_wgs84 的前两列必须等于 upper.waypoints_wgs84（纬度在前）。真正规划必须保持每层局部坐标与WGS84投影一致。
+task.transit_routes 保持版本2，waypoints_by_uav 只能为六机上层点表；其GPS坐标是经度在前。
+起飞高度必须与上层相同，下层必须更低。双层数据不允许在科目一或 internal 模式中静默忽略。
+不提供 task.layers 表示旧单层；提供空数组、缺一层、错序、非法坐标或不一致的上层目录会被拒绝，不能退化成只执行上层。
+
+与新规划的衔接
+
+此次仅完成接口支持，没有导入决赛场景1、决赛场景2、许昌小场景2，没有改变现有航点、默认高度方案、场景选择或3D图表。
+之后双层固定方案应输出以上层结构，并配套上层全机队返航几何。暂定高度仍为UAV1/4上47下34、UAV2/5上50下37、UAV3/6上53下40米，需要届时一并接入高度配置。
+双层时长必须增加“下层结束后升回上层”的时间，返航结束高度也改为上层；返航爬升速度尚未由本接口指定，不能把原起飞6m/s自动当作该爬升速度。旧规划提示词中“最后扫描层高度返航”的描述已被本次要求取代。
+完整六机离线示例：program_b_subject2_layers_example.json。该文件由实际任务分派、校验和发布方法生成，但使用测试坐标，不能用于实飞。
+
+更新与查看
+
+地面端和六机竞赛机载端都需要更新；程序 B 作者需增加下层订阅、双层执行、空数组清理及先升高后返航处理。
+当前仓库只修改了竞赛程序接口，没有修改、部署或启动外部程序 B，也没有自动重启正在运行的地面端或机载端。
+更新后在地面重新规划与分派；旧缓存不会凭空产生下层航点。
+查看 UAV1：
+  rostopic echo /ground_mission_planner/vehicle_1/path_stage_1
+  rostopic echo /ground_mission_planner/vehicle_1/path_stage_2
+  rostopic echo /ground_mission_planner/vehicle_1/return_paths
+  rostopic echo /uav1/competition/external_mission

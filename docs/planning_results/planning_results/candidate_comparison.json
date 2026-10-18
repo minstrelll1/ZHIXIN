@@ -1,0 +1,1020 @@
+[
+  {
+    "candidate": "coverage_priority",
+    "scene_id": "final_scene_1",
+    "variant": "effective_area_balanced",
+    "budget_s": 1350.0,
+    "uavs": [
+      {
+        "uav_id": 1,
+        "candidate_counts": [
+          386
+        ],
+        "sample_counts": [
+          2045
+        ],
+        "selected_counts": [
+          11
+        ],
+        "estimated_time_s": 1346.9453814532353
+      },
+      {
+        "uav_id": 2,
+        "candidate_counts": [
+          266
+        ],
+        "sample_counts": [
+          2082
+        ],
+        "selected_counts": [
+          10
+        ],
+        "estimated_time_s": 1278.4476850926162
+      },
+      {
+        "uav_id": 3,
+        "candidate_counts": [
+          308
+        ],
+        "sample_counts": [
+          2112
+        ],
+        "selected_counts": [
+          10
+        ],
+        "estimated_time_s": 1263.5309562473851
+      },
+      {
+        "uav_id": 4,
+        "candidate_counts": [
+          386
+        ],
+        "sample_counts": [
+          2045
+        ],
+        "selected_counts": [
+          11
+        ],
+        "estimated_time_s": 1298.284280252624
+      },
+      {
+        "uav_id": 5,
+        "candidate_counts": [
+          181
+        ],
+        "sample_counts": [
+          2082
+        ],
+        "selected_counts": [
+          10
+        ],
+        "estimated_time_s": 1275.7252149446172
+      },
+      {
+        "uav_id": 6,
+        "candidate_counts": [
+          264
+        ],
+        "sample_counts": [
+          2112
+        ],
+        "selected_counts": [
+          11
+        ],
+        "estimated_time_s": 1341.6315118484683
+      }
+    ],
+    "upper_coverage": 0.7672340210608258,
+    "lower_coverage": 0.9516088433929498,
+    "maximum_completion_time_s": 1346.9453814532355,
+    "total_aircraft_time_s": 7804.565029838946,
+    "selected_partition": true
+  },
+  {
+    "candidate": "coverage_priority",
+    "scene_id": "final_scene_1",
+    "variant": "gross_area_balanced",
+    "budget_s": 1350.0,
+    "uavs": [
+      {
+        "uav_id": 1,
+        "candidate_counts": [
+          457
+        ],
+        "sample_counts": [
+          2532
+        ],
+        "selected_counts": [
+          11
+        ],
+        "estimated_time_s": 1334.0282070419587
+      },
+      {
+        "uav_id": 2,
+        "candidate_counts": [
+          144
+        ],
+        "sample_counts": [
+          1341
+        ],
+        "selected_counts": [
+          10
+        ],
+        "estimated_time_s": 1259.8334984443939
+      },
+      {
+        "uav_id": 3,
+        "candidate_counts": [
+          358
+        ],
+        "sample_counts": [
+          2366
+        ],
+        "selected_counts": [
+          10
+        ],
+        "estimated_time_s": 1290.5451641585232
+      },
+      {
+        "uav_id": 4,
+        "candidate_counts": [
+          457
+        ],
+        "sample_counts": [
+          2532
+        ],
+        "selected_counts": [
+          10
+        ],
+        "estimated_time_s": 1250.8760090361504
+      },
+      {
+        "uav_id": 5,
+        "candidate_counts": [
+          87
+        ],
+        "sample_counts": [
+          1341
+        ],
+        "selected_counts": [
+          9
+        ],
+        "estimated_time_s": 1149.5545761583794
+      },
+      {
+        "uav_id": 6,
+        "candidate_counts": [
+          283
+        ],
+        "sample_counts": [
+          2366
+        ],
+        "selected_counts": [
+          10
+        ],
+        "estimated_time_s": 1255.8807161597347
+      }
+    ],
+    "upper_coverage": 0.7490548735994138,
+    "lower_coverage": 0.9390197176155497,
+    "maximum_completion_time_s": 1334.0282070419585,
+    "total_aircraft_time_s": 7540.71817099914,
+    "selected_partition": false
+  },
+  {
+    "candidate": "coverage_priority",
+    "scene_id": "final_scene_2",
+    "variant": "effective_area_balanced",
+    "budget_s": 1350.0,
+    "uavs": [
+      {
+        "uav_id": 1,
+        "candidate_counts": [
+          190,
+          190
+        ],
+        "sample_counts": [
+          1004,
+          1004
+        ],
+        "selected_counts": [
+          14,
+          8
+        ],
+        "estimated_time_s": 1256.6580271593143
+      },
+      {
+        "uav_id": 2,
+        "candidate_counts": [
+          216,
+          216
+        ],
+        "sample_counts": [
+          1041,
+          1041
+        ],
+        "selected_counts": [
+          14,
+          6
+        ],
+        "estimated_time_s": 1159.9988200684288
+      },
+      {
+        "uav_id": 3,
+        "candidate_counts": [
+          161,
+          115
+        ],
+        "sample_counts": [
+          1060,
+          1060
+        ],
+        "selected_counts": [
+          14,
+          8
+        ],
+        "estimated_time_s": 1323.1937569719119
+      },
+      {
+        "uav_id": 4,
+        "candidate_counts": [
+          196,
+          196
+        ],
+        "sample_counts": [
+          1071,
+          1071
+        ],
+        "selected_counts": [
+          14,
+          7
+        ],
+        "estimated_time_s": 1256.3596551305802
+      },
+      {
+        "uav_id": 5,
+        "candidate_counts": [
+          122,
+          81
+        ],
+        "sample_counts": [
+          1042,
+          1042
+        ],
+        "selected_counts": [
+          15,
+          7
+        ],
+        "estimated_time_s": 1322.661066374396
+      },
+      {
+        "uav_id": 6,
+        "candidate_counts": [
+          126,
+          81
+        ],
+        "sample_counts": [
+          1021,
+          1021
+        ],
+        "selected_counts": [
+          15,
+          7
+        ],
+        "estimated_time_s": 1337.1060976919084
+      }
+    ],
+    "upper_coverage": 0.9553216889429048,
+    "lower_coverage": 0.9566702063321191,
+    "maximum_completion_time_s": 1337.1060976919084,
+    "total_aircraft_time_s": 7655.97742339654,
+    "selected_partition": true
+  },
+  {
+    "candidate": "coverage_priority",
+    "scene_id": "final_scene_2",
+    "variant": "gross_area_balanced",
+    "budget_s": 1350.0,
+    "uavs": [
+      {
+        "uav_id": 1,
+        "candidate_counts": [
+          240,
+          240
+        ],
+        "sample_counts": [
+          1313,
+          1313
+        ],
+        "selected_counts": [
+          16,
+          7
+        ],
+        "estimated_time_s": 1333.0907321224008
+      },
+      {
+        "uav_id": 2,
+        "candidate_counts": [
+          236,
+          236
+        ],
+        "sample_counts": [
+          1219,
+          1219
+        ],
+        "selected_counts": [
+          16,
+          7
+        ],
+        "estimated_time_s": 1332.6771240718542
+      },
+      {
+        "uav_id": 3,
+        "candidate_counts": [
+          117,
+          66
+        ],
+        "sample_counts": [
+          739,
+          739
+        ],
+        "selected_counts": [
+          12,
+          6
+        ],
+        "estimated_time_s": 1085.3860696071495
+      },
+      {
+        "uav_id": 4,
+        "candidate_counts": [
+          239,
+          209
+        ],
+        "sample_counts": [
+          1329,
+          1329
+        ],
+        "selected_counts": [
+          16,
+          6
+        ],
+        "estimated_time_s": 1341.8407819891222
+      },
+      {
+        "uav_id": 5,
+        "candidate_counts": [
+          51,
+          24
+        ],
+        "sample_counts": [
+          602,
+          602
+        ],
+        "selected_counts": [
+          12,
+          3
+        ],
+        "estimated_time_s": 951.2461095105014
+      },
+      {
+        "uav_id": 6,
+        "candidate_counts": [
+          125,
+          86
+        ],
+        "sample_counts": [
+          1037,
+          1037
+        ],
+        "selected_counts": [
+          12,
+          10
+        ],
+        "estimated_time_s": 1335.6682140376008
+      }
+    ],
+    "upper_coverage": 0.9559437240197932,
+    "lower_coverage": 0.9375560188844049,
+    "maximum_completion_time_s": 1341.8407819891222,
+    "total_aircraft_time_s": 7379.909031338629,
+    "selected_partition": false
+  },
+  {
+    "candidate": "coverage_priority",
+    "scene_id": "xuchang_small_2",
+    "variant": "input_fixed_regions",
+    "budget_s": 1350.0,
+    "uavs": [
+      {
+        "uav_id": 1,
+        "candidate_counts": [
+          151,
+          151
+        ],
+        "sample_counts": [
+          810,
+          810
+        ],
+        "selected_counts": [
+          11,
+          6
+        ],
+        "estimated_time_s": 962.8755308806409
+      },
+      {
+        "uav_id": 2,
+        "candidate_counts": [
+          143,
+          143
+        ],
+        "sample_counts": [
+          797,
+          797
+        ],
+        "selected_counts": [
+          11,
+          4
+        ],
+        "estimated_time_s": 965.8694311009751
+      },
+      {
+        "uav_id": 3,
+        "candidate_counts": [
+          253,
+          253
+        ],
+        "sample_counts": [
+          1392,
+          1392
+        ],
+        "selected_counts": [
+          14,
+          7
+        ],
+        "estimated_time_s": 1307.7426880608994
+      },
+      {
+        "uav_id": 4,
+        "candidate_counts": [
+          251,
+          251
+        ],
+        "sample_counts": [
+          1386,
+          1386
+        ],
+        "selected_counts": [
+          15,
+          7
+        ],
+        "estimated_time_s": 1330.0254189847396
+      },
+      {
+        "uav_id": 5,
+        "candidate_counts": [
+          881,
+          881
+        ],
+        "sample_counts": [
+          5243,
+          5243
+        ],
+        "selected_counts": [
+          10,
+          8
+        ],
+        "estimated_time_s": 1327.1248185620827
+      },
+      {
+        "uav_id": 6,
+        "candidate_counts": [
+          124,
+          124
+        ],
+        "sample_counts": [
+          659,
+          659
+        ],
+        "selected_counts": [
+          9,
+          3
+        ],
+        "estimated_time_s": 703.566003694596
+      }
+    ],
+    "upper_coverage": 0.6801252220211585,
+    "lower_coverage": 0.8696952297291825,
+    "maximum_completion_time_s": 1330.0254189847394,
+    "total_aircraft_time_s": 6597.203891283934,
+    "selected_partition": true
+  },
+  {
+    "candidate": "more_reserve",
+    "scene_id": "final_scene_1",
+    "variant": "effective_area_balanced",
+    "budget_s": 1230.0,
+    "uavs": [
+      {
+        "uav_id": 1,
+        "candidate_counts": [
+          386
+        ],
+        "sample_counts": [
+          2045
+        ],
+        "selected_counts": [
+          9
+        ],
+        "estimated_time_s": 1131.9874770890492
+      },
+      {
+        "uav_id": 2,
+        "candidate_counts": [
+          266
+        ],
+        "sample_counts": [
+          2082
+        ],
+        "selected_counts": [
+          9
+        ],
+        "estimated_time_s": 1170.7007176789186
+      },
+      {
+        "uav_id": 3,
+        "candidate_counts": [
+          308
+        ],
+        "sample_counts": [
+          2112
+        ],
+        "selected_counts": [
+          9
+        ],
+        "estimated_time_s": 1163.390820351505
+      },
+      {
+        "uav_id": 4,
+        "candidate_counts": [
+          386
+        ],
+        "sample_counts": [
+          2045
+        ],
+        "selected_counts": [
+          10
+        ],
+        "estimated_time_s": 1197.0432754809756
+      },
+      {
+        "uav_id": 5,
+        "candidate_counts": [
+          181
+        ],
+        "sample_counts": [
+          2082
+        ],
+        "selected_counts": [
+          9
+        ],
+        "estimated_time_s": 1160.7622681475445
+      },
+      {
+        "uav_id": 6,
+        "candidate_counts": [
+          264
+        ],
+        "sample_counts": [
+          2112
+        ],
+        "selected_counts": [
+          9
+        ],
+        "estimated_time_s": 1140.538225013395
+      }
+    ],
+    "upper_coverage": 0.7021790178400783,
+    "lower_coverage": 0.9452711112760062,
+    "maximum_completion_time_s": 1197.0432754809756,
+    "total_aircraft_time_s": 6964.422783761387,
+    "selected_partition": true
+  },
+  {
+    "candidate": "more_reserve",
+    "scene_id": "final_scene_1",
+    "variant": "gross_area_balanced",
+    "budget_s": 1230.0,
+    "uavs": [
+      {
+        "uav_id": 1,
+        "candidate_counts": [
+          457
+        ],
+        "sample_counts": [
+          2532
+        ],
+        "selected_counts": [
+          10
+        ],
+        "estimated_time_s": 1218.5430270812997
+      },
+      {
+        "uav_id": 2,
+        "candidate_counts": [
+          144
+        ],
+        "sample_counts": [
+          1341
+        ],
+        "selected_counts": [
+          9
+        ],
+        "estimated_time_s": 1157.752646101186
+      },
+      {
+        "uav_id": 3,
+        "candidate_counts": [
+          358
+        ],
+        "sample_counts": [
+          2366
+        ],
+        "selected_counts": [
+          9
+        ],
+        "estimated_time_s": 1167.9177471605537
+      },
+      {
+        "uav_id": 4,
+        "candidate_counts": [
+          457
+        ],
+        "sample_counts": [
+          2532
+        ],
+        "selected_counts": [
+          9
+        ],
+        "estimated_time_s": 1130.3356586098823
+      },
+      {
+        "uav_id": 5,
+        "candidate_counts": [
+          87
+        ],
+        "sample_counts": [
+          1341
+        ],
+        "selected_counts": [
+          9
+        ],
+        "estimated_time_s": 1149.5545761583794
+      },
+      {
+        "uav_id": 6,
+        "candidate_counts": [
+          283
+        ],
+        "sample_counts": [
+          2366
+        ],
+        "selected_counts": [
+          9
+        ],
+        "estimated_time_s": 1140.950647124392
+      }
+    ],
+    "upper_coverage": 0.6964737843245071,
+    "lower_coverage": 0.9308140213256794,
+    "maximum_completion_time_s": 1218.5430270812994,
+    "total_aircraft_time_s": 6965.054302235693,
+    "selected_partition": false
+  },
+  {
+    "candidate": "more_reserve",
+    "scene_id": "final_scene_2",
+    "variant": "effective_area_balanced",
+    "budget_s": 1230.0,
+    "uavs": [
+      {
+        "uav_id": 1,
+        "candidate_counts": [
+          190,
+          190
+        ],
+        "sample_counts": [
+          1004,
+          1004
+        ],
+        "selected_counts": [
+          14,
+          7
+        ],
+        "estimated_time_s": 1202.6580271593143
+      },
+      {
+        "uav_id": 2,
+        "candidate_counts": [
+          216,
+          216
+        ],
+        "sample_counts": [
+          1041,
+          1041
+        ],
+        "selected_counts": [
+          14,
+          6
+        ],
+        "estimated_time_s": 1159.9988200684288
+      },
+      {
+        "uav_id": 3,
+        "candidate_counts": [
+          161,
+          115
+        ],
+        "sample_counts": [
+          1060,
+          1060
+        ],
+        "selected_counts": [
+          13,
+          7
+        ],
+        "estimated_time_s": 1219.0524710489578
+      },
+      {
+        "uav_id": 4,
+        "candidate_counts": [
+          196,
+          196
+        ],
+        "sample_counts": [
+          1071,
+          1071
+        ],
+        "selected_counts": [
+          13,
+          7
+        ],
+        "estimated_time_s": 1206.333293469513
+      },
+      {
+        "uav_id": 5,
+        "candidate_counts": [
+          122,
+          81
+        ],
+        "sample_counts": [
+          1042,
+          1042
+        ],
+        "selected_counts": [
+          13,
+          7
+        ],
+        "estimated_time_s": 1219.5656959776431
+      },
+      {
+        "uav_id": 6,
+        "candidate_counts": [
+          126,
+          81
+        ],
+        "sample_counts": [
+          1021,
+          1021
+        ],
+        "selected_counts": [
+          12,
+          7
+        ],
+        "estimated_time_s": 1184.7204280357057
+      }
+    ],
+    "upper_coverage": 0.9528412965801182,
+    "lower_coverage": 0.9551138686017028,
+    "maximum_completion_time_s": 1219.5656959776431,
+    "total_aircraft_time_s": 7192.328735759564,
+    "selected_partition": true
+  },
+  {
+    "candidate": "more_reserve",
+    "scene_id": "final_scene_2",
+    "variant": "gross_area_balanced",
+    "budget_s": 1230.0,
+    "uavs": [
+      {
+        "uav_id": 1,
+        "candidate_counts": [
+          240,
+          240
+        ],
+        "sample_counts": [
+          1313,
+          1313
+        ],
+        "selected_counts": [
+          15,
+          6
+        ],
+        "estimated_time_s": 1224.6514095074408
+      },
+      {
+        "uav_id": 2,
+        "candidate_counts": [
+          236,
+          236
+        ],
+        "sample_counts": [
+          1219,
+          1219
+        ],
+        "selected_counts": [
+          15,
+          6
+        ],
+        "estimated_time_s": 1229.804300833486
+      },
+      {
+        "uav_id": 3,
+        "candidate_counts": [
+          117,
+          66
+        ],
+        "sample_counts": [
+          739,
+          739
+        ],
+        "selected_counts": [
+          12,
+          6
+        ],
+        "estimated_time_s": 1085.3860696071495
+      },
+      {
+        "uav_id": 4,
+        "candidate_counts": [
+          239,
+          209
+        ],
+        "sample_counts": [
+          1329,
+          1329
+        ],
+        "selected_counts": [
+          14,
+          6
+        ],
+        "estimated_time_s": 1228.3182695370963
+      },
+      {
+        "uav_id": 5,
+        "candidate_counts": [
+          51,
+          24
+        ],
+        "sample_counts": [
+          602,
+          602
+        ],
+        "selected_counts": [
+          12,
+          3
+        ],
+        "estimated_time_s": 951.2461095105014
+      },
+      {
+        "uav_id": 6,
+        "candidate_counts": [
+          125,
+          86
+        ],
+        "sample_counts": [
+          1037,
+          1037
+        ],
+        "selected_counts": [
+          11,
+          8
+        ],
+        "estimated_time_s": 1184.629543096839
+      }
+    ],
+    "upper_coverage": 0.952576073154421,
+    "lower_coverage": 0.9352455599390442,
+    "maximum_completion_time_s": 1229.804300833486,
+    "total_aircraft_time_s": 6904.035702092513,
+    "selected_partition": false
+  },
+  {
+    "candidate": "more_reserve",
+    "scene_id": "xuchang_small_2",
+    "variant": "input_fixed_regions",
+    "budget_s": 1230.0,
+    "uavs": [
+      {
+        "uav_id": 1,
+        "candidate_counts": [
+          151,
+          151
+        ],
+        "sample_counts": [
+          810,
+          810
+        ],
+        "selected_counts": [
+          11,
+          6
+        ],
+        "estimated_time_s": 962.8755308806409
+      },
+      {
+        "uav_id": 2,
+        "candidate_counts": [
+          143,
+          143
+        ],
+        "sample_counts": [
+          797,
+          797
+        ],
+        "selected_counts": [
+          11,
+          4
+        ],
+        "estimated_time_s": 965.8694311009751
+      },
+      {
+        "uav_id": 3,
+        "candidate_counts": [
+          253,
+          253
+        ],
+        "sample_counts": [
+          1392,
+          1392
+        ],
+        "selected_counts": [
+          12,
+          7
+        ],
+        "estimated_time_s": 1199.6604938189669
+      },
+      {
+        "uav_id": 4,
+        "candidate_counts": [
+          251,
+          251
+        ],
+        "sample_counts": [
+          1386,
+          1386
+        ],
+        "selected_counts": [
+          13,
+          7
+        ],
+        "estimated_time_s": 1224.5238264938594
+      },
+      {
+        "uav_id": 5,
+        "candidate_counts": [
+          881,
+          881
+        ],
+        "sample_counts": [
+          5243,
+          5243
+        ],
+        "selected_counts": [
+          8,
+          8
+        ],
+        "estimated_time_s": 1206.8955015432089
+      },
+      {
+        "uav_id": 6,
+        "candidate_counts": [
+          124,
+          124
+        ],
+        "sample_counts": [
+          659,
+          659
+        ],
+        "selected_counts": [
+          9,
+          3
+        ],
+        "estimated_time_s": 703.566003694596
+      }
+    ],
+    "upper_coverage": 0.6419778741149729,
+    "lower_coverage": 0.8696952297291825,
+    "maximum_completion_time_s": 1224.5238264938594,
+    "total_aircraft_time_s": 6263.3907875322475,
+    "selected_partition": true
+  }
+]

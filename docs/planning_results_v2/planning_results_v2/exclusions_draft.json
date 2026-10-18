@@ -1,0 +1,420 @@
+{
+  "artifact_type": "v2_user_forest_and_historical_pond_exclusion_draft",
+  "status": "draft_requires_pond_and_connector_confirmation",
+  "source_date": "2026-10-17",
+  "source": "inputs/02_规划输入_v2.json",
+  "source_sha256": "79b40ab264f8973822be5173eb4feea087c8d55edde6052aa2c6a4b002f4fdc3",
+  "input_sha256": "79b40ab264f8973822be5173eb4feea087c8d55edde6052aa2c6a4b002f4fdc3",
+  "original_input_sha256": "758aaa7ca3b3e536a7d167eef1c5552ed965e8108e058ce9b56de8b381c8a27c",
+  "revision_request_sha256": "36e6acf4a60b3bb002d989d0db85d634f5838d1f12acb8f9748ea7e3f3d3ca12",
+  "source_provenance": [
+    {
+      "file": "inputs/v1/02_规划输入.json",
+      "sha256": "758aaa7ca3b3e536a7d167eef1c5552ed965e8108e058ce9b56de8b381c8a27c"
+    },
+    {
+      "file": "inputs/v1/exclusions_draft_v1.json",
+      "sha256": "92fab2ee62f98ceea15c686711a800f4b24dfae28efbd6b593cae361d6e23640"
+    },
+    {
+      "file": "inputs/v1/planning_result_v1.json",
+      "sha256": "0f649e708b99acd5b197bc516dcd4a2349497d865e9819a7a1f139ff2778fb14"
+    },
+    {
+      "file": "inputs/revision/修订需求.json",
+      "sha256": "36e6acf4a60b3bb002d989d0db85d634f5838d1f12acb8f9748ea7e3f3d3ca12"
+    },
+    {
+      "file": "inputs/revision/修改方案_发给规划对话.txt",
+      "sha256": "d239f3d9a63ea481387482d5e93634e24061d3653708968f1b01ee850c97ef66"
+    },
+    {
+      "file": "inputs/revision/新树林边界_含推导补点.json",
+      "sha256": "cf6a650c57cc7b7d21bb5c3aaf032b0f19113383f24e910ad130faca38a0b9fc"
+    },
+    {
+      "file": "inputs/revision/当前程序B双层接口说明.txt",
+      "sha256": "393f38f1088ccf0ec2818f5e0883a68cdc711e20070e5e66257ab1aa41dc21b3"
+    },
+    {
+      "file": "inputs/v1/05_历史底图.jpg",
+      "sha256": "817f1da5d1cf35b845ab66f51f4ce62236967ac49f1f8d6a40731da1b643cbb2"
+    }
+  ],
+  "is_current_survey": false,
+  "is_user_confirmed_boundary": false,
+  "method": "User forest chain with independently recomputed orthogonal original-edge connectors; unchanged historical pond. Forest replaces the old polygon completely.",
+  "exclusions": [
+    {
+      "id": "southeast_exclusion_anchor",
+      "kind": "scan_disk_forbidden",
+      "geometry_wgs84": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              113.707145064894,
+              33.86138706134834
+            ],
+            [
+              113.70690562296932,
+              33.86133183085928
+            ],
+            [
+              113.70679920433612,
+              33.861226892831695
+            ],
+            [
+              113.70672604152581,
+              33.86119375448038
+            ],
+            [
+              113.70662627405719,
+              33.86105567787819
+            ],
+            [
+              113.70653980891773,
+              33.86100044717481
+            ],
+            [
+              113.70627376233477,
+              33.86103358560113
+            ],
+            [
+              113.70620725068902,
+              33.86085132409721
+            ],
+            [
+              113.70618993407403,
+              33.86071614282803
+            ],
+            [
+              113.70715,
+              33.86063055555556
+            ],
+            [
+              113.70720908234131,
+              33.86138356578786
+            ],
+            [
+              113.707145064894,
+              33.86138706134834
+            ]
+          ]
+        ]
+      },
+      "geometry_status": "provisional",
+      "boundary_status": "user_chain_confirmed_with_developer_proposed_connectors",
+      "user_chain_status": "confirmed_in_supplied_revision",
+      "connector_status": "developer_derived_not_user_measured",
+      "source": "inputs/revision/修订需求.json; eight user points plus orthogonal connectors on original numbered edges",
+      "source_date": "2026-10-17",
+      "source_sha256": "36e6acf4a60b3bb002d989d0db85d634f5838d1f12acb8f9748ea7e3f3d3ca12",
+      "anchor_wgs84_lon_lat": [
+        113.70687514658842,
+        33.86097258705829
+      ],
+      "user_chain_wgs84_lat_lon": [
+        [
+          33.86138706134834,
+          113.707145064894
+        ],
+        [
+          33.86133183085928,
+          113.70690562296932
+        ],
+        [
+          33.861226892831695,
+          113.70679920433612
+        ],
+        [
+          33.86119375448038,
+          113.70672604152581
+        ],
+        [
+          33.86105567787819,
+          113.70662627405719
+        ],
+        [
+          33.86100044717481,
+          113.70653980891773
+        ],
+        [
+          33.86103358560113,
+          113.70627376233477
+        ],
+        [
+          33.86085132409721,
+          113.70620725068902
+        ]
+      ],
+      "original_boundary_vertex_ids": [
+        8,
+        9,
+        10
+      ],
+      "closure_rule": "P1..P8 -> Qsouth(perpendicular projection onto original edge8-9) -> original vertex9 -> Qeast(perpendicular projection onto original edge9-10) -> P1",
+      "derived_connectors": {
+        "q_south_wgs84_lat_lon": [
+          33.86071614282803,
+          113.70618993407403
+        ],
+        "q_east_wgs84_lat_lon": [
+          33.86138356578786,
+          113.70720908234131
+        ],
+        "q_south_nw_m": [
+          -372.52724005439524,
+          182.18040575154188
+        ],
+        "q_east_nw_m": [
+          -298.4967298898472,
+          87.87690949128124
+        ],
+        "south_edge_original_point_ids": [
+          8,
+          9
+        ],
+        "east_edge_original_point_ids": [
+          9,
+          10
+        ],
+        "south_projection_parameter": 0.7320746253100557,
+        "east_projection_parameter": 0.417051820965648,
+        "p1_to_east_edge_m": 5.9363172626691,
+        "p8_to_south_edge_m": 15.079669489735249,
+        "q_east_supplied_vs_computed_m": 6.673410716700094e-10,
+        "q_south_supplied_vs_computed_m": 4.625815725089086e-10
+      },
+      "polygon_m": [
+        [
+          -298.10900255469954,
+          93.80055112094136
+        ],
+        [
+          -304.2351647155368,
+          115.95651348032989
+        ],
+        [
+          -315.8748837321271,
+          125.80360786271868
+        ],
+        [
+          -319.5505874482923,
+          132.57348524954256
+        ],
+        [
+          -334.866034948932,
+          141.80513623360733
+        ],
+        [
+          -340.9922208822409,
+          149.80590041839417
+        ],
+        [
+          -337.31650884653817,
+          174.42363637107874
+        ],
+        [
+          -357.5329426978824,
+          180.57807036089358
+        ],
+        [
+          -372.527240054096,
+          182.1804057511891
+        ],
+        [
+          -382.02057460520473,
+          93.34389749585918
+        ],
+        [
+          -298.49672988959355,
+          87.87690949066398
+        ]
+      ],
+      "area_m2": 4935.39260830934,
+      "anchor_inside": true,
+      "geometry_valid": true,
+      "outside_boundary_area_m2": 2.5085132871062122e-08,
+      "flight_prohibited": false,
+      "radius_m": null,
+      "confirmation_required": true,
+      "interpretation": "整体替换旧东南候选。8个用户点保持原值；Q南、Q东按原固定投影和原8/9/10编号正交推导，并非用户实测补点。强禁扫不自动禁飞。",
+      "replacement_metrics": {
+        "old_area_m2": 18147.405994112025,
+        "new_area_m2": 4935.39260830934,
+        "new_area_outside_old_m2": 1953.1269642482814,
+        "old_area_outside_new_m2": 15165.140350050964
+      }
+    },
+    {
+      "id": "pond_exclusion_anchor",
+      "kind": "scan_disk_forbidden",
+      "geometry_wgs84": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              113.70370616984,
+              33.861756652791
+            ],
+            [
+              113.704266037633,
+              33.861713605977
+            ],
+            [
+              113.704369716853,
+              33.861653340402
+            ],
+            [
+              113.704348981009,
+              33.861102338883
+            ],
+            [
+              113.704266037633,
+              33.861050682308
+            ],
+            [
+              113.703664698152,
+              33.861102338883
+            ],
+            [
+              113.703633594386,
+              33.861171214267
+            ],
+            [
+              113.703664698152,
+              33.861696387246
+            ],
+            [
+              113.70370616984,
+              33.861756652791
+            ]
+          ]
+        ]
+      },
+      "geometry_status": "provisional",
+      "source": "inputs/v1/05_历史底图.jpg; unchanged v1 manual trace in inputs/v1/exclusions_draft_v1.json",
+      "source_date": "2017-07-24",
+      "source_sha256": "817f1da5d1cf35b845ab66f51f4ce62236967ac49f1f8d6a40731da1b643cbb2",
+      "manual_pixel_vertices": [
+        [
+          460,
+          1264
+        ],
+        [
+          514,
+          1269
+        ],
+        [
+          524,
+          1276
+        ],
+        [
+          522,
+          1340
+        ],
+        [
+          514,
+          1346
+        ],
+        [
+          456,
+          1340
+        ],
+        [
+          453,
+          1332
+        ],
+        [
+          456,
+          1271
+        ]
+      ],
+      "anchor_wgs84_lon_lat": [
+        113.70396642079015,
+        33.86137483466436
+      ],
+      "anchor_pixel_xy": [
+        485.1015534225868,
+        1308.3490861866496
+      ],
+      "polygon_m": [
+        [
+          -257.113944,
+          412.007271
+        ],
+        [
+          -261.888694,
+          360.201766
+        ],
+        [
+          -268.573348,
+          350.608154
+        ],
+        [
+          -329.690399,
+          352.526876
+        ],
+        [
+          -335.420143,
+          360.201766
+        ],
+        [
+          -329.690399,
+          415.844715
+        ],
+        [
+          -322.050746,
+          418.722799
+        ],
+        [
+          -263.798595,
+          415.844715
+        ]
+      ],
+      "area_m2": 4737.84636,
+      "anchor_inside": true,
+      "geometry_valid": true,
+      "outside_boundary_area_m2": 0.0,
+      "flight_prohibited": false,
+      "radius_m": null,
+      "interpretation": "池塘候选：沿可见近矩形水面外围岸线/窄堤的转折圈定，包含定位点。阴影、水陆交界、2017年至今水位及地物变化使现状边界不可确认。 本次修订未确认或修改池塘边界。",
+      "confirmation_required": true,
+      "sensitivity": [
+        {
+          "boundary_offset_m": -10.0,
+          "area_within_boundary_m2": 2431.0705487240066,
+          "additional_area_removed_after_terrain_exemption_m2": 2431.070548724007,
+          "upper_scan_centers_forbidden_within_boundary_m2": 13645.596845716234,
+          "lower_scan_centers_forbidden_within_boundary_m2": 9518.687921412165
+        },
+        {
+          "boundary_offset_m": 0.0,
+          "area_within_boundary_m2": 4737.846360189452,
+          "additional_area_removed_after_terrain_exemption_m2": 4737.846360189454,
+          "upper_scan_centers_forbidden_within_boundary_m2": 16013.089349521677,
+          "lower_scan_centers_forbidden_within_boundary_m2": 11583.750645834127
+        },
+        {
+          "boundary_offset_m": 10.0,
+          "area_within_boundary_m2": 7201.52596718181,
+          "additional_area_removed_after_terrain_exemption_m2": 7201.525967181814,
+          "upper_scan_centers_forbidden_within_boundary_m2": 18455.921987100046,
+          "lower_scan_centers_forbidden_within_boundary_m2": 13724.947728977533
+        }
+      ]
+    }
+  ],
+  "combined_metrics": {
+    "candidate_union_area_m2": 9673.238968498792,
+    "overlap_area_m2": 1.8189894035458565e-12,
+    "additional_area_removed_after_terrain_exemption_m2": 8559.057038872961,
+    "draft_effective_area_m2": 111256.32553872728
+  },
+  "limitations": [
+    "池塘仍待确认；树林补点为推导建议而非用户实测。",
+    "强禁扫区不自动禁飞。",
+    "历史地类主方案保持不变，局部修正敏感性见terrain_mask_audit.json。"
+  ]
+}

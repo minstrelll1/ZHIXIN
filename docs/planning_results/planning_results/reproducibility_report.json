@@ -1,0 +1,66 @@
+{
+  "passed": true,
+  "method": "Run planner.py independently into a fresh output directory using the same copied planner_config.json timestamp and the same immutable input/exclusion files; compare SHA256 of all deterministic planning artifacts. This is a real re-optimization run, not --reuse-candidates.",
+  "python": "3.8.10",
+  "dependencies": [
+    "numpy==1.24.4",
+    "shapely==2.0.6",
+    "jsonschema==4.23.0"
+  ],
+  "checks": [
+    {
+      "file": "planning_result.json",
+      "original_sha256": "0f649e708b99acd5b197bc516dcd4a2349497d865e9819a7a1f139ff2778fb14",
+      "reproduced_sha256": "0f649e708b99acd5b197bc516dcd4a2349497d865e9819a7a1f139ff2778fb14",
+      "byte_identical": true
+    },
+    {
+      "file": "planning_result.geojson",
+      "original_sha256": "d7e7cd31af8c237cd90a43bc7efee1071f4f2d9b8f5cff95e260ac1b41243875",
+      "reproduced_sha256": "d7e7cd31af8c237cd90a43bc7efee1071f4f2d9b8f5cff95e260ac1b41243875",
+      "byte_identical": true
+    },
+    {
+      "file": "waypoints.csv",
+      "original_sha256": "db3856a22e4908c49f6ada548d0695d9b0a6569d117f0e1551c12425c03e5daf",
+      "reproduced_sha256": "db3856a22e4908c49f6ada548d0695d9b0a6569d117f0e1551c12425c03e5daf",
+      "byte_identical": true
+    },
+    {
+      "file": "scan_visits.csv",
+      "original_sha256": "d6e0e04796b318216aad203ca73a59aa82e8c4314c156f30cdadb1e9778d7404",
+      "reproduced_sha256": "d6e0e04796b318216aad203ca73a59aa82e8c4314c156f30cdadb1e9778d7404",
+      "byte_identical": true
+    },
+    {
+      "file": "candidate_comparison.json",
+      "original_sha256": "7cae2eb08cf5577c7acffaa612871694dd54165f2391f7a587196fbb04d05ec0",
+      "reproduced_sha256": "7cae2eb08cf5577c7acffaa612871694dd54165f2391f7a587196fbb04d05ec0",
+      "byte_identical": true
+    },
+    {
+      "file": "feasibility_bounds.json",
+      "original_sha256": "638db7fe73f4345d4a13353d323487479687436432c12687a01cdabfe6888776",
+      "reproduced_sha256": "638db7fe73f4345d4a13353d323487479687436432c12687a01cdabfe6888776",
+      "byte_identical": true
+    },
+    {
+      "file": "planner_config.json",
+      "original_sha256": "7d6d28c52977c30003121e7130a32852af0de3e65bdffc0c4d11bd72b0000e91",
+      "reproduced_sha256": "7d6d28c52977c30003121e7130a32852af0de3e65bdffc0c4d11bd72b0000e91",
+      "byte_identical": true
+    },
+    {
+      "file": "candidates/coverage_priority.json",
+      "original_sha256": "0f649e708b99acd5b197bc516dcd4a2349497d865e9819a7a1f139ff2778fb14",
+      "reproduced_sha256": "0f649e708b99acd5b197bc516dcd4a2349497d865e9819a7a1f139ff2778fb14",
+      "byte_identical": true
+    },
+    {
+      "file": "candidates/more_reserve.json",
+      "original_sha256": "73bb88eee44e4b5c903abaa3df46ce00dff678023c6905184ff89cb0d97315f9",
+      "reproduced_sha256": "73bb88eee44e4b5c903abaa3df46ce00dff678023c6905184ff89cb0d97315f9",
+      "byte_identical": true
+    }
+  ]
+}

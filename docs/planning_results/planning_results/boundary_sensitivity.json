@@ -1,0 +1,92 @@
+[
+  {
+    "scene_id": "final_scene_1",
+    "boundary_offset_m": -10,
+    "effective_area_m2": 106413.75856814059,
+    "layers": {
+      "upper": {
+        "forbidden_disk_count": 0,
+        "fixed_point_coverage_ratio": 0.7199655287698117
+      },
+      "lower": {
+        "forbidden_disk_count": 0,
+        "fixed_point_coverage_ratio": 0.8929812095377289
+      }
+    }
+  },
+  {
+    "scene_id": "final_scene_1",
+    "boundary_offset_m": 0,
+    "effective_area_m2": 99857.71727590813,
+    "layers": {
+      "upper": {
+        "forbidden_disk_count": 0,
+        "fixed_point_coverage_ratio": 0.7672340210242171
+      },
+      "lower": {
+        "forbidden_disk_count": 0,
+        "fixed_point_coverage_ratio": 0.9516088433613742
+      }
+    }
+  },
+  {
+    "scene_id": "final_scene_1",
+    "boundary_offset_m": 10,
+    "effective_area_m2": 93473.53241922661,
+    "layers": {
+      "upper": {
+        "forbidden_disk_count": 7,
+        "fixed_point_coverage_ratio": 0.8063881958905116
+      },
+      "lower": {
+        "forbidden_disk_count": 14,
+        "fixed_point_coverage_ratio": 0.9906014928490413
+      }
+    }
+  },
+  {
+    "scene_id": "final_scene_2",
+    "boundary_offset_m": -10,
+    "effective_area_m2": 106413.75856814059,
+    "layers": {
+      "upper": {
+        "forbidden_disk_count": 0,
+        "fixed_point_coverage_ratio": 0.8964653105291088
+      },
+      "lower": {
+        "forbidden_disk_count": 0,
+        "fixed_point_coverage_ratio": 0.8977307471628632
+      }
+    }
+  },
+  {
+    "scene_id": "final_scene_2",
+    "boundary_offset_m": 0,
+    "effective_area_m2": 99857.71727590813,
+    "layers": {
+      "upper": {
+        "forbidden_disk_count": 0,
+        "fixed_point_coverage_ratio": 0.9553216889164083
+      },
+      "lower": {
+        "forbidden_disk_count": 0,
+        "fixed_point_coverage_ratio": 0.9566702063079642
+      }
+    }
+  },
+  {
+    "scene_id": "final_scene_2",
+    "boundary_offset_m": 10,
+    "effective_area_m2": 93473.53241922661,
+    "layers": {
+      "upper": {
+        "forbidden_disk_count": 24,
+        "fixed_point_coverage_ratio": 0.9892543997000348
+      },
+      "lower": {
+        "forbidden_disk_count": 19,
+        "fixed_point_coverage_ratio": 0.9917688851814814
+      }
+    }
+  }
+]

@@ -1,0 +1,846 @@
+{
+  "source_result_sha256": "0f649e708b99acd5b197bc516dcd4a2349497d865e9819a7a1f139ff2778fb14",
+  "new_radius_requirement": {
+    "upper": 50,
+    "lower": 30
+  },
+  "scenes": [
+    {
+      "scene_id": "final_scene_1",
+      "status": "draft",
+      "boundary_area_m2": 128126.68311787613,
+      "effective_area_m2": 99857.71727769043,
+      "layer_summary": {
+        "upper": {
+          "effective_area_m2": 99857.71727651944,
+          "covered_area_m2": 76614.2379600191,
+          "uncovered_area_m2": 23243.479316500416,
+          "coverage_ratio": 0.7672340210608258,
+          "independent_scan_count": 31,
+          "redundant_area_m2": 8420.04137803131,
+          "redundancy_ratio": 0.09901937716856243
+        },
+        "lower": {
+          "effective_area_m2": 99857.71727651944,
+          "covered_area_m2": 95025.48684136885,
+          "uncovered_area_m2": 4832.230435150674,
+          "coverage_ratio": 0.9516088433929498,
+          "independent_scan_count": 32,
+          "redundant_area_m2": 128399.05233288115,
+          "redundancy_ratio": 0.5746864368946601
+        }
+      },
+      "maximum_completion_time_s": 1346.9453814532355,
+      "uavs": [
+        {
+          "uav_id": 1,
+          "layers": [
+            {
+              "layer_id": "upper",
+              "altitude_m": 47,
+              "reconnaissance_radius_m": 30,
+              "scan_passes": 2,
+              "unique_count": 11
+            }
+          ],
+          "time_s": 1346.9453814532355,
+          "scan_visits": 22,
+          "return_end_altitude_m": 47,
+          "upper_altitude_m": 47,
+          "final_return_segment_count": 1
+        },
+        {
+          "uav_id": 2,
+          "layers": [
+            {
+              "layer_id": "upper",
+              "altitude_m": 50,
+              "reconnaissance_radius_m": 30,
+              "scan_passes": 2,
+              "unique_count": 10
+            }
+          ],
+          "time_s": 1278.4476850926164,
+          "scan_visits": 20,
+          "return_end_altitude_m": 50,
+          "upper_altitude_m": 50,
+          "final_return_segment_count": 2
+        },
+        {
+          "uav_id": 3,
+          "layers": [
+            {
+              "layer_id": "upper",
+              "altitude_m": 53,
+              "reconnaissance_radius_m": 30,
+              "scan_passes": 2,
+              "unique_count": 10
+            }
+          ],
+          "time_s": 1263.5309562473853,
+          "scan_visits": 20,
+          "return_end_altitude_m": 53,
+          "upper_altitude_m": 53,
+          "final_return_segment_count": 1
+        },
+        {
+          "uav_id": 4,
+          "layers": [
+            {
+              "layer_id": "lower",
+              "altitude_m": 34,
+              "reconnaissance_radius_m": 50,
+              "scan_passes": 2,
+              "unique_count": 11
+            }
+          ],
+          "time_s": 1298.2842802526243,
+          "scan_visits": 22,
+          "return_end_altitude_m": 34,
+          "upper_altitude_m": null,
+          "final_return_segment_count": 1
+        },
+        {
+          "uav_id": 5,
+          "layers": [
+            {
+              "layer_id": "lower",
+              "altitude_m": 37,
+              "reconnaissance_radius_m": 50,
+              "scan_passes": 2,
+              "unique_count": 10
+            }
+          ],
+          "time_s": 1275.7252149446167,
+          "scan_visits": 20,
+          "return_end_altitude_m": 37,
+          "upper_altitude_m": null,
+          "final_return_segment_count": 2
+        },
+        {
+          "uav_id": 6,
+          "layers": [
+            {
+              "layer_id": "lower",
+              "altitude_m": 40,
+              "reconnaissance_radius_m": 50,
+              "scan_passes": 2,
+              "unique_count": 11
+            }
+          ],
+          "time_s": 1341.631511848468,
+          "scan_visits": 22,
+          "return_end_altitude_m": 40,
+          "upper_altitude_m": null,
+          "final_return_segment_count": 2
+        }
+      ],
+      "unsafe_direct_scanning_links": [
+        {
+          "uav_id": 1,
+          "layer_id": "upper",
+          "from_id": "UAV1_upper_002",
+          "to_id": "UAV1_upper_003",
+          "outer_clearance_m": 0.9589271325979122,
+          "no_fly_clearance_m": null,
+          "inside_boundary": true
+        },
+        {
+          "uav_id": 4,
+          "layer_id": "lower",
+          "from_id": "UAV4_lower_001",
+          "to_id": "UAV4_lower_002",
+          "outer_clearance_m": 0.0,
+          "no_fly_clearance_m": null,
+          "inside_boundary": false
+        }
+      ],
+      "redundant_own_region_points": [
+        {
+          "uav_id": 4,
+          "layer_id": "lower",
+          "waypoint_id": "UAV4_lower_004",
+          "unique_area_m2": 0.0,
+          "same_layer_field_unique_area_m2": 0.0,
+          "scan_time_s": 100
+        },
+        {
+          "uav_id": 4,
+          "layer_id": "lower",
+          "waypoint_id": "UAV4_lower_007",
+          "unique_area_m2": 1.8239866445865994e-14,
+          "same_layer_field_unique_area_m2": 1.6202063450808017e-15,
+          "scan_time_s": 100
+        }
+      ],
+      "new_upper_radius_strict_exclusion_conflicts_if_only_edit_radius": [
+        {
+          "uav_id": 2,
+          "waypoint_id": "UAV2_upper_010",
+          "exclusion": "new_southeast_forest",
+          "distance_m": 17.446761721228082
+        },
+        {
+          "uav_id": 3,
+          "waypoint_id": "UAV3_upper_006",
+          "exclusion": "unchanged_pond_draft",
+          "distance_m": 33.539298479740104
+        },
+        {
+          "uav_id": 3,
+          "waypoint_id": "UAV3_upper_007",
+          "exclusion": "unchanged_pond_draft",
+          "distance_m": 30.049711921900865
+        },
+        {
+          "uav_id": 3,
+          "waypoint_id": "UAV3_upper_009",
+          "exclusion": "unchanged_pond_draft",
+          "distance_m": 45.74792382986454
+        },
+        {
+          "uav_id": 3,
+          "waypoint_id": "UAV3_upper_010",
+          "exclusion": "unchanged_pond_draft",
+          "distance_m": 47.35629366743097
+        }
+      ],
+      "forest_change": {
+        "old_area_m2": 18147.405994112025,
+        "proposed_new_area_m2": 4935.39260830934,
+        "proposed_area_outside_old_m2": 1953.1269642482814,
+        "effective_area_with_new_forest_and_old_terrain_m2": 111256.32553901827,
+        "old_terrain_still_exempt_outside_new_forest_inside_old_candidate_m2": 1836.7376780724417,
+        "old_terrain_intersection_new_forest_m2": 1114.1819296258327
+      }
+    },
+    {
+      "scene_id": "final_scene_2",
+      "status": "draft",
+      "boundary_area_m2": 128126.68311787613,
+      "effective_area_m2": 99857.71727769043,
+      "layer_summary": {
+        "upper": {
+          "effective_area_m2": 99857.71727651944,
+          "covered_area_m2": 95396.24312258764,
+          "uncovered_area_m2": 4461.474153931575,
+          "coverage_ratio": 0.9553216889429048,
+          "independent_scan_count": 86,
+          "redundant_area_m2": 129862.56522325524,
+          "redundancy_ratio": 0.5765038276499959
+        },
+        "lower": {
+          "effective_area_m2": 99857.71727651944,
+          "covered_area_m2": 95530.90299078227,
+          "uncovered_area_m2": 4326.814285737379,
+          "coverage_ratio": 0.9566702063321191,
+          "independent_scan_count": 43,
+          "redundant_area_m2": 203271.54571631755,
+          "redundancy_ratio": 0.6802874159695186
+        }
+      },
+      "maximum_completion_time_s": 1337.1060976919084,
+      "uavs": [
+        {
+          "uav_id": 1,
+          "layers": [
+            {
+              "layer_id": "upper",
+              "altitude_m": 47,
+              "reconnaissance_radius_m": 30,
+              "scan_passes": 1,
+              "unique_count": 14
+            },
+            {
+              "layer_id": "lower",
+              "altitude_m": 34,
+              "reconnaissance_radius_m": 50,
+              "scan_passes": 1,
+              "unique_count": 8
+            }
+          ],
+          "time_s": 1256.6580271593145,
+          "scan_visits": 22,
+          "return_end_altitude_m": 34,
+          "upper_altitude_m": 47,
+          "final_return_segment_count": 1,
+          "missing_return_climb_m": 13,
+          "return_climb_time_at_2mps_for_sensitivity_only_s": 6.5,
+          "time_with_climb_only_at_2mps_s": 1263.1580271593145,
+          "note": "2m/s is sensitivity only, not a user-confirmed return ascent rate; route reconnect not yet added."
+        },
+        {
+          "uav_id": 2,
+          "layers": [
+            {
+              "layer_id": "upper",
+              "altitude_m": 50,
+              "reconnaissance_radius_m": 30,
+              "scan_passes": 1,
+              "unique_count": 14
+            },
+            {
+              "layer_id": "lower",
+              "altitude_m": 37,
+              "reconnaissance_radius_m": 50,
+              "scan_passes": 1,
+              "unique_count": 6
+            }
+          ],
+          "time_s": 1159.998820068429,
+          "scan_visits": 20,
+          "return_end_altitude_m": 37,
+          "upper_altitude_m": 50,
+          "final_return_segment_count": 1,
+          "missing_return_climb_m": 13,
+          "return_climb_time_at_2mps_for_sensitivity_only_s": 6.5,
+          "time_with_climb_only_at_2mps_s": 1166.498820068429,
+          "note": "2m/s is sensitivity only, not a user-confirmed return ascent rate; route reconnect not yet added."
+        },
+        {
+          "uav_id": 3,
+          "layers": [
+            {
+              "layer_id": "upper",
+              "altitude_m": 53,
+              "reconnaissance_radius_m": 30,
+              "scan_passes": 1,
+              "unique_count": 14
+            },
+            {
+              "layer_id": "lower",
+              "altitude_m": 40,
+              "reconnaissance_radius_m": 50,
+              "scan_passes": 1,
+              "unique_count": 8
+            }
+          ],
+          "time_s": 1323.1937569719119,
+          "scan_visits": 22,
+          "return_end_altitude_m": 40,
+          "upper_altitude_m": 53,
+          "final_return_segment_count": 1,
+          "missing_return_climb_m": 13,
+          "return_climb_time_at_2mps_for_sensitivity_only_s": 6.5,
+          "time_with_climb_only_at_2mps_s": 1329.6937569719119,
+          "note": "2m/s is sensitivity only, not a user-confirmed return ascent rate; route reconnect not yet added."
+        },
+        {
+          "uav_id": 4,
+          "layers": [
+            {
+              "layer_id": "upper",
+              "altitude_m": 47,
+              "reconnaissance_radius_m": 30,
+              "scan_passes": 1,
+              "unique_count": 14
+            },
+            {
+              "layer_id": "lower",
+              "altitude_m": 34,
+              "reconnaissance_radius_m": 50,
+              "scan_passes": 1,
+              "unique_count": 7
+            }
+          ],
+          "time_s": 1256.35965513058,
+          "scan_visits": 21,
+          "return_end_altitude_m": 34,
+          "upper_altitude_m": 47,
+          "final_return_segment_count": 2,
+          "missing_return_climb_m": 13,
+          "return_climb_time_at_2mps_for_sensitivity_only_s": 6.5,
+          "time_with_climb_only_at_2mps_s": 1262.85965513058,
+          "note": "2m/s is sensitivity only, not a user-confirmed return ascent rate; route reconnect not yet added."
+        },
+        {
+          "uav_id": 5,
+          "layers": [
+            {
+              "layer_id": "upper",
+              "altitude_m": 50,
+              "reconnaissance_radius_m": 30,
+              "scan_passes": 1,
+              "unique_count": 15
+            },
+            {
+              "layer_id": "lower",
+              "altitude_m": 37,
+              "reconnaissance_radius_m": 50,
+              "scan_passes": 1,
+              "unique_count": 7
+            }
+          ],
+          "time_s": 1322.6610663743961,
+          "scan_visits": 22,
+          "return_end_altitude_m": 37,
+          "upper_altitude_m": 50,
+          "final_return_segment_count": 1,
+          "missing_return_climb_m": 13,
+          "return_climb_time_at_2mps_for_sensitivity_only_s": 6.5,
+          "time_with_climb_only_at_2mps_s": 1329.1610663743961,
+          "note": "2m/s is sensitivity only, not a user-confirmed return ascent rate; route reconnect not yet added."
+        },
+        {
+          "uav_id": 6,
+          "layers": [
+            {
+              "layer_id": "upper",
+              "altitude_m": 53,
+              "reconnaissance_radius_m": 30,
+              "scan_passes": 1,
+              "unique_count": 15
+            },
+            {
+              "layer_id": "lower",
+              "altitude_m": 40,
+              "reconnaissance_radius_m": 50,
+              "scan_passes": 1,
+              "unique_count": 7
+            }
+          ],
+          "time_s": 1337.1060976919084,
+          "scan_visits": 22,
+          "return_end_altitude_m": 40,
+          "upper_altitude_m": 53,
+          "final_return_segment_count": 2,
+          "missing_return_climb_m": 13,
+          "return_climb_time_at_2mps_for_sensitivity_only_s": 6.5,
+          "time_with_climb_only_at_2mps_s": 1343.6060976919084,
+          "note": "2m/s is sensitivity only, not a user-confirmed return ascent rate; route reconnect not yet added."
+        }
+      ],
+      "unsafe_direct_scanning_links": [
+        {
+          "uav_id": 1,
+          "layer_id": "upper",
+          "from_id": "UAV1_upper_001",
+          "to_id": "UAV1_upper_002",
+          "outer_clearance_m": 0.0,
+          "no_fly_clearance_m": null,
+          "inside_boundary": false
+        },
+        {
+          "uav_id": 1,
+          "layer_id": "lower",
+          "from_id": "UAV1_lower_007",
+          "to_id": "UAV1_lower_008",
+          "outer_clearance_m": 0.0,
+          "no_fly_clearance_m": null,
+          "inside_boundary": false
+        }
+      ],
+      "redundant_own_region_points": [
+        {
+          "uav_id": 1,
+          "layer_id": "lower",
+          "waypoint_id": "UAV1_lower_003",
+          "unique_area_m2": 0.0,
+          "same_layer_field_unique_area_m2": 0.0,
+          "scan_time_s": 50
+        },
+        {
+          "uav_id": 3,
+          "layer_id": "lower",
+          "waypoint_id": "UAV3_lower_004",
+          "unique_area_m2": 0.0,
+          "same_layer_field_unique_area_m2": 0.0,
+          "scan_time_s": 50
+        },
+        {
+          "uav_id": 4,
+          "layer_id": "lower",
+          "waypoint_id": "UAV4_lower_002",
+          "unique_area_m2": 0.0,
+          "same_layer_field_unique_area_m2": 0.0,
+          "scan_time_s": 50
+        },
+        {
+          "uav_id": 4,
+          "layer_id": "lower",
+          "waypoint_id": "UAV4_lower_004",
+          "unique_area_m2": 7.970793312244821e-14,
+          "same_layer_field_unique_area_m2": 0.0,
+          "scan_time_s": 50
+        },
+        {
+          "uav_id": 5,
+          "layer_id": "upper",
+          "waypoint_id": "UAV5_upper_007",
+          "unique_area_m2": 0.0,
+          "same_layer_field_unique_area_m2": 0.0,
+          "scan_time_s": 50
+        },
+        {
+          "uav_id": 5,
+          "layer_id": "upper",
+          "waypoint_id": "UAV5_upper_011",
+          "unique_area_m2": 0.0,
+          "same_layer_field_unique_area_m2": 0.0,
+          "scan_time_s": 50
+        }
+      ],
+      "new_upper_radius_strict_exclusion_conflicts_if_only_edit_radius": [
+        {
+          "uav_id": 5,
+          "waypoint_id": "UAV5_upper_010",
+          "exclusion": "new_southeast_forest",
+          "distance_m": 46.15606661675283
+        },
+        {
+          "uav_id": 5,
+          "waypoint_id": "UAV5_upper_011",
+          "exclusion": "new_southeast_forest",
+          "distance_m": 29.92560059455645
+        },
+        {
+          "uav_id": 5,
+          "waypoint_id": "UAV5_upper_012",
+          "exclusion": "new_southeast_forest",
+          "distance_m": 32.963774100288816
+        },
+        {
+          "uav_id": 5,
+          "waypoint_id": "UAV5_upper_013",
+          "exclusion": "new_southeast_forest",
+          "distance_m": 17.161219769994474
+        },
+        {
+          "uav_id": 5,
+          "waypoint_id": "UAV5_upper_014",
+          "exclusion": "new_southeast_forest",
+          "distance_m": 4.389283753887084
+        },
+        {
+          "uav_id": 5,
+          "waypoint_id": "UAV5_upper_015",
+          "exclusion": "new_southeast_forest",
+          "distance_m": 0.0
+        },
+        {
+          "uav_id": 6,
+          "waypoint_id": "UAV6_upper_001",
+          "exclusion": "unchanged_pond_draft",
+          "distance_m": 30.050001405452964
+        },
+        {
+          "uav_id": 6,
+          "waypoint_id": "UAV6_upper_002",
+          "exclusion": "unchanged_pond_draft",
+          "distance_m": 30.050001406954735
+        },
+        {
+          "uav_id": 6,
+          "waypoint_id": "UAV6_upper_003",
+          "exclusion": "unchanged_pond_draft",
+          "distance_m": 30.050001408456538
+        },
+        {
+          "uav_id": 6,
+          "waypoint_id": "UAV6_upper_004",
+          "exclusion": "unchanged_pond_draft",
+          "distance_m": 30.050001399082767
+        },
+        {
+          "uav_id": 6,
+          "waypoint_id": "UAV6_upper_005",
+          "exclusion": "unchanged_pond_draft",
+          "distance_m": 30.8884373463376
+        },
+        {
+          "uav_id": 6,
+          "waypoint_id": "UAV6_upper_006",
+          "exclusion": "unchanged_pond_draft",
+          "distance_m": 30.049512588345937
+        },
+        {
+          "uav_id": 6,
+          "waypoint_id": "UAV6_upper_009",
+          "exclusion": "unchanged_pond_draft",
+          "distance_m": 47.585076322207684
+        },
+        {
+          "uav_id": 6,
+          "waypoint_id": "UAV6_upper_010",
+          "exclusion": "unchanged_pond_draft",
+          "distance_m": 35.78700116817312
+        },
+        {
+          "uav_id": 6,
+          "waypoint_id": "UAV6_upper_011",
+          "exclusion": "unchanged_pond_draft",
+          "distance_m": 36.41985509908617
+        },
+        {
+          "uav_id": 6,
+          "waypoint_id": "UAV6_upper_012",
+          "exclusion": "unchanged_pond_draft",
+          "distance_m": 46.4149307525292
+        },
+        {
+          "uav_id": 6,
+          "waypoint_id": "UAV6_upper_013",
+          "exclusion": "unchanged_pond_draft",
+          "distance_m": 37.36121801398793
+        },
+        {
+          "uav_id": 6,
+          "waypoint_id": "UAV6_upper_014",
+          "exclusion": "unchanged_pond_draft",
+          "distance_m": 31.497822134249972
+        }
+      ],
+      "forest_change": {
+        "old_area_m2": 18147.405994112025,
+        "proposed_new_area_m2": 4935.39260830934,
+        "proposed_area_outside_old_m2": 1953.1269642482814,
+        "effective_area_with_new_forest_and_old_terrain_m2": 111256.32553901827,
+        "old_terrain_still_exempt_outside_new_forest_inside_old_candidate_m2": 1836.7376780724417,
+        "old_terrain_intersection_new_forest_m2": 1114.1819296258327
+      }
+    },
+    {
+      "scene_id": "xuchang_small_2",
+      "status": "validated",
+      "boundary_area_m2": 175974.47297205412,
+      "effective_area_m2": 164688.90038518354,
+      "layer_summary": {
+        "upper": {
+          "effective_area_m2": 164688.90038310815,
+          "covered_area_m2": 112009.0749374819,
+          "uncovered_area_m2": 52679.8254456268,
+          "coverage_ratio": 0.6801252220211585,
+          "independent_scan_count": 70,
+          "redundant_area_m2": 76454.20366482853,
+          "redundancy_ratio": 0.4056716206564564
+        },
+        "lower": {
+          "effective_area_m2": 164688.90038310815,
+          "covered_area_m2": 143229.15105253368,
+          "uncovered_area_m2": 21459.749330574377,
+          "coverage_ratio": 0.8696952297291825,
+          "independent_scan_count": 35,
+          "redundant_area_m2": 111452.24040494839,
+          "redundancy_ratio": 0.4376143846518714
+        }
+      },
+      "maximum_completion_time_s": 1330.0254189847394,
+      "uavs": [
+        {
+          "uav_id": 1,
+          "layers": [
+            {
+              "layer_id": "upper",
+              "altitude_m": 47,
+              "reconnaissance_radius_m": 30,
+              "scan_passes": 1,
+              "unique_count": 11
+            },
+            {
+              "layer_id": "lower",
+              "altitude_m": 34,
+              "reconnaissance_radius_m": 50,
+              "scan_passes": 1,
+              "unique_count": 6
+            }
+          ],
+          "time_s": 962.8755308806409,
+          "scan_visits": 17,
+          "return_end_altitude_m": 34,
+          "upper_altitude_m": 47,
+          "final_return_segment_count": 1,
+          "missing_return_climb_m": 13,
+          "return_climb_time_at_2mps_for_sensitivity_only_s": 6.5,
+          "time_with_climb_only_at_2mps_s": 969.3755308806409,
+          "note": "2m/s is sensitivity only, not a user-confirmed return ascent rate; route reconnect not yet added."
+        },
+        {
+          "uav_id": 2,
+          "layers": [
+            {
+              "layer_id": "upper",
+              "altitude_m": 50,
+              "reconnaissance_radius_m": 30,
+              "scan_passes": 1,
+              "unique_count": 11
+            },
+            {
+              "layer_id": "lower",
+              "altitude_m": 37,
+              "reconnaissance_radius_m": 50,
+              "scan_passes": 1,
+              "unique_count": 4
+            }
+          ],
+          "time_s": 965.8694311009749,
+          "scan_visits": 15,
+          "return_end_altitude_m": 37,
+          "upper_altitude_m": 50,
+          "final_return_segment_count": 4,
+          "missing_return_climb_m": 13,
+          "return_climb_time_at_2mps_for_sensitivity_only_s": 6.5,
+          "time_with_climb_only_at_2mps_s": 972.3694311009749,
+          "note": "2m/s is sensitivity only, not a user-confirmed return ascent rate; route reconnect not yet added."
+        },
+        {
+          "uav_id": 3,
+          "layers": [
+            {
+              "layer_id": "upper",
+              "altitude_m": 53,
+              "reconnaissance_radius_m": 30,
+              "scan_passes": 1,
+              "unique_count": 14
+            },
+            {
+              "layer_id": "lower",
+              "altitude_m": 40,
+              "reconnaissance_radius_m": 50,
+              "scan_passes": 1,
+              "unique_count": 7
+            }
+          ],
+          "time_s": 1307.7426880608996,
+          "scan_visits": 21,
+          "return_end_altitude_m": 40,
+          "upper_altitude_m": 53,
+          "final_return_segment_count": 4,
+          "missing_return_climb_m": 13,
+          "return_climb_time_at_2mps_for_sensitivity_only_s": 6.5,
+          "time_with_climb_only_at_2mps_s": 1314.2426880608996,
+          "note": "2m/s is sensitivity only, not a user-confirmed return ascent rate; route reconnect not yet added."
+        },
+        {
+          "uav_id": 4,
+          "layers": [
+            {
+              "layer_id": "upper",
+              "altitude_m": 47,
+              "reconnaissance_radius_m": 30,
+              "scan_passes": 1,
+              "unique_count": 15
+            },
+            {
+              "layer_id": "lower",
+              "altitude_m": 34,
+              "reconnaissance_radius_m": 50,
+              "scan_passes": 1,
+              "unique_count": 7
+            }
+          ],
+          "time_s": 1330.0254189847394,
+          "scan_visits": 22,
+          "return_end_altitude_m": 34,
+          "upper_altitude_m": 47,
+          "final_return_segment_count": 2,
+          "missing_return_climb_m": 13,
+          "return_climb_time_at_2mps_for_sensitivity_only_s": 6.5,
+          "time_with_climb_only_at_2mps_s": 1336.5254189847394,
+          "note": "2m/s is sensitivity only, not a user-confirmed return ascent rate; route reconnect not yet added."
+        },
+        {
+          "uav_id": 5,
+          "layers": [
+            {
+              "layer_id": "upper",
+              "altitude_m": 50,
+              "reconnaissance_radius_m": 30,
+              "scan_passes": 1,
+              "unique_count": 10
+            },
+            {
+              "layer_id": "lower",
+              "altitude_m": 37,
+              "reconnaissance_radius_m": 50,
+              "scan_passes": 1,
+              "unique_count": 8
+            }
+          ],
+          "time_s": 1327.1248185620834,
+          "scan_visits": 18,
+          "return_end_altitude_m": 37,
+          "upper_altitude_m": 50,
+          "final_return_segment_count": 4,
+          "missing_return_climb_m": 13,
+          "return_climb_time_at_2mps_for_sensitivity_only_s": 6.5,
+          "time_with_climb_only_at_2mps_s": 1333.6248185620834,
+          "note": "2m/s is sensitivity only, not a user-confirmed return ascent rate; route reconnect not yet added."
+        },
+        {
+          "uav_id": 6,
+          "layers": [
+            {
+              "layer_id": "upper",
+              "altitude_m": 53,
+              "reconnaissance_radius_m": 30,
+              "scan_passes": 1,
+              "unique_count": 9
+            },
+            {
+              "layer_id": "lower",
+              "altitude_m": 40,
+              "reconnaissance_radius_m": 50,
+              "scan_passes": 1,
+              "unique_count": 3
+            }
+          ],
+          "time_s": 703.566003694596,
+          "scan_visits": 12,
+          "return_end_altitude_m": 40,
+          "upper_altitude_m": 53,
+          "final_return_segment_count": 2,
+          "missing_return_climb_m": 13,
+          "return_climb_time_at_2mps_for_sensitivity_only_s": 6.5,
+          "time_with_climb_only_at_2mps_s": 710.066003694596,
+          "note": "2m/s is sensitivity only, not a user-confirmed return ascent rate; route reconnect not yet added."
+        }
+      ],
+      "unsafe_direct_scanning_links": [
+        {
+          "uav_id": 2,
+          "layer_id": "lower",
+          "from_id": "UAV2_lower_001",
+          "to_id": "UAV2_lower_002",
+          "outer_clearance_m": 93.1413072341356,
+          "no_fly_clearance_m": 2.664657050740064,
+          "inside_boundary": true
+        }
+      ],
+      "redundant_own_region_points": [
+        {
+          "uav_id": 1,
+          "layer_id": "upper",
+          "waypoint_id": "UAV1_upper_010",
+          "unique_area_m2": 0.0,
+          "same_layer_field_unique_area_m2": 1.210123718799459e-13,
+          "scan_time_s": 50
+        },
+        {
+          "uav_id": 1,
+          "layer_id": "lower",
+          "waypoint_id": "UAV1_lower_003",
+          "unique_area_m2": 0.0,
+          "same_layer_field_unique_area_m2": 0.0,
+          "scan_time_s": 50
+        },
+        {
+          "uav_id": 2,
+          "layer_id": "upper",
+          "waypoint_id": "UAV2_upper_004",
+          "unique_area_m2": 0.0,
+          "same_layer_field_unique_area_m2": 0.0,
+          "scan_time_s": 50
+        },
+        {
+          "uav_id": 3,
+          "layer_id": "lower",
+          "waypoint_id": "UAV3_lower_002",
+          "unique_area_m2": 5.728750807065808e-14,
+          "same_layer_field_unique_area_m2": 0.0,
+          "scan_time_s": 50
+        }
+      ],
+      "new_upper_radius_strict_exclusion_conflicts_if_only_edit_radius": []
+    }
+  ]
+}

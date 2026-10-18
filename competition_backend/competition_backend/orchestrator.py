@@ -12,6 +12,8 @@ from competition_shared.recognition import optional_recognition_selection
 from competition_shared.competition_time import normalize_competition_time
 from .adapter import FleetAdapter
 from .assignment_protocol import assignment_checksum
+from .config import ASCENDING_34M_HEIGHTS
+from .final_scenes import PROFILES as FINAL_PROFILES, HEIGHT_PROFILES, altitude_profile
 from .plan_jobs import plan_checkpoint
 from .journal import EventJournal
 from .return_receipts import ReturnReceiptTracker
@@ -42,7 +44,12 @@ def _altitude_profile_for(flight_profile: str, flight_altitude_plan: str) -> str
     """Resolve the selected scene and altitude scheme to a config profile."""
     scene = str(flight_profile or "lab").strip().lower()
     altitude_plan = str(flight_altitude_plan or "default").strip().lower()
-    if altitude_plan not in ("default", "around1m", "around2m", "around5m", "around10m", "around45m", "around54m", "subject2_50m"):
+    if scene in FINAL_PROFILES:
+        expected = altitude_profile(scene)
+        if altitude_plan not in ('default', expected):
+            raise MissionError('本固定场景必须使用其配套高度方案')
+        return expected
+    if altitude_plan not in ("default", "around1m", "around2m", "around5m", "around10m", "around45m", "around54m", "ascending34m", "subject2_50m"):
         raise MissionError("unknown flight altitude plan: %s" % altitude_plan)
     if altitude_plan == "around1m":
         return "lab"
@@ -54,7 +61,7 @@ def _altitude_profile_for(flight_profile: str, flight_altitude_plan: str) -> str
         return "around10m"
     if altitude_plan == "around45m":
         return "competition"
-    if altitude_plan in ("around54m", "subject2_50m"):
+    if altitude_plan in ("around54m", "ascending34m", "subject2_50m"):
         return altitude_plan
     if scene == "subject2_actual":
         return "around54m"
@@ -168,6 +175,13 @@ class CompetitionOrchestrator:
             input_gps_origin = None
             selected_altitudes = self.config.takeoff_altitudes_m
             profiles = template.get("takeoff_altitudes_m_by_profile", {})
+            if str(flight_altitude_plan).strip().lower() == 'ascending34m':
+                # 旧部署配置也能直接选用新增方案，无需改写用户配置文件。
+                profiles = dict(profiles, ascending34m=ASCENDING_34M_HEIGHTS)
+            if flight_profile in FINAL_PROFILES:
+                if subject != 'subject2' or controller_mode != 'external' or prepared_plan is None:
+                    raise MissionError('决赛固定场景仅支持科目二、外部程序 B 和已保存的固定规划')
+                profiles = dict(profiles, **HEIGHT_PROFILES)
             if profiles:
                 altitude_profile = _altitude_profile_for(flight_profile, flight_altitude_plan)
                 if altitude_profile not in profiles:
@@ -322,13 +336,16 @@ class CompetitionOrchestrator:
                 }
             if set(task_source) != set(self.config.uav_ids):
                 raise MissionError("tasks_by_uav must contain exactly UAV IDs 1 through 6")
-            duration = float(
-                duration_seconds
-                if duration_seconds is not None
-                else template["duration_seconds"]
-            )
-            if duration <= 0.0:
-                raise MissionError("duration_seconds must be positive")
+            # 用户于 2026-10-18 明确确认：这些科目一/二飞行场景同时取消
+            # 到时自动返航；完成任务、低电量、手动返航仍沿用原流程。
+            # 范围限于现有固定/缩放场景及新增三个场景，不改变科目三。
+            from .transit_routes import ALL_PROFILES as SCENE_PROFILES
+            if subject in ('subject1', 'subject2') and flight_profile in SCENE_PROFILES:
+                duration = 0.0
+            else:
+                duration = float(duration_seconds if duration_seconds is not None else template['duration_seconds'])
+                if not math.isfinite(duration) or duration <= 0:
+                    raise MissionError('duration_seconds must be positive')
             controller_mode = str(controller_mode or "internal").strip().lower()
             if controller_mode not in ("internal", "external"):
                 raise MissionError("controller_mode must be internal or external")
@@ -437,19 +454,42 @@ class CompetitionOrchestrator:
                 uav_id: planned_uavs[uav_id] for uav_id in self.active_uav_ids
             }
             actual_routes = {}
-            if flight_profile in ("subject1_actual", "subject2_actual", "xuchang_small"):
-                from .transit_routes import rebase_gps_routes_for_takeoff
+            if prepared_plan and coordinate_mode == 'gps' and flight_profile in SCENE_PROFILES:
+                from .transit_routes import rebase_gps_routes_for_takeoff, BOOT_HOME_PROFILES
                 homes = (area or {}).get("takeoff_gps_by_uav") or {}
-                if self.live_mode and any(str(uid) not in homes for uid in uavs):
+                if self.live_mode and flight_profile in BOOT_HOME_PROFILES and any(str(uid) not in homes for uid in uavs):
                     raise MissionError("本场景缺少参与机本次开机起降点，不能下发任务")
-                # 任一飞机路线有冲突时，整次分派在发送前失败，避免只有部分飞机收到任务。
+                # 发送前检查全部基础几何；进场交叉和起降点间距仅为软偏好。
                 for uid, runtime in uavs.items():
                     if str(uid) in homes:
                         plan_checkpoint("校验 UAV{} 实际起降点与避让航线".format(uid))
                         actual_routes[uid] = rebase_gps_routes_for_takeoff(area, runtime.task, homes[str(uid)])
-            if flight_profile == "subject2_actual":
-                from .subject2_actual_scene import finalize_dispatch
-                finalize_dispatch(area, planned_uavs, actual_routes)
+            if prepared_plan and area:
+                from .transit_preferences import finalize_entries, update_subject2_timing
+                finalize_entries(area, planned_uavs, actual_routes)
+                if flight_profile == 'subject2_actual':
+                    from .subject2_actual_scene import local_point, update_summary
+                    projection = area['coverage']['projection']
+                    for uid, runtime in planned_uavs.items():
+                        routes = runtime.task['transit_routes']
+                        entry = [local_point(projection, p[1], p[0]) for p in routes['entry_path']]
+                        returning = next(r['path'] for r in routes['return_paths']
+                                         if r['source_uav_id'] == uid and r['waypoint_index'] == 1)
+                        update_subject2_timing(runtime.task, entry,
+                            [local_point(projection, p[1], p[0]) for p in returning], runtime.target_altitude_m)
+                    update_summary(area, {uid:r.task for uid,r in planned_uavs.items()})
+            # 双层规划仍通过原 assign_task / SHA-256 / 回执链路传输。
+            # 在发送第一架之前检查全队，避免某架的下层数据损坏造成部分分派。
+            from competition_shared.mission_layers import validate_layer_fleet
+            try:
+                validate_layer_fleet({uid: {
+                    "subject": subject, "controller_mode": controller_mode,
+                    "target_altitude_m": runtime.target_altitude_m,
+                    "coordinate_frame": "WGS84" if (external_uses_gps or (prepared_plan and coordinate_mode == "gps")) else "ENU",
+                    "task": dict(runtime.task, transit_routes=actual_routes.get(uid, runtime.task.get("transit_routes"))),
+                } for uid, runtime in planned_uavs.items()})
+            except (ValueError, TypeError, KeyError, IndexError) as error:
+                raise MissionError("双层任务校验失败：{}".format(error)) from error
             plan_checkpoint("保存本次规划")
             self._mission = MissionRuntime(
                 mission_id=mission_id,
@@ -752,7 +792,8 @@ class CompetitionOrchestrator:
 
             self._mission.phase = MissionPhase.TAKING_OFF
             self._mission.started_at = now
-            self._mission.deadline_at = now + self._mission.duration_seconds
+            self._mission.deadline_at = (now + self._mission.duration_seconds
+                                         if self._mission.duration_seconds > 0 else None)
             self._mission.takeoff_commanded_at = now
             for uav_id, runtime in self._mission.uavs.items():
                 runtime.phase = UavPhase.TAKEOFF_COMMANDED

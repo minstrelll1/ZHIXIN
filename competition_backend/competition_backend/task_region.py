@@ -13,7 +13,7 @@ def build_task_region(task, area, uav_id):
             return None
         polygon = [[bounds["x_min"], bounds["y_min"]], [bounds["x_max"], bounds["y_min"]],
                    [bounds["x_max"], bounds["y_max"]], [bounds["x_min"], bounds["y_max"]]]
-    geometry = Polygon(polygon)
+    geometry = Polygon(polygon, holes=task.get('polygon_holes_m') or [])
     exclusions = (area or {}).get("excluded_polygons_m") or []
     if exclusions:
         geometry = geometry.difference(unary_union([Polygon(ring) for ring in exclusions]))

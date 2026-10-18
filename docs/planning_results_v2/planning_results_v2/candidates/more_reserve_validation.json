@@ -1,0 +1,1247 @@
+{
+  "validator_version": "2.0.0",
+  "independent_of_planner": true,
+  "csv_geojson_exports_validated": false,
+  "result_sha256": "f832b44cac3ae136969431557855f4b43c772058a2fbab0613e2331cf5143dc8",
+  "source_inputs_sha256": "79b40ab264f8973822be5173eb4feea087c8d55edde6052aa2c6a4b002f4fdc3",
+  "schema_sha256": "25b022cba3c538ba2695e8416d6f0a5edbe0900bdf3c0a4d57627d5b39ab0cda",
+  "revision_requirements_sha256": "36e6acf4a60b3bb002d989d0db85d634f5838d1f12acb8f9748ea7e3f3d3ca12",
+  "compatibility_scope": "Actual scan-array direct segments and nominal return climb verified; catalog and topic mapping require their separate offline validator; no runtime integration or flight test.",
+  "passed": true,
+  "flight_ready": false,
+  "meaning_of_passed": "Offline stored-candidate geometry, semantics, exports and nominal timing only; never flight approval.",
+  "tolerances": {
+    "coordinate_m": 0.0001,
+    "area_m2": 0.01,
+    "time_s": 0.1,
+    "ratio": 1e-07,
+    "flight_clearance_numeric_epsilon_m": 1e-07,
+    "circle_quad_segs": 128,
+    "hard_time_budget_tolerance_s": 0,
+    "strong_scan_check": "Exact point-to-polygon distance >= radius + 0.000001 m"
+  },
+  "checks_by_category": {
+    "schema": 1,
+    "provenance": 5,
+    "revision_input": 20,
+    "return_climb_assumption": 4,
+    "coverage": 298,
+    "provisional_status": 16,
+    "semantics": 623,
+    "projection": 3,
+    "geometry": 592,
+    "fixed_home": 63,
+    "coordinate_conversion": 873,
+    "exclusion": 27,
+    "forest_replacement": 50,
+    "waypoints": 1617,
+    "execution": 4001,
+    "waypoint_legality": 544,
+    "strong_scan_exclusion": 344,
+    "b_proposal": 216,
+    "actual_array_direct_links": 309,
+    "continuity": 1476,
+    "time": 1719,
+    "distance": 1476,
+    "flight_clearance": 984,
+    "return_climb": 166,
+    "scan_array_realization": 600,
+    "time_budget": 18,
+    "redundant_scan_points": 272,
+    "partition": 37,
+    "return_route_connection": 12,
+    "layer_transition": 160,
+    "legacy_corridors": 15
+  },
+  "total_checks": 16541,
+  "failure_count": 0,
+  "failures": [],
+  "warnings": [
+    {
+      "kind": "candidate_json_only",
+      "note": "CSV/GeoJSON export consistency was explicitly skipped for this standalone candidate; JSON geometry, semantics and nominal timing were checked."
+    },
+    {
+      "kind": "offline_scope_only",
+      "note": "Checks apply only to stored candidate boundaries and nominal parameters. Actual exclusion boundaries, real aircraft homes, wind/acceleration/tracking delays, descent/return-ascent performance, simultaneous multi-aircraft separation and executable program adapters are not flight-validated."
+    }
+  ],
+  "scenes": {
+    "final_scene_1": {
+      "status": "draft",
+      "scope": "offline_nominal_parameters_only",
+      "boundary_area_m2": 128126.68311787613,
+      "effective_area_m2": 111256.32553901827,
+      "layers": {
+        "upper": {
+          "effective_area_m2": 111256.32553901827,
+          "covered_area_m2": 106671.80099428196,
+          "uncovered_area_m2": 4584.524544736469,
+          "coverage_ratio": 0.9587931335811689,
+          "independent_scan_count": 27,
+          "redundant_area_m2": 78602.84849991852,
+          "redundancy_ratio": 0.42425042343625624
+        },
+        "lower": {
+          "effective_area_m2": 111256.32553901827,
+          "covered_area_m2": 75126.749016484,
+          "uncovered_area_m2": 36129.57652253403,
+          "coverage_ratio": 0.6752582260155319,
+          "independent_scan_count": 28,
+          "redundant_area_m2": 2280.7106718946743,
+          "redundancy_ratio": 0.02946370648353781
+        }
+      },
+      "both_layers_coverage_ratio": 0.6684033421835887,
+      "either_layer_coverage_ratio": 0.9656480174131111,
+      "partition_checks": {
+        "upper": {
+          "overlap_area_m2": 0.0,
+          "gap_area_m2": 4.6353693505807314e-07,
+          "outside_area_m2": 7.945172939116674e-06
+        },
+        "lower": {
+          "overlap_area_m2": 0.0,
+          "gap_area_m2": 4.6353693505807314e-07,
+          "outside_area_m2": 7.945172939116674e-06
+        }
+      },
+      "maximum_completion_time_s": 1216.376360414633,
+      "total_aircraft_time_s": 7030.396240754416,
+      "uavs": [
+        {
+          "uav_id": 1,
+          "mission_time_s": 1132.502325276549,
+          "remaining_s": 247.49767472345093,
+          "within_limit": true,
+          "phase_times_s": {
+            "takeoff": 7.833333333333333,
+            "entry": 2.3730336122179883,
+            "scan": 900.0,
+            "scan_transit": 219.92292471877983,
+            "return": 2.3730336122179883,
+            "layer_transition": 0.0
+          },
+          "horizontal_distances_m": {
+            "takeoff": 0.0,
+            "entry": 11.86516806108994,
+            "scan": 0.0,
+            "scan_transit": 1099.614623593899,
+            "return": 11.86516806108994
+          },
+          "scan_visits": 18,
+          "minimum_outer_clearance_m": 5.030000172925501,
+          "minimum_no_fly_clearance_m": null,
+          "scan_transit_outside_own_region_m": 0.0,
+          "return_climb_s": 0,
+          "return_climb_sensitivity": {
+            "1": 1132.502325276549,
+            "2": 1132.502325276549,
+            "3": 1132.502325276549
+          },
+          "actual_transmitted_array_direct_links": {
+            "direct_links_checked": 17,
+            "minimum_outer_clearance_m": 5.030000173341398,
+            "minimum_no_fly_clearance_m": null,
+            "all_scan_links_in_own_region": true,
+            "source": "external_program_b_proposal arrays, independent of segments"
+          },
+          "layers": {
+            "upper": {
+              "effective_area_m2": 40414.79661012471,
+              "covered_area_m2": 38361.72267137335,
+              "uncovered_area_m2": 2053.0739387514227,
+              "coverage_ratio": 0.9491999438087726,
+              "independent_scan_count": 9,
+              "redundant_area_m2": 17488.63410939912,
+              "redundancy_ratio": 0.3131337938994136
+            }
+          }
+        },
+        {
+          "uav_id": 2,
+          "mission_time_s": 1173.3968787428923,
+          "remaining_s": 206.60312125710766,
+          "within_limit": true,
+          "phase_times_s": {
+            "takeoff": 8.333333333333334,
+            "entry": 37.99330314495744,
+            "scan": 900.0,
+            "scan_transit": 189.07693911964398,
+            "return": 37.99330314495744,
+            "layer_transition": 0.0
+          },
+          "horizontal_distances_m": {
+            "takeoff": 0.0,
+            "entry": 189.96651572478717,
+            "scan": 0.0,
+            "scan_transit": 945.3846955982198,
+            "return": 189.96651572478717
+          },
+          "scan_visits": 18,
+          "minimum_outer_clearance_m": 5.030013004729256,
+          "minimum_no_fly_clearance_m": null,
+          "scan_transit_outside_own_region_m": 0.0,
+          "return_climb_s": 0,
+          "return_climb_sensitivity": {
+            "1": 1173.3968787428923,
+            "2": 1173.3968787428923,
+            "3": 1173.3968787428923
+          },
+          "actual_transmitted_array_direct_links": {
+            "direct_links_checked": 17,
+            "minimum_outer_clearance_m": 5.030013004997387,
+            "minimum_no_fly_clearance_m": null,
+            "all_scan_links_in_own_region": true,
+            "source": "external_program_b_proposal arrays, independent of segments"
+          },
+          "layers": {
+            "upper": {
+              "effective_area_m2": 33037.71917077543,
+              "covered_area_m2": 32468.51821880899,
+              "uncovered_area_m2": 569.2009519664443,
+              "coverage_ratio": 0.9827711789356831,
+              "independent_scan_count": 9,
+              "redundant_area_m2": 19654.695749901148,
+              "redundancy_ratio": 0.3770814240599203
+            }
+          }
+        },
+        {
+          "uav_id": 3,
+          "mission_time_s": 1144.737534584057,
+          "remaining_s": 235.2624654159431,
+          "within_limit": true,
+          "phase_times_s": {
+            "takeoff": 8.833333333333334,
+            "entry": 36.9830919102503,
+            "scan": 900.0,
+            "scan_transit": 161.9380174302229,
+            "return": 36.9830919102503,
+            "layer_transition": 0.0
+          },
+          "horizontal_distances_m": {
+            "takeoff": 0.0,
+            "entry": 184.9154595512515,
+            "scan": 0.0,
+            "scan_transit": 809.6900871511145,
+            "return": 184.9154595512515
+          },
+          "scan_visits": 18,
+          "minimum_outer_clearance_m": 11.481553457055288,
+          "minimum_no_fly_clearance_m": null,
+          "scan_transit_outside_own_region_m": 0.0,
+          "return_climb_s": 0,
+          "return_climb_sensitivity": {
+            "1": 1144.737534584057,
+            "2": 1144.737534584057,
+            "3": 1144.737534584057
+          },
+          "actual_transmitted_array_direct_links": {
+            "direct_links_checked": 17,
+            "minimum_outer_clearance_m": 15.383413667777939,
+            "minimum_no_fly_clearance_m": null,
+            "all_scan_links_in_own_region": true,
+            "source": "external_program_b_proposal arrays, independent of segments"
+          },
+          "layers": {
+            "upper": {
+              "effective_area_m2": 37803.80975804465,
+              "covered_area_m2": 34856.68107637267,
+              "uncovered_area_m2": 2947.1286816719826,
+              "coverage_ratio": 0.9220414899838281,
+              "independent_scan_count": 9,
+              "redundant_area_m2": 27439.985705995918,
+              "redundancy_ratio": 0.44047277524264067
+            }
+          }
+        },
+        {
+          "uav_id": 4,
+          "mission_time_s": 1216.376360414633,
+          "remaining_s": 163.62363958536707,
+          "within_limit": true,
+          "phase_times_s": {
+            "takeoff": 5.666666666666667,
+            "entry": 0.4947076044118207,
+            "scan": 1000.0,
+            "scan_transit": 209.72027853914267,
+            "return": 0.4947076044118207,
+            "layer_transition": 0.0
+          },
+          "horizontal_distances_m": {
+            "takeoff": 0.0,
+            "entry": 2.4735380220591034,
+            "scan": 0.0,
+            "scan_transit": 1048.6013926957132,
+            "return": 2.4735380220591034
+          },
+          "scan_visits": 20,
+          "minimum_outer_clearance_m": 19.558882375709075,
+          "minimum_no_fly_clearance_m": null,
+          "scan_transit_outside_own_region_m": 0.0,
+          "return_climb_s": 0,
+          "return_climb_sensitivity": {
+            "1": 1216.376360414633,
+            "2": 1216.376360414633,
+            "3": 1216.376360414633
+          },
+          "actual_transmitted_array_direct_links": {
+            "direct_links_checked": 19,
+            "minimum_outer_clearance_m": 19.55888237553834,
+            "minimum_no_fly_clearance_m": null,
+            "all_scan_links_in_own_region": true,
+            "source": "external_program_b_proposal arrays, independent of segments"
+          },
+          "layers": {
+            "lower": {
+              "effective_area_m2": 40414.79661012471,
+              "covered_area_m2": 27071.041087508416,
+              "uncovered_area_m2": 13343.755522616295,
+              "coverage_ratio": 0.6698299473991807,
+              "independent_scan_count": 10,
+              "redundant_area_m2": 418.01866363922454,
+              "redundancy_ratio": 0.015206728328413367
+            }
+          }
+        },
+        {
+          "uav_id": 5,
+          "mission_time_s": 1197.632061242397,
+          "remaining_s": 182.36793875760304,
+          "within_limit": true,
+          "phase_times_s": {
+            "takeoff": 6.166666666666667,
+            "entry": 35.75058784067444,
+            "scan": 900.0,
+            "scan_transit": 219.9642188943814,
+            "return": 35.75058784067444,
+            "layer_transition": 0.0
+          },
+          "horizontal_distances_m": {
+            "takeoff": 0.0,
+            "entry": 178.7529392033722,
+            "scan": 0.0,
+            "scan_transit": 1099.821094471907,
+            "return": 178.7529392033722
+          },
+          "scan_visits": 18,
+          "minimum_outer_clearance_m": 21.640519387206933,
+          "minimum_no_fly_clearance_m": null,
+          "scan_transit_outside_own_region_m": 0.0,
+          "return_climb_s": 0,
+          "return_climb_sensitivity": {
+            "1": 1197.632061242397,
+            "2": 1197.632061242397,
+            "3": 1197.632061242397
+          },
+          "actual_transmitted_array_direct_links": {
+            "direct_links_checked": 17,
+            "minimum_outer_clearance_m": 23.84636079650363,
+            "minimum_no_fly_clearance_m": null,
+            "all_scan_links_in_own_region": true,
+            "source": "external_program_b_proposal arrays, independent of segments"
+          },
+          "layers": {
+            "lower": {
+              "effective_area_m2": 33037.71917077543,
+              "covered_area_m2": 23490.252579214593,
+              "uncovered_area_m2": 9547.466591560864,
+              "coverage_ratio": 0.7110131440306462,
+              "independent_scan_count": 9,
+              "redundant_area_m2": 1025.7623078524848,
+              "redundancy_ratio": 0.04184049946851699
+            }
+          }
+        },
+        {
+          "uav_id": 6,
+          "mission_time_s": 1165.7510804938872,
+          "remaining_s": 214.24891950611277,
+          "within_limit": true,
+          "phase_times_s": {
+            "takeoff": 6.666666666666667,
+            "entry": 36.4820876877679,
+            "scan": 900.0,
+            "scan_transit": 186.12023845168466,
+            "return": 36.4820876877679,
+            "layer_transition": 0.0
+          },
+          "horizontal_distances_m": {
+            "takeoff": 0.0,
+            "entry": 182.41043843883952,
+            "scan": 0.0,
+            "scan_transit": 930.6011922584233,
+            "return": 182.41043843883952
+          },
+          "scan_visits": 18,
+          "minimum_outer_clearance_m": 13.422926297495572,
+          "minimum_no_fly_clearance_m": null,
+          "scan_transit_outside_own_region_m": 0.0,
+          "return_climb_s": 0,
+          "return_climb_sensitivity": {
+            "1": 1165.7510804938872,
+            "2": 1165.7510804938872,
+            "3": 1165.7510804938872
+          },
+          "actual_transmitted_array_direct_links": {
+            "direct_links_checked": 17,
+            "minimum_outer_clearance_m": 25.842019701050305,
+            "minimum_no_fly_clearance_m": null,
+            "all_scan_links_in_own_region": true,
+            "source": "external_program_b_proposal arrays, independent of segments"
+          },
+          "layers": {
+            "lower": {
+              "effective_area_m2": 37803.80975804465,
+              "covered_area_m2": 24152.291929855375,
+              "uncovered_area_m2": 13651.517828189279,
+              "coverage_ratio": 0.6388851304785695,
+              "independent_scan_count": 9,
+              "redundant_area_m2": 836.9297004029213,
+              "redundancy_ratio": 0.03349162742186102
+            }
+          }
+        }
+      ],
+      "pending_confirmations": [
+        "返航回升2m/s尚非用户确认，需实机核对",
+        "每机本次开机实测起降GPS与相对高度基准",
+        "暂定高度、下降2m/s和未建模实飞耗时",
+        "时空防撞、通信/控制器动态、风与目标跟踪未验证",
+        "池塘草案边界及新树林Q南/Q东推导连接待确认",
+        "最新森林/水体边界测绘；2017影像与2021分类不证明现状",
+        "是否允许进返场越出外边界尚待确认；本方案保守保持内部"
+      ]
+    },
+    "final_scene_2": {
+      "status": "draft",
+      "scope": "offline_nominal_parameters_only",
+      "boundary_area_m2": 128126.68311787613,
+      "effective_area_m2": 111256.32553901827,
+      "layers": {
+        "upper": {
+          "effective_area_m2": 111256.32553901827,
+          "covered_area_m2": 107702.70500816467,
+          "uncovered_area_m2": 3553.6205308535255,
+          "coverage_ratio": 0.9680591596600292,
+          "independent_scan_count": 34,
+          "redundant_area_m2": 127385.18099454152,
+          "redundancy_ratio": 0.5418619528233587
+        },
+        "lower": {
+          "effective_area_m2": 111256.32553901827,
+          "covered_area_m2": 108020.19417732449,
+          "uncovered_area_m2": 3236.131361693828,
+          "coverage_ratio": 0.970912832632075,
+          "independent_scan_count": 83,
+          "redundant_area_m2": 108136.04683915559,
+          "redundancy_ratio": 0.5002679836151996
+        }
+      },
+      "both_layers_coverage_ratio": 0.9577450679283172,
+      "either_layer_coverage_ratio": 0.9812269243637882,
+      "partition_checks": {
+        "all": {
+          "overlap_area_m2": 0.0,
+          "gap_area_m2": 1.734601653424761e-05,
+          "outside_area_m2": 1.1791719908060827e-05
+        }
+      },
+      "maximum_completion_time_s": 1225.3353854253119,
+      "total_aircraft_time_s": 7227.536330328041,
+      "uavs": [
+        {
+          "uav_id": 1,
+          "mission_time_s": 1201.2656558594638,
+          "remaining_s": 178.73434414053622,
+          "within_limit": true,
+          "phase_times_s": {
+            "takeoff": 7.833333333333333,
+            "entry": 11.059461446047518,
+            "scan": 1000.0,
+            "scan_transit": 149.99675397917542,
+            "layer_transition": 10.97213595499958,
+            "return": 21.40397114590759
+          },
+          "horizontal_distances_m": {
+            "takeoff": 0.0,
+            "entry": 55.29730723023759,
+            "scan": 0.0,
+            "scan_transit": 749.9837698958771,
+            "layer_transition": 22.360679774997898,
+            "return": 74.51985572953797
+          },
+          "scan_visits": 20,
+          "minimum_outer_clearance_m": 5.03000158990406,
+          "minimum_no_fly_clearance_m": null,
+          "scan_transit_outside_own_region_m": 0.0,
+          "return_climb_s": 6.5,
+          "return_climb_sensitivity": {
+            "1": 1207.7656558594638,
+            "2": 1201.2656558594638,
+            "3": 1199.098989192797
+          },
+          "actual_transmitted_array_direct_links": {
+            "direct_links_checked": 19,
+            "minimum_outer_clearance_m": 5.030005649017084,
+            "minimum_no_fly_clearance_m": null,
+            "all_scan_links_in_own_region": true,
+            "source": "external_program_b_proposal arrays, independent of segments"
+          },
+          "layers": {
+            "upper": {
+              "effective_area_m2": 18542.72091198013,
+              "covered_area_m2": 18350.785636190125,
+              "uncovered_area_m2": 191.93527579002068,
+              "coverage_ratio": 0.9896490231017823,
+              "independent_scan_count": 6,
+              "redundant_area_m2": 19823.79604651206,
+              "redundancy_ratio": 0.5192930786061422
+            },
+            "lower": {
+              "effective_area_m2": 18542.72091198013,
+              "covered_area_m2": 18261.899325184964,
+              "uncovered_area_m2": 280.8215867951676,
+              "coverage_ratio": 0.984855427198188,
+              "independent_scan_count": 14,
+              "redundant_area_m2": 12948.419798135823,
+              "redundancy_ratio": 0.4148762384316853
+            }
+          }
+        },
+        {
+          "uav_id": 2,
+          "mission_time_s": 1178.8528261801632,
+          "remaining_s": 201.14717381983678,
+          "within_limit": true,
+          "phase_times_s": {
+            "takeoff": 8.333333333333334,
+            "entry": 1.5612987250206,
+            "scan": 1000.0,
+            "scan_transit": 145.9247594417889,
+            "layer_transition": 10.97213595499958,
+            "return": 12.0612987250206
+          },
+          "horizontal_distances_m": {
+            "takeoff": 0.0,
+            "entry": 7.806493625103,
+            "scan": 0.0,
+            "scan_transit": 729.6237972089443,
+            "layer_transition": 22.360679774997898,
+            "return": 27.806493625103002
+          },
+          "scan_visits": 20,
+          "minimum_outer_clearance_m": 9.740688205777973,
+          "minimum_no_fly_clearance_m": null,
+          "scan_transit_outside_own_region_m": 0.0,
+          "return_climb_s": 6.5,
+          "return_climb_sensitivity": {
+            "1": 1185.3528261801632,
+            "2": 1178.8528261801632,
+            "3": 1176.6861595134965
+          },
+          "actual_transmitted_array_direct_links": {
+            "direct_links_checked": 19,
+            "minimum_outer_clearance_m": 9.740688205731256,
+            "minimum_no_fly_clearance_m": null,
+            "all_scan_links_in_own_region": true,
+            "source": "external_program_b_proposal arrays, independent of segments"
+          },
+          "layers": {
+            "upper": {
+              "effective_area_m2": 18542.720926262034,
+              "covered_area_m2": 18485.148564951192,
+              "uncovered_area_m2": 57.57236131084006,
+              "coverage_ratio": 0.9968951503104756,
+              "independent_scan_count": 6,
+              "redundant_area_m2": 14587.058586434,
+              "redundancy_ratio": 0.441066981700465
+            },
+            "lower": {
+              "effective_area_m2": 18542.720926262034,
+              "covered_area_m2": 18323.77969694768,
+              "uncovered_area_m2": 218.94122931437568,
+              "coverage_ratio": 0.9881926050559134,
+              "independent_scan_count": 14,
+              "redundant_area_m2": 12890.979225989831,
+              "redundancy_ratio": 0.4129770554312103
+            }
+          }
+        },
+        {
+          "uav_id": 3,
+          "mission_time_s": 1181.0779585807986,
+          "remaining_s": 198.92204141920138,
+          "within_limit": true,
+          "phase_times_s": {
+            "takeoff": 8.833333333333334,
+            "entry": 35.75058784067444,
+            "scan": 950.0,
+            "scan_transit": 125.53838899155588,
+            "layer_transition": 10.5,
+            "return": 50.45564841523502
+          },
+          "horizontal_distances_m": {
+            "takeoff": 0.0,
+            "entry": 178.7529392033722,
+            "scan": 0.0,
+            "scan_transit": 627.6919449577794,
+            "layer_transition": 20.0,
+            "return": 219.77824207617508
+          },
+          "scan_visits": 19,
+          "minimum_outer_clearance_m": 6.695327099039511,
+          "minimum_no_fly_clearance_m": null,
+          "scan_transit_outside_own_region_m": 0.0,
+          "return_climb_s": 6.5,
+          "return_climb_sensitivity": {
+            "1": 1187.5779585807986,
+            "2": 1181.0779585807986,
+            "3": 1178.9112919141319
+          },
+          "actual_transmitted_array_direct_links": {
+            "direct_links_checked": 18,
+            "minimum_outer_clearance_m": 23.84636079650363,
+            "minimum_no_fly_clearance_m": null,
+            "all_scan_links_in_own_region": true,
+            "source": "external_program_b_proposal arrays, independent of segments"
+          },
+          "layers": {
+            "upper": {
+              "effective_area_m2": 18542.720924201523,
+              "covered_area_m2": 18361.279063322443,
+              "uncovered_area_m2": 181.44186087908676,
+              "coverage_ratio": 0.9902149279158774,
+              "independent_scan_count": 5,
+              "redundant_area_m2": 7122.57015336712,
+              "redundancy_ratio": 0.27949349773669574
+            },
+            "lower": {
+              "effective_area_m2": 18542.720924201523,
+              "covered_area_m2": 18175.18401872466,
+              "uncovered_area_m2": 367.536905476876,
+              "coverage_ratio": 0.9801789118771042,
+              "independent_scan_count": 14,
+              "redundant_area_m2": 15100.220009678294,
+              "redundancy_ratio": 0.45379524157810885
+            }
+          }
+        },
+        {
+          "uav_id": 4,
+          "mission_time_s": 1215.8820419078033,
+          "remaining_s": 164.11795809219666,
+          "within_limit": true,
+          "phase_times_s": {
+            "takeoff": 7.833333333333333,
+            "entry": 31.259723814476622,
+            "scan": 1000.0,
+            "scan_transit": 128.05712499051714,
+            "layer_transition": 6.5,
+            "return": 42.2318597694762
+          },
+          "horizontal_distances_m": {
+            "takeoff": 0.0,
+            "entry": 156.2986190723831,
+            "scan": 0.0,
+            "scan_transit": 640.2856249525855,
+            "layer_transition": 0.0,
+            "return": 178.659298847381
+          },
+          "scan_visits": 20,
+          "minimum_outer_clearance_m": 9.49879265908302,
+          "minimum_no_fly_clearance_m": null,
+          "scan_transit_outside_own_region_m": 0.0,
+          "return_climb_s": 6.5,
+          "return_climb_sensitivity": {
+            "1": 1222.3820419078033,
+            "2": 1215.8820419078033,
+            "3": 1213.7153752411366
+          },
+          "actual_transmitted_array_direct_links": {
+            "direct_links_checked": 19,
+            "minimum_outer_clearance_m": 16.64013068166801,
+            "minimum_no_fly_clearance_m": null,
+            "all_scan_links_in_own_region": true,
+            "source": "external_program_b_proposal arrays, independent of segments"
+          },
+          "layers": {
+            "upper": {
+              "effective_area_m2": 18542.720914876776,
+              "covered_area_m2": 18512.526377644397,
+              "uncovered_area_m2": 30.19453723237833,
+              "coverage_ratio": 0.9983716231630195,
+              "independent_scan_count": 6,
+              "redundant_area_m2": 19055.853566371,
+              "redundancy_ratio": 0.5072311767174452
+            },
+            "lower": {
+              "effective_area_m2": 18542.720914876776,
+              "covered_area_m2": 18435.385447757115,
+              "uncovered_area_m2": 107.33546711964492,
+              "coverage_ratio": 0.9942114500017337,
+              "independent_scan_count": 14,
+              "redundant_area_m2": 16196.784943416205,
+              "redundancy_ratio": 0.46768033191313557
+            }
+          }
+        },
+        {
+          "uav_id": 5,
+          "mission_time_s": 1225.1224623745,
+          "remaining_s": 154.87753762550005,
+          "within_limit": true,
+          "phase_times_s": {
+            "takeoff": 8.333333333333334,
+            "entry": 59.82986865194006,
+            "scan": 950.0,
+            "scan_transit": 126.93933419443265,
+            "layer_transition": 10.861630418107787,
+            "return": 69.15829577668624
+          },
+          "horizontal_distances_m": {
+            "takeoff": 0.0,
+            "entry": 299.1493432597003,
+            "scan": 0.0,
+            "scan_transit": 634.6966709721632,
+            "layer_transition": 21.808152090538933,
+            "return": 313.29147888343124
+          },
+          "scan_visits": 19,
+          "minimum_outer_clearance_m": 13.940667048629138,
+          "minimum_no_fly_clearance_m": null,
+          "scan_transit_outside_own_region_m": 0.0,
+          "return_climb_s": 6.5,
+          "return_climb_sensitivity": {
+            "1": 1231.6224623745,
+            "2": 1225.1224623745,
+            "3": 1222.9557957078332
+          },
+          "actual_transmitted_array_direct_links": {
+            "direct_links_checked": 18,
+            "minimum_outer_clearance_m": 13.940667048828024,
+            "minimum_no_fly_clearance_m": null,
+            "all_scan_links_in_own_region": true,
+            "source": "external_program_b_proposal arrays, independent of segments"
+          },
+          "layers": {
+            "upper": {
+              "effective_area_m2": 18542.720930016247,
+              "covered_area_m2": 18070.151629912732,
+              "uncovered_area_m2": 472.569300103514,
+              "coverage_ratio": 0.974514565478978,
+              "independent_scan_count": 5,
+              "redundant_area_m2": 14190.182103587307,
+              "redundancy_ratio": 0.43986470260386124
+            },
+            "lower": {
+              "effective_area_m2": 18542.720930016247,
+              "covered_area_m2": 18024.50319304477,
+              "uncovered_area_m2": 518.2177369714797,
+              "coverage_ratio": 0.9720527672865633,
+              "independent_scan_count": 14,
+              "redundant_area_m2": 15528.46663532175,
+              "redundancy_ratio": 0.46280453607398997
+            }
+          }
+        },
+        {
+          "uav_id": 6,
+          "mission_time_s": 1225.3353854253119,
+          "remaining_s": 154.66461457468813,
+          "within_limit": true,
+          "phase_times_s": {
+            "takeoff": 8.833333333333334,
+            "entry": 56.55714641698387,
+            "scan": 950.0,
+            "scan_transit": 125.55933213326443,
+            "layer_transition": 9.32842712474619,
+            "return": 75.05714641698387
+          },
+          "horizontal_distances_m": {
+            "takeoff": 0.0,
+            "entry": 282.78573208491935,
+            "scan": 0.0,
+            "scan_transit": 627.796660666322,
+            "layer_transition": 14.142135623730951,
+            "return": 342.78573208491935
+          },
+          "scan_visits": 19,
+          "minimum_outer_clearance_m": 5.030006731562998,
+          "minimum_no_fly_clearance_m": null,
+          "scan_transit_outside_own_region_m": 0.0,
+          "return_climb_s": 6.5,
+          "return_climb_sensitivity": {
+            "1": 1231.8353854253119,
+            "2": 1225.3353854253119,
+            "3": 1223.1687187586451
+          },
+          "actual_transmitted_array_direct_links": {
+            "direct_links_checked": 18,
+            "minimum_outer_clearance_m": 5.030006731416875,
+            "minimum_no_fly_clearance_m": null,
+            "all_scan_links_in_own_region": true,
+            "source": "external_program_b_proposal arrays, independent of segments"
+          },
+          "layers": {
+            "upper": {
+              "effective_area_m2": 18542.720916275313,
+              "covered_area_m2": 15204.95202028041,
+              "uncovered_area_m2": 3337.7688959949073,
+              "coverage_ratio": 0.8199957324997931,
+              "independent_scan_count": 6,
+              "redundant_area_m2": 17854.192718985687,
+              "redundancy_ratio": 0.5400681977649384
+            },
+            "lower": {
+              "effective_area_m2": 18542.720916275313,
+              "covered_area_m2": 16210.10679205388,
+              "uncovered_area_m2": 2332.6141242214335,
+              "coverage_ratio": 0.8742032447797857,
+              "independent_scan_count": 13,
+              "redundant_area_m2": 13734.779006963443,
+              "redundancy_ratio": 0.45866860535544823
+            }
+          }
+        }
+      ],
+      "pending_confirmations": [
+        "返航回升2m/s尚非用户确认，需实机核对",
+        "每机本次开机实测起降GPS与相对高度基准",
+        "暂定高度、下降2m/s和未建模实飞耗时",
+        "时空防撞、通信/控制器动态、风与目标跟踪未验证",
+        "池塘草案边界及新树林Q南/Q东推导连接待确认",
+        "最新森林/水体边界测绘；2017影像与2021分类不证明现状",
+        "是否允许进返场越出外边界尚待确认；本方案保守保持内部"
+      ]
+    },
+    "xuchang_small_2": {
+      "status": "draft",
+      "scope": "offline_nominal_parameters_only",
+      "boundary_area_m2": 175974.47297205412,
+      "effective_area_m2": 164688.9003909809,
+      "layers": {
+        "upper": {
+          "effective_area_m2": 164688.9003909809,
+          "covered_area_m2": 144848.16380773374,
+          "uncovered_area_m2": 19840.736583247046,
+          "coverage_ratio": 0.8795259635825844,
+          "independent_scan_count": 32,
+          "redundant_area_m2": 89317.95846712499,
+          "redundancy_ratio": 0.38142989088014045
+        },
+        "lower": {
+          "effective_area_m2": 164688.9003909809,
+          "covered_area_m2": 107258.61115815124,
+          "uncovered_area_m2": 57430.289232829724,
+          "coverage_ratio": 0.6512801464064253,
+          "independent_scan_count": 68,
+          "redundant_area_m2": 75816.66987941167,
+          "redundancy_ratio": 0.41412838177676103
+        }
+      },
+      "both_layers_coverage_ratio": 0.6188413898204107,
+      "either_layer_coverage_ratio": 0.9119647201685992,
+      "partition_checks": {
+        "all": {
+          "overlap_area_m2": 0.0,
+          "gap_area_m2": 0.000501830723394567,
+          "outside_area_m2": 0.0004098854754123386
+        }
+      },
+      "maximum_completion_time_s": 1229.3218624147255,
+      "total_aircraft_time_s": 6338.750926037032,
+      "uavs": [
+        {
+          "uav_id": 1,
+          "mission_time_s": 918.7483001047517,
+          "remaining_s": 461.2516998952483,
+          "within_limit": true,
+          "phase_times_s": {
+            "takeoff": 7.833333333333333,
+            "entry": 1.4142135623730951,
+            "scan": 800.0,
+            "scan_transit": 88.25811252192595,
+            "layer_transition": 9.32842712474619,
+            "return": 11.914213562373096
+          },
+          "horizontal_distances_m": {
+            "takeoff": 0.0,
+            "entry": 7.0710678118654755,
+            "scan": 0.0,
+            "scan_transit": 441.2905626096297,
+            "layer_transition": 14.142135623730951,
+            "return": 27.071067811865476
+          },
+          "scan_visits": 16,
+          "minimum_outer_clearance_m": 16.934615425688705,
+          "minimum_no_fly_clearance_m": 11.727980657320796,
+          "scan_transit_outside_own_region_m": 0.0,
+          "return_climb_s": 6.5,
+          "return_climb_sensitivity": {
+            "1": 925.2483001047517,
+            "2": 918.7483001047517,
+            "3": 916.5816334380851
+          },
+          "actual_transmitted_array_direct_links": {
+            "direct_links_checked": 15,
+            "minimum_outer_clearance_m": 16.93461542585408,
+            "minimum_no_fly_clearance_m": 11.727980657576824,
+            "all_scan_links_in_own_region": true,
+            "source": "external_program_b_proposal arrays, independent of segments"
+          },
+          "layers": {
+            "upper": {
+              "effective_area_m2": 12895.609026477032,
+              "covered_area_m2": 12882.831155424055,
+              "uncovered_area_m2": 12.777871052975998,
+              "coverage_ratio": 0.9990091300824381,
+              "independent_scan_count": 4,
+              "redundant_area_m2": 9084.319642284025,
+              "redundancy_ratio": 0.41354109715638804
+            },
+            "lower": {
+              "effective_area_m2": 12895.609026477032,
+              "covered_area_m2": 12859.520221301214,
+              "uncovered_area_m2": 36.08880517580987,
+              "coverage_ratio": 0.9972014656227774,
+              "independent_scan_count": 12,
+              "redundant_area_m2": 16819.97287067536,
+              "redundancy_ratio": 0.5667203553157178
+            }
+          }
+        },
+        {
+          "uav_id": 2,
+          "mission_time_s": 975.3583428168582,
+          "remaining_s": 404.6416571831418,
+          "within_limit": true,
+          "phase_times_s": {
+            "takeoff": 8.333333333333334,
+            "entry": 41.33402219655905,
+            "scan": 750.0,
+            "scan_transit": 89.45556470960366,
+            "layer_transition": 9.32842712474619,
+            "return": 76.906995452616
+          },
+          "horizontal_distances_m": {
+            "takeoff": 0.0,
+            "entry": 206.67011098279525,
+            "scan": 0.0,
+            "scan_transit": 447.2778235480183,
+            "layer_transition": 14.142135623730951,
+            "return": 352.03497726308007
+          },
+          "scan_visits": 15,
+          "minimum_outer_clearance_m": 51.043690231212715,
+          "minimum_no_fly_clearance_m": 5.79980909387935,
+          "scan_transit_outside_own_region_m": 0.0,
+          "return_climb_s": 6.5,
+          "return_climb_sensitivity": {
+            "1": 981.8583428168582,
+            "2": 975.3583428168582,
+            "3": 973.1916761501916
+          },
+          "actual_transmitted_array_direct_links": {
+            "direct_links_checked": 14,
+            "minimum_outer_clearance_m": 73.21502021407743,
+            "minimum_no_fly_clearance_m": 10.817688482683645,
+            "all_scan_links_in_own_region": true,
+            "source": "external_program_b_proposal arrays, independent of segments"
+          },
+          "layers": {
+            "upper": {
+              "effective_area_m2": 12679.072425208675,
+              "covered_area_m2": 12664.295246306905,
+              "uncovered_area_m2": 14.777178901767702,
+              "coverage_ratio": 0.9988345220844081,
+              "independent_scan_count": 5,
+              "redundant_area_m2": 13201.41922328791,
+              "redundancy_ratio": 0.5103829333153043
+            },
+            "lower": {
+              "effective_area_m2": 12679.072425208675,
+              "covered_area_m2": 12634.94458640153,
+              "uncovered_area_m2": 44.127838807146226,
+              "coverage_ratio": 0.9965196319314804,
+              "independent_scan_count": 10,
+              "redundant_area_m2": 10729.344375407321,
+              "redundancy_ratio": 0.4592198116084531
+            }
+          }
+        },
+        {
+          "uav_id": 3,
+          "mission_time_s": 1212.4839983495547,
+          "remaining_s": 167.51600165044533,
+          "within_limit": true,
+          "phase_times_s": {
+            "takeoff": 8.833333333333334,
+            "entry": 33.8309518948453,
+            "scan": 950.0,
+            "scan_transit": 154.75241715840494,
+            "layer_transition": 9.32842712474619,
+            "return": 55.738868838224775
+          },
+          "horizontal_distances_m": {
+            "takeoff": 0.0,
+            "entry": 169.1547594742265,
+            "scan": 0.0,
+            "scan_transit": 773.7620857920245,
+            "layer_transition": 14.142135623730951,
+            "return": 246.1943441911239
+          },
+          "scan_visits": 19,
+          "minimum_outer_clearance_m": 51.043690231212715,
+          "minimum_no_fly_clearance_m": 5.478456603160333,
+          "scan_transit_outside_own_region_m": 0.0,
+          "return_climb_s": 6.5,
+          "return_climb_sensitivity": {
+            "1": 1218.9839983495547,
+            "2": 1212.4839983495547,
+            "3": 1210.317331682888
+          },
+          "actual_transmitted_array_direct_links": {
+            "direct_links_checked": 18,
+            "minimum_outer_clearance_m": 93.35117754067477,
+            "minimum_no_fly_clearance_m": 12.308266252269519,
+            "all_scan_links_in_own_region": true,
+            "source": "external_program_b_proposal arrays, independent of segments"
+          },
+          "layers": {
+            "upper": {
+              "effective_area_m2": 22182.771141935762,
+              "covered_area_m2": 22036.04394214334,
+              "uncovered_area_m2": 146.72719979242146,
+              "coverage_ratio": 0.9933855333558828,
+              "independent_scan_count": 6,
+              "redundant_area_m2": 16535.55713935374,
+              "redundancy_ratio": 0.42869771219546027
+            },
+            "lower": {
+              "effective_area_m2": 22182.771141935762,
+              "covered_area_m2": 21588.48802999826,
+              "uncovered_area_m2": 594.2831119374937,
+              "coverage_ratio": 0.9732096991789259,
+              "independent_scan_count": 13,
+              "redundant_area_m2": 9987.417233868597,
+              "redundancy_ratio": 0.3162986825051525
+            }
+          }
+        },
+        {
+          "uav_id": 4,
+          "mission_time_s": 1229.3218624147255,
+          "remaining_s": 150.6781375852745,
+          "within_limit": true,
+          "phase_times_s": {
+            "takeoff": 7.833333333333333,
+            "entry": 25.072783876948755,
+            "scan": 1000.0,
+            "scan_transit": 156.3429613274948,
+            "layer_transition": 8.5,
+            "return": 31.572783876948755
+          },
+          "horizontal_distances_m": {
+            "takeoff": 0.0,
+            "entry": 125.36391938474377,
+            "scan": 0.0,
+            "scan_transit": 781.714806637474,
+            "layer_transition": 10.0,
+            "return": 125.36391938474377
+          },
+          "scan_visits": 20,
+          "minimum_outer_clearance_m": 8.480058823640046,
+          "minimum_no_fly_clearance_m": 18.714479967229597,
+          "scan_transit_outside_own_region_m": 9.194936904294724e-10,
+          "return_climb_s": 6.5,
+          "return_climb_sensitivity": {
+            "1": 1235.8218624147255,
+            "2": 1229.3218624147255,
+            "3": 1227.1551957480588
+          },
+          "actual_transmitted_array_direct_links": {
+            "direct_links_checked": 19,
+            "minimum_outer_clearance_m": 8.48005882387878,
+            "minimum_no_fly_clearance_m": 18.71447996737056,
+            "all_scan_links_in_own_region": true,
+            "source": "external_program_b_proposal arrays, independent of segments"
+          },
+          "layers": {
+            "upper": {
+              "effective_area_m2": 22149.849393394714,
+              "covered_area_m2": 21846.093540522575,
+              "uncovered_area_m2": 303.7558528721304,
+              "coverage_ratio": 0.9862863242328537,
+              "independent_scan_count": 5,
+              "redundant_area_m2": 9779.944159597824,
+              "redundancy_ratio": 0.3092370992639584
+            },
+            "lower": {
+              "effective_area_m2": 22149.849393394714,
+              "covered_area_m2": 21697.53915322201,
+              "uncovered_area_m2": 452.31024017269584,
+              "coverage_ratio": 0.9795795342830824,
+              "independent_scan_count": 15,
+              "redundant_area_m2": 14777.281494871975,
+              "redundancy_ratio": 0.40513650875605256
+            }
+          }
+        },
+        {
+          "uav_id": 5,
+          "mission_time_s": 1226.244587025957,
+          "remaining_s": 153.7554129740431,
+          "within_limit": true,
+          "phase_times_s": {
+            "takeoff": 8.333333333333334,
+            "entry": 53.02060004230543,
+            "scan": 850.0,
+            "scan_transit": 235.99551801456607,
+            "layer_transition": 10.5,
+            "return": 68.39513563575201
+          },
+          "horizontal_distances_m": {
+            "takeoff": 0.0,
+            "entry": 265.10300021152716,
+            "scan": 0.0,
+            "scan_transit": 1179.9775900728303,
+            "layer_transition": 20.0,
+            "return": 309.47567817876006
+          },
+          "scan_visits": 17,
+          "minimum_outer_clearance_m": 31.391023368817233,
+          "minimum_no_fly_clearance_m": 5.0365914116871044,
+          "scan_transit_outside_own_region_m": 0.0,
+          "return_climb_s": 6.5,
+          "return_climb_sensitivity": {
+            "1": 1232.744587025957,
+            "2": 1226.244587025957,
+            "3": 1224.0779203592901
+          },
+          "actual_transmitted_array_direct_links": {
+            "direct_links_checked": 16,
+            "minimum_outer_clearance_m": 31.39102336881712,
+            "minimum_no_fly_clearance_m": 63.472892844121695,
+            "all_scan_links_in_own_region": true,
+            "source": "external_program_b_proposal arrays, independent of segments"
+          },
+          "layers": {
+            "upper": {
+              "effective_area_m2": 83978.1380165953,
+              "covered_area_m2": 62531.2408878891,
+              "uncovered_area_m2": 21446.897128706212,
+              "coverage_ratio": 0.7446133287157667,
+              "independent_scan_count": 9,
+              "redundant_area_m2": 4621.426706695522,
+              "redundancy_ratio": 0.06881970400038444
+            },
+            "lower": {
+              "effective_area_m2": 83978.1380165953,
+              "covered_area_m2": 22602.926625045162,
+              "uncovered_area_m2": 61375.211391550125,
+              "coverage_ratio": 0.2691525099136932,
+              "independent_scan_count": 8,
+              "redundant_area_m2": 15.972743193793576,
+              "redundancy_ratio": 0.0007061680117036202
+            }
+          }
+        },
+        {
+          "uav_id": 6,
+          "mission_time_s": 776.5938353251844,
+          "remaining_s": 603.4061646748156,
+          "within_limit": true,
+          "phase_times_s": {
+            "takeoff": 8.833333333333334,
+            "entry": 15.8309518948453,
+            "scan": 650.0,
+            "scan_transit": 66.96455845747022,
+            "layer_transition": 10.97213595499958,
+            "return": 23.992855684535904
+          },
+          "horizontal_distances_m": {
+            "takeoff": 0.0,
+            "entry": 79.1547594742265,
+            "scan": 0.0,
+            "scan_transit": 334.8227922873511,
+            "layer_transition": 22.360679774997898,
+            "return": 87.46427842267951
+          },
+          "scan_visits": 13,
+          "minimum_outer_clearance_m": 14.886166100506925,
+          "minimum_no_fly_clearance_m": 20.98221732784701,
+          "scan_transit_outside_own_region_m": 0.0,
+          "return_climb_s": 6.5,
+          "return_climb_sensitivity": {
+            "1": 783.0938353251844,
+            "2": 776.5938353251844,
+            "3": 774.4271686585178
+          },
+          "actual_transmitted_array_direct_links": {
+            "direct_links_checked": 12,
+            "minimum_outer_clearance_m": 14.886166100676453,
+            "minimum_no_fly_clearance_m": 20.982217328058585,
+            "all_scan_links_in_own_region": true,
+            "source": "external_program_b_proposal arrays, independent of segments"
+          },
+          "layers": {
+            "upper": {
+              "effective_area_m2": 10803.459885538688,
+              "covered_area_m2": 10764.64158001876,
+              "uncovered_area_m2": 38.818305519928494,
+              "coverage_ratio": 0.9964068635482334,
+              "independent_scan_count": 3,
+              "redundant_area_m2": 8858.168493521694,
+              "redundancy_ratio": 0.4514220165370767
+            },
+            "lower": {
+              "effective_area_m2": 10803.459885538688,
+              "covered_area_m2": 10799.357900060533,
+              "uncovered_area_m2": 4.101985478157573,
+              "coverage_ratio": 0.9996203081677892,
+              "independent_scan_count": 10,
+              "redundant_area_m2": 13376.554531650354,
+              "redundancy_ratio": 0.5533009175738365
+            }
+          }
+        }
+      ],
+      "pending_confirmations": [
+        "返航回升2m/s尚非用户确认，需实机核对",
+        "每机本次开机实测起降GPS与相对高度基准",
+        "暂定高度、下降2m/s和未建模实飞耗时",
+        "时空防撞、通信/控制器动态、风与目标跟踪未验证"
+      ]
+    }
+  },
+  "independent_redundancy_audit": {
+    "final_scene_1": {
+      "audited_independent_points": 55,
+      "local_unique_area_below_0_01_m2_count": 0,
+      "local_and_field_unique_area_below_0_01_m2_count": 0,
+      "zero_contribution_points": [],
+      "method": "Remove one point at a time from the FINAL set and recompute exact polygon unions; if local contribution is >=0.01m2 it cannot satisfy the both-zero criterion."
+    },
+    "final_scene_2": {
+      "audited_independent_points": 117,
+      "local_unique_area_below_0_01_m2_count": 0,
+      "local_and_field_unique_area_below_0_01_m2_count": 0,
+      "zero_contribution_points": [],
+      "method": "Remove one point at a time from the FINAL set and recompute exact polygon unions; if local contribution is >=0.01m2 it cannot satisfy the both-zero criterion."
+    },
+    "xuchang_small_2": {
+      "audited_independent_points": 100,
+      "local_unique_area_below_0_01_m2_count": 2,
+      "local_and_field_unique_area_below_0_01_m2_count": 0,
+      "zero_contribution_points": [],
+      "method": "Remove one point at a time from the FINAL set and recompute exact polygon unions; if local contribution is >=0.01m2 it cannot satisfy the both-zero criterion."
+    }
+  },
+  "dependencies": {
+    "python": "3.8.10",
+    "shapely": "2.0.6",
+    "numpy": "1.24.4"
+  }
+}

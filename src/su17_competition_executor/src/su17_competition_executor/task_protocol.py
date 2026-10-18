@@ -115,6 +115,11 @@ def validate_assignment(
                 normalized["competition_time"], mission_id)
         except ValueError as error:
             raise TaskValidationError("比赛计时快照无效：{}".format(error)) from error
+    from competition_shared.mission_layers import validate_layers
+    try:
+        validate_layers(normalized, maximum_waypoints)
+    except (ValueError, TypeError, KeyError, IndexError) as error:
+        raise TaskValidationError("双层任务校验失败：{}".format(error)) from error
     if task.get('transit_routes') and message.get('controller_mode') == 'external':
         from .transit_protocol import route_messages
         try:

@@ -1,0 +1,228 @@
+{
+  "schema_version": 1,
+  "artifact_type": "planning_revision_request_not_flight_plan",
+  "date": "2026-10-17",
+  "original_result_sha256": "0f649e708b99acd5b197bc516dcd4a2349497d865e9819a7a1f139ff2778fb14",
+  "original_inputs_sha256": "758aaa7ca3b3e536a7d167eef1c5552ed965e8108e058ce9b56de8b381c8a27c",
+  "confirmed_overrides": {
+    "applies_to": [
+      "final_scene_1",
+      "final_scene_2",
+      "xuchang_small_2"
+    ],
+    "upper_scan_radius_m": 50,
+    "lower_scan_radius_m": 30,
+    "height_mapping_unchanged": true,
+    "scan_seconds": 50,
+    "horizontal_speed_mps": 5,
+    "takeoff_vertical_speed_mps": 6,
+    "mission_limit_s": 1380,
+    "preferred_reserve_s": 30,
+    "dual_layer_return_policy": "climb_to_own_upper_altitude_then_connect_to_upper_return_route",
+    "fixed_layer_scene_return_policy": "return_at_own_assigned_height_without_extra_layer_change",
+    "southeast_forest_user_chain_lat_lon": [
+      [
+        33.86138706134834,
+        113.707145064894
+      ],
+      [
+        33.86133183085928,
+        113.70690562296932
+      ],
+      [
+        33.861226892831695,
+        113.70679920433612
+      ],
+      [
+        33.86119375448038,
+        113.70672604152581
+      ],
+      [
+        33.86105567787819,
+        113.70662627405719
+      ],
+      [
+        33.86100044717481,
+        113.70653980891773
+      ],
+      [
+        33.86103358560113,
+        113.70627376233477
+      ],
+      [
+        33.86085132409721,
+        113.70620725068902
+      ]
+    ],
+    "forest_rule": "scan_disk_forbidden_not_no_fly",
+    "xuchang_regions_unchanged": true
+  },
+  "proposed_not_user_measured_boundary_completion": {
+    "status": "proposed_boundary_connector_rule",
+    "chain_lat_lon": [
+      [
+        33.86138706134834,
+        113.707145064894
+      ],
+      [
+        33.86133183085928,
+        113.70690562296932
+      ],
+      [
+        33.861226892831695,
+        113.70679920433612
+      ],
+      [
+        33.86119375448038,
+        113.70672604152581
+      ],
+      [
+        33.86105567787819,
+        113.70662627405719
+      ],
+      [
+        33.86100044717481,
+        113.70653980891773
+      ],
+      [
+        33.86103358560113,
+        113.70627376233477
+      ],
+      [
+        33.86085132409721,
+        113.70620725068902
+      ]
+    ],
+    "projection": {
+      "latitude": 33.86407466666667,
+      "longitude": 113.70815877777777,
+      "north_m_per_degree": 110919.93326612496,
+      "west_m_per_degree": 92531.6750158963,
+      "method": "WGS84_local_midlatitude"
+    },
+    "closure_rule": "P1..P8 -> Qsouth(perpendicular projection onto original edge8-9) -> original vertex9 -> Qeast(perpendicular projection onto original edge9-10) -> P1",
+    "q_south_lat_lon": [
+      33.86071614282803,
+      113.70618993407403
+    ],
+    "q_east_lat_lon": [
+      33.86138356578786,
+      113.70720908234131
+    ],
+    "area_m2": 4935.392608300755,
+    "geometry_wgs84": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            113.707145064894,
+            33.86138706134834
+          ],
+          [
+            113.70690562296932,
+            33.86133183085928
+          ],
+          [
+            113.70679920433612,
+            33.861226892831695
+          ],
+          [
+            113.70672604152581,
+            33.86119375448038
+          ],
+          [
+            113.70662627405719,
+            33.86105567787819
+          ],
+          [
+            113.70653980891773,
+            33.86100044717481
+          ],
+          [
+            113.70627376233477,
+            33.86103358560113
+          ],
+          [
+            113.70620725068902,
+            33.86085132409721
+          ],
+          [
+            113.70618993407403,
+            33.86071614282803
+          ],
+          [
+            113.70715,
+            33.86063055555556
+          ],
+          [
+            113.70720908234131,
+            33.86138356578786
+          ],
+          [
+            113.707145064894,
+            33.86138706134834
+          ]
+        ]
+      ]
+    }
+  },
+  "return_climb_rate": {
+    "confirmed_by_user": false,
+    "proposed_nominal_mps": 2,
+    "sensitivity_mps": [
+      1,
+      2,
+      3
+    ],
+    "note": "Planning-review proposal only; do not infer return climb speed from 6m/s takeoff speed."
+  },
+  "required_checks": [
+    "Reoptimize all three scenes, not only swap radius labels or recompute metrics on old points.",
+    "Replace old southeast polygon; never union it with the replacement.",
+    "Audit stale historical forest mask locally; retain unrelated forest and water.",
+    "Validate every segment implied by the transmitted scan arrays, separately from auxiliary segmented routes.",
+    "Do not silently place non-scanning auxiliary vertices into arrays where every point triggers a scan.",
+    "Include return ascent, route connection and upper-altitude route time.",
+    "Produce six-recipient all-upper-waypoint return catalogs for dual-layer scenes.",
+    "Iteratively audit removable zero-marginal-area points with route and coverage revalidation.",
+    "Keep pond boundary and return-climb rate status provisional.",
+    "Keep old schema ros_topics null; provide actual topic mapping as separate artifact unless versioning schema."
+  ],
+  "review_findings_summary": [
+    {
+      "scene_id": "final_scene_1",
+      "old_maximum_time_s": 1346.9453814532355,
+      "unsafe_direct_scanning_link_count": 2,
+      "individually_redundant_scan_point_count": 2,
+      "forest_change": {
+        "old_area_m2": 18147.405994112025,
+        "proposed_new_area_m2": 4935.39260830934,
+        "proposed_area_outside_old_m2": 1953.1269642482814,
+        "effective_area_with_new_forest_and_old_terrain_m2": 111256.32553901827,
+        "old_terrain_still_exempt_outside_new_forest_inside_old_candidate_m2": 1836.7376780724417,
+        "old_terrain_intersection_new_forest_m2": 1114.1819296258327
+      }
+    },
+    {
+      "scene_id": "final_scene_2",
+      "old_maximum_time_s": 1337.1060976919084,
+      "unsafe_direct_scanning_link_count": 2,
+      "individually_redundant_scan_point_count": 6,
+      "forest_change": {
+        "old_area_m2": 18147.405994112025,
+        "proposed_new_area_m2": 4935.39260830934,
+        "proposed_area_outside_old_m2": 1953.1269642482814,
+        "effective_area_with_new_forest_and_old_terrain_m2": 111256.32553901827,
+        "old_terrain_still_exempt_outside_new_forest_inside_old_candidate_m2": 1836.7376780724417,
+        "old_terrain_intersection_new_forest_m2": 1114.1819296258327
+      }
+    },
+    {
+      "scene_id": "xuchang_small_2",
+      "old_maximum_time_s": 1330.0254189847394,
+      "unsafe_direct_scanning_link_count": 1,
+      "individually_redundant_scan_point_count": 4,
+      "forest_change": null
+    }
+  ]
+}

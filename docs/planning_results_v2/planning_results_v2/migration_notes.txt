@@ -1,0 +1,28 @@
+v2离线交接与已提供程序B接口的适配说明
+
+主planning_result.json继续满足原03_规划输出.schema.json；schema_version=1不变，未添加违反additionalProperties的字段，external_program_b_proposal.ros_topics仍为null。planner.version=2.0.0与plan_id的v2标识本次算法及任务语义修订。
+
+修改语义
+1. 半径统一从新合并输入读取：物理upper=50m，physical lower=30m；三场景都重新优化。
+2. 决赛强禁扫的东南区整体替换为用户8点+Q南/原9号点/Q东；池塘和未确认历史mask状态单独保留。
+3. B/C return phase现在可含原位正向竖直爬升，随后接入upper航点目录并以接收机upper高度到达home。timing.return_s含回升、接入和目录路线三部分。旧验证器不能按旧“return竖直为0、结束于最后扫描层”语义验v2。
+4. A仍是固定物理层、正逆两趟、原高度返航，无额外回升。
+
+已知实际话题与独立映射
+实际话题见topic_mapping.json及inputs/revision/当前程序B双层接口说明.txt；没有调用ROS，也没有发送任何消息。
+每机 /ground_mission_planner/vehicle_N/path_stage_1、path_stage_2 均为std_msgs/Float64MultiArray；GPS展平顺序[经度,纬度,相对高度]。stage数组只含真正扫描点。
+双层：upper一趟→lower一趟。扫描内部及换层直接连线全段合法，无依赖未下发辅助点。entry/return可使用单独路线接口中的非扫描辅助点。
+固定层A：UAV1/2/3的upper和UAV4/5/6的lower都映射到本机path_stage_1；path_stage_2=[]。旧单层task不携带task.layers；仅有一层的task.layers数组会被现有双层校验拒绝。stage1并不代表所有飞机物理高度都属于upper。
+传唯一点数组+相应遍数；A的完整正逆execution_order用于调度验证，不能把展开后的序列再次作为B的两趟输入。
+
+返航目录版本
+return_catalog.json是独立离线契约，其catalog_schema_version=1，与其配套return_catalog.schema.json一致；目录中runtime_schema_version=2表示已知原程序return_paths话题的运行契约版本。两种版本编号含义不同，不应互换。
+双层route_scope=all_uav_waypoints，waypoint_layer=upper，return_policy=climb_to_upper_then_return。每个recipient包含所有六机upper数组的每个点，索引从1开始。目录所有高度是接收机upper高度。
+A目录保存六机各自唯一物理层的完整返航几何，waypoint_layer=assigned_physical_layer、return_policy=at_task_altitude，接收机全路使用自身固定层高度。A具体目录导入与legacy映射仍由原程序对话适配，不能把它宣称为直接可导入的双层目录。
+return_selections.json明确每机正常结束时所选(source_uav_id, waypoint_index, waypoint_id)、回升参数、直连接入路径和对应完整返航路线；目录验证器与主segments逐项核对，不允许瞬移。
+真正的mission_id、assignment_checksum、任务校验和外部mission envelope由原分派程序生成，本包未伪造这些运行标识。topic_mapping.json中的geometry_payload_only是几何和字段提案，缺少真实运行身份，不是直接下发任务。
+
+验证状态分开理解
+- 几何与名义参数：以validation_report.json和return_catalog_validation_report.json为准。
+- 已知话题数组及映射：以独立数组直连检查、topic_mapping及目录检查为准；原程序导入、ROS运行和程序B执行未测试。
+- 真实条件：池塘边界、树林补点连接、旧森林局部归属、实际六机GPS、暂定高度/下降速度及非用户确认的返航回升速度仍有限制。draft状态不因几何检查通过自动变为实飞许可。

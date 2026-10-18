@@ -1,0 +1,54 @@
+{
+  "passed": true,
+  "purpose": "Adversarial changes must be detected; does not establish real-world flight safety.",
+  "cases": [
+    {
+      "name": "scan_duration",
+      "expected_failure_category": "time",
+      "caught": true,
+      "matching_failure_count": 2
+    },
+    {
+      "name": "repeated_turn_scan_pass",
+      "expected_failure_category": "execution",
+      "caught": true,
+      "matching_failure_count": 1
+    },
+    {
+      "name": "strong_scan_circle",
+      "expected_failure_category": "strong_scan_exclusion",
+      "caught": true,
+      "matching_failure_count": 1
+    },
+    {
+      "name": "false_coverage_ratio",
+      "expected_failure_category": "coverage",
+      "caught": true,
+      "matching_failure_count": 1
+    },
+    {
+      "name": "swapped_fixed_xuchang_regions",
+      "expected_failure_category": "partition",
+      "caught": true,
+      "matching_failure_count": 2
+    },
+    {
+      "name": "segment_crosses_no_fly",
+      "expected_failure_category": "flight_clearance",
+      "caught": true,
+      "matching_failure_count": 1
+    },
+    {
+      "name": "internally_consistent_over_budget",
+      "expected_failure_category": "time_budget",
+      "caught": true,
+      "matching_failure_count": 1
+    },
+    {
+      "name": "unconfirmed_boundary_claimed_validated",
+      "expected_failure_category": "provisional_status",
+      "caught": true,
+      "matching_failure_count": 1
+    }
+  ]
+}

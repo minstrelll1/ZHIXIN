@@ -30,6 +30,11 @@
   }
   function mapping(area){
     area=displayArea(area);
+    if(['final_scene_1','final_scene_2'].includes(area?.flight_profile)){
+      const projection=area.coverage?.projection;
+      if(!projection||Math.abs(projection.latitude-source.projection.latitude)>1e-9||Math.abs(projection.longitude-source.projection.longitude)>1e-9)return null;
+      return {local:p=>p,geo:project,scaleX:1,scaleY:1};
+    }
     const points=area?.points_m||area?.coverage?.polygon_m;
     if(!Array.isArray(points)||points.length!==original.length||points.some(p=>!Array.isArray(p)||!Number.isFinite(p[0])||!Number.isFinite(p[1])))return null;
     const target=bounds(points),sx=(target.maxX-target.minX)/(extent.maxX-extent.minX),sy=(target.maxY-target.minY)/(extent.maxY-extent.minY);
@@ -68,7 +73,7 @@
   }
   function caption(area){
     if(area?.flight_profile==='dalian_nanshan')return '大连南山坡外场尚无已校准卫星底图；任务边界、航点和实时 GPS 位置按固定 WGS84 坐标绘制';
-    if(area?.flight_profile==='xuchang_small')return '许昌试飞场地（小）按固定 WGS84 坐标绘制；深灰色区域为内部禁飞扣除区';
+    if(['xuchang_small','xuchang_small_2'].includes(area?.flight_profile))return '许昌试飞场地按固定 WGS84 坐标绘制；深灰色区域为内部禁飞扣除区';
     if(!mapping(area))return 'Esri 示意底图：当前区域形状不匹配';
     if(state.status==='error')return 'Esri 底图加载失败，请检查地面端地图资源';
     if(state.status!=='ready')return '正在加载本地 Esri 底图…';

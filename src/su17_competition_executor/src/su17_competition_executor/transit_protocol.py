@@ -1,8 +1,10 @@
 """程序 B 进返场航线消息；仅做协议校验和高度填充，不控制飞行。"""
 import math
+from competition_shared.mission_layers import validate_layers
 
 
 def route_messages(assignment):
+    layers = validate_layers(assignment)
     routes = assignment['task'].get('transit_routes')
     if routes is None:
         return None
@@ -96,4 +98,8 @@ def route_messages(assignment):
     if version == 2:
         returned.update(schema_version=2, route_scope='all_uav_waypoints', landing_point=home,
                         waypoint_counts_by_uav={uid: len(points) for uid, points in catalog.items()})
+    if assignment.get('subject') == 'subject2':
+        # task.waypoints_* 与全队 catalog 均只包含上层；绝不把下层拼入返航目录。
+        returned.update(waypoint_layer=routes.get('waypoint_layer', 'upper'), return_altitude_m=altitude,
+                        return_policy='climb_to_upper_then_return' if layers else 'at_task_altitude')
     return dict(common, path=entry), returned

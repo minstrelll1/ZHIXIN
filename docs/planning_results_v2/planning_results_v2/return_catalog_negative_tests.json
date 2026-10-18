@@ -1,0 +1,114 @@
+{
+  "passed": true,
+  "baseline_passed": true,
+  "planning_result_sha256": "60c52b29986a25ddc51da5a601dd5c3b2dd105ec2dc049d3bee2209c460adb14",
+  "return_catalog_sha256": "ea22749b138982ec65fa2c67ce114c41953f35c0a13a77515215dc07db23ad29",
+  "original_files_unmodified": true,
+  "cases": [
+    {
+      "case": "missing_source_route",
+      "rejected": true,
+      "failure_count": 2,
+      "examples": [
+        {
+          "check": "final_scene_2/UAV1 exact all-source coverage, indices, ordering and no duplicates",
+          "detail": null
+        },
+        {
+          "check": "final_scene_2/UAV1 topic return payload count",
+          "detail": null
+        }
+      ]
+    },
+    {
+      "case": "source_altitude_used_instead_of_recipient",
+      "rejected": true,
+      "failure_count": 7,
+      "examples": [
+        {
+          "check": "final_scene_2/UAV1/source1-point1 source endpoint at recipient altitude",
+          "detail": null
+        },
+        {
+          "check": "final_scene_2/UAV1/source1-point1 recipient home endpoint",
+          "detail": null
+        },
+        {
+          "check": "final_scene_2/UAV1/source1-point1 recipient altitude 0",
+          "detail": {
+            "actual": 50,
+            "expected": 47,
+            "tolerance": 1e-09
+          }
+        }
+      ]
+    },
+    {
+      "case": "wrong_source_waypoint_index",
+      "rejected": true,
+      "exception": "KeyError: (1, 1)"
+    },
+    {
+      "case": "inherited_return_gate_omitted",
+      "rejected": true,
+      "failure_count": 4,
+      "examples": [
+        {
+          "check": "xuchang_small_2/UAV2/source1-point1 retained gate in prescribed order",
+          "detail": [
+            97.6195454598592,
+            -208.25463610474657
+          ]
+        },
+        {
+          "check": "xuchang_small_2/UAV2/source1-point1 retained gate in prescribed order",
+          "detail": [
+            130.0,
+            -65.0
+          ]
+        },
+        {
+          "check": "xuchang_small_2/UAV2/source1-point1 retained gate in prescribed order",
+          "detail": [
+            70.0,
+            -45.0
+          ]
+        }
+      ]
+    },
+    {
+      "case": "normal_return_connection_teleport",
+      "rejected": true,
+      "failure_count": 10,
+      "examples": [
+        {
+          "check": "final_scene_2/UAV1 exact connection geometry from planner",
+          "detail": null
+        },
+        {
+          "check": "final_scene_2/UAV1 connection starts at upper point above last scan",
+          "detail": null
+        },
+        {
+          "check": "final_scene_2/UAV1 selected connection length",
+          "detail": {
+            "actual": 0.0,
+            "expected": 20.0,
+            "tolerance": 1e-06
+          }
+        }
+      ]
+    },
+    {
+      "case": "actual_stage_array_missing_scan_point",
+      "rejected": true,
+      "failure_count": 1,
+      "examples": [
+        {
+          "check": "final_scene_2/UAV1 actual flattened GPS array path_stage_1",
+          "detail": null
+        }
+      ]
+    }
+  ]
+}

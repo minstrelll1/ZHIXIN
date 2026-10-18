@@ -1,0 +1,140 @@
+决赛与许昌双层固定场景集成说明（2026-10-18）
+
+一、当前可选择的场景
+
+三个场景固定为科目二、GPS、外部程序 B；选择场景时界面自动锁定对应高度、参考起飞点、5m/s 和50秒/点。
+规划区域、子区域、扫描航点、顺序及高度直接来自 planning_results_v2.zip。
+规划与分派不会重新求解覆盖、划分区域或增删扫描航点，只按各机实际开机起降点重接进返场路线。
+最新半径为上层50m、下层30m。
+
+决赛场景1（final_scene_1）：
+UAV1：上层47m，半径50m，10个点。
+UAV2：上层50m，半径50m，10个点。
+UAV3：上层53m，半径50m，10个点。
+UAV4：下层34m，半径30m，11个点。
+UAV5：下层37m，半径30m，10个点。
+UAV6：下层40m，半径30m，10个点。
+上三机、下三机分别覆盖整个区域；每层内部三个子区域互不重叠，两组之间可以重叠。
+每架只飞自己的固定高度，按1→2→…→N→N→…→2→1扫描，两趟各50秒/点，转折点累计100秒。
+
+决赛场景2（final_scene_2）：
+UAV       上层高度 / 点数       下层高度 / 点数
+1         47m / 7             34m / 15
+2         50m / 7             37m / 16
+3         53m / 7             40m / 13
+4         47m / 6             34m / 16
+5         50m / 7             37m / 13
+6         53m / 9             40m / 12
+
+许昌试飞小场景2（xuchang_small_2）：
+UAV       上层高度 / 点数       下层高度 / 点数
+1         47m / 4             34m / 12
+2         50m / 5             37m / 10
+3         53m / 7             40m / 14
+4         47m / 6             34m / 16
+5         50m / 9             37m / 9
+6         53m / 3             40m / 10
+
+后两场景均为六个互不重叠的子区域，每机先上层一趟，再下层一趟；每层按照数组原顺序执行一次。
+上层终点连接下层起点；不再将每一层正逆各扫一遍。
+层间下降2m/s是原离线估时的暂定参数，真实换层动作由程序 B 执行。本次没有修改程序 B。
+初始爬升6m/s同样是规划估时参数；本次未改变竞赛执行器原有起飞控制过程。
+
+二、起降点、进返场与时间策略
+
+三个新场景的起降点取各机本次开机首次有效、未解锁时的 GPS 记录，重连不会改变。
+固定规划坐标不随任务发布者位置平移。操场中心和许昌固定起飞点仅为离线方案的参考点。
+GPS 实飞分派使用各机的开机记录；不在一键起飞时重新采样降落点。
+
+科目一、科目二所有现有和新增飞行场景均取消任务时长门槛：duration_seconds=0、deadline_at=null。
+计划中的 mission_time_s 仅供展示；新场景的时间和距离标为离线名义起降点估算，不限制实际分派。
+competition_time 仍表示比赛已经经过的时间，不是倒计时、也不是自动返航指令。
+真实自动返航由外部程序 B 决定；若 B 内部写死了14分钟或23分钟，需要 B 作者同步取消。
+保留原有完成任务、低电量和手动返航处理；科目三、起飞安全检查、回执和重试机制不变。
+
+进场不共用航段、不平面交叉，以及进返场避让其他起降点1.5m，均为软偏好。
+删除离开集结区后至少3m航线间距的门槛。以有限候选尝试改善，不能满足时继续使用基础合法路线。
+不会因为上述软偏好不满足或任务预计超时而中断分派。
+GPS 缺失、固定数据损坏、非法航点或无法连接基础区域几何等输入问题仍按原校验处理。
+区域外边界、真正的禁飞扣除区和5m基本边界规则保留；必要的起降连接段沿用原例外规则。
+森林/池塘严格禁扫区及原免侦察地类采用 v2 数据。许昌内部六点禁飞扣除区继续保留。
+
+三、程序 B 话题和发布时间
+
+N 表示本机 ROS 编号；正常与竞赛 UAV1～UAV6 一一对应。
+JSON 的 mission_id、uav_id、assignment_checksum 用于核对本次任务。
+GPS 航点数组顺序为 [经度,纬度,相对起飞点高度米]，不使用海拔高度。
+
+点击“规划与分派”：仍通过原 assign_task 命令、校验值和确认回执链路给机载竞赛程序缓存任务。
+随后机载向 B 发布/更新：
+  /uavN/competition/task_region             std_msgs/String，子区域顶点、孔洞等 JSON
+  /uavN/competition/fixed_targets           std_msgs/String，发布端当前固定目标 JSON
+  /uavN/competition/recognition_categories   std_msgs/Int32MultiArray，识别类别列表
+  /uavN/competition/competition_time        std_msgs/String，比赛已用时间 JSON
+此时不发布本次新航线、不发送 recon_start_mode 启动信号。
+
+点击“一键起飞”：仍走原起飞准备、确认和机载起飞流程。
+只有机载确认起飞成功，才发布本次：
+  /ground_mission_planner/vehicle_N/entry_path       std_msgs/String
+  /ground_mission_planner/vehicle_N/return_paths     std_msgs/String
+  /ground_mission_planner/vehicle_N/path_stage_1     std_msgs/Float64MultiArray
+  /ground_mission_planner/vehicle_N/path_stage_2     std_msgs/Float64MultiArray
+  /ground_mission_planner/vehicle_N/jiangluodian     std_msgs/Float64MultiArray
+  /uavN/competition/external_mission                std_msgs/String
+最后发布 /ground_mission_planner/recon_start_mode，std_msgs/Int32，data=0。
+起飞失败时不发布上述本次新航线和启动信号。
+
+双层场景：stage_1 是上层，stage_2 是下层，均按 lon/lat/height 三个数一组扁平排列。
+external_mission.execution_mode=upper_once_then_lower_once；两层 scan_passes 都为1，hover_scan_seconds 都为50。
+return_policy=climb_to_upper_then_return。返航目录只包含六机上层点，不包含下层点。
+每条返航路线均以接收机自己的上层高度返回接收机自己的开机起降点上方。
+B 在下层返航时先回升到本机上层高度，自行连接选定的上层返航入口，再沿对应路线执行。
+返航路线唯一键为(source_uav_id,waypoint_index)，waypoint_index 从1开始。
+决赛场景2每个接收机收到43条返航路线；许昌2每机收到34条。
+
+决赛场景1使用原单层兼容方式：每机全部扫描点放 stage_1，stage_2 发空数组覆盖旧锁存值。
+UAV4～6的 stage_1 物理高度分别为34/37/40m，不能因话题名 stage_1 而改成上层高度。
+external_mission.execution_mode=legacy_single_layer，scan_pass_order=forward_then_reverse，首层scan_passes=2。
+兼容字段 layers[0].layer_id 仍为 upper，另用 physical_layer 明确 upper/lower 物理分组。
+return_waypoint_layer=assigned_physical_layer，return_policy=at_task_altitude。
+每机收到六机全部61个固定扫描点的返航路线，均按接收机自己的任务高度返回其降落点上方。
+
+点击界面返航：原 /ground_mission_planner/vehicle_N/return_home，std_msgs/Bool，data=true。
+本次没有新增或删除 ROS 话题，使用此前已经增加的 stage_2 双层接口；本次新增固定数据和必要说明字段。
+Float64MultiArray 本身没有任务编号；B 仍应结合 external_mission、进返场 JSON 和启动信号核对同批数据。
+
+四、完整示例与3D图表
+
+final_scenes_program_b_examples/index.json 为索引，包含三场景、各六机的点数、高度、返航数量及文件摘要。
+每个场景目录下 uav1.json ～ uav6.json 给出：
+  plan_and_assign_to_onboard：真实校验后的完整任务分派内容。
+  one_click_takeoff_to_onboard：完整起飞命令内容。
+  ros_after_assignment：分派后各话题名称、类型与完整消息。
+  ros_after_successful_takeoff：起飞成功后各话题名称、类型与完整消息（无省略航点/返航路径）。
+  manual_return_only_example：仅点击返航时的消息示例。
+String 消息的 message.data 是原 JSON 字符串，解析一次即可得到对象。
+
+这些消息由真实应用代码的离线端到端测试捕获，六个地面端通过内存网络互联，起降点使用模拟 GPS。
+模拟点位、任务编号、时间戳和校验值只供接口核对，不应直接上传实飞。
+本次示例固定目标、识别类别为空；现场会读取任务发布端当前配置，未修改用户现有目标 JSON。
+
+docs/competition_plans_3d.html 已加入三场景、配套高度、上下层筛选、扫描区、禁扫区和返航目录。
+每个示例目录的 planning_preview.json 可以导入3D图查看模拟实际起降点重接后的结果。
+直接打开3D图看到的是离线参考进返场；现场以当次任务导出的规划 JSON 为准。
+
+五、固定文件、验证与更新范围
+
+运行数据：competition_backend/competition_backend/final_scenes_prepared.json。
+导入工具：tools/import_final_scenes.py，仅赛前读取 ZIP 并生成固定文件，运行请求不会调用它。
+读取时验证固定文件内容摘要；导入时核对交接包文件 SHA-256、规划与返航目录一致性和原校验报告。
+源 planning_result.json SHA-256：60c52b29986a25ddc51da5a601dd5c3b2dd105ec2dc049d3bee2209c460adb14。
+
+193项后端/机载回归测试通过，包括三场景六机实际 API 分派、校验缓存、起飞准备/确认、起飞成功/失败、
+各机上下层坐标/高度/次数、返航来源和终点、软约束回退、旧场景及原接口。
+地面2D与3D脚本在离线 DOM/Canvas 测试中验证选择器、层数、点数、有限坐标和高度；未做真实浏览器截图验收。
+测试完全离线，没有向真实飞机发指令，也不等同于实飞验证。
+原 v2 的 status=draft 及地形/参数待确认说明保留在 search_area.source_pending_confirmations 中。
+
+使用本版本需要更新并重启地面端后端，以及更新机载竞赛程序和 competition_shared 公共模块。
+没有修改外部程序 B 源码；其双层执行、扫描次数、换层/回升和自行设置的超时策略由 B 作者核对。
+本次未提交 Git、未 push、未部署到其他电脑或无人机；原有未提交修改均保留。

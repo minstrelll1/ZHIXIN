@@ -1,0 +1,380 @@
+{
+  "artifact_type": "independent_historical_exclusion_draft",
+  "status": "draft_requires_user_confirmation",
+  "source_date": "2017-07-24",
+  "source_date_basis": "02_规划输入.json historical_basemap.date; not independently authenticated from satellite provider",
+  "source": "inputs/05_历史底图.jpg, user-supplied historical raster",
+  "source_sha256": "817f1da5d1cf35b845ab66f51f4ce62236967ac49f1f8d6a40731da1b643cbb2",
+  "input_sha256": "758aaa7ca3b3e536a7d167eef1c5552ed965e8108e058ce9b56de8b381c8a27c",
+  "is_current_survey": false,
+  "is_user_confirmed_boundary": false,
+  "method": "Manual path/bank pixel tracing; linear longitude and inverse interpolated WebMercator latitude from supplied image bounds; fixed field projection for metric checks.",
+  "image_registration": {
+    "file": "05_历史底图.jpg",
+    "date": "2017-07-24",
+    "current_survey": false,
+    "image_bounds_southwest_northeast_lat_lon": [
+      [
+        33.85714191084824,
+        113.69893692568316
+      ],
+      [
+        33.87263819104422,
+        113.71759918542799
+      ]
+    ],
+    "pixel_origin": "upper_left",
+    "longitude_mapping": "linear_west_to_east",
+    "latitude_mapping": "interpolate_WebMercator_y_north_to_south_then_inverse_Mercator",
+    "note": "只能辅助圈定待确认区域，不能用旧影像或10m地类栅格证明现状边界及5m精度",
+    "width_px": 1800,
+    "height_px": 1800,
+    "pixel_extent_convention": "[0,width] x [0,height]; upper-left origin"
+  },
+  "manual_pixel_vertices_are_reproducible_inputs": true,
+  "exclusions": [
+    {
+      "id": "southeast_exclusion_anchor",
+      "kind": "scan_disk_forbidden",
+      "geometry_wgs84": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              113.705862697633,
+              33.862445398857
+            ],
+            [
+              113.706754338932,
+              33.862410961685
+            ],
+            [
+              113.70704464075,
+              33.8623765245
+            ],
+            [
+              113.707189791659,
+              33.862299040782
+            ],
+            [
+              113.707137952049,
+              33.860697694878
+            ],
+            [
+              113.706712867243,
+              33.860757961127
+            ],
+            [
+              113.706453669191,
+              33.861076510599
+            ],
+            [
+              113.706152999451,
+              33.861360621287
+            ],
+            [
+              113.705862697633,
+              33.861670559142
+            ],
+            [
+              113.705862697633,
+              33.862445398857
+            ]
+          ]
+        ]
+      },
+      "geometry_status": "provisional",
+      "source": "inputs/05_历史底图.jpg; historical_basemap registration in inputs/02_规划输入.json",
+      "source_date": "2017-07-24",
+      "source_sha256": "817f1da5d1cf35b845ab66f51f4ce62236967ac49f1f8d6a40731da1b643cbb2",
+      "manual_pixel_vertices": [
+        [
+          668,
+          1184
+        ],
+        [
+          754,
+          1188
+        ],
+        [
+          782,
+          1192
+        ],
+        [
+          796,
+          1201
+        ],
+        [
+          791,
+          1387
+        ],
+        [
+          750,
+          1380
+        ],
+        [
+          725,
+          1343
+        ],
+        [
+          696,
+          1310
+        ],
+        [
+          668,
+          1274
+        ]
+      ],
+      "anchor_wgs84_lon_lat": [
+        113.70687514658842,
+        33.86097258705829
+      ],
+      "anchor_pixel_xy": [
+        765.6520606207091,
+        1355.0708906575412
+      ],
+      "polygon_m": [
+        [
+          -180.718277,
+          212.460142
+        ],
+        [
+          -184.538046,
+          129.955079
+        ],
+        [
+          -188.357816,
+          103.092965
+        ],
+        [
+          -196.952305,
+          89.661909
+        ],
+        [
+          -374.573485,
+          94.458715
+        ],
+        [
+          -367.888757,
+          133.792524
+        ],
+        [
+          -332.555271,
+          157.776554
+        ],
+        [
+          -301.041732,
+          185.598028
+        ],
+        [
+          -266.663446,
+          212.460142
+        ]
+      ],
+      "area_m2": 18147.405994,
+      "anchor_inside": true,
+      "geometry_valid": true,
+      "outside_boundary_area_m2": 0.0,
+      "flight_prohibited": false,
+      "radius_m": null,
+      "interpretation": "东南植被地块候选：沿北侧横路、东侧道路、南侧场界小径及西侧折转斜路圈定。定位点只确定附近位置，不能证明用户所指范围恰为整个地块；选择完整历史地块是显式草案假设。",
+      "confirmation_required": true,
+      "sensitivity": [
+        {
+          "boundary_offset_m": -10.0,
+          "area_within_boundary_m2": 12948.387057,
+          "additional_area_removed_after_terrain_exemption_m2": 10970.55346,
+          "upper_scan_centers_forbidden_within_boundary_m2": 26715.75472,
+          "lower_scan_centers_forbidden_within_boundary_m2": 34661.336175
+        },
+        {
+          "boundary_offset_m": 0.0,
+          "area_within_boundary_m2": 18147.405994,
+          "additional_area_removed_after_terrain_exemption_m2": 15219.818941,
+          "upper_scan_centers_forbidden_within_boundary_m2": 30800.922836,
+          "lower_scan_centers_forbidden_within_boundary_m2": 39113.130771
+        },
+        {
+          "boundary_offset_m": 10.0,
+          "area_within_boundary_m2": 23015.609437,
+          "additional_area_removed_after_terrain_exemption_m2": 19140.324236,
+          "upper_scan_centers_forbidden_within_boundary_m2": 34890.761602,
+          "lower_scan_centers_forbidden_within_boundary_m2": 43469.348511
+        }
+      ]
+    },
+    {
+      "id": "pond_exclusion_anchor",
+      "kind": "scan_disk_forbidden",
+      "geometry_wgs84": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              113.70370616984,
+              33.861756652791
+            ],
+            [
+              113.704266037633,
+              33.861713605977
+            ],
+            [
+              113.704369716853,
+              33.861653340402
+            ],
+            [
+              113.704348981009,
+              33.861102338883
+            ],
+            [
+              113.704266037633,
+              33.861050682308
+            ],
+            [
+              113.703664698152,
+              33.861102338883
+            ],
+            [
+              113.703633594386,
+              33.861171214267
+            ],
+            [
+              113.703664698152,
+              33.861696387246
+            ],
+            [
+              113.70370616984,
+              33.861756652791
+            ]
+          ]
+        ]
+      },
+      "geometry_status": "provisional",
+      "source": "inputs/05_历史底图.jpg; historical_basemap registration in inputs/02_规划输入.json",
+      "source_date": "2017-07-24",
+      "source_sha256": "817f1da5d1cf35b845ab66f51f4ce62236967ac49f1f8d6a40731da1b643cbb2",
+      "manual_pixel_vertices": [
+        [
+          460,
+          1264
+        ],
+        [
+          514,
+          1269
+        ],
+        [
+          524,
+          1276
+        ],
+        [
+          522,
+          1340
+        ],
+        [
+          514,
+          1346
+        ],
+        [
+          456,
+          1340
+        ],
+        [
+          453,
+          1332
+        ],
+        [
+          456,
+          1271
+        ]
+      ],
+      "anchor_wgs84_lon_lat": [
+        113.70396642079015,
+        33.86137483466436
+      ],
+      "anchor_pixel_xy": [
+        485.1015534225868,
+        1308.3490861866496
+      ],
+      "polygon_m": [
+        [
+          -257.113944,
+          412.007271
+        ],
+        [
+          -261.888694,
+          360.201766
+        ],
+        [
+          -268.573348,
+          350.608154
+        ],
+        [
+          -329.690399,
+          352.526876
+        ],
+        [
+          -335.420143,
+          360.201766
+        ],
+        [
+          -329.690399,
+          415.844715
+        ],
+        [
+          -322.050746,
+          418.722799
+        ],
+        [
+          -263.798595,
+          415.844715
+        ]
+      ],
+      "area_m2": 4737.84636,
+      "anchor_inside": true,
+      "geometry_valid": true,
+      "outside_boundary_area_m2": 0.0,
+      "flight_prohibited": false,
+      "radius_m": null,
+      "interpretation": "池塘候选：沿可见近矩形水面外围岸线/窄堤的转折圈定，包含定位点。阴影、水陆交界、2017年至今水位及地物变化使现状边界不可确认。",
+      "confirmation_required": true,
+      "sensitivity": [
+        {
+          "boundary_offset_m": -10.0,
+          "area_within_boundary_m2": 2431.070549,
+          "additional_area_removed_after_terrain_exemption_m2": 2431.070549,
+          "upper_scan_centers_forbidden_within_boundary_m2": 9518.687598,
+          "lower_scan_centers_forbidden_within_boundary_m2": 13645.596433
+        },
+        {
+          "boundary_offset_m": 0.0,
+          "area_within_boundary_m2": 4737.84636,
+          "additional_area_removed_after_terrain_exemption_m2": 4737.84636,
+          "upper_scan_centers_forbidden_within_boundary_m2": 11583.75027,
+          "lower_scan_centers_forbidden_within_boundary_m2": 16013.088895
+        },
+        {
+          "boundary_offset_m": 10.0,
+          "area_within_boundary_m2": 7201.525749,
+          "additional_area_removed_after_terrain_exemption_m2": 7201.525749,
+          "upper_scan_centers_forbidden_within_boundary_m2": 13724.947313,
+          "lower_scan_centers_forbidden_within_boundary_m2": 18455.921494
+        }
+      ]
+    }
+  ],
+  "sensitivity_is_not_an_authorized_boundary_change": true,
+  "limitations": [
+    "真实边界未经用户确认；规划只能作为完整可复算草案，不能声明满足真实禁扫要求或可直接飞行。",
+    "日期来自准备方提供的输入元数据；原始影像服务商、拍摄真实性和绝对配准误差无独立核验材料。",
+    "两个锚点未定义禁扫范围；本文件没有把附近偷换成固定半径圆。",
+    "道路与岸线仅为可审查的历史地物代理，±10m敏感性不是测量误差置信区间。",
+    "两个候选均按完整扫描圆不得相交处理；它们不是自动禁飞区。",
+    "2021森林/水体覆盖豁免与这些强禁扫多边形分别计算，不能抵消强禁扫限制。"
+  ],
+  "combined_metrics": {
+    "candidate_union_area_m2": 22885.252354,
+    "overlap_area_m2": 0.0,
+    "additional_area_removed_after_terrain_exemption_m2": 19957.665301,
+    "draft_effective_area_m2": 99857.715906
+  }
+}

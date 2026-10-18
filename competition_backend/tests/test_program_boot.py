@@ -35,6 +35,7 @@ class RemoteBootTests(unittest.TestCase):
             patch.object(remote, 'stamp', side_effect=lambda pid: self.live.get(pid, '')),
             patch.object(remote, 'existing', side_effect=lambda key, uid: self.borrowed.get(key, {})),
             patch.object(remote, 'ros_health', side_effect=lambda uid: self.health),
+            patch.object(remote, 'flight_allows_autostart', return_value=True),
             patch.object(remote.subprocess, 'Popen', side_effect=self.spawn),
         ]
         for item in patches:
@@ -110,14 +111,147 @@ class RemoteBootTests(unittest.TestCase):
         self.assertEqual(len(self.calls), 2 * len(remote.NAMES))
         self.assertEqual(self.rpc()['_lifecycle']['auto_start_pending'], [])
 
-    def test_partial_start_interruption_does_not_fill_missing_programs_on_reconnect(self):
+    def test_partial_start_interruption_resumes_only_missing_programs_on_reconnect(self):
         self.interrupt_at = 2
         with self.assertRaises(KeyboardInterrupt):
             self.rpc('auto_start')
         self.interrupt_at = None
+        self.assertEqual(self.rpc()['_lifecycle']['auto_start_pending'], list(remote.NAMES)[1:])
         self.rpc('auto_start')
-        self.assertEqual(len(self.calls), 1)
+        self.assertEqual([Path(argv[3]).name for argv in self.calls], list(remote.NAMES))
         self.assertEqual(self.rpc()['_lifecycle']['auto_start_pending'], [])
+
+    def test_interruption_before_first_worker_and_repeated_missing_replies(self):
+        self.interrupt_at = 1
+        for _ in range(3):
+            with self.assertRaises(KeyboardInterrupt):
+                self.rpc('auto_start')
+            self.assertEqual(self.rpc()['_lifecycle']['auto_start_pending'], list(remote.NAMES))
+        self.interrupt_at = None
+        self.rpc('auto_start')
+        for _ in range(3):
+            self.rpc('status'); self.rpc('auto_start')
+        self.assertEqual(len(self.calls), len(remote.NAMES))
+
+    def test_partial_batch_waits_until_flight_state_is_confirmed_disarmed(self):
+        self.interrupt_at = 2
+        with self.assertRaises(KeyboardInterrupt):
+            self.rpc('auto_start')
+        self.interrupt_at = None
+        with patch.object(remote, 'flight_allows_autostart', return_value=False):
+            state = self.rpc('auto_start')
+        self.assertEqual(len(self.calls), 1)
+        self.assertEqual(state['_lifecycle']['auto_start_pending'], list(remote.NAMES)[1:])
+        self.assertEqual(state['_lifecycle']['auto_start_waiting_for_disarm'], list(remote.NAMES)[1:])
+        self.rpc('auto_start')
+        self.assertEqual(len(self.calls), len(remote.NAMES))
+
+    def test_manual_stop_during_partial_batch_remains_stopped(self):
+        self.interrupt_at = 2
+        with self.assertRaises(KeyboardInterrupt):
+            self.rpc('auto_start')
+        self.interrupt_at = None
+        with patch.object(remote, 'stop_program', return_value=dict(state='stopped')):
+            self.rpc('stop', program='flight')
+        self.rpc('auto_start')
+        self.assertEqual([Path(argv[3]).name for argv in self.calls], [key for key in remote.NAMES if key != 'flight'])
+        self.assertEqual(self.rpc()['_lifecycle']['auto_start_pending'], [])
+
+    def test_legacy_batch_marker_does_not_resume_untracked_programs(self):
+        self.rpc()
+        runtime = self.root / 'ground_runtime/programs_uav2'
+        remote.write_json(runtime / 'boot_autostart.json', dict(boot_id=self.boot, reason='auto_start'))
+        self.rpc('auto_start')
+        self.assertEqual(self.calls, [])
+        self.assertEqual(self.rpc()['_lifecycle']['auto_start_pending'], [])
+
+    def test_connection_lost_after_spawn_before_worker_receipt_cannot_duplicate_child(self):
+        directory = self.root / 'ground_runtime/programs_uav2/onboard'
+        original_write = remote.write_json
+        attempts = []
+        def spawn_worker(argv, **kwargs):
+            attempts.append(argv)
+            pid = 700 + len(attempts)
+            self.live[pid] = 'worker-stamp'
+            return SimpleNamespace(pid=pid)
+        def lose_receipt(path, value):
+            if path.name == 'worker.json':
+                raise KeyboardInterrupt('worker 已创建，SSH 在保存回执前丢失')
+            original_write(path, value)
+        with patch.object(remote.subprocess, 'Popen', side_effect=spawn_worker):
+            with patch.object(remote, 'write_json', side_effect=lose_receipt):
+                with self.assertRaises(KeyboardInterrupt):
+                    self.rpc('auto_start', program='onboard')
+            self.rpc('auto_start', program='onboard')
+        self.assertEqual(len(attempts), 2)
+        old_id, new_id = attempts[0][-2], attempts[1][-2]
+        self.assertNotEqual(old_id, new_id)
+        self.live[801] = 'child-stamp'
+        child = SimpleNamespace(pid=801, wait=lambda: 0)
+        with patch.object(remote.subprocess, 'Popen', return_value=child) as launch:
+            remote.worker(directory, 'echo synthetic', old_id)
+            launch.assert_not_called()
+            remote.worker(directory, 'echo synthetic', new_id)
+            remote.worker(directory, 'echo synthetic', old_id)
+            remote.worker(directory, 'echo synthetic', new_id)
+            launch.assert_called_once()
+        self.assertEqual(remote.read_json(directory / 'process.json')['exit_code'], 0)
+        self.assertNotIn('onboard', self.rpc()['_lifecycle']['auto_start_pending'])
+
+    def test_worker_checks_flight_again_and_can_resume_after_state_recovers(self):
+        directory = self.root / 'ground_runtime/programs_uav2/onboard'
+        self.rpc()  # 仅创建目录。
+        marker = dict(boot_id=self.boot, reason='launch_pending', launch_id='test-token', automatic=True, uav_id=2)
+        remote.write_json(directory / 'autostart.json', marker)
+        self.live[901] = 'child-stamp'
+        with patch.object(remote.subprocess, 'Popen', return_value=SimpleNamespace(pid=901, wait=lambda: 0)) as launch:
+            with patch.object(remote, 'flight_allows_autostart', return_value=False):
+                remote.worker(directory, 'echo synthetic', 'test-token')
+            launch.assert_not_called()
+            self.assertEqual(remote.read_json(directory / 'autostart.json')['reason'], 'launch_pending')
+            remote.worker(directory, 'echo synthetic', 'test-token')
+            launch.assert_called_once()
+
+    def test_manual_stop_invalidates_a_worker_that_has_not_started_its_child(self):
+        self.rpc()
+        directory = self.root / 'ground_runtime/programs_uav2/onboard'
+        remote.write_json(directory / 'autostart.json', dict(boot_id=self.boot, reason='operator_stopped'))
+        with patch.object(remote.subprocess, 'Popen') as launch:
+            remote.worker(directory, 'echo synthetic', 'old-token')
+            launch.assert_not_called()
+
+    def test_full_watch_recovers_base_connection_and_partial_batch_after_ssh_loss(self):
+        manager = ProgramManager(self.home / 'ground', {})
+        manager.local = dict(uav_id=2, model='p600', onboard_host='192.168.1.207')
+        requests = []
+        def request(action, offsets, program=None):
+            requests.append(action)
+            if len(requests) == 1:
+                raise TimeoutError('无人机尚未开机')
+            if requests.count('auto_start') == 1 and action == 'auto_start':
+                self.interrupt_at = 2
+                try:
+                    self.rpc(action)
+                except KeyboardInterrupt:
+                    self.interrupt_at = None
+                    raise RuntimeError('Timeout, server 192.168.1.207 not responding.')
+            result = self.rpc(action)
+            if len(self.calls) == len(remote.NAMES) and not result['_lifecycle']['auto_start_pending']:
+                manager.stop_event.set()
+            if len(requests) > 12:
+                manager.stop_event.set()
+                self.fail('全流程未在网络恢复后完成')
+            return result
+        manager._request = request
+        def connection(**kwargs):
+            ready = len(requests) >= 2
+            return dict(ready=ready, auto_start_allowed=ready, state='starting', detail='等待厂商基础连接')
+        with patch.object(manager, '_prepare_connection', side_effect=connection), \
+                patch.object(manager.stop_event, 'wait', return_value=False):
+            manager._watch()
+        self.assertEqual(requests, ['status', 'status', 'status', 'auto_start', 'status', 'auto_start'])
+        self.assertEqual([Path(argv[3]).name for argv in self.calls], list(remote.NAMES))
+        self.assertEqual(manager.auto_blocked_boot, '')
 
     def test_first_contact_with_existing_flight_session_only_monitors(self):
         self.live[999] = 'flight-stamp'
@@ -256,6 +390,13 @@ class GroundBootTests(unittest.TestCase):
         calls, _ = self.watch([snapshot(pending=True), TimeoutError('SSH 响应丢失'), snapshot(), snapshot()])
         self.assertEqual(calls, ['status', 'auto_start', 'status', 'status'])
 
+    def test_openssh_server_timeout_does_not_block_the_remaining_boot_batch(self):
+        calls, result = self.watch([snapshot(pending=True),
+            RuntimeError('SSH 连接或机载程序管理失败：Timeout, server 192.168.1.202 not responding.'),
+            snapshot(pending=True), snapshot()])
+        self.assertEqual(calls, ['status', 'auto_start', 'status', 'auto_start'])
+        self.assertEqual(result['programs']['flight']['state'], 'running')
+
     def test_new_ground_instance_only_monitors_existing_boot(self):
         calls, _ = self.watch([snapshot(), snapshot()])
         self.assertEqual(calls, ['status', 'status'])
@@ -267,6 +408,20 @@ class GroundBootTests(unittest.TestCase):
     def test_bad_config_does_not_end_monitoring_or_loop_start_requests(self):
         calls, _ = self.watch([snapshot(pending=True), RuntimeError('启动配置格式错误'), snapshot(pending=True)])
         self.assertEqual(calls, ['status', 'auto_start', 'status'])
+
+
+class FlightGuardTests(unittest.TestCase):
+    def test_only_fresh_connected_disarmed_sample_allows_autostart(self):
+        for state, expected in (({}, False), (dict(connected=True), False),
+                                (dict(connected=True, armed=True), False),
+                                (dict(connected=False, armed=False), False),
+                                (dict(connected=True, armed=False), True)):
+            with self.subTest(state=state), patch.object(remote.subprocess, 'run', return_value=SimpleNamespace(
+                    returncode=0, stdout=json.dumps(state).encode())) as run:
+                self.assertEqual(remote.flight_allows_autostart(2), expected)
+                self.assertEqual(run.call_args.kwargs['timeout'], 4)
+        with patch.object(remote.subprocess, 'run', side_effect=remote.subprocess.TimeoutExpired('probe', 4)):
+            self.assertFalse(remote.flight_allows_autostart(2))
 
 
 if __name__ == '__main__':

@@ -9,6 +9,7 @@ assert.match(html, /<option value="fixed_xuchang" hidden>许昌固定起飞点<\
 // Exercise scene selection: Xuchang uses the saved 45 m plan; other scenes keep their defaults.
 const sceneNodes=new Map();
 const sceneContext=vm.createContext({
+  决赛场景名称:{final_scene_1:'决赛场景1',final_scene_2:'决赛场景2',xuchang_small_2:'许昌试飞小场景2'},
   $:id=>{if(!sceneNodes.has(id))sceneNodes.set(id,{value:'gps',dataset:{},disabled:false});return sceneNodes.get(id)},
   更新飞行高度选项:()=>{},更新GPS参考:()=>{}
 });
@@ -56,7 +57,7 @@ function fixture(fetch,recognitionSelection={category_count:3,category_ids:[0,7,
     if(url==='/api/v1/plan/jobs'&&result.ok){finishedPlan=await result.json();return response({job_id:'job-1',state:'running'});}
     return result;
   };
-  const context={fetch:jobFetch,AbortController,setTimeout,clearTimeout,console,当前状态:{mission:null},当前角色:{task_publisher:true},文本:{错误:{}},
+  const context={fetch:jobFetch,AbortController,setTimeout,clearTimeout,console,当前状态:{mission:null},当前角色:{task_publisher:true},文本:{错误:{}},决赛场景名称:{final_scene_1:'决赛场景1',final_scene_2:'决赛场景2',xuchang_small_2:'许昌试飞小场景2'},
     $:id=>{if(!nodes.has(id))nodes.set(id,{value:defaults[id]??'',style:{},dataset:{},disabled:false});return nodes.get(id)},
     获取规划识别类别:()=>recognitionSelection,提示:message=>notes.push(message),读取机载GPS参考组:()=>({}),数值:Number,渲染:()=>{}};
   vm.createContext(context);

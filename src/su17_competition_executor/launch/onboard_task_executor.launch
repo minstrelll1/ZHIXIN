@@ -20,6 +20,7 @@
   <arg name="external_mission_topic" default="" />
   <arg name="external_status_topic" default="" />
   <arg name="external_path_topic" default="" />
+  <arg name="external_lower_path_topic" default="" />
   <arg name="external_landing_topic" default="" />
   <arg name="external_return_topic" default="" />
   <arg name="restart_all_command" default="" />
@@ -48,6 +49,7 @@
     <param name="external_mission_topic" value="$(arg external_mission_topic)" />
     <param name="external_status_topic" value="$(arg external_status_topic)" />
     <param name="external_path_topic" value="$(arg external_path_topic)" />
+    <param name="external_lower_path_topic" value="$(arg external_lower_path_topic)" />
     <param name="external_landing_topic" value="$(arg external_landing_topic)" />
     <param name="external_return_topic" value="$(arg external_return_topic)" />
     <param name="restart_all_command" value="$(arg restart_all_command)" />

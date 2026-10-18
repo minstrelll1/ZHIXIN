@@ -11,7 +11,7 @@ from unittest.mock import Mock, patch
 
 from fastapi.testclient import TestClient
 from competition_backend.ground_entry import GroundEntry
-from competition_backend.program_manager import ProgramManager
+from competition_backend.program_manager import ProgramManager, SSHTransportError, transient_connection_error
 from competition_shared.fleet import default_fleet
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -113,6 +113,55 @@ class ProgramsTest(unittest.TestCase):
                 self.assertEqual(manager.snapshot()['programs'][key]['state'], 'error')
                 self.assertIn('密钥验证失败', manager.read_log(key)['text'])
             manager.stop()
+
+    def test_ssh_disconnect_and_truncated_reply_retry_but_auth_and_config_errors_do_not(self):
+        manager = ProgramManager(ROOT, {})
+        manager.local = dict(uav_id=1, model='p600', onboard_host='192.168.1.202', ground_host='192.168.1.230')
+        cases = [
+            (255, b'Timeout, server 192.168.1.202 not responding.', b'', True),
+            (255, b'Connection closed by 192.168.1.202 port 22', b'', True),
+            (255, b'kex_exchange_identification: read: Connection reset', b'', True),
+            (255, b'Permission denied (publickey,password).', b'', False),
+            (255, b'Host key verification failed.', b'', False),
+            (1, b'ValueError: invalid configuration', b'', False),
+            (0, b'', b'ZHX1:truncated', True),
+            (0, b'', b'{"onboard":', True),
+        ]
+        for rc, err, out, retryable in cases:
+            with self.subTest(error=err, output=out), patch('competition_backend.program_manager.subprocess.run',
+                    return_value=SimpleNamespace(returncode=rc, stderr=err, stdout=out)) as run:
+                with self.assertRaises(RuntimeError) as failure:
+                    manager._request('status', {})
+                self.assertEqual(transient_connection_error(failure.exception), retryable)
+                self.assertEqual(isinstance(failure.exception, SSHTransportError), retryable)
+                argv = run.call_args.args[0]
+                self.assertEqual(argv[argv.index('-b') + 1], '192.168.1.230')
+                self.assertEqual(run.call_args.kwargs['timeout'], 45)
+
+    def test_compression_reduces_actual_management_source_and_preserves_payload(self):
+        import base64
+        import zlib
+        manager = ProgramManager(ROOT, {})
+        manager.local = dict(uav_id=1, model='p600', onboard_host='192.168.1.202')
+        expected = {'中文': '回包' * 1000, '_lifecycle': {'boot_id': 'test-boot'}}
+        encoded = b'ZHX1:' + base64.b64encode(zlib.compress(json.dumps(expected, ensure_ascii=False).encode()))
+        with patch('competition_backend.program_manager.subprocess.run',
+                   return_value=SimpleNamespace(returncode=0, stdout=encoded, stderr=b'')) as run:
+            self.assertEqual(manager._request('status', {}), expected)
+        self.assertLess(len(run.call_args.kwargs['input']), (ROOT / 'tools/remote_programs.py').stat().st_size / 2)
+
+    def test_small_log_pages_and_start_receipts_do_not_skip_log_bytes(self):
+        import base64
+        with tempfile.TemporaryDirectory() as tmp:
+            directory = Path(tmp)
+            content = ('中文日志\n' * 10000).encode()
+            (directory / 'console.log').write_bytes(content)
+            receipt = remote.status(directory, 7, log_limit=0)
+            self.assertEqual(receipt['offset'], 7)
+            self.assertEqual(receipt['log'], '')
+            first = remote.status(directory, 0, log_limit=8192)
+            second = remote.status(directory, first['offset'], log_limit=8192)
+            self.assertEqual(base64.b64decode(first['log']) + base64.b64decode(second['log']), content[:16384])
 
     def test_start_reads_latest_config_but_status_and_stop_ignore_broken_config(self):
         with tempfile.TemporaryDirectory() as tmp:

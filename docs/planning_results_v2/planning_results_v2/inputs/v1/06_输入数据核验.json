@@ -1,0 +1,57 @@
+{
+  "checked_at_local_date": "2026-10-17",
+  "output_plans_generated": false,
+  "source_points_match_docx_and_existing_area": true,
+  "source_point_count": 25,
+  "final_scene_point_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10
+  ],
+  "final_polygon_valid": true,
+  "final_polygon_area_m2": 128126.6831172987,
+  "final_terrain_exempt_area_before_new_exclusions_m2": 8311.304188230659,
+  "final_effective_area_before_new_exclusions_m2": 119815.37892906804,
+  "strict_new_scan_exclusion_geometry_complete": false,
+  "xuchang_region_count": 6,
+  "xuchang_all_regions_valid": true,
+  "xuchang_overlap_area_m2": 0.0,
+  "xuchang_partition_symmetric_difference_area_m2": 5.024397023796752e-07,
+  "xuchang_old_total_points": 75,
+  "xuchang_current_regions": [
+    {
+      "uav_id": 1,
+      "area_m2": 12895.609050758763
+    },
+    {
+      "uav_id": 2,
+      "area_m2": 12679.072529677258
+    },
+    {
+      "uav_id": 3,
+      "area_m2": 22182.771401607235
+    },
+    {
+      "uav_id": 4,
+      "area_m2": 22149.84940232191
+    },
+    {
+      "uav_id": 5,
+      "area_m2": 83978.1380407199
+    },
+    {
+      "uav_id": 6,
+      "area_m2": 10803.459886036584
+    }
+  ],
+  "final_scene_1_ideal_upper_group_scan_area_ceiling_m2": 110269.90214100173,
+  "final_scene_2_and_xuchang_2_max_scan_count_ignoring_travel": 27,
+  "note": "只验证输入提取和现有区域，不是新规划可飞证明；两个禁扫边界仍未给定。"
+}

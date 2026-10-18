@@ -69,6 +69,9 @@ class AutonomyTest(unittest.TestCase):
         node._land = Mock()
         node.external_mission_pub = Mock()
         node.external_path_pub = Mock()
+        node.external_path_topic = "/ground_mission_planner/vehicle_3/path_stage_1"
+        node.external_lower_path_pub = Mock()
+        node.external_lower_path_topic = "/ground_mission_planner/vehicle_3/path_stage_2"
         node.external_landing_pub = Mock()
         node.recon_start_mode_pub = Mock()
         node._pengfei_bridge = Mock()

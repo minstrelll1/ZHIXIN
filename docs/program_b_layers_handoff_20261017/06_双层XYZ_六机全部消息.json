@@ -1,0 +1,4927 @@
+{
+  "example_only": true,
+  "description": "双层XYZ六机接口示例；测试坐标，不代表当前固定规划或实飞任务。",
+  "encoding_note": "topics[].message 是 ROS 字段；String 的 message.data 是实际JSON字符串；decoded_data 为同内容解码视图，不是额外ROS字段。",
+  "uavs": [
+    {
+      "uav_id": 1,
+      "assignment_sent_on_plan_and_dispatch": {
+        "mission_id": "subject2-dual-layer-xyz-interface-example",
+        "subject": "subject2",
+        "flight_profile": "lab",
+        "task": {
+          "type": "lawnmower_search",
+          "coordinate_frame": "ENU",
+          "waypoints_m": [
+            [
+              10.0,
+              20.0
+            ],
+            [
+              15.0,
+              30.0
+            ]
+          ],
+          "waypoints_wgs84": [
+            [
+              33.86309000009,
+              113.70578260869566
+            ],
+            [
+              33.863135000135,
+              113.70567391304348
+            ]
+          ],
+          "reconnaissance_mode": "hover_scan",
+          "hover_scan_seconds": 50.0,
+          "execution_mode": "upper_once_then_lower_once",
+          "layer_order": [
+            "upper",
+            "lower"
+          ],
+          "layers": [
+            {
+              "layer_id": "upper",
+              "altitude_m": 47.0,
+              "waypoints_m": [
+                [
+                  10.0,
+                  20.0
+                ],
+                [
+                  15.0,
+                  30.0
+                ]
+              ],
+              "waypoints_wgs84": [
+                [
+                  33.86309000009,
+                  113.70578260869566
+                ],
+                [
+                  33.863135000135,
+                  113.70567391304348
+                ]
+              ],
+              "hover_scan_seconds": 50.0,
+              "scan_passes": 1
+            },
+            {
+              "layer_id": "lower",
+              "altitude_m": 34.0,
+              "waypoints_m": [
+                [
+                  15.0,
+                  28.0
+                ],
+                [
+                  12.0,
+                  22.0
+                ],
+                [
+                  10.0,
+                  15.0
+                ]
+              ],
+              "waypoints_wgs84": [
+                [
+                  33.863135000135,
+                  113.70569565217392
+                ],
+                [
+                  33.863108000108,
+                  113.70576086956522
+                ],
+                [
+                  33.86309000009,
+                  113.70583695652174
+                ]
+              ],
+              "hover_scan_seconds": 50.0,
+              "scan_passes": 1
+            }
+          ],
+          "transit_routes": {
+            "schema_version": 2,
+            "recipient_uav_id": 1,
+            "route_scope": "all_uav_waypoints",
+            "plan_sha256": "offline-example-not-a-flight-plan",
+            "coordinate_frame": "ENU",
+            "departure": [
+              1.0,
+              0.0
+            ],
+            "entry_path": [
+              [
+                1.0,
+                0.0
+              ],
+              [
+                10.0,
+                20.0
+              ]
+            ],
+            "waypoints_by_uav": {
+              "1": [
+                [
+                  10.0,
+                  20.0
+                ],
+                [
+                  15.0,
+                  30.0
+                ]
+              ],
+              "2": [
+                [
+                  20.0,
+                  20.0
+                ],
+                [
+                  25.0,
+                  30.0
+                ]
+              ],
+              "3": [
+                [
+                  30.0,
+                  20.0
+                ],
+                [
+                  35.0,
+                  30.0
+                ]
+              ],
+              "4": [
+                [
+                  40.0,
+                  20.0
+                ],
+                [
+                  45.0,
+                  30.0
+                ]
+              ],
+              "5": [
+                [
+                  50.0,
+                  20.0
+                ],
+                [
+                  55.0,
+                  30.0
+                ]
+              ],
+              "6": [
+                [
+                  60.0,
+                  20.0
+                ],
+                [
+                  65.0,
+                  30.0
+                ]
+              ]
+            },
+            "return_paths": [
+              {
+                "source_uav_id": 1,
+                "waypoint_index": 1,
+                "path": [
+                  [
+                    10.0,
+                    20.0
+                  ],
+                  [
+                    1.0,
+                    0.0
+                  ]
+                ]
+              },
+              {
+                "source_uav_id": 1,
+                "waypoint_index": 2,
+                "path": [
+                  [
+                    15.0,
+                    30.0
+                  ],
+                  [
+                    1.0,
+                    0.0
+                  ]
+                ]
+              },
+              {
+                "source_uav_id": 2,
+                "waypoint_index": 1,
+                "path": [
+                  [
+                    20.0,
+                    20.0
+                  ],
+                  [
+                    1.0,
+                    0.0
+                  ]
+                ]
+              },
+              {
+                "source_uav_id": 2,
+                "waypoint_index": 2,
+                "path": [
+                  [
+                    25.0,
+                    30.0
+                  ],
+                  [
+                    1.0,
+                    0.0
+                  ]
+                ]
+              },
+              {
+                "source_uav_id": 3,
+                "waypoint_index": 1,
+                "path": [
+                  [
+                    30.0,
+                    20.0
+                  ],
+                  [
+                    1.0,
+                    0.0
+                  ]
+                ]
+              },
+              {
+                "source_uav_id": 3,
+                "waypoint_index": 2,
+                "path": [
+                  [
+                    35.0,
+                    30.0
+                  ],
+                  [
+                    1.0,
+                    0.0
+                  ]
+                ]
+              },
+              {
+                "source_uav_id": 4,
+                "waypoint_index": 1,
+                "path": [
+                  [
+                    40.0,
+                    20.0
+                  ],
+                  [
+                    1.0,
+                    0.0
+                  ]
+                ]
+              },
+              {
+                "source_uav_id": 4,
+                "waypoint_index": 2,
+                "path": [
+                  [
+                    45.0,
+                    30.0
+                  ],
+                  [
+                    1.0,
+                    0.0
+                  ]
+                ]
+              },
+              {
+                "source_uav_id": 5,
+                "waypoint_index": 1,
+                "path": [
+                  [
+                    50.0,
+                    20.0
+                  ],
+                  [
+                    1.0,
+                    0.0
+                  ]
+                ]
+              },
+              {
+                "source_uav_id": 5,
+                "waypoint_index": 2,
+                "path": [
+                  [
+                    55.0,
+                    30.0
+                  ],
+                  [
+                    1.0,
+                    0.0
+                  ]
+                ]
+              },
+              {
+                "source_uav_id": 6,
+                "waypoint_index": 1,
+                "path": [
+                  [
+                    60.0,
+                    20.0
+                  ],
+                  [
+                    1.0,
+                    0.0
+                  ]
+                ]
+              },
+              {
+                "source_uav_id": 6,
+                "waypoint_index": 2,
+                "path": [
+                  [
+                    65.0,
+                    30.0
+                  ],
+                  [
+                    1.0,
+                    0.0
+                  ]
+                ]
+              }
+            ]
+          },
+          "recognition_selection": {
+            "category_count": 0,
+            "category_ids": [],
+            "category_names": []
+          }
+        },
+        "target_altitude_m": 47.0,
+        "controller_mode": "external",
+        "coordinate_frame": "ENU",
+        "landing_point_m": [
+          1.0,
+          0.0
+        ],
+        "landing_sequence": 1,
+        "landing_mode": "selected_departure",
+        "assignment_checksum": "5ad12a8fc016a0a8ebfda5004f4e3d10cad5516793ee68d69857e4bf191576d7",
+        "type": "assign_task",
+        "uav_id": 1
+      },
+      "topics": [
+        {
+          "topic": "/ground_mission_planner/vehicle_1/entry_path",
+          "publish_phase": "after_successful_takeoff_before_start",
+          "latch": true,
+          "changed_in_this_update": false,
+          "ros_type": "std_msgs/String",
+          "message": {
+            "data": "{\"schema_version\":1,\"mission_id\":\"subject2-dual-layer-xyz-interface-example\",\"uav_id\":1,\"assignment_checksum\":\"5ad12a8fc016a0a8ebfda5004f4e3d10cad5516793ee68d69857e4bf191576d7\",\"coordinate_frame\":\"ENU\",\"coordinate_order\":\"x_y_z\",\"altitude_frame\":\"RELATIVE_TO_TAKEOFF\",\"plan_sha256\":\"offline-example-not-a-flight-plan\",\"path\":[[1.0,0.0,47.0],[10.0,20.0,47.0]]}"
+          },
+          "decoded_data": {
+            "schema_version": 1,
+            "mission_id": "subject2-dual-layer-xyz-interface-example",
+            "uav_id": 1,
+            "assignment_checksum": "5ad12a8fc016a0a8ebfda5004f4e3d10cad5516793ee68d69857e4bf191576d7",
+            "coordinate_frame": "ENU",
+            "coordinate_order": "x_y_z",
+            "altitude_frame": "RELATIVE_TO_TAKEOFF",
+            "plan_sha256": "offline-example-not-a-flight-plan",
+            "path": [
+              [
+                1.0,
+                0.0,
+                47.0
+              ],
+              [
+                10.0,
+                20.0,
+                47.0
+              ]
+            ]
+          }
+        },
+        {
+          "topic": "/ground_mission_planner/vehicle_1/return_paths",
+          "publish_phase": "after_successful_takeoff_before_start",
+          "latch": true,
+          "changed_in_this_update": true,
+          "ros_type": "std_msgs/String",
+          "message": {
+            "data": "{\"schema_version\":2,\"mission_id\":\"subject2-dual-layer-xyz-interface-example\",\"uav_id\":1,\"assignment_checksum\":\"5ad12a8fc016a0a8ebfda5004f4e3d10cad5516793ee68d69857e4bf191576d7\",\"coordinate_frame\":\"ENU\",\"coordinate_order\":\"x_y_z\",\"altitude_frame\":\"RELATIVE_TO_TAKEOFF\",\"plan_sha256\":\"offline-example-not-a-flight-plan\",\"routes\":[{\"waypoint_index\":1,\"path\":[[10.0,20.0,47.0],[1.0,0.0,47.0]],\"source_uav_id\":1},{\"waypoint_index\":2,\"path\":[[15.0,30.0,47.0],[1.0,0.0,47.0]],\"source_uav_id\":1},{\"waypoint_index\":1,\"path\":[[20.0,20.0,47.0],[1.0,0.0,47.0]],\"source_uav_id\":2},{\"waypoint_index\":2,\"path\":[[25.0,30.0,47.0],[1.0,0.0,47.0]],\"source_uav_id\":2},{\"waypoint_index\":1,\"path\":[[30.0,20.0,47.0],[1.0,0.0,47.0]],\"source_uav_id\":3},{\"waypoint_index\":2,\"path\":[[35.0,30.0,47.0],[1.0,0.0,47.0]],\"source_uav_id\":3},{\"waypoint_index\":1,\"path\":[[40.0,20.0,47.0],[1.0,0.0,47.0]],\"source_uav_id\":4},{\"waypoint_index\":2,\"path\":[[45.0,30.0,47.0],[1.0,0.0,47.0]],\"source_uav_id\":4},{\"waypoint_index\":1,\"path\":[[50.0,20.0,47.0],[1.0,0.0,47.0]],\"source_uav_id\":5},{\"waypoint_index\":2,\"path\":[[55.0,30.0,47.0],[1.0,0.0,47.0]],\"source_uav_id\":5},{\"waypoint_index\":1,\"path\":[[60.0,20.0,47.0],[1.0,0.0,47.0]],\"source_uav_id\":6},{\"waypoint_index\":2,\"path\":[[65.0,30.0,47.0],[1.0,0.0,47.0]],\"source_uav_id\":6}],\"route_scope\":\"all_uav_waypoints\",\"landing_point\":[1.0,0.0,47.0],\"waypoint_counts_by_uav\":{\"1\":2,\"2\":2,\"3\":2,\"4\":2,\"5\":2,\"6\":2},\"waypoint_layer\":\"upper\",\"return_altitude_m\":47.0,\"return_policy\":\"climb_to_upper_then_return\"}"
+          },
+          "decoded_data": {
+            "schema_version": 2,
+            "mission_id": "subject2-dual-layer-xyz-interface-example",
+            "uav_id": 1,
+            "assignment_checksum": "5ad12a8fc016a0a8ebfda5004f4e3d10cad5516793ee68d69857e4bf191576d7",
+            "coordinate_frame": "ENU",
+            "coordinate_order": "x_y_z",
+            "altitude_frame": "RELATIVE_TO_TAKEOFF",
+            "plan_sha256": "offline-example-not-a-flight-plan",
+            "routes": [
+              {
+                "waypoint_index": 1,
+                "path": [
+                  [
+                    10.0,
+                    20.0,
+                    47.0
+                  ],
+                  [
+                    1.0,
+                    0.0,
+                    47.0
+                  ]
+                ],
+                "source_uav_id": 1
+              },
+              {
+                "waypoint_index": 2,
+                "path": [
+                  [
+                    15.0,
+                    30.0,
+                    47.0
+                  ],
+                  [
+                    1.0,
+                    0.0,
+                    47.0
+                  ]
+                ],
+                "source_uav_id": 1
+              },
+              {
+                "waypoint_index": 1,
+                "path": [
+                  [
+                    20.0,
+                    20.0,
+                    47.0
+                  ],
+                  [
+                    1.0,
+                    0.0,
+                    47.0
+                  ]
+                ],
+                "source_uav_id": 2
+              },
+              {
+                "waypoint_index": 2,
+                "path": [
+                  [
+                    25.0,
+                    30.0,
+                    47.0
+                  ],
+                  [
+                    1.0,
+                    0.0,
+                    47.0
+                  ]
+                ],
+                "source_uav_id": 2
+              },
+              {
+                "waypoint_index": 1,
+                "path": [
+                  [
+                    30.0,
+                    20.0,
+                    47.0
+                  ],
+                  [
+                    1.0,
+                    0.0,
+                    47.0
+                  ]
+                ],
+                "source_uav_id": 3
+              },
+              {
+                "waypoint_index": 2,
+                "path": [
+                  [
+                    35.0,
+                    30.0,
+                    47.0
+                  ],
+                  [
+                    1.0,
+                    0.0,
+                    47.0
+                  ]
+                ],
+                "source_uav_id": 3
+              },
+              {
+                "waypoint_index": 1,
+                "path": [
+                  [
+                    40.0,
+                    20.0,
+                    47.0
+                  ],
+                  [
+                    1.0,
+                    0.0,
+                    47.0
+                  ]
+                ],
+                "source_uav_id": 4
+              },
+              {
+                "waypoint_index": 2,
+                "path": [
+                  [
+                    45.0,
+                    30.0,
+                    47.0
+                  ],
+                  [
+                    1.0,
+                    0.0,
+                    47.0
+                  ]
+                ],
+                "source_uav_id": 4
+              },
+              {
+                "waypoint_index": 1,
+                "path": [
+                  [
+                    50.0,
+                    20.0,
+                    47.0
+                  ],
+                  [
+                    1.0,
+                    0.0,
+                    47.0
+                  ]
+                ],
+                "source_uav_id": 5
+              },
+              {
+                "waypoint_index": 2,
+                "path": [
+                  [
+                    55.0,
+                    30.0,
+                    47.0
+                  ],
+                  [
+                    1.0,
+                    0.0,
+                    47.0
+                  ]
+                ],
+                "source_uav_id": 5
+              },
+              {
+                "waypoint_index": 1,
+                "path": [
+                  [
+                    60.0,
+                    20.0,
+                    47.0
+                  ],
+                  [
+                    1.0,
+                    0.0,
+                    47.0
+                  ]
+                ],
+                "source_uav_id": 6
+              },
+              {
+                "waypoint_index": 2,
+                "path": [
+                  [
+                    65.0,
+                    30.0,
+                    47.0
+                  ],
+                  [
+                    1.0,
+                    0.0,
+                    47.0
+                  ]
+                ],
+                "source_uav_id": 6
+              }
+            ],
+            "route_scope": "all_uav_waypoints",
+            "landing_point": [
+              1.0,
+              0.0,
+              47.0
+            ],
+            "waypoint_counts_by_uav": {
+              "1": 2,
+              "2": 2,
+              "3": 2,
+              "4": 2,
+              "5": 2,
+              "6": 2
+            },
+            "waypoint_layer": "upper",
+            "return_altitude_m": 47.0,
+            "return_policy": "climb_to_upper_then_return"
+          }
+        },
+        {
+          "topic": "/ground_mission_planner/vehicle_1/path_stage_1",
+          "publish_phase": "after_successful_takeoff_before_start",
+          "latch": true,
+          "changed_in_this_update": true,
+          "ros_type": "std_msgs/Float64MultiArray",
+          "message": {
+            "layout": {
+              "dim": [],
+              "data_offset": 0
+            },
+            "data": [
+              10.0,
+              20.0,
+              47.0,
+              15.0,
+              30.0,
+              47.0
+            ]
+          }
+        },
+        {
+          "topic": "/ground_mission_planner/vehicle_1/path_stage_2",
+          "publish_phase": "after_successful_takeoff_before_start",
+          "latch": true,
+          "changed_in_this_update": true,
+          "ros_type": "std_msgs/Float64MultiArray",
+          "message": {
+            "layout": {
+              "dim": [],
+              "data_offset": 0
+            },
+            "data": [
+              15.0,
+              28.0,
+              34.0,
+              12.0,
+              22.0,
+              34.0,
+              10.0,
+              15.0,
+              34.0
+            ]
+          }
+        },
+        {
+          "topic": "/ground_mission_planner/vehicle_1/jiangluodian",
+          "publish_phase": "after_successful_takeoff_before_start",
+          "latch": true,
+          "changed_in_this_update": false,
+          "ros_type": "std_msgs/Float64MultiArray",
+          "message": {
+            "layout": {
+              "dim": [],
+              "data_offset": 0
+            },
+            "data": [
+              1.0,
+              0.0,
+              47.0
+            ]
+          }
+        },
+        {
+          "topic": "/uav1/competition/external_mission",
+          "publish_phase": "after_successful_takeoff_before_start",
+          "latch": true,
+          "changed_in_this_update": true,
+          "ros_type": "std_msgs/String",
+          "message": {
+            "data": "{\"type\":\"external_mission\",\"uav_id\":1,\"mission_id\":\"subject2-dual-layer-xyz-interface-example\",\"assignment_checksum\":\"5ad12a8fc016a0a8ebfda5004f4e3d10cad5516793ee68d69857e4bf191576d7\",\"flight_profile\":\"lab\",\"coordinate_frame\":\"ENU\",\"altitude_frame\":\"RELATIVE_TO_TAKEOFF\",\"target_altitude_m\":47.0,\"relative_altitude_m\":47.0,\"waypoints\":[{\"x_m\":10.0,\"y_m\":20.0,\"z_m\":47.0},{\"x_m\":15.0,\"y_m\":30.0,\"z_m\":47.0}],\"speed_mps\":0.3,\"waypoint_actions\":[],\"reconnaissance_mode\":\"hover_scan\",\"hover_scan_seconds\":50.0,\"return_home\":{\"x_m\":1.0,\"y_m\":0.0,\"z_m\":47.0},\"deadline_at\":null,\"return_battery_threshold\":null,\"subject\":\"subject2\",\"path_contract_version\":2,\"execution_mode\":\"upper_once_then_lower_once\",\"layer_order\":[\"upper\",\"lower\"],\"return_waypoint_layer\":\"upper\",\"return_altitude_m\":47.0,\"return_policy\":\"climb_to_upper_then_return\",\"layers\":[{\"layer_id\":\"upper\",\"topic\":\"/ground_mission_planner/vehicle_1/path_stage_1\",\"altitude_m\":47.0,\"waypoint_count\":2,\"waypoints\":[{\"x_m\":10.0,\"y_m\":20.0,\"z_m\":47.0},{\"x_m\":15.0,\"y_m\":30.0,\"z_m\":47.0}],\"scan_passes\":1,\"hover_scan_seconds\":50.0},{\"layer_id\":\"lower\",\"topic\":\"/ground_mission_planner/vehicle_1/path_stage_2\",\"altitude_m\":34.0,\"waypoint_count\":3,\"waypoints\":[{\"x_m\":15.0,\"y_m\":28.0,\"z_m\":34.0},{\"x_m\":12.0,\"y_m\":22.0,\"z_m\":34.0},{\"x_m\":10.0,\"y_m\":15.0,\"z_m\":34.0}],\"scan_passes\":1,\"hover_scan_seconds\":50.0}]}"
+          },
+          "decoded_data": {
+            "type": "external_mission",
+            "uav_id": 1,
+            "mission_id": "subject2-dual-layer-xyz-interface-example",
+            "assignment_checksum": "5ad12a8fc016a0a8ebfda5004f4e3d10cad5516793ee68d69857e4bf191576d7",
+            "flight_profile": "lab",
+            "coordinate_frame": "ENU",
+            "altitude_frame": "RELATIVE_TO_TAKEOFF",
+            "target_altitude_m": 47.0,
+            "relative_altitude_m": 47.0,
+            "waypoints": [
+              {
+                "x_m": 10.0,
+                "y_m": 20.0,
+                "z_m": 47.0
+              },
+              {
+                "x_m": 15.0,
+                "y_m": 30.0,
+                "z_m": 47.0
+              }
+            ],
+            "speed_mps": 0.3,
+            "waypoint_actions": [],
+            "reconnaissance_mode": "hover_scan",
+            "hover_scan_seconds": 50.0,
+            "return_home": {
+              "x_m": 1.0,
+              "y_m": 0.0,
+              "z_m": 47.0
+            },
+            "deadline_at": null,
+            "return_battery_threshold": null,
+            "subject": "subject2",
+            "path_contract_version": 2,
+            "execution_mode": "upper_once_then_lower_once",
+            "layer_order": [
+              "upper",
+              "lower"
+            ],
+            "return_waypoint_layer": "upper",
+            "return_altitude_m": 47.0,
+            "return_policy": "climb_to_upper_then_return",
+            "layers": [
+              {
+                "layer_id": "upper",
+                "topic": "/ground_mission_planner/vehicle_1/path_stage_1",
+                "altitude_m": 47.0,
+                "waypoint_count": 2,
+                "waypoints": [
+                  {
+                    "x_m": 10.0,
+                    "y_m": 20.0,
+                    "z_m": 47.0
+                  },
+                  {
+                    "x_m": 15.0,
+                    "y_m": 30.0,
+                    "z_m": 47.0
+                  }
+                ],
+                "scan_passes": 1,
+                "hover_scan_seconds": 50.0
+              },
+              {
+                "layer_id": "lower",
+                "topic": "/ground_mission_planner/vehicle_1/path_stage_2",
+                "altitude_m": 34.0,
+                "waypoint_count": 3,
+                "waypoints": [
+                  {
+                    "x_m": 15.0,
+                    "y_m": 28.0,
+                    "z_m": 34.0
+                  },
+                  {
+                    "x_m": 12.0,
+                    "y_m": 22.0,
+                    "z_m": 34.0
+                  },
+                  {
+                    "x_m": 10.0,
+                    "y_m": 15.0,
+                    "z_m": 34.0
+                  }
+                ],
+                "scan_passes": 1,
+                "hover_scan_seconds": 50.0
+              }
+            ]
+          }
+        },
+        {
+          "topic": "/ground_mission_planner/recon_start_mode",
+          "ros_type": "std_msgs/Int32",
+          "publish_phase": "after_all_mission_data",
+          "latch": true,
+          "changed_in_this_update": false,
+          "message": {
+            "data": 0
+          }
+        },
+        {
+          "topic": "/ground_mission_planner/vehicle_1/return_home",
+          "ros_type": "std_msgs/Bool",
+          "publish_phase": "only_when_return_is_requested",
+          "latch": true,
+          "changed_in_this_update": false,
+          "message": {
+            "data": true
+          }
+        }
+      ]
+    },
+    {
+      "uav_id": 2,
+      "assignment_sent_on_plan_and_dispatch": {
+        "mission_id": "subject2-dual-layer-xyz-interface-example",
+        "subject": "subject2",
+        "flight_profile": "lab",
+        "task": {
+          "type": "lawnmower_search",
+          "coordinate_frame": "ENU",
+          "waypoints_m": [
+            [
+              20.0,
+              20.0
+            ],
+            [
+              25.0,
+              30.0
+            ]
+          ],
+          "waypoints_wgs84": [
+            [
+              33.86318000018,
+              113.70578260869566
+            ],
+            [
+              33.863225000225,
+              113.70567391304348
+            ]
+          ],
+          "reconnaissance_mode": "hover_scan",
+          "hover_scan_seconds": 50.0,
+          "execution_mode": "upper_once_then_lower_once",
+          "layer_order": [
+            "upper",
+            "lower"
+          ],
+          "layers": [
+            {
+              "layer_id": "upper",
+              "altitude_m": 50.0,
+              "waypoints_m": [
+                [
+                  20.0,
+                  20.0
+                ],
+                [
+                  25.0,
+                  30.0
+                ]
+              ],
+              "waypoints_wgs84": [
+                [
+                  33.86318000018,
+                  113.70578260869566
+                ],
+                [
+                  33.863225000225,
+                  113.70567391304348
+                ]
+              ],
+              "hover_scan_seconds": 50.0,
+              "scan_passes": 1
+            },
+            {
+              "layer_id": "lower",
+              "altitude_m": 37.0,
+              "waypoints_m": [
+                [
+                  25.0,
+                  28.0
+                ],
+                [
+                  22.0,
+                  22.0
+                ],
+                [
+                  20.0,
+                  15.0
+                ]
+              ],
+              "waypoints_wgs84": [
+                [
+                  33.863225000225,
+                  113.70569565217392
+                ],
+                [
+                  33.863198000198,
+                  113.70576086956522
+                ],
+                [
+                  33.86318000018,
+                  113.70583695652174
+                ]
+              ],
+              "hover_scan_seconds": 50.0,
+              "scan_passes": 1
+            }
+          ],
+          "transit_routes": {
+            "schema_version": 2,
+            "recipient_uav_id": 2,
+            "route_scope": "all_uav_waypoints",
+            "plan_sha256": "offline-example-not-a-flight-plan",
+            "coordinate_frame": "ENU",
+            "departure": [
+              2.0,
+              0.0
+            ],
+            "entry_path": [
+              [
+                2.0,
+                0.0
+              ],
+              [
+                20.0,
+                20.0
+              ]
+            ],
+            "waypoints_by_uav": {
+              "1": [
+                [
+                  10.0,
+                  20.0
+                ],
+                [
+                  15.0,
+                  30.0
+                ]
+              ],
+              "2": [
+                [
+                  20.0,
+                  20.0
+                ],
+                [
+                  25.0,
+                  30.0
+                ]
+              ],
+              "3": [
+                [
+                  30.0,
+                  20.0
+                ],
+                [
+                  35.0,
+                  30.0
+                ]
+              ],
+              "4": [
+                [
+                  40.0,
+                  20.0
+                ],
+                [
+                  45.0,
+                  30.0
+                ]
+              ],
+              "5": [
+                [
+                  50.0,
+                  20.0
+                ],
+                [
+                  55.0,
+                  30.0
+                ]
+              ],
+              "6": [
+                [
+                  60.0,
+                  20.0
+                ],
+                [
+                  65.0,
+                  30.0
+                ]
+              ]
+            },
+            "return_paths": [
+              {
+                "source_uav_id": 1,
+                "waypoint_index": 1,
+                "path": [
+                  [
+                    10.0,
+                    20.0
+                  ],
+                  [
+                    2.0,
+                    0.0
+                  ]
+                ]
+              },
+              {
+                "source_uav_id": 1,
+                "waypoint_index": 2,
+                "path": [
+                  [
+                    15.0,
+                    30.0
+                  ],
+                  [
+                    2.0,
+                    0.0
+                  ]
+                ]
+              },
+              {
+                "source_uav_id": 2,
+                "waypoint_index": 1,
+                "path": [
+                  [
+                    20.0,
+                    20.0
+                  ],
+                  [
+                    2.0,
+                    0.0
+                  ]
+                ]
+              },
+              {
+                "source_uav_id": 2,
+                "waypoint_index": 2,
+                "path": [
+                  [
+                    25.0,
+                    30.0
+                  ],
+                  [
+                    2.0,
+                    0.0
+                  ]
+                ]
+              },
+              {
+                "source_uav_id": 3,
+                "waypoint_index": 1,
+                "path": [
+                  [
+                    30.0,
+                    20.0
+                  ],
+                  [
+                    2.0,
+                    0.0
+                  ]
+                ]
+              },
+              {
+                "source_uav_id": 3,
+                "waypoint_index": 2,
+                "path": [
+                  [
+                    35.0,
+                    30.0
+                  ],
+                  [
+                    2.0,
+                    0.0
+                  ]
+                ]
+              },
+              {
+                "source_uav_id": 4,
+                "waypoint_index": 1,
+                "path": [
+                  [
+                    40.0,
+                    20.0
+                  ],
+                  [
+                    2.0,
+                    0.0
+                  ]
+                ]
+              },
+              {
+                "source_uav_id": 4,
+                "waypoint_index": 2,
+                "path": [
+                  [
+                    45.0,
+                    30.0
+                  ],
+                  [
+                    2.0,
+                    0.0
+                  ]
+                ]
+              },
+              {
+                "source_uav_id": 5,
+                "waypoint_index": 1,
+                "path": [
+                  [
+                    50.0,
+                    20.0
+                  ],
+                  [
+                    2.0,
+                    0.0
+                  ]
+                ]
+              },
+              {
+                "source_uav_id": 5,
+                "waypoint_index": 2,
+                "path": [
+                  [
+                    55.0,
+                    30.0
+                  ],
+                  [
+                    2.0,
+                    0.0
+                  ]
+                ]
+              },
+              {
+                "source_uav_id": 6,
+                "waypoint_index": 1,
+                "path": [
+                  [
+                    60.0,
+                    20.0
+                  ],
+                  [
+                    2.0,
+                    0.0
+                  ]
+                ]
+              },
+              {
+                "source_uav_id": 6,
+                "waypoint_index": 2,
+                "path": [
+                  [
+                    65.0,
+                    30.0
+                  ],
+                  [
+                    2.0,
+                    0.0
+                  ]
+                ]
+              }
+            ]
+          },
+          "recognition_selection": {
+            "category_count": 0,
+            "category_ids": [],
+            "category_names": []
+          }
+        },
+        "target_altitude_m": 50.0,
+        "controller_mode": "external",
+        "coordinate_frame": "ENU",
+        "landing_point_m": [
+          2.0,
+          0.0
+        ],
+        "landing_sequence": 2,
+        "landing_mode": "selected_departure",
+        "assignment_checksum": "cc28d3220c0ee174b37a841e3e716ba1d5a2beaa3c4c75809aac7974c61ab07c",
+        "type": "assign_task",
+        "uav_id": 2
+      },
+      "topics": [
+        {
+          "topic": "/ground_mission_planner/vehicle_2/entry_path",
+          "publish_phase": "after_successful_takeoff_before_start",
+          "latch": true,
+          "changed_in_this_update": false,
+          "ros_type": "std_msgs/String",
+          "message": {
+            "data": "{\"schema_version\":1,\"mission_id\":\"subject2-dual-layer-xyz-interface-example\",\"uav_id\":2,\"assignment_checksum\":\"cc28d3220c0ee174b37a841e3e716ba1d5a2beaa3c4c75809aac7974c61ab07c\",\"coordinate_frame\":\"ENU\",\"coordinate_order\":\"x_y_z\",\"altitude_frame\":\"RELATIVE_TO_TAKEOFF\",\"plan_sha256\":\"offline-example-not-a-flight-plan\",\"path\":[[2.0,0.0,50.0],[20.0,20.0,50.0]]}"
+          },
+          "decoded_data": {
+            "schema_version": 1,
+            "mission_id": "subject2-dual-layer-xyz-interface-example",
+            "uav_id": 2,
+            "assignment_checksum": "cc28d3220c0ee174b37a841e3e716ba1d5a2beaa3c4c75809aac7974c61ab07c",
+            "coordinate_frame": "ENU",
+            "coordinate_order": "x_y_z",
+            "altitude_frame": "RELATIVE_TO_TAKEOFF",
+            "plan_sha256": "offline-example-not-a-flight-plan",
+            "path": [
+              [
+                2.0,
+                0.0,
+                50.0
+              ],
+              [
+                20.0,
+                20.0,
+                50.0
+              ]
+            ]
+          }
+        },
+        {
+          "topic": "/ground_mission_planner/vehicle_2/return_paths",
+          "publish_phase": "after_successful_takeoff_before_start",
+          "latch": true,
+          "changed_in_this_update": true,
+          "ros_type": "std_msgs/String",
+          "message": {
+            "data": "{\"schema_version\":2,\"mission_id\":\"subject2-dual-layer-xyz-interface-example\",\"uav_id\":2,\"assignment_checksum\":\"cc28d3220c0ee174b37a841e3e716ba1d5a2beaa3c4c75809aac7974c61ab07c\",\"coordinate_frame\":\"ENU\",\"coordinate_order\":\"x_y_z\",\"altitude_frame\":\"RELATIVE_TO_TAKEOFF\",\"plan_sha256\":\"offline-example-not-a-flight-plan\",\"routes\":[{\"waypoint_index\":1,\"path\":[[10.0,20.0,50.0],[2.0,0.0,50.0]],\"source_uav_id\":1},{\"waypoint_index\":2,\"path\":[[15.0,30.0,50.0],[2.0,0.0,50.0]],\"source_uav_id\":1},{\"waypoint_index\":1,\"path\":[[20.0,20.0,50.0],[2.0,0.0,50.0]],\"source_uav_id\":2},{\"waypoint_index\":2,\"path\":[[25.0,30.0,50.0],[2.0,0.0,50.0]],\"source_uav_id\":2},{\"waypoint_index\":1,\"path\":[[30.0,20.0,50.0],[2.0,0.0,50.0]],\"source_uav_id\":3},{\"waypoint_index\":2,\"path\":[[35.0,30.0,50.0],[2.0,0.0,50.0]],\"source_uav_id\":3},{\"waypoint_index\":1,\"path\":[[40.0,20.0,50.0],[2.0,0.0,50.0]],\"source_uav_id\":4},{\"waypoint_index\":2,\"path\":[[45.0,30.0,50.0],[2.0,0.0,50.0]],\"source_uav_id\":4},{\"waypoint_index\":1,\"path\":[[50.0,20.0,50.0],[2.0,0.0,50.0]],\"source_uav_id\":5},{\"waypoint_index\":2,\"path\":[[55.0,30.0,50.0],[2.0,0.0,50.0]],\"source_uav_id\":5},{\"waypoint_index\":1,\"path\":[[60.0,20.0,50.0],[2.0,0.0,50.0]],\"source_uav_id\":6},{\"waypoint_index\":2,\"path\":[[65.0,30.0,50.0],[2.0,0.0,50.0]],\"source_uav_id\":6}],\"route_scope\":\"all_uav_waypoints\",\"landing_point\":[2.0,0.0,50.0],\"waypoint_counts_by_uav\":{\"1\":2,\"2\":2,\"3\":2,\"4\":2,\"5\":2,\"6\":2},\"waypoint_layer\":\"upper\",\"return_altitude_m\":50.0,\"return_policy\":\"climb_to_upper_then_return\"}"
+          },
+          "decoded_data": {
+            "schema_version": 2,
+            "mission_id": "subject2-dual-layer-xyz-interface-example",
+            "uav_id": 2,
+            "assignment_checksum": "cc28d3220c0ee174b37a841e3e716ba1d5a2beaa3c4c75809aac7974c61ab07c",
+            "coordinate_frame": "ENU",
+            "coordinate_order": "x_y_z",
+            "altitude_frame": "RELATIVE_TO_TAKEOFF",
+            "plan_sha256": "offline-example-not-a-flight-plan",
+            "routes": [
+              {
+                "waypoint_index": 1,
+                "path": [
+                  [
+                    10.0,
+                    20.0,
+                    50.0
+                  ],
+                  [
+                    2.0,
+                    0.0,
+                    50.0
+                  ]
+                ],
+                "source_uav_id": 1
+              },
+              {
+                "waypoint_index": 2,
+                "path": [
+                  [
+                    15.0,
+                    30.0,
+                    50.0
+                  ],
+                  [
+                    2.0,
+                    0.0,
+                    50.0
+                  ]
+                ],
+                "source_uav_id": 1
+              },
+              {
+                "waypoint_index": 1,
+                "path": [
+                  [
+                    20.0,
+                    20.0,
+                    50.0
+                  ],
+                  [
+                    2.0,
+                    0.0,
+                    50.0
+                  ]
+                ],
+                "source_uav_id": 2
+              },
+              {
+                "waypoint_index": 2,
+                "path": [
+                  [
+                    25.0,
+                    30.0,
+                    50.0
+                  ],
+                  [
+                    2.0,
+                    0.0,
+                    50.0
+                  ]
+                ],
+                "source_uav_id": 2
+              },
+              {
+                "waypoint_index": 1,
+                "path": [
+                  [
+                    30.0,
+                    20.0,
+                    50.0
+                  ],
+                  [
+                    2.0,
+                    0.0,
+                    50.0
+                  ]
+                ],
+                "source_uav_id": 3
+              },
+              {
+                "waypoint_index": 2,
+                "path": [
+                  [
+                    35.0,
+                    30.0,
+                    50.0
+                  ],
+                  [
+                    2.0,
+                    0.0,
+                    50.0
+                  ]
+                ],
+                "source_uav_id": 3
+              },
+              {
+                "waypoint_index": 1,
+                "path": [
+                  [
+                    40.0,
+                    20.0,
+                    50.0
+                  ],
+                  [
+                    2.0,
+                    0.0,
+                    50.0
+                  ]
+                ],
+                "source_uav_id": 4
+              },
+              {
+                "waypoint_index": 2,
+                "path": [
+                  [
+                    45.0,
+                    30.0,
+                    50.0
+                  ],
+                  [
+                    2.0,
+                    0.0,
+                    50.0
+                  ]
+                ],
+                "source_uav_id": 4
+              },
+              {
+                "waypoint_index": 1,
+                "path": [
+                  [
+                    50.0,
+                    20.0,
+                    50.0
+                  ],
+                  [
+                    2.0,
+                    0.0,
+                    50.0
+                  ]
+                ],
+                "source_uav_id": 5
+              },
+              {
+                "waypoint_index": 2,
+                "path": [
+                  [
+                    55.0,
+                    30.0,
+                    50.0
+                  ],
+                  [
+                    2.0,
+                    0.0,
+                    50.0
+                  ]
+                ],
+                "source_uav_id": 5
+              },
+              {
+                "waypoint_index": 1,
+                "path": [
+                  [
+                    60.0,
+                    20.0,
+                    50.0
+                  ],
+                  [
+                    2.0,
+                    0.0,
+                    50.0
+                  ]
+                ],
+                "source_uav_id": 6
+              },
+              {
+                "waypoint_index": 2,
+                "path": [
+                  [
+                    65.0,
+                    30.0,
+                    50.0
+                  ],
+                  [
+                    2.0,
+                    0.0,
+                    50.0
+                  ]
+                ],
+                "source_uav_id": 6
+              }
+            ],
+            "route_scope": "all_uav_waypoints",
+            "landing_point": [
+              2.0,
+              0.0,
+              50.0
+            ],
+            "waypoint_counts_by_uav": {
+              "1": 2,
+              "2": 2,
+              "3": 2,
+              "4": 2,
+              "5": 2,
+              "6": 2
+            },
+            "waypoint_layer": "upper",
+            "return_altitude_m": 50.0,
+            "return_policy": "climb_to_upper_then_return"
+          }
+        },
+        {
+          "topic": "/ground_mission_planner/vehicle_2/path_stage_1",
+          "publish_phase": "after_successful_takeoff_before_start",
+          "latch": true,
+          "changed_in_this_update": true,
+          "ros_type": "std_msgs/Float64MultiArray",
+          "message": {
+            "layout": {
+              "dim": [],
+              "data_offset": 0
+            },
+            "data": [
+              20.0,
+              20.0,
+              50.0,
+              25.0,
+              30.0,
+              50.0
+            ]
+          }
+        },
+        {
+          "topic": "/ground_mission_planner/vehicle_2/path_stage_2",
+          "publish_phase": "after_successful_takeoff_before_start",
+          "latch": true,
+          "changed_in_this_update": true,
+          "ros_type": "std_msgs/Float64MultiArray",
+          "message": {
+            "layout": {
+              "dim": [],
+              "data_offset": 0
+            },
+            "data": [
+              25.0,
+              28.0,
+              37.0,
+              22.0,
+              22.0,
+              37.0,
+              20.0,
+              15.0,
+              37.0
+            ]
+          }
+        },
+        {
+          "topic": "/ground_mission_planner/vehicle_2/jiangluodian",
+          "publish_phase": "after_successful_takeoff_before_start",
+          "latch": true,
+          "changed_in_this_update": false,
+          "ros_type": "std_msgs/Float64MultiArray",
+          "message": {
+            "layout": {
+              "dim": [],
+              "data_offset": 0
+            },
+            "data": [
+              2.0,
+              0.0,
+              50.0
+            ]
+          }
+        },
+        {
+          "topic": "/uav2/competition/external_mission",
+          "publish_phase": "after_successful_takeoff_before_start",
+          "latch": true,
+          "changed_in_this_update": true,
+          "ros_type": "std_msgs/String",
+          "message": {
+            "data": "{\"type\":\"external_mission\",\"uav_id\":2,\"mission_id\":\"subject2-dual-layer-xyz-interface-example\",\"assignment_checksum\":\"cc28d3220c0ee174b37a841e3e716ba1d5a2beaa3c4c75809aac7974c61ab07c\",\"flight_profile\":\"lab\",\"coordinate_frame\":\"ENU\",\"altitude_frame\":\"RELATIVE_TO_TAKEOFF\",\"target_altitude_m\":50.0,\"relative_altitude_m\":50.0,\"waypoints\":[{\"x_m\":20.0,\"y_m\":20.0,\"z_m\":50.0},{\"x_m\":25.0,\"y_m\":30.0,\"z_m\":50.0}],\"speed_mps\":0.3,\"waypoint_actions\":[],\"reconnaissance_mode\":\"hover_scan\",\"hover_scan_seconds\":50.0,\"return_home\":{\"x_m\":2.0,\"y_m\":0.0,\"z_m\":50.0},\"deadline_at\":null,\"return_battery_threshold\":null,\"subject\":\"subject2\",\"path_contract_version\":2,\"execution_mode\":\"upper_once_then_lower_once\",\"layer_order\":[\"upper\",\"lower\"],\"return_waypoint_layer\":\"upper\",\"return_altitude_m\":50.0,\"return_policy\":\"climb_to_upper_then_return\",\"layers\":[{\"layer_id\":\"upper\",\"topic\":\"/ground_mission_planner/vehicle_2/path_stage_1\",\"altitude_m\":50.0,\"waypoint_count\":2,\"waypoints\":[{\"x_m\":20.0,\"y_m\":20.0,\"z_m\":50.0},{\"x_m\":25.0,\"y_m\":30.0,\"z_m\":50.0}],\"scan_passes\":1,\"hover_scan_seconds\":50.0},{\"layer_id\":\"lower\",\"topic\":\"/ground_mission_planner/vehicle_2/path_stage_2\",\"altitude_m\":37.0,\"waypoint_count\":3,\"waypoints\":[{\"x_m\":25.0,\"y_m\":28.0,\"z_m\":37.0},{\"x_m\":22.0,\"y_m\":22.0,\"z_m\":37.0},{\"x_m\":20.0,\"y_m\":15.0,\"z_m\":37.0}],\"scan_passes\":1,\"hover_scan_seconds\":50.0}]}"
+          },
+          "decoded_data": {
+            "type": "external_mission",
+            "uav_id": 2,
+            "mission_id": "subject2-dual-layer-xyz-interface-example",
+            "assignment_checksum": "cc28d3220c0ee174b37a841e3e716ba1d5a2beaa3c4c75809aac7974c61ab07c",
+            "flight_profile": "lab",
+            "coordinate_frame": "ENU",
+            "altitude_frame": "RELATIVE_TO_TAKEOFF",
+            "target_altitude_m": 50.0,
+            "relative_altitude_m": 50.0,
+            "waypoints": [
+              {
+                "x_m": 20.0,
+                "y_m": 20.0,
+                "z_m": 50.0
+              },
+              {
+                "x_m": 25.0,
+                "y_m": 30.0,
+                "z_m": 50.0
+              }
+            ],
+            "speed_mps": 0.3,
+            "waypoint_actions": [],
+            "reconnaissance_mode": "hover_scan",
+            "hover_scan_seconds": 50.0,
+            "return_home": {
+              "x_m": 2.0,
+              "y_m": 0.0,
+              "z_m": 50.0
+            },
+            "deadline_at": null,
+            "return_battery_threshold": null,
+            "subject": "subject2",
+            "path_contract_version": 2,
+            "execution_mode": "upper_once_then_lower_once",
+            "layer_order": [
+              "upper",
+              "lower"
+            ],
+            "return_waypoint_layer": "upper",
+            "return_altitude_m": 50.0,
+            "return_policy": "climb_to_upper_then_return",
+            "layers": [
+              {
+                "layer_id": "upper",
+                "topic": "/ground_mission_planner/vehicle_2/path_stage_1",
+                "altitude_m": 50.0,
+                "waypoint_count": 2,
+                "waypoints": [
+                  {
+                    "x_m": 20.0,
+                    "y_m": 20.0,
+                    "z_m": 50.0
+                  },
+                  {
+                    "x_m": 25.0,
+                    "y_m": 30.0,
+                    "z_m": 50.0
+                  }
+                ],
+                "scan_passes": 1,
+                "hover_scan_seconds": 50.0
+              },
+              {
+                "layer_id": "lower",
+                "topic": "/ground_mission_planner/vehicle_2/path_stage_2",
+                "altitude_m": 37.0,
+                "waypoint_count": 3,
+                "waypoints": [
+                  {
+                    "x_m": 25.0,
+                    "y_m": 28.0,
+                    "z_m": 37.0
+                  },
+                  {
+                    "x_m": 22.0,
+                    "y_m": 22.0,
+                    "z_m": 37.0
+                  },
+                  {
+                    "x_m": 20.0,
+                    "y_m": 15.0,
+                    "z_m": 37.0
+                  }
+                ],
+                "scan_passes": 1,
+                "hover_scan_seconds": 50.0
+              }
+            ]
+          }
+        },
+        {
+          "topic": "/ground_mission_planner/recon_start_mode",
+          "ros_type": "std_msgs/Int32",
+          "publish_phase": "after_all_mission_data",
+          "latch": true,
+          "changed_in_this_update": false,
+          "message": {
+            "data": 0
+          }
+        },
+        {
+          "topic": "/ground_mission_planner/vehicle_2/return_home",
+          "ros_type": "std_msgs/Bool",
+          "publish_phase": "only_when_return_is_requested",
+          "latch": true,
+          "changed_in_this_update": false,
+          "message": {
+            "data": true
+          }
+        }
+      ]
+    },
+    {
+      "uav_id": 3,
+      "assignment_sent_on_plan_and_dispatch": {
+        "mission_id": "subject2-dual-layer-xyz-interface-example",
+        "subject": "subject2",
+        "flight_profile": "lab",
+        "task": {
+          "type": "lawnmower_search",
+          "coordinate_frame": "ENU",
+          "waypoints_m": [
+            [
+              30.0,
+              20.0
+            ],
+            [
+              35.0,
+              30.0
+            ]
+          ],
+          "waypoints_wgs84": [
+            [
+              33.86327000027,
+              113.70578260869566
+            ],
+            [
+              33.863315000315,
+              113.70567391304348
+            ]
+          ],
+          "reconnaissance_mode": "hover_scan",
+          "hover_scan_seconds": 50.0,
+          "execution_mode": "upper_once_then_lower_once",
+          "layer_order": [
+            "upper",
+            "lower"
+          ],
+          "layers": [
+            {
+              "layer_id": "upper",
+              "altitude_m": 53.0,
+              "waypoints_m": [
+                [
+                  30.0,
+                  20.0
+                ],
+                [
+                  35.0,
+                  30.0
+                ]
+              ],
+              "waypoints_wgs84": [
+                [
+                  33.86327000027,
+                  113.70578260869566
+                ],
+                [
+                  33.863315000315,
+                  113.70567391304348
+                ]
+              ],
+              "hover_scan_seconds": 50.0,
+              "scan_passes": 1
+            },
+            {
+              "layer_id": "lower",
+              "altitude_m": 40.0,
+              "waypoints_m": [
+                [
+                  35.0,
+                  28.0
+                ],
+                [
+                  32.0,
+                  22.0
+                ],
+                [
+                  30.0,
+                  15.0
+                ]
+              ],
+              "waypoints_wgs84": [
+                [
+                  33.863315000315,
+                  113.70569565217392
+                ],
+                [
+                  33.863288000288,
+                  113.70576086956522
+                ],
+                [
+                  33.86327000027,
+                  113.70583695652174
+                ]
+              ],
+              "hover_scan_seconds": 50.0,
+              "scan_passes": 1
+            }
+          ],
+          "transit_routes": {
+            "schema_version": 2,
+            "recipient_uav_id": 3,
+            "route_scope": "all_uav_waypoints",
+            "plan_sha256": "offline-example-not-a-flight-plan",
+            "coordinate_frame": "ENU",
+            "departure": [
+              3.0,
+              0.0
+            ],
+            "entry_path": [
+              [
+                3.0,
+                0.0
+              ],
+              [
+                30.0,
+                20.0
+              ]
+            ],
+            "waypoints_by_uav": {
+              "1": [
+                [
+                  10.0,
+                  20.0
+                ],
+                [
+                  15.0,
+                  30.0
+                ]
+              ],
+              "2": [
+                [
+                  20.0,
+                  20.0
+                ],
+                [
+                  25.0,
+                  30.0
+                ]
+              ],
+              "3": [
+                [
+                  30.0,
+                  20.0
+                ],
+                [
+                  35.0,
+                  30.0
+                ]
+              ],
+              "4": [
+                [
+                  40.0,
+                  20.0
+                ],
+                [
+                  45.0,
+                  30.0
+                ]
+              ],
+              "5": [
+                [
+                  50.0,
+                  20.0
+                ],
+                [
+                  55.0,
+                  30.0
+                ]
+              ],
+              "6": [
+                [
+                  60.0,
+                  20.0
+                ],
+                [
+                  65.0,
+                  30.0
+                ]
+              ]
+            },
+            "return_paths": [
+              {
+                "source_uav_id": 1,
+                "waypoint_index": 1,
+                "path": [
+                  [
+                    10.0,
+                    20.0
+                  ],
+                  [
+                    3.0,
+                    0.0
+                  ]
+                ]
+              },
+              {
+                "source_uav_id": 1,
+                "waypoint_index": 2,
+                "path": [
+                  [
+                    15.0,
+                    30.0
+                  ],
+                  [
+                    3.0,
+                    0.0
+                  ]
+                ]
+              },
+              {
+                "source_uav_id": 2,
+                "waypoint_index": 1,
+                "path": [
+                  [
+                    20.0,
+                    20.0
+                  ],
+                  [
+                    3.0,
+                    0.0
+                  ]
+                ]
+              },
+              {
+                "source_uav_id": 2,
+                "waypoint_index": 2,
+                "path": [
+                  [
+                    25.0,
+                    30.0
+                  ],
+                  [
+                    3.0,
+                    0.0
+                  ]
+                ]
+              },
+              {
+                "source_uav_id": 3,
+                "waypoint_index": 1,
+                "path": [
+                  [
+                    30.0,
+                    20.0
+                  ],
+                  [
+                    3.0,
+                    0.0
+                  ]
+                ]
+              },
+              {
+                "source_uav_id": 3,
+                "waypoint_index": 2,
+                "path": [
+                  [
+                    35.0,
+                    30.0
+                  ],
+                  [
+                    3.0,
+                    0.0
+                  ]
+                ]
+              },
+              {
+                "source_uav_id": 4,
+                "waypoint_index": 1,
+                "path": [
+                  [
+                    40.0,
+                    20.0
+                  ],
+                  [
+                    3.0,
+                    0.0
+                  ]
+                ]
+              },
+              {
+                "source_uav_id": 4,
+                "waypoint_index": 2,
+                "path": [
+                  [
+                    45.0,
+                    30.0
+                  ],
+                  [
+                    3.0,
+                    0.0
+                  ]
+                ]
+              },
+              {
+                "source_uav_id": 5,
+                "waypoint_index": 1,
+                "path": [
+                  [
+                    50.0,
+                    20.0
+                  ],
+                  [
+                    3.0,
+                    0.0
+                  ]
+                ]
+              },
+              {
+                "source_uav_id": 5,
+                "waypoint_index": 2,
+                "path": [
+                  [
+                    55.0,
+                    30.0
+                  ],
+                  [
+                    3.0,
+                    0.0
+                  ]
+                ]
+              },
+              {
+                "source_uav_id": 6,
+                "waypoint_index": 1,
+                "path": [
+                  [
+                    60.0,
+                    20.0
+                  ],
+                  [
+                    3.0,
+                    0.0
+                  ]
+                ]
+              },
+              {
+                "source_uav_id": 6,
+                "waypoint_index": 2,
+                "path": [
+                  [
+                    65.0,
+                    30.0
+                  ],
+                  [
+                    3.0,
+                    0.0
+                  ]
+                ]
+              }
+            ]
+          },
+          "recognition_selection": {
+            "category_count": 0,
+            "category_ids": [],
+            "category_names": []
+          }
+        },
+        "target_altitude_m": 53.0,
+        "controller_mode": "external",
+        "coordinate_frame": "ENU",
+        "landing_point_m": [
+          3.0,
+          0.0
+        ],
+        "landing_sequence": 3,
+        "landing_mode": "selected_departure",
+        "assignment_checksum": "2f69f75b51f5c3241c17eceeb8e70750131e5054c97f60c7e29a01844eabe9d0",
+        "type": "assign_task",
+        "uav_id": 3
+      },
+      "topics": [
+        {
+          "topic": "/ground_mission_planner/vehicle_3/entry_path",
+          "publish_phase": "after_successful_takeoff_before_start",
+          "latch": true,
+          "changed_in_this_update": false,
+          "ros_type": "std_msgs/String",
+          "message": {
+            "data": "{\"schema_version\":1,\"mission_id\":\"subject2-dual-layer-xyz-interface-example\",\"uav_id\":3,\"assignment_checksum\":\"2f69f75b51f5c3241c17eceeb8e70750131e5054c97f60c7e29a01844eabe9d0\",\"coordinate_frame\":\"ENU\",\"coordinate_order\":\"x_y_z\",\"altitude_frame\":\"RELATIVE_TO_TAKEOFF\",\"plan_sha256\":\"offline-example-not-a-flight-plan\",\"path\":[[3.0,0.0,53.0],[30.0,20.0,53.0]]}"
+          },
+          "decoded_data": {
+            "schema_version": 1,
+            "mission_id": "subject2-dual-layer-xyz-interface-example",
+            "uav_id": 3,
+            "assignment_checksum": "2f69f75b51f5c3241c17eceeb8e70750131e5054c97f60c7e29a01844eabe9d0",
+            "coordinate_frame": "ENU",
+            "coordinate_order": "x_y_z",
+            "altitude_frame": "RELATIVE_TO_TAKEOFF",
+            "plan_sha256": "offline-example-not-a-flight-plan",
+            "path": [
+              [
+                3.0,
+                0.0,
+                53.0
+              ],
+              [
+                30.0,
+                20.0,
+                53.0
+              ]
+            ]
+          }
+        },
+        {
+          "topic": "/ground_mission_planner/vehicle_3/return_paths",
+          "publish_phase": "after_successful_takeoff_before_start",
+          "latch": true,
+          "changed_in_this_update": true,
+          "ros_type": "std_msgs/String",
+          "message": {
+            "data": "{\"schema_version\":2,\"mission_id\":\"subject2-dual-layer-xyz-interface-example\",\"uav_id\":3,\"assignment_checksum\":\"2f69f75b51f5c3241c17eceeb8e70750131e5054c97f60c7e29a01844eabe9d0\",\"coordinate_frame\":\"ENU\",\"coordinate_order\":\"x_y_z\",\"altitude_frame\":\"RELATIVE_TO_TAKEOFF\",\"plan_sha256\":\"offline-example-not-a-flight-plan\",\"routes\":[{\"waypoint_index\":1,\"path\":[[10.0,20.0,53.0],[3.0,0.0,53.0]],\"source_uav_id\":1},{\"waypoint_index\":2,\"path\":[[15.0,30.0,53.0],[3.0,0.0,53.0]],\"source_uav_id\":1},{\"waypoint_index\":1,\"path\":[[20.0,20.0,53.0],[3.0,0.0,53.0]],\"source_uav_id\":2},{\"waypoint_index\":2,\"path\":[[25.0,30.0,53.0],[3.0,0.0,53.0]],\"source_uav_id\":2},{\"waypoint_index\":1,\"path\":[[30.0,20.0,53.0],[3.0,0.0,53.0]],\"source_uav_id\":3},{\"waypoint_index\":2,\"path\":[[35.0,30.0,53.0],[3.0,0.0,53.0]],\"source_uav_id\":3},{\"waypoint_index\":1,\"path\":[[40.0,20.0,53.0],[3.0,0.0,53.0]],\"source_uav_id\":4},{\"waypoint_index\":2,\"path\":[[45.0,30.0,53.0],[3.0,0.0,53.0]],\"source_uav_id\":4},{\"waypoint_index\":1,\"path\":[[50.0,20.0,53.0],[3.0,0.0,53.0]],\"source_uav_id\":5},{\"waypoint_index\":2,\"path\":[[55.0,30.0,53.0],[3.0,0.0,53.0]],\"source_uav_id\":5},{\"waypoint_index\":1,\"path\":[[60.0,20.0,53.0],[3.0,0.0,53.0]],\"source_uav_id\":6},{\"waypoint_index\":2,\"path\":[[65.0,30.0,53.0],[3.0,0.0,53.0]],\"source_uav_id\":6}],\"route_scope\":\"all_uav_waypoints\",\"landing_point\":[3.0,0.0,53.0],\"waypoint_counts_by_uav\":{\"1\":2,\"2\":2,\"3\":2,\"4\":2,\"5\":2,\"6\":2},\"waypoint_layer\":\"upper\",\"return_altitude_m\":53.0,\"return_policy\":\"climb_to_upper_then_return\"}"
+          },
+          "decoded_data": {
+            "schema_version": 2,
+            "mission_id": "subject2-dual-layer-xyz-interface-example",
+            "uav_id": 3,
+            "assignment_checksum": "2f69f75b51f5c3241c17eceeb8e70750131e5054c97f60c7e29a01844eabe9d0",
+            "coordinate_frame": "ENU",
+            "coordinate_order": "x_y_z",
+            "altitude_frame": "RELATIVE_TO_TAKEOFF",
+            "plan_sha256": "offline-example-not-a-flight-plan",
+            "routes": [
+              {
+                "waypoint_index": 1,
+                "path": [
+                  [
+                    10.0,
+                    20.0,
+                    53.0
+                  ],
+                  [
+                    3.0,
+                    0.0,
+                    53.0
+                  ]
+                ],
+                "source_uav_id": 1
+              },
+              {
+                "waypoint_index": 2,
+                "path": [
+                  [
+                    15.0,
+                    30.0,
+                    53.0
+                  ],
+                  [
+                    3.0,
+                    0.0,
+                    53.0
+                  ]
+                ],
+                "source_uav_id": 1
+              },
+              {
+                "waypoint_index": 1,
+                "path": [
+                  [
+                    20.0,
+                    20.0,
+                    53.0
+                  ],
+                  [
+                    3.0,
+                    0.0,
+                    53.0
+                  ]
+                ],
+                "source_uav_id": 2
+              },
+              {
+                "waypoint_index": 2,
+                "path": [
+                  [
+                    25.0,
+                    30.0,
+                    53.0
+                  ],
+                  [
+                    3.0,
+                    0.0,
+                    53.0
+                  ]
+                ],
+                "source_uav_id": 2
+              },
+              {
+                "waypoint_index": 1,
+                "path": [
+                  [
+                    30.0,
+                    20.0,
+                    53.0
+                  ],
+                  [
+                    3.0,
+                    0.0,
+                    53.0
+                  ]
+                ],
+                "source_uav_id": 3
+              },
+              {
+                "waypoint_index": 2,
+                "path": [
+                  [
+                    35.0,
+                    30.0,
+                    53.0
+                  ],
+                  [
+                    3.0,
+                    0.0,
+                    53.0
+                  ]
+                ],
+                "source_uav_id": 3
+              },
+              {
+                "waypoint_index": 1,
+                "path": [
+                  [
+                    40.0,
+                    20.0,
+                    53.0
+                  ],
+                  [
+                    3.0,
+                    0.0,
+                    53.0
+                  ]
+                ],
+                "source_uav_id": 4
+              },
+              {
+                "waypoint_index": 2,
+                "path": [
+                  [
+                    45.0,
+                    30.0,
+                    53.0
+                  ],
+                  [
+                    3.0,
+                    0.0,
+                    53.0
+                  ]
+                ],
+                "source_uav_id": 4
+              },
+              {
+                "waypoint_index": 1,
+                "path": [
+                  [
+                    50.0,
+                    20.0,
+                    53.0
+                  ],
+                  [
+                    3.0,
+                    0.0,
+                    53.0
+                  ]
+                ],
+                "source_uav_id": 5
+              },
+              {
+                "waypoint_index": 2,
+                "path": [
+                  [
+                    55.0,
+                    30.0,
+                    53.0
+                  ],
+                  [
+                    3.0,
+                    0.0,
+                    53.0
+                  ]
+                ],
+                "source_uav_id": 5
+              },
+              {
+                "waypoint_index": 1,
+                "path": [
+                  [
+                    60.0,
+                    20.0,
+                    53.0
+                  ],
+                  [
+                    3.0,
+                    0.0,
+                    53.0
+                  ]
+                ],
+                "source_uav_id": 6
+              },
+              {
+                "waypoint_index": 2,
+                "path": [
+                  [
+                    65.0,
+                    30.0,
+                    53.0
+                  ],
+                  [
+                    3.0,
+                    0.0,
+                    53.0
+                  ]
+                ],
+                "source_uav_id": 6
+              }
+            ],
+            "route_scope": "all_uav_waypoints",
+            "landing_point": [
+              3.0,
+              0.0,
+              53.0
+            ],
+            "waypoint_counts_by_uav": {
+              "1": 2,
+              "2": 2,
+              "3": 2,
+              "4": 2,
+              "5": 2,
+              "6": 2
+            },
+            "waypoint_layer": "upper",
+            "return_altitude_m": 53.0,
+            "return_policy": "climb_to_upper_then_return"
+          }
+        },
+        {
+          "topic": "/ground_mission_planner/vehicle_3/path_stage_1",
+          "publish_phase": "after_successful_takeoff_before_start",
+          "latch": true,
+          "changed_in_this_update": true,
+          "ros_type": "std_msgs/Float64MultiArray",
+          "message": {
+            "layout": {
+              "dim": [],
+              "data_offset": 0
+            },
+            "data": [
+              30.0,
+              20.0,
+              53.0,
+              35.0,
+              30.0,
+              53.0
+            ]
+          }
+        },
+        {
+          "topic": "/ground_mission_planner/vehicle_3/path_stage_2",
+          "publish_phase": "after_successful_takeoff_before_start",
+          "latch": true,
+          "changed_in_this_update": true,
+          "ros_type": "std_msgs/Float64MultiArray",
+          "message": {
+            "layout": {
+              "dim": [],
+              "data_offset": 0
+            },
+            "data": [
+              35.0,
+              28.0,
+              40.0,
+              32.0,
+              22.0,
+              40.0,
+              30.0,
+              15.0,
+              40.0
+            ]
+          }
+        },
+        {
+          "topic": "/ground_mission_planner/vehicle_3/jiangluodian",
+          "publish_phase": "after_successful_takeoff_before_start",
+          "latch": true,
+          "changed_in_this_update": false,
+          "ros_type": "std_msgs/Float64MultiArray",
+          "message": {
+            "layout": {
+              "dim": [],
+              "data_offset": 0
+            },
+            "data": [
+              3.0,
+              0.0,
+              53.0
+            ]
+          }
+        },
+        {
+          "topic": "/uav3/competition/external_mission",
+          "publish_phase": "after_successful_takeoff_before_start",
+          "latch": true,
+          "changed_in_this_update": true,
+          "ros_type": "std_msgs/String",
+          "message": {
+            "data": "{\"type\":\"external_mission\",\"uav_id\":3,\"mission_id\":\"subject2-dual-layer-xyz-interface-example\",\"assignment_checksum\":\"2f69f75b51f5c3241c17eceeb8e70750131e5054c97f60c7e29a01844eabe9d0\",\"flight_profile\":\"lab\",\"coordinate_frame\":\"ENU\",\"altitude_frame\":\"RELATIVE_TO_TAKEOFF\",\"target_altitude_m\":53.0,\"relative_altitude_m\":53.0,\"waypoints\":[{\"x_m\":30.0,\"y_m\":20.0,\"z_m\":53.0},{\"x_m\":35.0,\"y_m\":30.0,\"z_m\":53.0}],\"speed_mps\":0.3,\"waypoint_actions\":[],\"reconnaissance_mode\":\"hover_scan\",\"hover_scan_seconds\":50.0,\"return_home\":{\"x_m\":3.0,\"y_m\":0.0,\"z_m\":53.0},\"deadline_at\":null,\"return_battery_threshold\":null,\"subject\":\"subject2\",\"path_contract_version\":2,\"execution_mode\":\"upper_once_then_lower_once\",\"layer_order\":[\"upper\",\"lower\"],\"return_waypoint_layer\":\"upper\",\"return_altitude_m\":53.0,\"return_policy\":\"climb_to_upper_then_return\",\"layers\":[{\"layer_id\":\"upper\",\"topic\":\"/ground_mission_planner/vehicle_3/path_stage_1\",\"altitude_m\":53.0,\"waypoint_count\":2,\"waypoints\":[{\"x_m\":30.0,\"y_m\":20.0,\"z_m\":53.0},{\"x_m\":35.0,\"y_m\":30.0,\"z_m\":53.0}],\"scan_passes\":1,\"hover_scan_seconds\":50.0},{\"layer_id\":\"lower\",\"topic\":\"/ground_mission_planner/vehicle_3/path_stage_2\",\"altitude_m\":40.0,\"waypoint_count\":3,\"waypoints\":[{\"x_m\":35.0,\"y_m\":28.0,\"z_m\":40.0},{\"x_m\":32.0,\"y_m\":22.0,\"z_m\":40.0},{\"x_m\":30.0,\"y_m\":15.0,\"z_m\":40.0}],\"scan_passes\":1,\"hover_scan_seconds\":50.0}]}"
+          },
+          "decoded_data": {
+            "type": "external_mission",
+            "uav_id": 3,
+            "mission_id": "subject2-dual-layer-xyz-interface-example",
+            "assignment_checksum": "2f69f75b51f5c3241c17eceeb8e70750131e5054c97f60c7e29a01844eabe9d0",
+            "flight_profile": "lab",
+            "coordinate_frame": "ENU",
+            "altitude_frame": "RELATIVE_TO_TAKEOFF",
+            "target_altitude_m": 53.0,
+            "relative_altitude_m": 53.0,
+            "waypoints": [
+              {
+                "x_m": 30.0,
+                "y_m": 20.0,
+                "z_m": 53.0
+              },
+              {
+                "x_m": 35.0,
+                "y_m": 30.0,
+                "z_m": 53.0
+              }
+            ],
+            "speed_mps": 0.3,
+            "waypoint_actions": [],
+            "reconnaissance_mode": "hover_scan",
+            "hover_scan_seconds": 50.0,
+            "return_home": {
+              "x_m": 3.0,
+              "y_m": 0.0,
+              "z_m": 53.0
+            },
+            "deadline_at": null,
+            "return_battery_threshold": null,
+            "subject": "subject2",
+            "path_contract_version": 2,
+            "execution_mode": "upper_once_then_lower_once",
+            "layer_order": [
+              "upper",
+              "lower"
+            ],
+            "return_waypoint_layer": "upper",
+            "return_altitude_m": 53.0,
+            "return_policy": "climb_to_upper_then_return",
+            "layers": [
+              {
+                "layer_id": "upper",
+                "topic": "/ground_mission_planner/vehicle_3/path_stage_1",
+                "altitude_m": 53.0,
+                "waypoint_count": 2,
+                "waypoints": [
+                  {
+                    "x_m": 30.0,
+                    "y_m": 20.0,
+                    "z_m": 53.0
+                  },
+                  {
+                    "x_m": 35.0,
+                    "y_m": 30.0,
+                    "z_m": 53.0
+                  }
+                ],
+                "scan_passes": 1,
+                "hover_scan_seconds": 50.0
+              },
+              {
+                "layer_id": "lower",
+                "topic": "/ground_mission_planner/vehicle_3/path_stage_2",
+                "altitude_m": 40.0,
+                "waypoint_count": 3,
+                "waypoints": [
+                  {
+                    "x_m": 35.0,
+                    "y_m": 28.0,
+                    "z_m": 40.0
+                  },
+                  {
+                    "x_m": 32.0,
+                    "y_m": 22.0,
+                    "z_m": 40.0
+                  },
+                  {
+                    "x_m": 30.0,
+                    "y_m": 15.0,
+                    "z_m": 40.0
+                  }
+                ],
+                "scan_passes": 1,
+                "hover_scan_seconds": 50.0
+              }
+            ]
+          }
+        },
+        {
+          "topic": "/ground_mission_planner/recon_start_mode",
+          "ros_type": "std_msgs/Int32",
+          "publish_phase": "after_all_mission_data",
+          "latch": true,
+          "changed_in_this_update": false,
+          "message": {
+            "data": 0
+          }
+        },
+        {
+          "topic": "/ground_mission_planner/vehicle_3/return_home",
+          "ros_type": "std_msgs/Bool",
+          "publish_phase": "only_when_return_is_requested",
+          "latch": true,
+          "changed_in_this_update": false,
+          "message": {
+            "data": true
+          }
+        }
+      ]
+    },
+    {
+      "uav_id": 4,
+      "assignment_sent_on_plan_and_dispatch": {
+        "mission_id": "subject2-dual-layer-xyz-interface-example",
+        "subject": "subject2",
+        "flight_profile": "lab",
+        "task": {
+          "type": "lawnmower_search",
+          "coordinate_frame": "ENU",
+          "waypoints_m": [
+            [
+              40.0,
+              20.0
+            ],
+            [
+              45.0,
+              30.0
+            ]
+          ],
+          "waypoints_wgs84": [
+            [
+              33.86336000036,
+              113.70578260869566
+            ],
+            [
+              33.863405000405,
+              113.70567391304348
+            ]
+          ],
+          "reconnaissance_mode": "hover_scan",
+          "hover_scan_seconds": 50.0,
+          "execution_mode": "upper_once_then_lower_once",
+          "layer_order": [
+            "upper",
+            "lower"
+          ],
+          "layers": [
+            {
+              "layer_id": "upper",
+              "altitude_m": 47.0,
+              "waypoints_m": [
+                [
+                  40.0,
+                  20.0
+                ],
+                [
+                  45.0,
+                  30.0
+                ]
+              ],
+              "waypoints_wgs84": [
+                [
+                  33.86336000036,
+                  113.70578260869566
+                ],
+                [
+                  33.863405000405,
+                  113.70567391304348
+                ]
+              ],
+              "hover_scan_seconds": 50.0,
+              "scan_passes": 1
+            },
+            {
+              "layer_id": "lower",
+              "altitude_m": 34.0,
+              "waypoints_m": [
+                [
+                  45.0,
+                  28.0
+                ],
+                [
+                  42.0,
+                  22.0
+                ],
+                [
+                  40.0,
+                  15.0
+                ]
+              ],
+              "waypoints_wgs84": [
+                [
+                  33.863405000405,
+                  113.70569565217392
+                ],
+                [
+                  33.863378000378,
+                  113.70576086956522
+                ],
+                [
+                  33.86336000036,
+                  113.70583695652174
+                ]
+              ],
+              "hover_scan_seconds": 50.0,
+              "scan_passes": 1
+            }
+          ],
+          "transit_routes": {
+            "schema_version": 2,
+            "recipient_uav_id": 4,
+            "route_scope": "all_uav_waypoints",
+            "plan_sha256": "offline-example-not-a-flight-plan",
+            "coordinate_frame": "ENU",
+            "departure": [
+              4.0,
+              0.0
+            ],
+            "entry_path": [
+              [
+                4.0,
+                0.0
+              ],
+              [
+                40.0,
+                20.0
+              ]
+            ],
+            "waypoints_by_uav": {
+              "1": [
+                [
+                  10.0,
+                  20.0
+                ],
+                [
+                  15.0,
+                  30.0
+                ]
+              ],
+              "2": [
+                [
+                  20.0,
+                  20.0
+                ],
+                [
+                  25.0,
+                  30.0
+                ]
+              ],
+              "3": [
+                [
+                  30.0,
+                  20.0
+                ],
+                [
+                  35.0,
+                  30.0
+                ]
+              ],
+              "4": [
+                [
+                  40.0,
+                  20.0
+                ],
+                [
+                  45.0,
+                  30.0
+                ]
+              ],
+              "5": [
+                [
+                  50.0,
+                  20.0
+                ],
+                [
+                  55.0,
+                  30.0
+                ]
+              ],
+              "6": [
+                [
+                  60.0,
+                  20.0
+                ],
+                [
+                  65.0,
+                  30.0
+                ]
+              ]
+            },
+            "return_paths": [
+              {
+                "source_uav_id": 1,
+                "waypoint_index": 1,
+                "path": [
+                  [
+                    10.0,
+                    20.0
+                  ],
+                  [
+                    4.0,
+                    0.0
+                  ]
+                ]
+              },
+              {
+                "source_uav_id": 1,
+                "waypoint_index": 2,
+                "path": [
+                  [
+                    15.0,
+                    30.0
+                  ],
+                  [
+                    4.0,
+                    0.0
+                  ]
+                ]
+              },
+              {
+                "source_uav_id": 2,
+                "waypoint_index": 1,
+                "path": [
+                  [
+                    20.0,
+                    20.0
+                  ],
+                  [
+                    4.0,
+                    0.0
+                  ]
+                ]
+              },
+              {
+                "source_uav_id": 2,
+                "waypoint_index": 2,
+                "path": [
+                  [
+                    25.0,
+                    30.0
+                  ],
+                  [
+                    4.0,
+                    0.0
+                  ]
+                ]
+              },
+              {
+                "source_uav_id": 3,
+                "waypoint_index": 1,
+                "path": [
+                  [
+                    30.0,
+                    20.0
+                  ],
+                  [
+                    4.0,
+                    0.0
+                  ]
+                ]
+              },
+              {
+                "source_uav_id": 3,
+                "waypoint_index": 2,
+                "path": [
+                  [
+                    35.0,
+                    30.0
+                  ],
+                  [
+                    4.0,
+                    0.0
+                  ]
+                ]
+              },
+              {
+                "source_uav_id": 4,
+                "waypoint_index": 1,
+                "path": [
+                  [
+                    40.0,
+                    20.0
+                  ],
+                  [
+                    4.0,
+                    0.0
+                  ]
+                ]
+              },
+              {
+                "source_uav_id": 4,
+                "waypoint_index": 2,
+                "path": [
+                  [
+                    45.0,
+                    30.0
+                  ],
+                  [
+                    4.0,
+                    0.0
+                  ]
+                ]
+              },
+              {
+                "source_uav_id": 5,
+                "waypoint_index": 1,
+                "path": [
+                  [
+                    50.0,
+                    20.0
+                  ],
+                  [
+                    4.0,
+                    0.0
+                  ]
+                ]
+              },
+              {
+                "source_uav_id": 5,
+                "waypoint_index": 2,
+                "path": [
+                  [
+                    55.0,
+                    30.0
+                  ],
+                  [
+                    4.0,
+                    0.0
+                  ]
+                ]
+              },
+              {
+                "source_uav_id": 6,
+                "waypoint_index": 1,
+                "path": [
+                  [
+                    60.0,
+                    20.0
+                  ],
+                  [
+                    4.0,
+                    0.0
+                  ]
+                ]
+              },
+              {
+                "source_uav_id": 6,
+                "waypoint_index": 2,
+                "path": [
+                  [
+                    65.0,
+                    30.0
+                  ],
+                  [
+                    4.0,
+                    0.0
+                  ]
+                ]
+              }
+            ]
+          },
+          "recognition_selection": {
+            "category_count": 0,
+            "category_ids": [],
+            "category_names": []
+          }
+        },
+        "target_altitude_m": 47.0,
+        "controller_mode": "external",
+        "coordinate_frame": "ENU",
+        "landing_point_m": [
+          4.0,
+          0.0
+        ],
+        "landing_sequence": 4,
+        "landing_mode": "selected_departure",
+        "assignment_checksum": "f868a7b0f0ff16269fed4d91e1abc1c57acf238386aad431a24ec4b5a3018daa",
+        "type": "assign_task",
+        "uav_id": 4
+      },
+      "topics": [
+        {
+          "topic": "/ground_mission_planner/vehicle_4/entry_path",
+          "publish_phase": "after_successful_takeoff_before_start",
+          "latch": true,
+          "changed_in_this_update": false,
+          "ros_type": "std_msgs/String",
+          "message": {
+            "data": "{\"schema_version\":1,\"mission_id\":\"subject2-dual-layer-xyz-interface-example\",\"uav_id\":4,\"assignment_checksum\":\"f868a7b0f0ff16269fed4d91e1abc1c57acf238386aad431a24ec4b5a3018daa\",\"coordinate_frame\":\"ENU\",\"coordinate_order\":\"x_y_z\",\"altitude_frame\":\"RELATIVE_TO_TAKEOFF\",\"plan_sha256\":\"offline-example-not-a-flight-plan\",\"path\":[[4.0,0.0,47.0],[40.0,20.0,47.0]]}"
+          },
+          "decoded_data": {
+            "schema_version": 1,
+            "mission_id": "subject2-dual-layer-xyz-interface-example",
+            "uav_id": 4,
+            "assignment_checksum": "f868a7b0f0ff16269fed4d91e1abc1c57acf238386aad431a24ec4b5a3018daa",
+            "coordinate_frame": "ENU",
+            "coordinate_order": "x_y_z",
+            "altitude_frame": "RELATIVE_TO_TAKEOFF",
+            "plan_sha256": "offline-example-not-a-flight-plan",
+            "path": [
+              [
+                4.0,
+                0.0,
+                47.0
+              ],
+              [
+                40.0,
+                20.0,
+                47.0
+              ]
+            ]
+          }
+        },
+        {
+          "topic": "/ground_mission_planner/vehicle_4/return_paths",
+          "publish_phase": "after_successful_takeoff_before_start",
+          "latch": true,
+          "changed_in_this_update": true,
+          "ros_type": "std_msgs/String",
+          "message": {
+            "data": "{\"schema_version\":2,\"mission_id\":\"subject2-dual-layer-xyz-interface-example\",\"uav_id\":4,\"assignment_checksum\":\"f868a7b0f0ff16269fed4d91e1abc1c57acf238386aad431a24ec4b5a3018daa\",\"coordinate_frame\":\"ENU\",\"coordinate_order\":\"x_y_z\",\"altitude_frame\":\"RELATIVE_TO_TAKEOFF\",\"plan_sha256\":\"offline-example-not-a-flight-plan\",\"routes\":[{\"waypoint_index\":1,\"path\":[[10.0,20.0,47.0],[4.0,0.0,47.0]],\"source_uav_id\":1},{\"waypoint_index\":2,\"path\":[[15.0,30.0,47.0],[4.0,0.0,47.0]],\"source_uav_id\":1},{\"waypoint_index\":1,\"path\":[[20.0,20.0,47.0],[4.0,0.0,47.0]],\"source_uav_id\":2},{\"waypoint_index\":2,\"path\":[[25.0,30.0,47.0],[4.0,0.0,47.0]],\"source_uav_id\":2},{\"waypoint_index\":1,\"path\":[[30.0,20.0,47.0],[4.0,0.0,47.0]],\"source_uav_id\":3},{\"waypoint_index\":2,\"path\":[[35.0,30.0,47.0],[4.0,0.0,47.0]],\"source_uav_id\":3},{\"waypoint_index\":1,\"path\":[[40.0,20.0,47.0],[4.0,0.0,47.0]],\"source_uav_id\":4},{\"waypoint_index\":2,\"path\":[[45.0,30.0,47.0],[4.0,0.0,47.0]],\"source_uav_id\":4},{\"waypoint_index\":1,\"path\":[[50.0,20.0,47.0],[4.0,0.0,47.0]],\"source_uav_id\":5},{\"waypoint_index\":2,\"path\":[[55.0,30.0,47.0],[4.0,0.0,47.0]],\"source_uav_id\":5},{\"waypoint_index\":1,\"path\":[[60.0,20.0,47.0],[4.0,0.0,47.0]],\"source_uav_id\":6},{\"waypoint_index\":2,\"path\":[[65.0,30.0,47.0],[4.0,0.0,47.0]],\"source_uav_id\":6}],\"route_scope\":\"all_uav_waypoints\",\"landing_point\":[4.0,0.0,47.0],\"waypoint_counts_by_uav\":{\"1\":2,\"2\":2,\"3\":2,\"4\":2,\"5\":2,\"6\":2},\"waypoint_layer\":\"upper\",\"return_altitude_m\":47.0,\"return_policy\":\"climb_to_upper_then_return\"}"
+          },
+          "decoded_data": {
+            "schema_version": 2,
+            "mission_id": "subject2-dual-layer-xyz-interface-example",
+            "uav_id": 4,
+            "assignment_checksum": "f868a7b0f0ff16269fed4d91e1abc1c57acf238386aad431a24ec4b5a3018daa",
+            "coordinate_frame": "ENU",
+            "coordinate_order": "x_y_z",
+            "altitude_frame": "RELATIVE_TO_TAKEOFF",
+            "plan_sha256": "offline-example-not-a-flight-plan",
+            "routes": [
+              {
+                "waypoint_index": 1,
+                "path": [
+                  [
+                    10.0,
+                    20.0,
+                    47.0
+                  ],
+                  [
+                    4.0,
+                    0.0,
+                    47.0
+                  ]
+                ],
+                "source_uav_id": 1
+              },
+              {
+                "waypoint_index": 2,
+                "path": [
+                  [
+                    15.0,
+                    30.0,
+                    47.0
+                  ],
+                  [
+                    4.0,
+                    0.0,
+                    47.0
+                  ]
+                ],
+                "source_uav_id": 1
+              },
+              {
+                "waypoint_index": 1,
+                "path": [
+                  [
+                    20.0,
+                    20.0,
+                    47.0
+                  ],
+                  [
+                    4.0,
+                    0.0,
+                    47.0
+                  ]
+                ],
+                "source_uav_id": 2
+              },
+              {
+                "waypoint_index": 2,
+                "path": [
+                  [
+                    25.0,
+                    30.0,
+                    47.0
+                  ],
+                  [
+                    4.0,
+                    0.0,
+                    47.0
+                  ]
+                ],
+                "source_uav_id": 2
+              },
+              {
+                "waypoint_index": 1,
+                "path": [
+                  [
+                    30.0,
+                    20.0,
+                    47.0
+                  ],
+                  [
+                    4.0,
+                    0.0,
+                    47.0
+                  ]
+                ],
+                "source_uav_id": 3
+              },
+              {
+                "waypoint_index": 2,
+                "path": [
+                  [
+                    35.0,
+                    30.0,
+                    47.0
+                  ],
+                  [
+                    4.0,
+                    0.0,
+                    47.0
+                  ]
+                ],
+                "source_uav_id": 3
+              },
+              {
+                "waypoint_index": 1,
+                "path": [
+                  [
+                    40.0,
+                    20.0,
+                    47.0
+                  ],
+                  [
+                    4.0,
+                    0.0,
+                    47.0
+                  ]
+                ],
+                "source_uav_id": 4
+              },
+              {
+                "waypoint_index": 2,
+                "path": [
+                  [
+                    45.0,
+                    30.0,
+                    47.0
+                  ],
+                  [
+                    4.0,
+                    0.0,
+                    47.0
+                  ]
+                ],
+                "source_uav_id": 4
+              },
+              {
+                "waypoint_index": 1,
+                "path": [
+                  [
+                    50.0,
+                    20.0,
+                    47.0
+                  ],
+                  [
+                    4.0,
+                    0.0,
+                    47.0
+                  ]
+                ],
+                "source_uav_id": 5
+              },
+              {
+                "waypoint_index": 2,
+                "path": [
+                  [
+                    55.0,
+                    30.0,
+                    47.0
+                  ],
+                  [
+                    4.0,
+                    0.0,
+                    47.0
+                  ]
+                ],
+                "source_uav_id": 5
+              },
+              {
+                "waypoint_index": 1,
+                "path": [
+                  [
+                    60.0,
+                    20.0,
+                    47.0
+                  ],
+                  [
+                    4.0,
+                    0.0,
+                    47.0
+                  ]
+                ],
+                "source_uav_id": 6
+              },
+              {
+                "waypoint_index": 2,
+                "path": [
+                  [
+                    65.0,
+                    30.0,
+                    47.0
+                  ],
+                  [
+                    4.0,
+                    0.0,
+                    47.0
+                  ]
+                ],
+                "source_uav_id": 6
+              }
+            ],
+            "route_scope": "all_uav_waypoints",
+            "landing_point": [
+              4.0,
+              0.0,
+              47.0
+            ],
+            "waypoint_counts_by_uav": {
+              "1": 2,
+              "2": 2,
+              "3": 2,
+              "4": 2,
+              "5": 2,
+              "6": 2
+            },
+            "waypoint_layer": "upper",
+            "return_altitude_m": 47.0,
+            "return_policy": "climb_to_upper_then_return"
+          }
+        },
+        {
+          "topic": "/ground_mission_planner/vehicle_4/path_stage_1",
+          "publish_phase": "after_successful_takeoff_before_start",
+          "latch": true,
+          "changed_in_this_update": true,
+          "ros_type": "std_msgs/Float64MultiArray",
+          "message": {
+            "layout": {
+              "dim": [],
+              "data_offset": 0
+            },
+            "data": [
+              40.0,
+              20.0,
+              47.0,
+              45.0,
+              30.0,
+              47.0
+            ]
+          }
+        },
+        {
+          "topic": "/ground_mission_planner/vehicle_4/path_stage_2",
+          "publish_phase": "after_successful_takeoff_before_start",
+          "latch": true,
+          "changed_in_this_update": true,
+          "ros_type": "std_msgs/Float64MultiArray",
+          "message": {
+            "layout": {
+              "dim": [],
+              "data_offset": 0
+            },
+            "data": [
+              45.0,
+              28.0,
+              34.0,
+              42.0,
+              22.0,
+              34.0,
+              40.0,
+              15.0,
+              34.0
+            ]
+          }
+        },
+        {
+          "topic": "/ground_mission_planner/vehicle_4/jiangluodian",
+          "publish_phase": "after_successful_takeoff_before_start",
+          "latch": true,
+          "changed_in_this_update": false,
+          "ros_type": "std_msgs/Float64MultiArray",
+          "message": {
+            "layout": {
+              "dim": [],
+              "data_offset": 0
+            },
+            "data": [
+              4.0,
+              0.0,
+              47.0
+            ]
+          }
+        },
+        {
+          "topic": "/uav4/competition/external_mission",
+          "publish_phase": "after_successful_takeoff_before_start",
+          "latch": true,
+          "changed_in_this_update": true,
+          "ros_type": "std_msgs/String",
+          "message": {
+            "data": "{\"type\":\"external_mission\",\"uav_id\":4,\"mission_id\":\"subject2-dual-layer-xyz-interface-example\",\"assignment_checksum\":\"f868a7b0f0ff16269fed4d91e1abc1c57acf238386aad431a24ec4b5a3018daa\",\"flight_profile\":\"lab\",\"coordinate_frame\":\"ENU\",\"altitude_frame\":\"RELATIVE_TO_TAKEOFF\",\"target_altitude_m\":47.0,\"relative_altitude_m\":47.0,\"waypoints\":[{\"x_m\":40.0,\"y_m\":20.0,\"z_m\":47.0},{\"x_m\":45.0,\"y_m\":30.0,\"z_m\":47.0}],\"speed_mps\":0.3,\"waypoint_actions\":[],\"reconnaissance_mode\":\"hover_scan\",\"hover_scan_seconds\":50.0,\"return_home\":{\"x_m\":4.0,\"y_m\":0.0,\"z_m\":47.0},\"deadline_at\":null,\"return_battery_threshold\":null,\"subject\":\"subject2\",\"path_contract_version\":2,\"execution_mode\":\"upper_once_then_lower_once\",\"layer_order\":[\"upper\",\"lower\"],\"return_waypoint_layer\":\"upper\",\"return_altitude_m\":47.0,\"return_policy\":\"climb_to_upper_then_return\",\"layers\":[{\"layer_id\":\"upper\",\"topic\":\"/ground_mission_planner/vehicle_4/path_stage_1\",\"altitude_m\":47.0,\"waypoint_count\":2,\"waypoints\":[{\"x_m\":40.0,\"y_m\":20.0,\"z_m\":47.0},{\"x_m\":45.0,\"y_m\":30.0,\"z_m\":47.0}],\"scan_passes\":1,\"hover_scan_seconds\":50.0},{\"layer_id\":\"lower\",\"topic\":\"/ground_mission_planner/vehicle_4/path_stage_2\",\"altitude_m\":34.0,\"waypoint_count\":3,\"waypoints\":[{\"x_m\":45.0,\"y_m\":28.0,\"z_m\":34.0},{\"x_m\":42.0,\"y_m\":22.0,\"z_m\":34.0},{\"x_m\":40.0,\"y_m\":15.0,\"z_m\":34.0}],\"scan_passes\":1,\"hover_scan_seconds\":50.0}]}"
+          },
+          "decoded_data": {
+            "type": "external_mission",
+            "uav_id": 4,
+            "mission_id": "subject2-dual-layer-xyz-interface-example",
+            "assignment_checksum": "f868a7b0f0ff16269fed4d91e1abc1c57acf238386aad431a24ec4b5a3018daa",
+            "flight_profile": "lab",
+            "coordinate_frame": "ENU",
+            "altitude_frame": "RELATIVE_TO_TAKEOFF",
+            "target_altitude_m": 47.0,
+            "relative_altitude_m": 47.0,
+            "waypoints": [
+              {
+                "x_m": 40.0,
+                "y_m": 20.0,
+                "z_m": 47.0
+              },
+              {
+                "x_m": 45.0,
+                "y_m": 30.0,
+                "z_m": 47.0
+              }
+            ],
+            "speed_mps": 0.3,
+            "waypoint_actions": [],
+            "reconnaissance_mode": "hover_scan",
+            "hover_scan_seconds": 50.0,
+            "return_home": {
+              "x_m": 4.0,
+              "y_m": 0.0,
+              "z_m": 47.0
+            },
+            "deadline_at": null,
+            "return_battery_threshold": null,
+            "subject": "subject2",
+            "path_contract_version": 2,
+            "execution_mode": "upper_once_then_lower_once",
+            "layer_order": [
+              "upper",
+              "lower"
+            ],
+            "return_waypoint_layer": "upper",
+            "return_altitude_m": 47.0,
+            "return_policy": "climb_to_upper_then_return",
+            "layers": [
+              {
+                "layer_id": "upper",
+                "topic": "/ground_mission_planner/vehicle_4/path_stage_1",
+                "altitude_m": 47.0,
+                "waypoint_count": 2,
+                "waypoints": [
+                  {
+                    "x_m": 40.0,
+                    "y_m": 20.0,
+                    "z_m": 47.0
+                  },
+                  {
+                    "x_m": 45.0,
+                    "y_m": 30.0,
+                    "z_m": 47.0
+                  }
+                ],
+                "scan_passes": 1,
+                "hover_scan_seconds": 50.0
+              },
+              {
+                "layer_id": "lower",
+                "topic": "/ground_mission_planner/vehicle_4/path_stage_2",
+                "altitude_m": 34.0,
+                "waypoint_count": 3,
+                "waypoints": [
+                  {
+                    "x_m": 45.0,
+                    "y_m": 28.0,
+                    "z_m": 34.0
+                  },
+                  {
+                    "x_m": 42.0,
+                    "y_m": 22.0,
+                    "z_m": 34.0
+                  },
+                  {
+                    "x_m": 40.0,
+                    "y_m": 15.0,
+                    "z_m": 34.0
+                  }
+                ],
+                "scan_passes": 1,
+                "hover_scan_seconds": 50.0
+              }
+            ]
+          }
+        },
+        {
+          "topic": "/ground_mission_planner/recon_start_mode",
+          "ros_type": "std_msgs/Int32",
+          "publish_phase": "after_all_mission_data",
+          "latch": true,
+          "changed_in_this_update": false,
+          "message": {
+            "data": 0
+          }
+        },
+        {
+          "topic": "/ground_mission_planner/vehicle_4/return_home",
+          "ros_type": "std_msgs/Bool",
+          "publish_phase": "only_when_return_is_requested",
+          "latch": true,
+          "changed_in_this_update": false,
+          "message": {
+            "data": true
+          }
+        }
+      ]
+    },
+    {
+      "uav_id": 5,
+      "assignment_sent_on_plan_and_dispatch": {
+        "mission_id": "subject2-dual-layer-xyz-interface-example",
+        "subject": "subject2",
+        "flight_profile": "lab",
+        "task": {
+          "type": "lawnmower_search",
+          "coordinate_frame": "ENU",
+          "waypoints_m": [
+            [
+              50.0,
+              20.0
+            ],
+            [
+              55.0,
+              30.0
+            ]
+          ],
+          "waypoints_wgs84": [
+            [
+              33.86345000045,
+              113.70578260869566
+            ],
+            [
+              33.863495000495,
+              113.70567391304348
+            ]
+          ],
+          "reconnaissance_mode": "hover_scan",
+          "hover_scan_seconds": 50.0,
+          "execution_mode": "upper_once_then_lower_once",
+          "layer_order": [
+            "upper",
+            "lower"
+          ],
+          "layers": [
+            {
+              "layer_id": "upper",
+              "altitude_m": 50.0,
+              "waypoints_m": [
+                [
+                  50.0,
+                  20.0
+                ],
+                [
+                  55.0,
+                  30.0
+                ]
+              ],
+              "waypoints_wgs84": [
+                [
+                  33.86345000045,
+                  113.70578260869566
+                ],
+                [
+                  33.863495000495,
+                  113.70567391304348
+                ]
+              ],
+              "hover_scan_seconds": 50.0,
+              "scan_passes": 1
+            },
+            {
+              "layer_id": "lower",
+              "altitude_m": 37.0,
+              "waypoints_m": [
+                [
+                  55.0,
+                  28.0
+                ],
+                [
+                  52.0,
+                  22.0
+                ],
+                [
+                  50.0,
+                  15.0
+                ]
+              ],
+              "waypoints_wgs84": [
+                [
+                  33.863495000495,
+                  113.70569565217392
+                ],
+                [
+                  33.863468000468,
+                  113.70576086956522
+                ],
+                [
+                  33.86345000045,
+                  113.70583695652174
+                ]
+              ],
+              "hover_scan_seconds": 50.0,
+              "scan_passes": 1
+            }
+          ],
+          "transit_routes": {
+            "schema_version": 2,
+            "recipient_uav_id": 5,
+            "route_scope": "all_uav_waypoints",
+            "plan_sha256": "offline-example-not-a-flight-plan",
+            "coordinate_frame": "ENU",
+            "departure": [
+              5.0,
+              0.0
+            ],
+            "entry_path": [
+              [
+                5.0,
+                0.0
+              ],
+              [
+                50.0,
+                20.0
+              ]
+            ],
+            "waypoints_by_uav": {
+              "1": [
+                [
+                  10.0,
+                  20.0
+                ],
+                [
+                  15.0,
+                  30.0
+                ]
+              ],
+              "2": [
+                [
+                  20.0,
+                  20.0
+                ],
+                [
+                  25.0,
+                  30.0
+                ]
+              ],
+              "3": [
+                [
+                  30.0,
+                  20.0
+                ],
+                [
+                  35.0,
+                  30.0
+                ]
+              ],
+              "4": [
+                [
+                  40.0,
+                  20.0
+                ],
+                [
+                  45.0,
+                  30.0
+                ]
+              ],
+              "5": [
+                [
+                  50.0,
+                  20.0
+                ],
+                [
+                  55.0,
+                  30.0
+                ]
+              ],
+              "6": [
+                [
+                  60.0,
+                  20.0
+                ],
+                [
+                  65.0,
+                  30.0
+                ]
+              ]
+            },
+            "return_paths": [
+              {
+                "source_uav_id": 1,
+                "waypoint_index": 1,
+                "path": [
+                  [
+                    10.0,
+                    20.0
+                  ],
+                  [
+                    5.0,
+                    0.0
+                  ]
+                ]
+              },
+              {
+                "source_uav_id": 1,
+                "waypoint_index": 2,
+                "path": [
+                  [
+                    15.0,
+                    30.0
+                  ],
+                  [
+                    5.0,
+                    0.0
+                  ]
+                ]
+              },
+              {
+                "source_uav_id": 2,
+                "waypoint_index": 1,
+                "path": [
+                  [
+                    20.0,
+                    20.0
+                  ],
+                  [
+                    5.0,
+                    0.0
+                  ]
+                ]
+              },
+              {
+                "source_uav_id": 2,
+                "waypoint_index": 2,
+                "path": [
+                  [
+                    25.0,
+                    30.0
+                  ],
+                  [
+                    5.0,
+                    0.0
+                  ]
+                ]
+              },
+              {
+                "source_uav_id": 3,
+                "waypoint_index": 1,
+                "path": [
+                  [
+                    30.0,
+                    20.0
+                  ],
+                  [
+                    5.0,
+                    0.0
+                  ]
+                ]
+              },
+              {
+                "source_uav_id": 3,
+                "waypoint_index": 2,
+                "path": [
+                  [
+                    35.0,
+                    30.0
+                  ],
+                  [
+                    5.0,
+                    0.0
+                  ]
+                ]
+              },
+              {
+                "source_uav_id": 4,
+                "waypoint_index": 1,
+                "path": [
+                  [
+                    40.0,
+                    20.0
+                  ],
+                  [
+                    5.0,
+                    0.0
+                  ]
+                ]
+              },
+              {
+                "source_uav_id": 4,
+                "waypoint_index": 2,
+                "path": [
+                  [
+                    45.0,
+                    30.0
+                  ],
+                  [
+                    5.0,
+                    0.0
+                  ]
+                ]
+              },
+              {
+                "source_uav_id": 5,
+                "waypoint_index": 1,
+                "path": [
+                  [
+                    50.0,
+                    20.0
+                  ],
+                  [
+                    5.0,
+                    0.0
+                  ]
+                ]
+              },
+              {
+                "source_uav_id": 5,
+                "waypoint_index": 2,
+                "path": [
+                  [
+                    55.0,
+                    30.0
+                  ],
+                  [
+                    5.0,
+                    0.0
+                  ]
+                ]
+              },
+              {
+                "source_uav_id": 6,
+                "waypoint_index": 1,
+                "path": [
+                  [
+                    60.0,
+                    20.0
+                  ],
+                  [
+                    5.0,
+                    0.0
+                  ]
+                ]
+              },
+              {
+                "source_uav_id": 6,
+                "waypoint_index": 2,
+                "path": [
+                  [
+                    65.0,
+                    30.0
+                  ],
+                  [
+                    5.0,
+                    0.0
+                  ]
+                ]
+              }
+            ]
+          },
+          "recognition_selection": {
+            "category_count": 0,
+            "category_ids": [],
+            "category_names": []
+          }
+        },
+        "target_altitude_m": 50.0,
+        "controller_mode": "external",
+        "coordinate_frame": "ENU",
+        "landing_point_m": [
+          5.0,
+          0.0
+        ],
+        "landing_sequence": 5,
+        "landing_mode": "selected_departure",
+        "assignment_checksum": "08620b10250a416488775dcb88873c2aa55772ed37b68603119bfed0054e977c",
+        "type": "assign_task",
+        "uav_id": 5
+      },
+      "topics": [
+        {
+          "topic": "/ground_mission_planner/vehicle_5/entry_path",
+          "publish_phase": "after_successful_takeoff_before_start",
+          "latch": true,
+          "changed_in_this_update": false,
+          "ros_type": "std_msgs/String",
+          "message": {
+            "data": "{\"schema_version\":1,\"mission_id\":\"subject2-dual-layer-xyz-interface-example\",\"uav_id\":5,\"assignment_checksum\":\"08620b10250a416488775dcb88873c2aa55772ed37b68603119bfed0054e977c\",\"coordinate_frame\":\"ENU\",\"coordinate_order\":\"x_y_z\",\"altitude_frame\":\"RELATIVE_TO_TAKEOFF\",\"plan_sha256\":\"offline-example-not-a-flight-plan\",\"path\":[[5.0,0.0,50.0],[50.0,20.0,50.0]]}"
+          },
+          "decoded_data": {
+            "schema_version": 1,
+            "mission_id": "subject2-dual-layer-xyz-interface-example",
+            "uav_id": 5,
+            "assignment_checksum": "08620b10250a416488775dcb88873c2aa55772ed37b68603119bfed0054e977c",
+            "coordinate_frame": "ENU",
+            "coordinate_order": "x_y_z",
+            "altitude_frame": "RELATIVE_TO_TAKEOFF",
+            "plan_sha256": "offline-example-not-a-flight-plan",
+            "path": [
+              [
+                5.0,
+                0.0,
+                50.0
+              ],
+              [
+                50.0,
+                20.0,
+                50.0
+              ]
+            ]
+          }
+        },
+        {
+          "topic": "/ground_mission_planner/vehicle_5/return_paths",
+          "publish_phase": "after_successful_takeoff_before_start",
+          "latch": true,
+          "changed_in_this_update": true,
+          "ros_type": "std_msgs/String",
+          "message": {
+            "data": "{\"schema_version\":2,\"mission_id\":\"subject2-dual-layer-xyz-interface-example\",\"uav_id\":5,\"assignment_checksum\":\"08620b10250a416488775dcb88873c2aa55772ed37b68603119bfed0054e977c\",\"coordinate_frame\":\"ENU\",\"coordinate_order\":\"x_y_z\",\"altitude_frame\":\"RELATIVE_TO_TAKEOFF\",\"plan_sha256\":\"offline-example-not-a-flight-plan\",\"routes\":[{\"waypoint_index\":1,\"path\":[[10.0,20.0,50.0],[5.0,0.0,50.0]],\"source_uav_id\":1},{\"waypoint_index\":2,\"path\":[[15.0,30.0,50.0],[5.0,0.0,50.0]],\"source_uav_id\":1},{\"waypoint_index\":1,\"path\":[[20.0,20.0,50.0],[5.0,0.0,50.0]],\"source_uav_id\":2},{\"waypoint_index\":2,\"path\":[[25.0,30.0,50.0],[5.0,0.0,50.0]],\"source_uav_id\":2},{\"waypoint_index\":1,\"path\":[[30.0,20.0,50.0],[5.0,0.0,50.0]],\"source_uav_id\":3},{\"waypoint_index\":2,\"path\":[[35.0,30.0,50.0],[5.0,0.0,50.0]],\"source_uav_id\":3},{\"waypoint_index\":1,\"path\":[[40.0,20.0,50.0],[5.0,0.0,50.0]],\"source_uav_id\":4},{\"waypoint_index\":2,\"path\":[[45.0,30.0,50.0],[5.0,0.0,50.0]],\"source_uav_id\":4},{\"waypoint_index\":1,\"path\":[[50.0,20.0,50.0],[5.0,0.0,50.0]],\"source_uav_id\":5},{\"waypoint_index\":2,\"path\":[[55.0,30.0,50.0],[5.0,0.0,50.0]],\"source_uav_id\":5},{\"waypoint_index\":1,\"path\":[[60.0,20.0,50.0],[5.0,0.0,50.0]],\"source_uav_id\":6},{\"waypoint_index\":2,\"path\":[[65.0,30.0,50.0],[5.0,0.0,50.0]],\"source_uav_id\":6}],\"route_scope\":\"all_uav_waypoints\",\"landing_point\":[5.0,0.0,50.0],\"waypoint_counts_by_uav\":{\"1\":2,\"2\":2,\"3\":2,\"4\":2,\"5\":2,\"6\":2},\"waypoint_layer\":\"upper\",\"return_altitude_m\":50.0,\"return_policy\":\"climb_to_upper_then_return\"}"
+          },
+          "decoded_data": {
+            "schema_version": 2,
+            "mission_id": "subject2-dual-layer-xyz-interface-example",
+            "uav_id": 5,
+            "assignment_checksum": "08620b10250a416488775dcb88873c2aa55772ed37b68603119bfed0054e977c",
+            "coordinate_frame": "ENU",
+            "coordinate_order": "x_y_z",
+            "altitude_frame": "RELATIVE_TO_TAKEOFF",
+            "plan_sha256": "offline-example-not-a-flight-plan",
+            "routes": [
+              {
+                "waypoint_index": 1,
+                "path": [
+                  [
+                    10.0,
+                    20.0,
+                    50.0
+                  ],
+                  [
+                    5.0,
+                    0.0,
+                    50.0
+                  ]
+                ],
+                "source_uav_id": 1
+              },
+              {
+                "waypoint_index": 2,
+                "path": [
+                  [
+                    15.0,
+                    30.0,
+                    50.0
+                  ],
+                  [
+                    5.0,
+                    0.0,
+                    50.0
+                  ]
+                ],
+                "source_uav_id": 1
+              },
+              {
+                "waypoint_index": 1,
+                "path": [
+                  [
+                    20.0,
+                    20.0,
+                    50.0
+                  ],
+                  [
+                    5.0,
+                    0.0,
+                    50.0
+                  ]
+                ],
+                "source_uav_id": 2
+              },
+              {
+                "waypoint_index": 2,
+                "path": [
+                  [
+                    25.0,
+                    30.0,
+                    50.0
+                  ],
+                  [
+                    5.0,
+                    0.0,
+                    50.0
+                  ]
+                ],
+                "source_uav_id": 2
+              },
+              {
+                "waypoint_index": 1,
+                "path": [
+                  [
+                    30.0,
+                    20.0,
+                    50.0
+                  ],
+                  [
+                    5.0,
+                    0.0,
+                    50.0
+                  ]
+                ],
+                "source_uav_id": 3
+              },
+              {
+                "waypoint_index": 2,
+                "path": [
+                  [
+                    35.0,
+                    30.0,
+                    50.0
+                  ],
+                  [
+                    5.0,
+                    0.0,
+                    50.0
+                  ]
+                ],
+                "source_uav_id": 3
+              },
+              {
+                "waypoint_index": 1,
+                "path": [
+                  [
+                    40.0,
+                    20.0,
+                    50.0
+                  ],
+                  [
+                    5.0,
+                    0.0,
+                    50.0
+                  ]
+                ],
+                "source_uav_id": 4
+              },
+              {
+                "waypoint_index": 2,
+                "path": [
+                  [
+                    45.0,
+                    30.0,
+                    50.0
+                  ],
+                  [
+                    5.0,
+                    0.0,
+                    50.0
+                  ]
+                ],
+                "source_uav_id": 4
+              },
+              {
+                "waypoint_index": 1,
+                "path": [
+                  [
+                    50.0,
+                    20.0,
+                    50.0
+                  ],
+                  [
+                    5.0,
+                    0.0,
+                    50.0
+                  ]
+                ],
+                "source_uav_id": 5
+              },
+              {
+                "waypoint_index": 2,
+                "path": [
+                  [
+                    55.0,
+                    30.0,
+                    50.0
+                  ],
+                  [
+                    5.0,
+                    0.0,
+                    50.0
+                  ]
+                ],
+                "source_uav_id": 5
+              },
+              {
+                "waypoint_index": 1,
+                "path": [
+                  [
+                    60.0,
+                    20.0,
+                    50.0
+                  ],
+                  [
+                    5.0,
+                    0.0,
+                    50.0
+                  ]
+                ],
+                "source_uav_id": 6
+              },
+              {
+                "waypoint_index": 2,
+                "path": [
+                  [
+                    65.0,
+                    30.0,
+                    50.0
+                  ],
+                  [
+                    5.0,
+                    0.0,
+                    50.0
+                  ]
+                ],
+                "source_uav_id": 6
+              }
+            ],
+            "route_scope": "all_uav_waypoints",
+            "landing_point": [
+              5.0,
+              0.0,
+              50.0
+            ],
+            "waypoint_counts_by_uav": {
+              "1": 2,
+              "2": 2,
+              "3": 2,
+              "4": 2,
+              "5": 2,
+              "6": 2
+            },
+            "waypoint_layer": "upper",
+            "return_altitude_m": 50.0,
+            "return_policy": "climb_to_upper_then_return"
+          }
+        },
+        {
+          "topic": "/ground_mission_planner/vehicle_5/path_stage_1",
+          "publish_phase": "after_successful_takeoff_before_start",
+          "latch": true,
+          "changed_in_this_update": true,
+          "ros_type": "std_msgs/Float64MultiArray",
+          "message": {
+            "layout": {
+              "dim": [],
+              "data_offset": 0
+            },
+            "data": [
+              50.0,
+              20.0,
+              50.0,
+              55.0,
+              30.0,
+              50.0
+            ]
+          }
+        },
+        {
+          "topic": "/ground_mission_planner/vehicle_5/path_stage_2",
+          "publish_phase": "after_successful_takeoff_before_start",
+          "latch": true,
+          "changed_in_this_update": true,
+          "ros_type": "std_msgs/Float64MultiArray",
+          "message": {
+            "layout": {
+              "dim": [],
+              "data_offset": 0
+            },
+            "data": [
+              55.0,
+              28.0,
+              37.0,
+              52.0,
+              22.0,
+              37.0,
+              50.0,
+              15.0,
+              37.0
+            ]
+          }
+        },
+        {
+          "topic": "/ground_mission_planner/vehicle_5/jiangluodian",
+          "publish_phase": "after_successful_takeoff_before_start",
+          "latch": true,
+          "changed_in_this_update": false,
+          "ros_type": "std_msgs/Float64MultiArray",
+          "message": {
+            "layout": {
+              "dim": [],
+              "data_offset": 0
+            },
+            "data": [
+              5.0,
+              0.0,
+              50.0
+            ]
+          }
+        },
+        {
+          "topic": "/uav5/competition/external_mission",
+          "publish_phase": "after_successful_takeoff_before_start",
+          "latch": true,
+          "changed_in_this_update": true,
+          "ros_type": "std_msgs/String",
+          "message": {
+            "data": "{\"type\":\"external_mission\",\"uav_id\":5,\"mission_id\":\"subject2-dual-layer-xyz-interface-example\",\"assignment_checksum\":\"08620b10250a416488775dcb88873c2aa55772ed37b68603119bfed0054e977c\",\"flight_profile\":\"lab\",\"coordinate_frame\":\"ENU\",\"altitude_frame\":\"RELATIVE_TO_TAKEOFF\",\"target_altitude_m\":50.0,\"relative_altitude_m\":50.0,\"waypoints\":[{\"x_m\":50.0,\"y_m\":20.0,\"z_m\":50.0},{\"x_m\":55.0,\"y_m\":30.0,\"z_m\":50.0}],\"speed_mps\":0.3,\"waypoint_actions\":[],\"reconnaissance_mode\":\"hover_scan\",\"hover_scan_seconds\":50.0,\"return_home\":{\"x_m\":5.0,\"y_m\":0.0,\"z_m\":50.0},\"deadline_at\":null,\"return_battery_threshold\":null,\"subject\":\"subject2\",\"path_contract_version\":2,\"execution_mode\":\"upper_once_then_lower_once\",\"layer_order\":[\"upper\",\"lower\"],\"return_waypoint_layer\":\"upper\",\"return_altitude_m\":50.0,\"return_policy\":\"climb_to_upper_then_return\",\"layers\":[{\"layer_id\":\"upper\",\"topic\":\"/ground_mission_planner/vehicle_5/path_stage_1\",\"altitude_m\":50.0,\"waypoint_count\":2,\"waypoints\":[{\"x_m\":50.0,\"y_m\":20.0,\"z_m\":50.0},{\"x_m\":55.0,\"y_m\":30.0,\"z_m\":50.0}],\"scan_passes\":1,\"hover_scan_seconds\":50.0},{\"layer_id\":\"lower\",\"topic\":\"/ground_mission_planner/vehicle_5/path_stage_2\",\"altitude_m\":37.0,\"waypoint_count\":3,\"waypoints\":[{\"x_m\":55.0,\"y_m\":28.0,\"z_m\":37.0},{\"x_m\":52.0,\"y_m\":22.0,\"z_m\":37.0},{\"x_m\":50.0,\"y_m\":15.0,\"z_m\":37.0}],\"scan_passes\":1,\"hover_scan_seconds\":50.0}]}"
+          },
+          "decoded_data": {
+            "type": "external_mission",
+            "uav_id": 5,
+            "mission_id": "subject2-dual-layer-xyz-interface-example",
+            "assignment_checksum": "08620b10250a416488775dcb88873c2aa55772ed37b68603119bfed0054e977c",
+            "flight_profile": "lab",
+            "coordinate_frame": "ENU",
+            "altitude_frame": "RELATIVE_TO_TAKEOFF",
+            "target_altitude_m": 50.0,
+            "relative_altitude_m": 50.0,
+            "waypoints": [
+              {
+                "x_m": 50.0,
+                "y_m": 20.0,
+                "z_m": 50.0
+              },
+              {
+                "x_m": 55.0,
+                "y_m": 30.0,
+                "z_m": 50.0
+              }
+            ],
+            "speed_mps": 0.3,
+            "waypoint_actions": [],
+            "reconnaissance_mode": "hover_scan",
+            "hover_scan_seconds": 50.0,
+            "return_home": {
+              "x_m": 5.0,
+              "y_m": 0.0,
+              "z_m": 50.0
+            },
+            "deadline_at": null,
+            "return_battery_threshold": null,
+            "subject": "subject2",
+            "path_contract_version": 2,
+            "execution_mode": "upper_once_then_lower_once",
+            "layer_order": [
+              "upper",
+              "lower"
+            ],
+            "return_waypoint_layer": "upper",
+            "return_altitude_m": 50.0,
+            "return_policy": "climb_to_upper_then_return",
+            "layers": [
+              {
+                "layer_id": "upper",
+                "topic": "/ground_mission_planner/vehicle_5/path_stage_1",
+                "altitude_m": 50.0,
+                "waypoint_count": 2,
+                "waypoints": [
+                  {
+                    "x_m": 50.0,
+                    "y_m": 20.0,
+                    "z_m": 50.0
+                  },
+                  {
+                    "x_m": 55.0,
+                    "y_m": 30.0,
+                    "z_m": 50.0
+                  }
+                ],
+                "scan_passes": 1,
+                "hover_scan_seconds": 50.0
+              },
+              {
+                "layer_id": "lower",
+                "topic": "/ground_mission_planner/vehicle_5/path_stage_2",
+                "altitude_m": 37.0,
+                "waypoint_count": 3,
+                "waypoints": [
+                  {
+                    "x_m": 55.0,
+                    "y_m": 28.0,
+                    "z_m": 37.0
+                  },
+                  {
+                    "x_m": 52.0,
+                    "y_m": 22.0,
+                    "z_m": 37.0
+                  },
+                  {
+                    "x_m": 50.0,
+                    "y_m": 15.0,
+                    "z_m": 37.0
+                  }
+                ],
+                "scan_passes": 1,
+                "hover_scan_seconds": 50.0
+              }
+            ]
+          }
+        },
+        {
+          "topic": "/ground_mission_planner/recon_start_mode",
+          "ros_type": "std_msgs/Int32",
+          "publish_phase": "after_all_mission_data",
+          "latch": true,
+          "changed_in_this_update": false,
+          "message": {
+            "data": 0
+          }
+        },
+        {
+          "topic": "/ground_mission_planner/vehicle_5/return_home",
+          "ros_type": "std_msgs/Bool",
+          "publish_phase": "only_when_return_is_requested",
+          "latch": true,
+          "changed_in_this_update": false,
+          "message": {
+            "data": true
+          }
+        }
+      ]
+    },
+    {
+      "uav_id": 6,
+      "assignment_sent_on_plan_and_dispatch": {
+        "mission_id": "subject2-dual-layer-xyz-interface-example",
+        "subject": "subject2",
+        "flight_profile": "lab",
+        "task": {
+          "type": "lawnmower_search",
+          "coordinate_frame": "ENU",
+          "waypoints_m": [
+            [
+              60.0,
+              20.0
+            ],
+            [
+              65.0,
+              30.0
+            ]
+          ],
+          "waypoints_wgs84": [
+            [
+              33.86354000054,
+              113.70578260869566
+            ],
+            [
+              33.863585000585,
+              113.70567391304348
+            ]
+          ],
+          "reconnaissance_mode": "hover_scan",
+          "hover_scan_seconds": 50.0,
+          "execution_mode": "upper_once_then_lower_once",
+          "layer_order": [
+            "upper",
+            "lower"
+          ],
+          "layers": [
+            {
+              "layer_id": "upper",
+              "altitude_m": 53.0,
+              "waypoints_m": [
+                [
+                  60.0,
+                  20.0
+                ],
+                [
+                  65.0,
+                  30.0
+                ]
+              ],
+              "waypoints_wgs84": [
+                [
+                  33.86354000054,
+                  113.70578260869566
+                ],
+                [
+                  33.863585000585,
+                  113.70567391304348
+                ]
+              ],
+              "hover_scan_seconds": 50.0,
+              "scan_passes": 1
+            },
+            {
+              "layer_id": "lower",
+              "altitude_m": 40.0,
+              "waypoints_m": [
+                [
+                  65.0,
+                  28.0
+                ],
+                [
+                  62.0,
+                  22.0
+                ],
+                [
+                  60.0,
+                  15.0
+                ]
+              ],
+              "waypoints_wgs84": [
+                [
+                  33.863585000585,
+                  113.70569565217392
+                ],
+                [
+                  33.863558000558,
+                  113.70576086956522
+                ],
+                [
+                  33.86354000054,
+                  113.70583695652174
+                ]
+              ],
+              "hover_scan_seconds": 50.0,
+              "scan_passes": 1
+            }
+          ],
+          "transit_routes": {
+            "schema_version": 2,
+            "recipient_uav_id": 6,
+            "route_scope": "all_uav_waypoints",
+            "plan_sha256": "offline-example-not-a-flight-plan",
+            "coordinate_frame": "ENU",
+            "departure": [
+              6.0,
+              0.0
+            ],
+            "entry_path": [
+              [
+                6.0,
+                0.0
+              ],
+              [
+                60.0,
+                20.0
+              ]
+            ],
+            "waypoints_by_uav": {
+              "1": [
+                [
+                  10.0,
+                  20.0
+                ],
+                [
+                  15.0,
+                  30.0
+                ]
+              ],
+              "2": [
+                [
+                  20.0,
+                  20.0
+                ],
+                [
+                  25.0,
+                  30.0
+                ]
+              ],
+              "3": [
+                [
+                  30.0,
+                  20.0
+                ],
+                [
+                  35.0,
+                  30.0
+                ]
+              ],
+              "4": [
+                [
+                  40.0,
+                  20.0
+                ],
+                [
+                  45.0,
+                  30.0
+                ]
+              ],
+              "5": [
+                [
+                  50.0,
+                  20.0
+                ],
+                [
+                  55.0,
+                  30.0
+                ]
+              ],
+              "6": [
+                [
+                  60.0,
+                  20.0
+                ],
+                [
+                  65.0,
+                  30.0
+                ]
+              ]
+            },
+            "return_paths": [
+              {
+                "source_uav_id": 1,
+                "waypoint_index": 1,
+                "path": [
+                  [
+                    10.0,
+                    20.0
+                  ],
+                  [
+                    6.0,
+                    0.0
+                  ]
+                ]
+              },
+              {
+                "source_uav_id": 1,
+                "waypoint_index": 2,
+                "path": [
+                  [
+                    15.0,
+                    30.0
+                  ],
+                  [
+                    6.0,
+                    0.0
+                  ]
+                ]
+              },
+              {
+                "source_uav_id": 2,
+                "waypoint_index": 1,
+                "path": [
+                  [
+                    20.0,
+                    20.0
+                  ],
+                  [
+                    6.0,
+                    0.0
+                  ]
+                ]
+              },
+              {
+                "source_uav_id": 2,
+                "waypoint_index": 2,
+                "path": [
+                  [
+                    25.0,
+                    30.0
+                  ],
+                  [
+                    6.0,
+                    0.0
+                  ]
+                ]
+              },
+              {
+                "source_uav_id": 3,
+                "waypoint_index": 1,
+                "path": [
+                  [
+                    30.0,
+                    20.0
+                  ],
+                  [
+                    6.0,
+                    0.0
+                  ]
+                ]
+              },
+              {
+                "source_uav_id": 3,
+                "waypoint_index": 2,
+                "path": [
+                  [
+                    35.0,
+                    30.0
+                  ],
+                  [
+                    6.0,
+                    0.0
+                  ]
+                ]
+              },
+              {
+                "source_uav_id": 4,
+                "waypoint_index": 1,
+                "path": [
+                  [
+                    40.0,
+                    20.0
+                  ],
+                  [
+                    6.0,
+                    0.0
+                  ]
+                ]
+              },
+              {
+                "source_uav_id": 4,
+                "waypoint_index": 2,
+                "path": [
+                  [
+                    45.0,
+                    30.0
+                  ],
+                  [
+                    6.0,
+                    0.0
+                  ]
+                ]
+              },
+              {
+                "source_uav_id": 5,
+                "waypoint_index": 1,
+                "path": [
+                  [
+                    50.0,
+                    20.0
+                  ],
+                  [
+                    6.0,
+                    0.0
+                  ]
+                ]
+              },
+              {
+                "source_uav_id": 5,
+                "waypoint_index": 2,
+                "path": [
+                  [
+                    55.0,
+                    30.0
+                  ],
+                  [
+                    6.0,
+                    0.0
+                  ]
+                ]
+              },
+              {
+                "source_uav_id": 6,
+                "waypoint_index": 1,
+                "path": [
+                  [
+                    60.0,
+                    20.0
+                  ],
+                  [
+                    6.0,
+                    0.0
+                  ]
+                ]
+              },
+              {
+                "source_uav_id": 6,
+                "waypoint_index": 2,
+                "path": [
+                  [
+                    65.0,
+                    30.0
+                  ],
+                  [
+                    6.0,
+                    0.0
+                  ]
+                ]
+              }
+            ]
+          },
+          "recognition_selection": {
+            "category_count": 0,
+            "category_ids": [],
+            "category_names": []
+          }
+        },
+        "target_altitude_m": 53.0,
+        "controller_mode": "external",
+        "coordinate_frame": "ENU",
+        "landing_point_m": [
+          6.0,
+          0.0
+        ],
+        "landing_sequence": 6,
+        "landing_mode": "selected_departure",
+        "assignment_checksum": "af4e48c277849b56c020d8595f8bd5163ed039ce54e5a8ce2908fbebc466f5f5",
+        "type": "assign_task",
+        "uav_id": 6
+      },
+      "topics": [
+        {
+          "topic": "/ground_mission_planner/vehicle_6/entry_path",
+          "publish_phase": "after_successful_takeoff_before_start",
+          "latch": true,
+          "changed_in_this_update": false,
+          "ros_type": "std_msgs/String",
+          "message": {
+            "data": "{\"schema_version\":1,\"mission_id\":\"subject2-dual-layer-xyz-interface-example\",\"uav_id\":6,\"assignment_checksum\":\"af4e48c277849b56c020d8595f8bd5163ed039ce54e5a8ce2908fbebc466f5f5\",\"coordinate_frame\":\"ENU\",\"coordinate_order\":\"x_y_z\",\"altitude_frame\":\"RELATIVE_TO_TAKEOFF\",\"plan_sha256\":\"offline-example-not-a-flight-plan\",\"path\":[[6.0,0.0,53.0],[60.0,20.0,53.0]]}"
+          },
+          "decoded_data": {
+            "schema_version": 1,
+            "mission_id": "subject2-dual-layer-xyz-interface-example",
+            "uav_id": 6,
+            "assignment_checksum": "af4e48c277849b56c020d8595f8bd5163ed039ce54e5a8ce2908fbebc466f5f5",
+            "coordinate_frame": "ENU",
+            "coordinate_order": "x_y_z",
+            "altitude_frame": "RELATIVE_TO_TAKEOFF",
+            "plan_sha256": "offline-example-not-a-flight-plan",
+            "path": [
+              [
+                6.0,
+                0.0,
+                53.0
+              ],
+              [
+                60.0,
+                20.0,
+                53.0
+              ]
+            ]
+          }
+        },
+        {
+          "topic": "/ground_mission_planner/vehicle_6/return_paths",
+          "publish_phase": "after_successful_takeoff_before_start",
+          "latch": true,
+          "changed_in_this_update": true,
+          "ros_type": "std_msgs/String",
+          "message": {
+            "data": "{\"schema_version\":2,\"mission_id\":\"subject2-dual-layer-xyz-interface-example\",\"uav_id\":6,\"assignment_checksum\":\"af4e48c277849b56c020d8595f8bd5163ed039ce54e5a8ce2908fbebc466f5f5\",\"coordinate_frame\":\"ENU\",\"coordinate_order\":\"x_y_z\",\"altitude_frame\":\"RELATIVE_TO_TAKEOFF\",\"plan_sha256\":\"offline-example-not-a-flight-plan\",\"routes\":[{\"waypoint_index\":1,\"path\":[[10.0,20.0,53.0],[6.0,0.0,53.0]],\"source_uav_id\":1},{\"waypoint_index\":2,\"path\":[[15.0,30.0,53.0],[6.0,0.0,53.0]],\"source_uav_id\":1},{\"waypoint_index\":1,\"path\":[[20.0,20.0,53.0],[6.0,0.0,53.0]],\"source_uav_id\":2},{\"waypoint_index\":2,\"path\":[[25.0,30.0,53.0],[6.0,0.0,53.0]],\"source_uav_id\":2},{\"waypoint_index\":1,\"path\":[[30.0,20.0,53.0],[6.0,0.0,53.0]],\"source_uav_id\":3},{\"waypoint_index\":2,\"path\":[[35.0,30.0,53.0],[6.0,0.0,53.0]],\"source_uav_id\":3},{\"waypoint_index\":1,\"path\":[[40.0,20.0,53.0],[6.0,0.0,53.0]],\"source_uav_id\":4},{\"waypoint_index\":2,\"path\":[[45.0,30.0,53.0],[6.0,0.0,53.0]],\"source_uav_id\":4},{\"waypoint_index\":1,\"path\":[[50.0,20.0,53.0],[6.0,0.0,53.0]],\"source_uav_id\":5},{\"waypoint_index\":2,\"path\":[[55.0,30.0,53.0],[6.0,0.0,53.0]],\"source_uav_id\":5},{\"waypoint_index\":1,\"path\":[[60.0,20.0,53.0],[6.0,0.0,53.0]],\"source_uav_id\":6},{\"waypoint_index\":2,\"path\":[[65.0,30.0,53.0],[6.0,0.0,53.0]],\"source_uav_id\":6}],\"route_scope\":\"all_uav_waypoints\",\"landing_point\":[6.0,0.0,53.0],\"waypoint_counts_by_uav\":{\"1\":2,\"2\":2,\"3\":2,\"4\":2,\"5\":2,\"6\":2},\"waypoint_layer\":\"upper\",\"return_altitude_m\":53.0,\"return_policy\":\"climb_to_upper_then_return\"}"
+          },
+          "decoded_data": {
+            "schema_version": 2,
+            "mission_id": "subject2-dual-layer-xyz-interface-example",
+            "uav_id": 6,
+            "assignment_checksum": "af4e48c277849b56c020d8595f8bd5163ed039ce54e5a8ce2908fbebc466f5f5",
+            "coordinate_frame": "ENU",
+            "coordinate_order": "x_y_z",
+            "altitude_frame": "RELATIVE_TO_TAKEOFF",
+            "plan_sha256": "offline-example-not-a-flight-plan",
+            "routes": [
+              {
+                "waypoint_index": 1,
+                "path": [
+                  [
+                    10.0,
+                    20.0,
+                    53.0
+                  ],
+                  [
+                    6.0,
+                    0.0,
+                    53.0
+                  ]
+                ],
+                "source_uav_id": 1
+              },
+              {
+                "waypoint_index": 2,
+                "path": [
+                  [
+                    15.0,
+                    30.0,
+                    53.0
+                  ],
+                  [
+                    6.0,
+                    0.0,
+                    53.0
+                  ]
+                ],
+                "source_uav_id": 1
+              },
+              {
+                "waypoint_index": 1,
+                "path": [
+                  [
+                    20.0,
+                    20.0,
+                    53.0
+                  ],
+                  [
+                    6.0,
+                    0.0,
+                    53.0
+                  ]
+                ],
+                "source_uav_id": 2
+              },
+              {
+                "waypoint_index": 2,
+                "path": [
+                  [
+                    25.0,
+                    30.0,
+                    53.0
+                  ],
+                  [
+                    6.0,
+                    0.0,
+                    53.0
+                  ]
+                ],
+                "source_uav_id": 2
+              },
+              {
+                "waypoint_index": 1,
+                "path": [
+                  [
+                    30.0,
+                    20.0,
+                    53.0
+                  ],
+                  [
+                    6.0,
+                    0.0,
+                    53.0
+                  ]
+                ],
+                "source_uav_id": 3
+              },
+              {
+                "waypoint_index": 2,
+                "path": [
+                  [
+                    35.0,
+                    30.0,
+                    53.0
+                  ],
+                  [
+                    6.0,
+                    0.0,
+                    53.0
+                  ]
+                ],
+                "source_uav_id": 3
+              },
+              {
+                "waypoint_index": 1,
+                "path": [
+                  [
+                    40.0,
+                    20.0,
+                    53.0
+                  ],
+                  [
+                    6.0,
+                    0.0,
+                    53.0
+                  ]
+                ],
+                "source_uav_id": 4
+              },
+              {
+                "waypoint_index": 2,
+                "path": [
+                  [
+                    45.0,
+                    30.0,
+                    53.0
+                  ],
+                  [
+                    6.0,
+                    0.0,
+                    53.0
+                  ]
+                ],
+                "source_uav_id": 4
+              },
+              {
+                "waypoint_index": 1,
+                "path": [
+                  [
+                    50.0,
+                    20.0,
+                    53.0
+                  ],
+                  [
+                    6.0,
+                    0.0,
+                    53.0
+                  ]
+                ],
+                "source_uav_id": 5
+              },
+              {
+                "waypoint_index": 2,
+                "path": [
+                  [
+                    55.0,
+                    30.0,
+                    53.0
+                  ],
+                  [
+                    6.0,
+                    0.0,
+                    53.0
+                  ]
+                ],
+                "source_uav_id": 5
+              },
+              {
+                "waypoint_index": 1,
+                "path": [
+                  [
+                    60.0,
+                    20.0,
+                    53.0
+                  ],
+                  [
+                    6.0,
+                    0.0,
+                    53.0
+                  ]
+                ],
+                "source_uav_id": 6
+              },
+              {
+                "waypoint_index": 2,
+                "path": [
+                  [
+                    65.0,
+                    30.0,
+                    53.0
+                  ],
+                  [
+                    6.0,
+                    0.0,
+                    53.0
+                  ]
+                ],
+                "source_uav_id": 6
+              }
+            ],
+            "route_scope": "all_uav_waypoints",
+            "landing_point": [
+              6.0,
+              0.0,
+              53.0
+            ],
+            "waypoint_counts_by_uav": {
+              "1": 2,
+              "2": 2,
+              "3": 2,
+              "4": 2,
+              "5": 2,
+              "6": 2
+            },
+            "waypoint_layer": "upper",
+            "return_altitude_m": 53.0,
+            "return_policy": "climb_to_upper_then_return"
+          }
+        },
+        {
+          "topic": "/ground_mission_planner/vehicle_6/path_stage_1",
+          "publish_phase": "after_successful_takeoff_before_start",
+          "latch": true,
+          "changed_in_this_update": true,
+          "ros_type": "std_msgs/Float64MultiArray",
+          "message": {
+            "layout": {
+              "dim": [],
+              "data_offset": 0
+            },
+            "data": [
+              60.0,
+              20.0,
+              53.0,
+              65.0,
+              30.0,
+              53.0
+            ]
+          }
+        },
+        {
+          "topic": "/ground_mission_planner/vehicle_6/path_stage_2",
+          "publish_phase": "after_successful_takeoff_before_start",
+          "latch": true,
+          "changed_in_this_update": true,
+          "ros_type": "std_msgs/Float64MultiArray",
+          "message": {
+            "layout": {
+              "dim": [],
+              "data_offset": 0
+            },
+            "data": [
+              65.0,
+              28.0,
+              40.0,
+              62.0,
+              22.0,
+              40.0,
+              60.0,
+              15.0,
+              40.0
+            ]
+          }
+        },
+        {
+          "topic": "/ground_mission_planner/vehicle_6/jiangluodian",
+          "publish_phase": "after_successful_takeoff_before_start",
+          "latch": true,
+          "changed_in_this_update": false,
+          "ros_type": "std_msgs/Float64MultiArray",
+          "message": {
+            "layout": {
+              "dim": [],
+              "data_offset": 0
+            },
+            "data": [
+              6.0,
+              0.0,
+              53.0
+            ]
+          }
+        },
+        {
+          "topic": "/uav6/competition/external_mission",
+          "publish_phase": "after_successful_takeoff_before_start",
+          "latch": true,
+          "changed_in_this_update": true,
+          "ros_type": "std_msgs/String",
+          "message": {
+            "data": "{\"type\":\"external_mission\",\"uav_id\":6,\"mission_id\":\"subject2-dual-layer-xyz-interface-example\",\"assignment_checksum\":\"af4e48c277849b56c020d8595f8bd5163ed039ce54e5a8ce2908fbebc466f5f5\",\"flight_profile\":\"lab\",\"coordinate_frame\":\"ENU\",\"altitude_frame\":\"RELATIVE_TO_TAKEOFF\",\"target_altitude_m\":53.0,\"relative_altitude_m\":53.0,\"waypoints\":[{\"x_m\":60.0,\"y_m\":20.0,\"z_m\":53.0},{\"x_m\":65.0,\"y_m\":30.0,\"z_m\":53.0}],\"speed_mps\":0.3,\"waypoint_actions\":[],\"reconnaissance_mode\":\"hover_scan\",\"hover_scan_seconds\":50.0,\"return_home\":{\"x_m\":6.0,\"y_m\":0.0,\"z_m\":53.0},\"deadline_at\":null,\"return_battery_threshold\":null,\"subject\":\"subject2\",\"path_contract_version\":2,\"execution_mode\":\"upper_once_then_lower_once\",\"layer_order\":[\"upper\",\"lower\"],\"return_waypoint_layer\":\"upper\",\"return_altitude_m\":53.0,\"return_policy\":\"climb_to_upper_then_return\",\"layers\":[{\"layer_id\":\"upper\",\"topic\":\"/ground_mission_planner/vehicle_6/path_stage_1\",\"altitude_m\":53.0,\"waypoint_count\":2,\"waypoints\":[{\"x_m\":60.0,\"y_m\":20.0,\"z_m\":53.0},{\"x_m\":65.0,\"y_m\":30.0,\"z_m\":53.0}],\"scan_passes\":1,\"hover_scan_seconds\":50.0},{\"layer_id\":\"lower\",\"topic\":\"/ground_mission_planner/vehicle_6/path_stage_2\",\"altitude_m\":40.0,\"waypoint_count\":3,\"waypoints\":[{\"x_m\":65.0,\"y_m\":28.0,\"z_m\":40.0},{\"x_m\":62.0,\"y_m\":22.0,\"z_m\":40.0},{\"x_m\":60.0,\"y_m\":15.0,\"z_m\":40.0}],\"scan_passes\":1,\"hover_scan_seconds\":50.0}]}"
+          },
+          "decoded_data": {
+            "type": "external_mission",
+            "uav_id": 6,
+            "mission_id": "subject2-dual-layer-xyz-interface-example",
+            "assignment_checksum": "af4e48c277849b56c020d8595f8bd5163ed039ce54e5a8ce2908fbebc466f5f5",
+            "flight_profile": "lab",
+            "coordinate_frame": "ENU",
+            "altitude_frame": "RELATIVE_TO_TAKEOFF",
+            "target_altitude_m": 53.0,
+            "relative_altitude_m": 53.0,
+            "waypoints": [
+              {
+                "x_m": 60.0,
+                "y_m": 20.0,
+                "z_m": 53.0
+              },
+              {
+                "x_m": 65.0,
+                "y_m": 30.0,
+                "z_m": 53.0
+              }
+            ],
+            "speed_mps": 0.3,
+            "waypoint_actions": [],
+            "reconnaissance_mode": "hover_scan",
+            "hover_scan_seconds": 50.0,
+            "return_home": {
+              "x_m": 6.0,
+              "y_m": 0.0,
+              "z_m": 53.0
+            },
+            "deadline_at": null,
+            "return_battery_threshold": null,
+            "subject": "subject2",
+            "path_contract_version": 2,
+            "execution_mode": "upper_once_then_lower_once",
+            "layer_order": [
+              "upper",
+              "lower"
+            ],
+            "return_waypoint_layer": "upper",
+            "return_altitude_m": 53.0,
+            "return_policy": "climb_to_upper_then_return",
+            "layers": [
+              {
+                "layer_id": "upper",
+                "topic": "/ground_mission_planner/vehicle_6/path_stage_1",
+                "altitude_m": 53.0,
+                "waypoint_count": 2,
+                "waypoints": [
+                  {
+                    "x_m": 60.0,
+                    "y_m": 20.0,
+                    "z_m": 53.0
+                  },
+                  {
+                    "x_m": 65.0,
+                    "y_m": 30.0,
+                    "z_m": 53.0
+                  }
+                ],
+                "scan_passes": 1,
+                "hover_scan_seconds": 50.0
+              },
+              {
+                "layer_id": "lower",
+                "topic": "/ground_mission_planner/vehicle_6/path_stage_2",
+                "altitude_m": 40.0,
+                "waypoint_count": 3,
+                "waypoints": [
+                  {
+                    "x_m": 65.0,
+                    "y_m": 28.0,
+                    "z_m": 40.0
+                  },
+                  {
+                    "x_m": 62.0,
+                    "y_m": 22.0,
+                    "z_m": 40.0
+                  },
+                  {
+                    "x_m": 60.0,
+                    "y_m": 15.0,
+                    "z_m": 40.0
+                  }
+                ],
+                "scan_passes": 1,
+                "hover_scan_seconds": 50.0
+              }
+            ]
+          }
+        },
+        {
+          "topic": "/ground_mission_planner/recon_start_mode",
+          "ros_type": "std_msgs/Int32",
+          "publish_phase": "after_all_mission_data",
+          "latch": true,
+          "changed_in_this_update": false,
+          "message": {
+            "data": 0
+          }
+        },
+        {
+          "topic": "/ground_mission_planner/vehicle_6/return_home",
+          "ros_type": "std_msgs/Bool",
+          "publish_phase": "only_when_return_is_requested",
+          "latch": true,
+          "changed_in_this_update": false,
+          "message": {
+            "data": true
+          }
+        }
+      ]
+    }
+  ]
+}

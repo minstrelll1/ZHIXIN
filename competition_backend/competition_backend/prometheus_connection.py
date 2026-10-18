@@ -145,8 +145,8 @@ class PrometheusConnection:
         elif probe.get('prepared'):
             ready, detail = True, '本次开机基础连接已准备；重连只恢复心跳与监控'
         elif state.get('armed') or probe.get('business_present'):
-            # 接管已有飞行/业务会话只监控，绝不切定位源或补启动缺失程序。
-            ready, detail = True, '复用已有运行会话，不切换定位源、不自动补启动程序'
+            # 已有会话绝不切定位源；是否为本管理器尚未完成的启动由机载记录判断。
+            ready, detail = True, '复用已有运行会话，不切换定位源'
         else:
             result = switch_gps(self.boot_id)
             ready, detail = result.get('ready', False), result['detail']
@@ -155,7 +155,7 @@ class PrometheusConnection:
                            detail=detail, boot_id=self.boot_id, heartbeat=heartbeat,
                            external_listener=self.external,
                            preparation_audit=preparation_audit,
-                           auto_start_allowed=ready and not state.get('armed') and not probe.get('business_present'))
+                           auto_start_allowed=ready and state.get('armed') is False)
         return self.status
 
     def heartbeat_snapshot(self):

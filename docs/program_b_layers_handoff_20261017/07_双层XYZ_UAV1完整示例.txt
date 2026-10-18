@@ -1,0 +1,460 @@
+﻿双层XYZ六机接口示例；测试坐标，不代表当前固定规划或实飞任务。
+
+UAV1 全部八类消息完整示例（不省略返航路线或任务说明字段）
+其他五机完整数据在同名 JSON 的 uavs 数组中。
+JSON 中的 decoded_data 仅供阅读；ROS String 线上只有一个 data 字符串字段。
+return_home 是按需返航时的消息，不是起飞后立即发送的消息。
+
+==============================================================================
+1. /ground_mission_planner/vehicle_1/entry_path
+类型：std_msgs/String
+发布时间：after_successful_takeoff_before_start
+本次接口变更：否，供流程联调
+ROS 消息各字段（JSON 表达）：
+{
+  "data": "{\"schema_version\":1,\"mission_id\":\"subject2-dual-layer-xyz-interface-example\",\"uav_id\":1,\"assignment_checksum\":\"5ad12a8fc016a0a8ebfda5004f4e3d10cad5516793ee68d69857e4bf191576d7\",\"coordinate_frame\":\"ENU\",\"coordinate_order\":\"x_y_z\",\"altitude_frame\":\"RELATIVE_TO_TAKEOFF\",\"plan_sha256\":\"offline-example-not-a-flight-plan\",\"path\":[[1.0,0.0,47.0],[10.0,20.0,47.0]]}"
+}
+
+将 String.data 用 json.loads 等解码一次后的完整内容：
+{
+  "schema_version": 1,
+  "mission_id": "subject2-dual-layer-xyz-interface-example",
+  "uav_id": 1,
+  "assignment_checksum": "5ad12a8fc016a0a8ebfda5004f4e3d10cad5516793ee68d69857e4bf191576d7",
+  "coordinate_frame": "ENU",
+  "coordinate_order": "x_y_z",
+  "altitude_frame": "RELATIVE_TO_TAKEOFF",
+  "plan_sha256": "offline-example-not-a-flight-plan",
+  "path": [
+    [
+      1.0,
+      0.0,
+      47.0
+    ],
+    [
+      10.0,
+      20.0,
+      47.0
+    ]
+  ]
+}
+
+==============================================================================
+2. /ground_mission_planner/vehicle_1/return_paths
+类型：std_msgs/String
+发布时间：after_successful_takeoff_before_start
+本次接口变更：是
+ROS 消息各字段（JSON 表达）：
+{
+  "data": "{\"schema_version\":2,\"mission_id\":\"subject2-dual-layer-xyz-interface-example\",\"uav_id\":1,\"assignment_checksum\":\"5ad12a8fc016a0a8ebfda5004f4e3d10cad5516793ee68d69857e4bf191576d7\",\"coordinate_frame\":\"ENU\",\"coordinate_order\":\"x_y_z\",\"altitude_frame\":\"RELATIVE_TO_TAKEOFF\",\"plan_sha256\":\"offline-example-not-a-flight-plan\",\"routes\":[{\"waypoint_index\":1,\"path\":[[10.0,20.0,47.0],[1.0,0.0,47.0]],\"source_uav_id\":1},{\"waypoint_index\":2,\"path\":[[15.0,30.0,47.0],[1.0,0.0,47.0]],\"source_uav_id\":1},{\"waypoint_index\":1,\"path\":[[20.0,20.0,47.0],[1.0,0.0,47.0]],\"source_uav_id\":2},{\"waypoint_index\":2,\"path\":[[25.0,30.0,47.0],[1.0,0.0,47.0]],\"source_uav_id\":2},{\"waypoint_index\":1,\"path\":[[30.0,20.0,47.0],[1.0,0.0,47.0]],\"source_uav_id\":3},{\"waypoint_index\":2,\"path\":[[35.0,30.0,47.0],[1.0,0.0,47.0]],\"source_uav_id\":3},{\"waypoint_index\":1,\"path\":[[40.0,20.0,47.0],[1.0,0.0,47.0]],\"source_uav_id\":4},{\"waypoint_index\":2,\"path\":[[45.0,30.0,47.0],[1.0,0.0,47.0]],\"source_uav_id\":4},{\"waypoint_index\":1,\"path\":[[50.0,20.0,47.0],[1.0,0.0,47.0]],\"source_uav_id\":5},{\"waypoint_index\":2,\"path\":[[55.0,30.0,47.0],[1.0,0.0,47.0]],\"source_uav_id\":5},{\"waypoint_index\":1,\"path\":[[60.0,20.0,47.0],[1.0,0.0,47.0]],\"source_uav_id\":6},{\"waypoint_index\":2,\"path\":[[65.0,30.0,47.0],[1.0,0.0,47.0]],\"source_uav_id\":6}],\"route_scope\":\"all_uav_waypoints\",\"landing_point\":[1.0,0.0,47.0],\"waypoint_counts_by_uav\":{\"1\":2,\"2\":2,\"3\":2,\"4\":2,\"5\":2,\"6\":2},\"waypoint_layer\":\"upper\",\"return_altitude_m\":47.0,\"return_policy\":\"climb_to_upper_then_return\"}"
+}
+
+将 String.data 用 json.loads 等解码一次后的完整内容：
+{
+  "schema_version": 2,
+  "mission_id": "subject2-dual-layer-xyz-interface-example",
+  "uav_id": 1,
+  "assignment_checksum": "5ad12a8fc016a0a8ebfda5004f4e3d10cad5516793ee68d69857e4bf191576d7",
+  "coordinate_frame": "ENU",
+  "coordinate_order": "x_y_z",
+  "altitude_frame": "RELATIVE_TO_TAKEOFF",
+  "plan_sha256": "offline-example-not-a-flight-plan",
+  "routes": [
+    {
+      "waypoint_index": 1,
+      "path": [
+        [
+          10.0,
+          20.0,
+          47.0
+        ],
+        [
+          1.0,
+          0.0,
+          47.0
+        ]
+      ],
+      "source_uav_id": 1
+    },
+    {
+      "waypoint_index": 2,
+      "path": [
+        [
+          15.0,
+          30.0,
+          47.0
+        ],
+        [
+          1.0,
+          0.0,
+          47.0
+        ]
+      ],
+      "source_uav_id": 1
+    },
+    {
+      "waypoint_index": 1,
+      "path": [
+        [
+          20.0,
+          20.0,
+          47.0
+        ],
+        [
+          1.0,
+          0.0,
+          47.0
+        ]
+      ],
+      "source_uav_id": 2
+    },
+    {
+      "waypoint_index": 2,
+      "path": [
+        [
+          25.0,
+          30.0,
+          47.0
+        ],
+        [
+          1.0,
+          0.0,
+          47.0
+        ]
+      ],
+      "source_uav_id": 2
+    },
+    {
+      "waypoint_index": 1,
+      "path": [
+        [
+          30.0,
+          20.0,
+          47.0
+        ],
+        [
+          1.0,
+          0.0,
+          47.0
+        ]
+      ],
+      "source_uav_id": 3
+    },
+    {
+      "waypoint_index": 2,
+      "path": [
+        [
+          35.0,
+          30.0,
+          47.0
+        ],
+        [
+          1.0,
+          0.0,
+          47.0
+        ]
+      ],
+      "source_uav_id": 3
+    },
+    {
+      "waypoint_index": 1,
+      "path": [
+        [
+          40.0,
+          20.0,
+          47.0
+        ],
+        [
+          1.0,
+          0.0,
+          47.0
+        ]
+      ],
+      "source_uav_id": 4
+    },
+    {
+      "waypoint_index": 2,
+      "path": [
+        [
+          45.0,
+          30.0,
+          47.0
+        ],
+        [
+          1.0,
+          0.0,
+          47.0
+        ]
+      ],
+      "source_uav_id": 4
+    },
+    {
+      "waypoint_index": 1,
+      "path": [
+        [
+          50.0,
+          20.0,
+          47.0
+        ],
+        [
+          1.0,
+          0.0,
+          47.0
+        ]
+      ],
+      "source_uav_id": 5
+    },
+    {
+      "waypoint_index": 2,
+      "path": [
+        [
+          55.0,
+          30.0,
+          47.0
+        ],
+        [
+          1.0,
+          0.0,
+          47.0
+        ]
+      ],
+      "source_uav_id": 5
+    },
+    {
+      "waypoint_index": 1,
+      "path": [
+        [
+          60.0,
+          20.0,
+          47.0
+        ],
+        [
+          1.0,
+          0.0,
+          47.0
+        ]
+      ],
+      "source_uav_id": 6
+    },
+    {
+      "waypoint_index": 2,
+      "path": [
+        [
+          65.0,
+          30.0,
+          47.0
+        ],
+        [
+          1.0,
+          0.0,
+          47.0
+        ]
+      ],
+      "source_uav_id": 6
+    }
+  ],
+  "route_scope": "all_uav_waypoints",
+  "landing_point": [
+    1.0,
+    0.0,
+    47.0
+  ],
+  "waypoint_counts_by_uav": {
+    "1": 2,
+    "2": 2,
+    "3": 2,
+    "4": 2,
+    "5": 2,
+    "6": 2
+  },
+  "waypoint_layer": "upper",
+  "return_altitude_m": 47.0,
+  "return_policy": "climb_to_upper_then_return"
+}
+
+==============================================================================
+3. /ground_mission_planner/vehicle_1/path_stage_1
+类型：std_msgs/Float64MultiArray
+发布时间：after_successful_takeoff_before_start
+本次接口变更：是
+ROS 消息各字段（JSON 表达）：
+{
+  "layout": {
+    "dim": [],
+    "data_offset": 0
+  },
+  "data": [
+    10.0,
+    20.0,
+    47.0,
+    15.0,
+    30.0,
+    47.0
+  ]
+}
+
+==============================================================================
+4. /ground_mission_planner/vehicle_1/path_stage_2
+类型：std_msgs/Float64MultiArray
+发布时间：after_successful_takeoff_before_start
+本次接口变更：是
+ROS 消息各字段（JSON 表达）：
+{
+  "layout": {
+    "dim": [],
+    "data_offset": 0
+  },
+  "data": [
+    15.0,
+    28.0,
+    34.0,
+    12.0,
+    22.0,
+    34.0,
+    10.0,
+    15.0,
+    34.0
+  ]
+}
+
+==============================================================================
+5. /ground_mission_planner/vehicle_1/jiangluodian
+类型：std_msgs/Float64MultiArray
+发布时间：after_successful_takeoff_before_start
+本次接口变更：否，供流程联调
+ROS 消息各字段（JSON 表达）：
+{
+  "layout": {
+    "dim": [],
+    "data_offset": 0
+  },
+  "data": [
+    1.0,
+    0.0,
+    47.0
+  ]
+}
+
+==============================================================================
+6. /uav1/competition/external_mission
+类型：std_msgs/String
+发布时间：after_successful_takeoff_before_start
+本次接口变更：是
+ROS 消息各字段（JSON 表达）：
+{
+  "data": "{\"type\":\"external_mission\",\"uav_id\":1,\"mission_id\":\"subject2-dual-layer-xyz-interface-example\",\"assignment_checksum\":\"5ad12a8fc016a0a8ebfda5004f4e3d10cad5516793ee68d69857e4bf191576d7\",\"flight_profile\":\"lab\",\"coordinate_frame\":\"ENU\",\"altitude_frame\":\"RELATIVE_TO_TAKEOFF\",\"target_altitude_m\":47.0,\"relative_altitude_m\":47.0,\"waypoints\":[{\"x_m\":10.0,\"y_m\":20.0,\"z_m\":47.0},{\"x_m\":15.0,\"y_m\":30.0,\"z_m\":47.0}],\"speed_mps\":0.3,\"waypoint_actions\":[],\"reconnaissance_mode\":\"hover_scan\",\"hover_scan_seconds\":50.0,\"return_home\":{\"x_m\":1.0,\"y_m\":0.0,\"z_m\":47.0},\"deadline_at\":null,\"return_battery_threshold\":null,\"subject\":\"subject2\",\"path_contract_version\":2,\"execution_mode\":\"upper_once_then_lower_once\",\"layer_order\":[\"upper\",\"lower\"],\"return_waypoint_layer\":\"upper\",\"return_altitude_m\":47.0,\"return_policy\":\"climb_to_upper_then_return\",\"layers\":[{\"layer_id\":\"upper\",\"topic\":\"/ground_mission_planner/vehicle_1/path_stage_1\",\"altitude_m\":47.0,\"waypoint_count\":2,\"waypoints\":[{\"x_m\":10.0,\"y_m\":20.0,\"z_m\":47.0},{\"x_m\":15.0,\"y_m\":30.0,\"z_m\":47.0}],\"scan_passes\":1,\"hover_scan_seconds\":50.0},{\"layer_id\":\"lower\",\"topic\":\"/ground_mission_planner/vehicle_1/path_stage_2\",\"altitude_m\":34.0,\"waypoint_count\":3,\"waypoints\":[{\"x_m\":15.0,\"y_m\":28.0,\"z_m\":34.0},{\"x_m\":12.0,\"y_m\":22.0,\"z_m\":34.0},{\"x_m\":10.0,\"y_m\":15.0,\"z_m\":34.0}],\"scan_passes\":1,\"hover_scan_seconds\":50.0}]}"
+}
+
+将 String.data 用 json.loads 等解码一次后的完整内容：
+{
+  "type": "external_mission",
+  "uav_id": 1,
+  "mission_id": "subject2-dual-layer-xyz-interface-example",
+  "assignment_checksum": "5ad12a8fc016a0a8ebfda5004f4e3d10cad5516793ee68d69857e4bf191576d7",
+  "flight_profile": "lab",
+  "coordinate_frame": "ENU",
+  "altitude_frame": "RELATIVE_TO_TAKEOFF",
+  "target_altitude_m": 47.0,
+  "relative_altitude_m": 47.0,
+  "waypoints": [
+    {
+      "x_m": 10.0,
+      "y_m": 20.0,
+      "z_m": 47.0
+    },
+    {
+      "x_m": 15.0,
+      "y_m": 30.0,
+      "z_m": 47.0
+    }
+  ],
+  "speed_mps": 0.3,
+  "waypoint_actions": [],
+  "reconnaissance_mode": "hover_scan",
+  "hover_scan_seconds": 50.0,
+  "return_home": {
+    "x_m": 1.0,
+    "y_m": 0.0,
+    "z_m": 47.0
+  },
+  "deadline_at": null,
+  "return_battery_threshold": null,
+  "subject": "subject2",
+  "path_contract_version": 2,
+  "execution_mode": "upper_once_then_lower_once",
+  "layer_order": [
+    "upper",
+    "lower"
+  ],
+  "return_waypoint_layer": "upper",
+  "return_altitude_m": 47.0,
+  "return_policy": "climb_to_upper_then_return",
+  "layers": [
+    {
+      "layer_id": "upper",
+      "topic": "/ground_mission_planner/vehicle_1/path_stage_1",
+      "altitude_m": 47.0,
+      "waypoint_count": 2,
+      "waypoints": [
+        {
+          "x_m": 10.0,
+          "y_m": 20.0,
+          "z_m": 47.0
+        },
+        {
+          "x_m": 15.0,
+          "y_m": 30.0,
+          "z_m": 47.0
+        }
+      ],
+      "scan_passes": 1,
+      "hover_scan_seconds": 50.0
+    },
+    {
+      "layer_id": "lower",
+      "topic": "/ground_mission_planner/vehicle_1/path_stage_2",
+      "altitude_m": 34.0,
+      "waypoint_count": 3,
+      "waypoints": [
+        {
+          "x_m": 15.0,
+          "y_m": 28.0,
+          "z_m": 34.0
+        },
+        {
+          "x_m": 12.0,
+          "y_m": 22.0,
+          "z_m": 34.0
+        },
+        {
+          "x_m": 10.0,
+          "y_m": 15.0,
+          "z_m": 34.0
+        }
+      ],
+      "scan_passes": 1,
+      "hover_scan_seconds": 50.0
+    }
+  ]
+}
+
+==============================================================================
+7. /ground_mission_planner/recon_start_mode
+类型：std_msgs/Int32
+发布时间：after_all_mission_data
+本次接口变更：否，供流程联调
+ROS 消息各字段（JSON 表达）：
+{
+  "data": 0
+}
+
+==============================================================================
+8. /ground_mission_planner/vehicle_1/return_home
+类型：std_msgs/Bool
+发布时间：only_when_return_is_requested
+本次接口变更：否，供流程联调
+ROS 消息各字段（JSON 表达）：
+{
+  "data": true
+}
+
