@@ -2,8 +2,8 @@
   "schema_version": 1,
   "repository": "minstrelll1/ZHIXIN",
   "branch": "codex/portable-ground-deployment",
-  "commit": "99919c990795d2ef96a4692919a898eeadbef78a",
-  "tree_sha": "4da4261f3cb07f75a600db45f59b5f4c6c3a0f5f",
+  "commit": "06bf20acdfcc1e4bbdcf6ba7531c46561a2ee22d",
+  "tree_sha": "4f76461971c156e5ba9e2f02eb5f957c6cf694a5",
   "file_count": 653,
   "files": [
     {
@@ -297,15 +297,15 @@
       "path": "competition_backend/competition_backend/final_scenes.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "a53324684a62e21e916d24c4a6b75dad11e9a4cc",
-      "size": 1956
+      "sha": "511568bb5ffa75a3c0a4fa2ef900c905b983f780",
+      "size": 2325
     },
     {
       "path": "competition_backend/competition_backend/final_scenes_prepared.json",
       "type": "blob",
       "mode": "100644",
-      "sha": "79ec1549d8cae1b8f69f5967572f991f96ff1608",
-      "size": 381283
+      "sha": "ceed72b779bd208b15adbaf346dee7ca7b1b75ee",
+      "size": 381334
     },
     {
       "path": "competition_backend/competition_backend/fixed_gps_scene.py",
@@ -374,8 +374,8 @@
       "path": "competition_backend/competition_backend/orchestrator.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "57b7b2d0ffd09f2be42cc21ab46b7b018bf323f6",
-      "size": 62123
+      "sha": "07c959c93863772df197e9ac08ad6d57d937933a",
+      "size": 62147
     },
     {
       "path": "competition_backend/competition_backend/pcl_octree.py",
@@ -626,8 +626,8 @@
       "path": "competition_backend/competition_backend/web/index.html",
       "type": "blob",
       "mode": "100644",
-      "sha": "1de928dc1f2114d10a48f73378a78f5bc4830ff0",
-      "size": 180062
+      "sha": "f4ae0c0da2643d2e803d7e6ee1e8a24c2debdf34",
+      "size": 180246
     },
     {
       "path": "competition_backend/competition_backend/web/military_preview.html",
@@ -850,15 +850,15 @@
       "path": "competition_backend/tests/test_final_scenes.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "7b2177452dea566c991ac6ddf7021ee5b7ef32aa",
-      "size": 22044
+      "sha": "54f43bf2af571c2c79aea43f61fd3ca411eaac10",
+      "size": 22671
     },
     {
       "path": "competition_backend/tests/test_final_takeoff_exemption.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "214313d9db4c9e21c40f6b9b47f129abbb7027e6",
-      "size": 12371
+      "sha": "a81ac34d1424719c34efb8272c536da192b1dc0d",
+      "size": 12587
     },
     {
       "path": "competition_backend/tests/test_fixed_gps_scene.py",
@@ -1466,15 +1466,15 @@
       "path": "docs/competition_plans_3d.html",
       "type": "blob",
       "mode": "100644",
-      "sha": "2e827b609a798a3829fc9612cd4f99a2e1f45b75",
-      "size": 1014887
+      "sha": "ccefa754b9c70bc81d604565e9c82c791a76cc1c",
+      "size": 1015374
     },
     {
       "path": "docs/competition_plans_legacy_3d.html",
       "type": "blob",
       "mode": "100644",
-      "sha": "78adb83d9cc6a135fced37db8895e6dfe2c52a02",
-      "size": 3294114
+      "sha": "f37919ba24df8973a722776c4ac6047ad0a16d66",
+      "size": 3292781
     },
     {
       "path": "docs/completed_targets_protocol.md",
@@ -1522,8 +1522,8 @@
       "path": "docs/final_scenes_integration.txt",
       "type": "blob",
       "mode": "100644",
-      "sha": "b81e493fe5ae5ee71fc234e8393b79b0b34b8e28",
-      "size": 16234
+      "sha": "f5a3768434792e1fc552ed80a62a1be74d97a55b",
+      "size": 18050
     },
     {
       "path": "docs/final_scenes_program_b_examples/final_scene_1/planning_preview.json",
@@ -1578,57 +1578,57 @@
       "path": "docs/final_scenes_program_b_examples/final_scene_2/planning_preview.json",
       "type": "blob",
       "mode": "100644",
-      "sha": "252aba0ac9a9c57f3881e9beac9e744c2daacfbc",
-      "size": 455634
+      "sha": "7f31ac13dddde855089920a3e7aecd210aac7a91",
+      "size": 455660
     },
     {
       "path": "docs/final_scenes_program_b_examples/final_scene_2/uav1.json",
       "type": "blob",
       "mode": "100644",
-      "sha": "2d9a954e69845a8eb8dcb949d314bcbcc2fa673c",
-      "size": 32718
+      "sha": "8168412c60b0ebce0ae998dc938934e750f04245",
+      "size": 32725
     },
     {
       "path": "docs/final_scenes_program_b_examples/final_scene_2/uav2.json",
       "type": "blob",
       "mode": "100644",
-      "sha": "70c9e8cca42529286480860f46d7805d9d4d8f8b",
-      "size": 41624
+      "sha": "ec1069d5cb95d9c56ca5ee08cc7fc1d0e62db709",
+      "size": 41617
     },
     {
       "path": "docs/final_scenes_program_b_examples/final_scene_2/uav3.json",
       "type": "blob",
       "mode": "100644",
-      "sha": "7cedb5b378d6e89861938a21389ec1a9ef902664",
-      "size": 42461
+      "sha": "363c51802711bcfaa98bb15d7c69924b9b5a6824",
+      "size": 42454
     },
     {
       "path": "docs/final_scenes_program_b_examples/final_scene_2/uav4.json",
       "type": "blob",
       "mode": "100644",
-      "sha": "b70abac5906a71df552ca59fe53e568585019da7",
-      "size": 42377
+      "sha": "b2a61788452e76f9288ce4b467f1a918d4d00148",
+      "size": 42383
     },
     {
       "path": "docs/final_scenes_program_b_examples/final_scene_2/uav5.json",
       "type": "blob",
       "mode": "100644",
-      "sha": "6d911291fe68690c9dd8e620b876252fda11df00",
-      "size": 41320
+      "sha": "1dfbed8efa09c60619a920d7264654d0b64de473",
+      "size": 41326
     },
     {
       "path": "docs/final_scenes_program_b_examples/final_scene_2/uav6.json",
       "type": "blob",
       "mode": "100644",
-      "sha": "1409934512cc61bba4ef13b09585d4181d9a72b6",
-      "size": 42604
+      "sha": "3e3ceb507bf77daa01fc5d4f5b80966ef45afee9",
+      "size": 42584
     },
     {
       "path": "docs/final_scenes_program_b_examples/index.json",
       "type": "blob",
       "mode": "100644",
-      "sha": "48f73afb1ad146740bd987d506fdbdbd8247c091",
-      "size": 7078
+      "sha": "be402aba56590ba4b96babc04af774a4b6638f4b",
+      "size": 7075
     },
     {
       "path": "docs/final_scenes_program_b_examples/xuchang_small_2/planning_preview.json",
@@ -1732,15 +1732,15 @@
       "path": "docs/planning_preview.html",
       "type": "blob",
       "mode": "100644",
-      "sha": "2e827b609a798a3829fc9612cd4f99a2e1f45b75",
-      "size": 1014887
+      "sha": "ccefa754b9c70bc81d604565e9c82c791a76cc1c",
+      "size": 1015374
     },
     {
       "path": "docs/planning_preview_data.json",
       "type": "blob",
       "mode": "100644",
-      "sha": "30e60eab6520d5cddb16740c7f1324b840100e8d",
-      "size": 872403
+      "sha": "327794d8e4384053f61fc04419e90f1c712cd667",
+      "size": 872898
     },
     {
       "path": "docs/planning_results/planning_results/README_使用说明.txt",
@@ -2425,8 +2425,8 @@
       "path": "docs/planning_results_v2/planning_results_v2/planning_preview.html",
       "type": "blob",
       "mode": "100644",
-      "sha": "d1bbe7e94a9a9a6746f87655e974bb3b943879cb",
-      "size": 1014893
+      "sha": "677da5f901f4809fb994eb6659ab4b677b3e0390",
+      "size": 1015380
     },
     {
       "path": "docs/planning_results_v2/planning_results_v2/planning_report.txt",
@@ -3937,8 +3937,8 @@
       "path": "tools/build_final_scene_handoff.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "a9462f78b8dd9d481035e28cbba63684047352e2",
-      "size": 5062
+      "sha": "06f10d31c845b307956c15cd0f5a8204479f9216",
+      "size": 5541
     },
     {
       "path": "tools/build_ground_app.ps1",
@@ -4084,8 +4084,8 @@
       "path": "tools/import_final_scenes.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "7a618ebc21759b87ad5984197c97d428d77342b4",
-      "size": 13034
+      "sha": "cc556d8844e1af8838c271302f8372ad5c5bb55d",
+      "size": 14374
     },
     {
       "path": "tools/inspect_groundstation_pointcloud.py",
@@ -4385,8 +4385,8 @@
       "path": "tools/tests/test_final_scenes_ui.js",
       "type": "blob",
       "mode": "100644",
-      "sha": "16932097f1fdbd278263064501f5ee7e0c40d649",
-      "size": 9239
+      "sha": "cd71df9a2ef1bdd6d6f14d3e1fb40805bac1d8d0",
+      "size": 9625
     },
     {
       "path": "tools/tests/test_gps_card.js",
@@ -4578,5 +4578,5 @@
       "size": 804
     }
   ],
-  "generated_at": "2026-10-18T14:52:39+00:00"
+  "generated_at": "2026-10-18T23:27:40+00:00"
 }
