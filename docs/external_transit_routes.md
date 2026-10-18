@@ -71,7 +71,9 @@ UAV1 接收的 XYZ 返航消息示意（仅展示两条，真实消息包含六�
 
 **固定起降点连接段例外：**起降点若位于边界上、距边界不足 5 米或区域外，保持该实际起降点不变，使用通往内缩区域的可见连接段；只有这段无法满足 5 米。进入内缩区域后保持间距，返航仅最后返回该起降点的连接段例外。不会把近边侦察航点当成例外。
 
-新消息包含 `boundary_clearance_m: 5.0` 与 `endpoint_clearance_policy: "takeoff_landing_connector_only"`。原 3m、5m、10m、大连场景不启用这一新约束。
+上述5米说明对应固定预生成方案。按实际GPS起降点重接进返场航线时，先尝试5米；基础航路无法形成时，只重试一次3米。两次都失败则明确报错，不继续放宽。原始场界、禁飞扣除区、固定扫描航点及起降连接段例外规则不变。3米仍额外保留2cm坐标舍入余量。
+
+消息包含 `boundary_clearance_m: 5.0` 或回退后的 `3.0`，以及 `endpoint_clearance_policy: "takeoff_landing_connector_only"`。该字段表示本机进返场实际采用的间距，后续进场优化保持此值；5米可行的飞机不会因为其他飞机回退而一同放宽。地面任务副本还记录 `boundary_clearance_relaxed` 与回退原因，并通过规划提示和诊断日志说明。现有机载解析器支持正数3，无需新增或变更ROS话题。原 3m、5m、10m、大连场景不启用这一约束，保持原规则。
 
 ### 许昌试飞场地（小）的内部扣除区
 
@@ -81,7 +83,7 @@ UAV1 接收的 XYZ 返航消息示意（仅展示两条，真实消息包含六�
 
 科目一、科目二的全部现有和新增飞行场景取消任务时长门槛，任务时长为 0 表示不限时，起飞命令与程序 B 任务说明中的 `deadline_at` 为 `null`。预计用时和比赛已用时间仍可显示，不作为超时返航命令。实际自动返航由程序 B 决定；程序 B 内部独立设置的超时逻辑需由其作者同步调整。完成任务、低电量及手动返航流程保持原有实现；科目三未作修改。
 
-固定侦察方案由 `tools/prepare_clearance_plans.py` 赛前生成，保存在 `competition_backend/competition_backend/competition_clearance_prepared.json`，运行时只读；区域内进返场几何仍保存于下述文件，GPS 实际起降点变化时按相同 5 米规则重接。更新后应在起飞前重新规划与分派，旧任务不会在飞行中自动替换。
+固定侦察方案由 `tools/prepare_clearance_plans.py` 赛前生成，保存在 `competition_backend/competition_backend/competition_clearance_prepared.json`，运行时只读；区域内进返场几何仍保存于下述文件，GPS 实际起降点变化时按优先5米、不可行才重试3米的规则重接。更新后应在起飞前重新规划与分派，旧任务不会在飞行中自动替换。
 
 固定文件为 `competition_backend/competition_backend/external_transit_prepared.json`，保存全部场景各机的原始进返场几何。地面端组合六机几何；GPS 实飞再依据接收机实测起飞点，重接全机队航点的返航路线，不改变侦察点。
 

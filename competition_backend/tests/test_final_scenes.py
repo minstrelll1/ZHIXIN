@@ -103,7 +103,7 @@ class FinalScenesTest(unittest.TestCase):
                     publisher.state.adapter.peer_program_b_status = Mock(return_value={str(uid):{'state':'running','received_at':time.time(),'flight_mode':'outdoor'} for uid in range(2,7)})
                     publisher.state.adapter.connected_uav_ids_snapshot = Mock(return_value=list(range(1,7)))
                     for uid,home in homes.items():
-                        publisher.state.orchestrator.update_telemetry(Telemetry(uav_id=uid,received_at=time.time(),connected=True,
+                        publisher.state.orchestrator.update_telemetry(Telemetry(uav_id=uid,received_at=time.time(),connected=True,odom_valid=True,
                             latitude=home['latitude'],longitude=home['longitude'],gps_status=3,location_source=4,
                             capabilities=dict(boot_id=home['boot_id'],boot_gps_home=home)))
                     selection = dict(subject='subject2',planning_mode='competition',flight_profile=profile,coordinate_mode='gps',

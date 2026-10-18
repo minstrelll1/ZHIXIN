@@ -141,7 +141,7 @@ class XuchangBootHomeTest(unittest.TestCase):
             payload=dict(subject='subject1',flight_profile='xuchang_small',coordinate_mode='gps',departure_point='fixed_xuchang')
             def update(uid,cap=None):
                 h=self.homes[str(uid)]
-                app.state.orchestrator.update_telemetry(Telemetry(uav_id=uid,received_at=999.8,connected=True,
+                app.state.orchestrator.update_telemetry(Telemetry(uav_id=uid,received_at=999.8,connected=True,odom_valid=True,
                     latitude=h['latitude']+.0001,longitude=h['longitude'],gps_status=3,location_source=4,
                     gps_telemetry_age_seconds=.1,capabilities=cap if cap is not None else
                     dict(boot_id=h['boot_id'],boot_gps_home=h)))

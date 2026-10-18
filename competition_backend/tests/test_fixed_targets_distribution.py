@@ -1,11 +1,13 @@
 import json
 from pathlib import Path
 import tempfile
+import time
 import unittest
 from unittest.mock import Mock
 
 from competition_backend.api import create_app
 from competition_backend.assignment_protocol import assignment_checksum
+from competition_backend.models import Telemetry
 from competition_shared.fleet import apply_fixed_binding, default_fleet
 from competition_shared.fixed_targets import empty_fixed_targets
 from test_fixed_targets import targets
@@ -95,6 +97,10 @@ class FixedTargetDistributionTest(unittest.TestCase):
                                         latitude=33.8644, longitude=113.7098))
         publisher.state.fixed_target_store.replace(snapshot)
         publisher.state.adapter.connected_uav_ids_snapshot = Mock(return_value=list(range(1, 7)))
+        for uid in range(1, 7):
+            publisher.state.orchestrator.update_telemetry(Telemetry(
+                uav_id=uid, received_at=time.time(), connected=True, odom_valid=True,
+            ))
         for subject in ("subject1", "subject2"):
             for app in self.apps.values():
                 app.state.adapter.local_adapter.forward_command.reset_mock()

@@ -346,6 +346,23 @@ def create_app(environment=None, audit=None) -> FastAPI:
         competition_time_provider=competition_clock.snapshot,
     )
 
+    def planning_connected_ids():
+        if isinstance(adapter, DistributedFleetAdapter):
+            return adapter.connected_uav_ids_snapshot()
+        if hasattr(adapter, "connected_uav_ids"):
+            return list(adapter.connected_uav_ids)
+        telemetry = orchestrator.telemetry_snapshot()
+        return [uid for uid in active_uav_ids if (telemetry.get(str(uid)) or {}).get("connected")]
+
+    def localization_participants(uav_ids, role=None):
+        """发布端仅将定位有效的在线飞机纳入本次任务；不改动六机固定方案。"""
+        if not live_mode or not (role or operator_status())["task_publisher"]:
+            return list(uav_ids), {}
+        telemetry = orchestrator.telemetry_snapshot()
+        excluded = {str(uid): "定位状态无效" for uid in uav_ids
+                    if not (telemetry.get(str(uid)) or {}).get("odom_valid")}
+        return [uid for uid in uav_ids if str(uid) not in excluded], excluded
+
     def onboard_gps_references(required_ids=None) -> Dict[str, Dict[str, Any]]:
         """读取规划前各架已连接无人机的有效 WGS84 经纬度。"""
         # Copy telemetry only: serializing the previous mission can consume
@@ -1321,6 +1338,9 @@ def create_app(environment=None, audit=None) -> FastAPI:
 
     @app.post("/api/v1/planning/competition-coverage", summary="读取赛前固定比赛覆盖方案", tags=["任务规划"])
     def competition_coverage(payload: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
+        return _competition_coverage(payload)
+
+    def _competition_coverage(payload, connected_ids=None):
         # 独立预览不会改写当前任务，也不获取主控租约或下发指令。
         subject = str(payload.get("subject", "subject1"))
         if subject not in ("subject1", "subject2"):
@@ -1345,11 +1365,11 @@ def create_app(environment=None, audit=None) -> FastAPI:
                 raise HTTPException(status_code=422, detail="未知的飞行高度方案")
             if flight_profile not in ("lab", "lab10", "outdoor5", "outdoor100", "outdoor200", "competition", "dalian_nanshan", "xuchang_small", "subject1_actual", "subject2_actual") + FINAL_PROFILES:
                 raise HTTPException(status_code=422, detail="未知的飞行场景")
-            connected_ids = (
-                adapter.connected_uav_ids_snapshot()
-                if isinstance(adapter, DistributedFleetAdapter)
-                else list(getattr(adapter, "connected_uav_ids", []))
-            ) if live_mode and coordinate_mode == "gps" else []
+            if not live_mode or coordinate_mode != "gps":
+                connected_ids = []
+            elif connected_ids is None:
+                connected_ids = planning_connected_ids()
+                connected_ids, _ = localization_participants(connected_ids)
             takeoff_gps_by_uav = onboard_gps_references(connected_ids) if connected_ids else {}
             missing_gps_ids = [uid for uid in connected_ids if str(uid) not in takeoff_gps_by_uav]
             if missing_gps_ids:
@@ -1556,9 +1576,14 @@ def create_app(environment=None, audit=None) -> FastAPI:
         requested_coordinate_mode = str(
             payload.get("coordinate_mode") or (payload.get("search_area") or {}).get("coordinate_mode") or ""
         ).strip().lower()
+        selected_uav_ids, connected_uav_ids, excluded_uavs = None, [], {}
+        if isinstance(adapter, DistributedFleetAdapter) or (live_mode and role["task_publisher"]):
+            connected_uav_ids = planning_connected_ids()
+            candidates = (connected_uav_ids if role["task_publisher"]
+                          else ([local_uav_id] if local_uav_id in connected_uav_ids else []))
+            selected_uav_ids, excluded_uavs = localization_participants(candidates, role)
         if live_mode and requested_coordinate_mode == "gps" and payload.get("planning_mode") != "competition":
-            connected = (adapter.connected_uav_ids_snapshot() if isinstance(adapter, DistributedFleetAdapter)
-                         else list(getattr(adapter, "connected_uav_ids", [])))
+            connected = selected_uav_ids if selected_uav_ids is not None else planning_connected_ids()
             references = onboard_gps_references(connected)
             missing = [uid for uid in connected if str(uid) not in references]
             if missing:
@@ -1578,7 +1603,7 @@ def create_app(environment=None, audit=None) -> FastAPI:
             plan_checkpoint("读取固定规划和 GPS 基准")
             if payload.get("tasks_by_uav") is not None:
                 raise HTTPException(status_code=422, detail="比赛区域任务由已保存方案生成，不能混用手工任务")
-            prepared = competition_coverage({
+            prepared = _competition_coverage({
                 "subject": payload.get("subject", "subject1"),
                 "coordinate_mode": payload.get("coordinate_mode", "gps"),
                 "flight_profile": requested_profile,
@@ -1593,40 +1618,39 @@ def create_app(environment=None, audit=None) -> FastAPI:
                 "departure_point": payload.get("departure_point", "southeast"),
                 "gps_origin": payload.get("gps_origin"),
                 "gps_origins_by_uav": payload.get("gps_origins_by_uav"),
-            })
+            }, connected_ids=selected_uav_ids)
         tasks = payload.get("tasks_by_uav")
         normalized_tasks = None
         if tasks is not None:
             normalized_tasks = {int(key): dict(value) for key, value in tasks.items()}
-        if isinstance(adapter, DistributedFleetAdapter):
+        if selected_uav_ids is not None:
             try:
                 plan_checkpoint("核对在线无人机和地面控制权限")
-                connected_uav_ids = adapter.connected_uav_ids_snapshot()
                 # Keep planning independent from physical availability.  With
                 # no fresh UAV telemetry this is a planning-only mission: the
                 # solver still returns all six routes, but no assignment is
                 # sent and no ground-computer lease is acquired.
-                selected_uav_ids = (
-                    connected_uav_ids
-                    if role["task_publisher"]
-                    else ([local_uav_id] if local_uav_id in connected_uav_ids else [])
-                )
-                if prepared is not None and prepared["search_area"].get("coordinate_mode") == "gps" and selected_uav_ids:
+                # 只允许剔除规划期间失去定位的参与机，不把刚恢复的飞机加入本次任务。
+                selected_uav_ids, newly_excluded = localization_participants(selected_uav_ids, role)
+                excluded_uavs.update(newly_excluded)
+                if prepared is not None and prepared["search_area"].get("coordinate_mode") == "gps":
                     # GPS 原点用于固定航点，实际起降点必须在分派前再次取各机遥测。
-                    latest_takeoff_gps = (boot_scene_homes(connected_uav_ids) if requested_profile in ("subject1_actual", "subject2_actual", "xuchang_small") + FINAL_PROFILES
+                    latest_takeoff_gps = (boot_scene_homes(selected_uav_ids) if requested_profile in ("subject1_actual", "subject2_actual", "xuchang_small") + FINAL_PROFILES
                                           else onboard_gps_references(selected_uav_ids))
                     missing = [uid for uid in selected_uav_ids if str(uid) not in latest_takeoff_gps]
                     if missing:
                         raise RuntimeError("缺少 UAV{} 的有效 GPS，无法分派".format(
                             "、UAV".join(str(uid) for uid in missing)))
                     prepared["search_area"]["takeoff_gps_by_uav"] = latest_takeoff_gps
-                if not role["task_publisher"]:
+                if isinstance(adapter, DistributedFleetAdapter) and not role["task_publisher"]:
                     adapter.assert_local_control_available()
                     mirrored_mission = (adapter.mirrored_snapshot() or {}).get("mission") or {}
                     if mirrored_mission.get("phase") in ("taking_off", "running", "returning"):
                         raise RuntimeError("发布端任务仍在执行，不能用本地规划覆盖")
                 orchestrator.set_active_uav_ids(selected_uav_ids)
-                if role["task_publisher"] and selected_uav_ids:
+                audit.record("规划参与机筛选", connected_uav_ids=connected_uav_ids,
+                             selected_uav_ids=selected_uav_ids, excluded_uavs=excluded_uavs)
+                if isinstance(adapter, DistributedFleetAdapter) and role["task_publisher"] and selected_uav_ids:
                     adapter.acquire_coordination(selected_uav_ids)
             except HTTPException:
                 raise
@@ -1651,6 +1675,7 @@ def create_app(environment=None, audit=None) -> FastAPI:
                 prepared,
                 recognition_selection,
                 fixed_targets,
+                excluded_uavs,
             )
         except Exception:
             if isinstance(adapter, DistributedFleetAdapter):
@@ -1669,12 +1694,22 @@ def create_app(environment=None, audit=None) -> FastAPI:
                 ),
                 "connected_uav_ids": list(connected_uav_ids),
                 "assigned_uav_ids": assigned_uav_ids,
+                "excluded_uavs": dict(excluded_uavs),
                 "ack_required_before_takeoff": True,
             }
             result["operator"] = operator_status()
         result["planning_warnings"] = _external_program_b_radius_warnings(
             requested_profile, payload.get("controller_mode", "internal"), orchestrator.active_uav_ids,
         )
+        for uid, runtime in mission.get("uavs", {}).items():
+            routes = runtime.get("task", {}).get("transit_routes") or {}
+            if routes.get("boundary_clearance_relaxed"):
+                distance = routes["boundary_clearance_m"]
+                result["planning_warnings"].append(
+                    "UAV{}进返场航线无法满足5米边界间距，本次已按{:g}米生成并分派".format(uid, distance))
+                audit.record("进返场边界间距已回退", mission_id=mission.get("mission_id"),
+                             uav_id=int(uid), boundary_clearance_m=distance,
+                             reason=routes.get("boundary_clearance_fallback_reason", ""))
         return result
 
     @app.post("/api/v1/plan/jobs", summary="启动规划分派作业", tags=["任务控制"])

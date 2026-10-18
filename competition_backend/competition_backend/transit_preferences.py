@@ -11,10 +11,11 @@ def _paths(region, home, targets):
     from shapely.geometry import Point
     from shapely import prepare
     from .landing_avoidance import _visible_pairs
+    from .transit_routes import ClearanceRouteError
     parts = [region] if region.geom_type == 'Polygon' else list(getattr(region, 'geoms', []))
     region = next((p for p in parts if p.geom_type == 'Polygon' and p.covers(Point(home))), None)
     if region is None or any(not region.buffer(1e-8).covers(Point(p)) for p in targets):
-        raise ValueError('软避让切断航路')
+        raise ClearanceRouteError('当前间距下起降点与全部侦察航点不在同一可通行区域')
     allowed = region.buffer(1e-8); prepare(allowed)
     vertices = [list(p) for ring in (region.exterior, *region.interiors) for p in list(ring.coords)[:-1]]
     nodes = [list(home), *vertices]
@@ -40,7 +41,7 @@ def _paths(region, home, targets):
         mask = _visible_pairs(allowed, coordinates, np.broadcast_to(target, coordinates.shape))
         choices = [(distances[i] + math.dist(p, target), i) for i, p in enumerate(nodes) if i in distances and mask[i]]
         if not choices:
-            raise ValueError('软避让切断航路')
+            raise ClearanceRouteError('当前间距下无法连接侦察航点')
         _, i = min(choices); path = [list(target)]
         while True:
             if math.dist(path[-1], nodes[i]) > 1e-9:
@@ -54,10 +55,43 @@ def _paths(region, home, targets):
 
 
 def routes_from_home(boundary, home, targets, others, *, holes=(), clearance=5.):
+    """5m基础航路无法形成时只重试一次3m；不吞掉数据或坐标错误。"""
+    from shapely.geometry import Polygon, Point
+    from .transit_routes import BOUNDARY_CLEARANCE_M, FALLBACK_BOUNDARY_CLEARANCE_M, ClearanceRouteError
+    if clearance != BOUNDARY_CLEARANCE_M:
+        return _routes_at_clearance(boundary, home, targets, others, holes=holes, clearance=clearance)
+    # 基础几何错误与边界间距不足区分，不能靠降低间距接受禁飞区内起降或越界航点。
+    polygon = Polygon(boundary, holes=holes)
+    if not polygon.is_valid or polygon.is_empty:
+        raise ValueError('带扣除区的任务边界无效')
+    if any(Polygon(hole).contains(Point(home)) for hole in holes):
+        raise ValueError('实际起降点位于扣除区内，不可规划穿越扣除区的进返场航线')
+    allowed = polygon.buffer(2e-5)
+    if any(not allowed.covers(Point(p)) for p in targets):
+        raise ValueError('侦察航点不在任务区域内部或位于禁飞扣除区内')
+    failure = ''
+    for distance in (BOUNDARY_CLEARANCE_M, FALLBACK_BOUNDARY_CLEARANCE_M):
+        try:
+            paths, metadata = _routes_at_clearance(boundary, home, targets, others,
+                                                   holes=holes, clearance=distance)
+        except ClearanceRouteError as error:
+            if distance == BOUNDARY_CLEARANCE_M:
+                failure = str(error)
+                continue
+            raise ClearanceRouteError('进返场航线按5米和3米边界间距均无法规划：{}'.format(error)) from error
+        metadata.update(boundary_clearance_m=distance,
+                        endpoint_clearance_policy='takeoff_landing_connector_only',
+                        boundary_clearance_preferred_m=BOUNDARY_CLEARANCE_M,
+                        boundary_clearance_relaxed=distance < BOUNDARY_CLEARANCE_M,
+                        boundary_clearance_fallback_reason=failure)
+        return paths, metadata
+
+
+def _routes_at_clearance(boundary, home, targets, others, *, holes, clearance):
     """所有目标共用一张小可见图，不在全部扫描点之间建立平方数量的边。"""
     from shapely.geometry import Polygon, Point
     from shapely.ops import unary_union
-    from .transit_routes import clearance_routes, shortest_routes
+    from .transit_routes import clearance_routes, shortest_routes, ClearanceRouteError
     safe = Polygon(boundary, holes=holes).buffer(-clearance - .02, join_style=2) if clearance else Polygon(boundary, holes=holes).buffer(2e-5)
     if not safe.covers(Point(home)):
         # 保留原有场界/禁飞区连接规则；其他起降点间距不阻塞连接。
@@ -69,19 +103,22 @@ def routes_from_home(boundary, home, targets, others, *, holes=(), clearance=5.)
         obstacles = unary_union([Point(p).buffer(radius, quad_segs=3) for p in others])
         try:
             return _paths(safe.difference(obstacles), home, targets), {'home_avoidance_relaxed': False}
-        except ValueError:
+        except ClearanceRouteError:
             pass
     return _paths(safe, home, targets), {'home_avoidance_relaxed': bool(others)}
 
 
-def prefer_entries(boundary, entries, homes, *, holes=(), clearance=5.):
+def prefer_entries(boundary, entries, homes, *, holes=(), clearance=5., clearance_by_uav=None):
     """最多两种顺序、每段六个偏移候选；交叉/共线是评分，无间距硬门槛。"""
     from shapely.geometry import Polygon, LineString, Point
-    safe = Polygon(boundary, holes=holes).buffer(-clearance - .02, join_style=2) if clearance else Polygon(boundary, holes=holes)
-    allowed = safe.buffer(1e-7)
+    polygon = Polygon(boundary, holes=holes)
+    clearances = {uid: (clearance_by_uav or {}).get(uid, clearance) for uid in entries}
+    allowed_by_clearance = {distance: (polygon.buffer(-distance - .02, join_style=2) if distance else polygon).buffer(1e-7)
+                            for distance in set(clearances.values())}
     uids = sorted(entries)
     candidates = {}
     for uid in uids:
+        allowed = allowed_by_clearance[clearances[uid]]
         base = entries[uid]; values = [base]
         for index, (a, b) in enumerate(zip(base, base[1:])):
             length = math.dist(a, b)
@@ -144,8 +181,11 @@ def finalize_entries(area, runtimes, actual_routes):
         to_local = convert = lambda p: list(p)
     entries = {uid:[to_local(p) for p in r['entry_path']] for uid,r in routes.items()}
     homes = {uid:to_local(r['departure']) for uid,r in routes.items()}
+    default_clearance = 5. if profile in SAFE_TRANSIT_PROFILES else 0.
+    clearances = {uid:r.get('boundary_clearance_m', default_clearance) for uid,r in routes.items()}
     improved, metadata = prefer_entries(saved['boundary_m'], entries, homes,
-        holes=saved.get('excluded_polygons_m', []), clearance=5. if profile in SAFE_TRANSIT_PROFILES else 0.)
+        holes=saved.get('excluded_polygons_m', []), clearance=default_clearance, clearance_by_uav=clearances)
+    metadata['boundary_clearance_m_by_uav'] = {str(uid):distance for uid,distance in clearances.items()}
     area['entry_separation'] = metadata
     area['mission_time_limit_s'] = None
     for uid,r in routes.items():

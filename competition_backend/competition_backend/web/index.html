@@ -470,9 +470,9 @@ const 文本={
   任务:{search_sector:'区域搜索',lawnmower_search:'弓字形区域搜索',search_and_drop:'搜索与投放',forest_delivery:'林区物资投送'},
   字段:{sector:'区域',role:'角色',route:'路线'},
   角色:{search:'搜索',static_target:'静态目标',moving_target:'动态目标'},
-  事件:{manual_override:'遥控器接管',takeoff_failed:'自动起飞失败',mission_stopped:'任务已停止',task_assignment_sent:'子任务分派报文已发送',mission_planned:'任务规划完成',mission_planning_only:'无无人机在线：仅生成六机规划，未下发任务',preflight_passed:'启用无人机起飞预检通过',takeoff_commanded:'起飞命令已下发',uav_at_altitude:'无人机到达目标高度',uav_task_started:'无人机已出发执行子任务',all_tasks_started:'任务已开始',return_commanded:'返航请求已发送',uav_landed:'无人机已降落',mission_completed:'本次任务全部完成'},
+  事件:{manual_override:'遥控器接管',takeoff_failed:'自动起飞失败',mission_stopped:'任务已停止',task_assignment_sent:'子任务分派报文已发送',mission_planned:'任务规划完成',mission_planning_only:'无可参与无人机：仅生成六机规划，未下发任务',preflight_passed:'启用无人机起飞预检通过',takeoff_commanded:'起飞命令已下发',uav_at_altitude:'无人机到达目标高度',uav_task_started:'无人机已出发执行子任务',all_tasks_started:'任务已开始',return_commanded:'返航请求已发送',uav_landed:'无人机已降落',mission_completed:'本次任务全部完成'},
   原因:{task_complete:'单机任务完成',time_limit:'比赛时间结束',low_battery:'电量达到返航阈值',manual:'人工命令返航',takeoff_timeout:'起飞阶段超时'},
-  预检:{'no telemetry':'没有收到遥测','telemetry is stale':'遥测数据已超时','flight controller is disconnected':'飞控未连接','odometry is invalid':'定位无效','failsafe is active':'安全保护已触发','battery is below preflight threshold':'电量低于起飞阈值','UAV is not armed':'无人机尚未解锁','control_state is not COMMAND_CONTROL':'控制状态不是自主控制','task assignment is not acknowledged':'无人机尚未确认收到子任务','no UAV is connected; this mission is planning-only':'没有无人机连接，本次任务仅规划，不执行','production_config_confirmed is false; live takeoff is locked':'实机参数尚未确认，起飞已锁定'},
+  预检:{'no telemetry':'没有收到遥测','telemetry is stale':'遥测数据已超时','flight controller is disconnected':'飞控未连接','odometry is invalid':'定位无效','failsafe is active':'安全保护已触发','battery is below preflight threshold':'电量低于起飞阈值','UAV is not armed':'无人机尚未解锁','control_state is not COMMAND_CONTROL':'控制状态不是自主控制','task assignment is not acknowledged':'无人机尚未确认收到子任务','no UAV is connected; this mission is planning-only':'没有无人机连接，本次任务仅规划，不执行','no UAV participates; this mission is planning-only':'没有可参与的无人机，本次任务仅规划，不执行','production_config_confirmed is false; live takeoff is locked':'实机参数尚未确认，起飞已锁定'},
   错误:{'an active mission already exists':'已有正在进行的任务','mission must be planned before takeoff preparation':'请先完成任务规划，再执行起飞预检','takeoff is not awaiting confirmation':'当前没有等待确认的起飞任务','takeoff confirmation token is invalid or expired':'起飞确认已失效，请重新执行预检','preflight changed before confirmation':'确认前飞行状态发生变化，请重新执行预检','no mission exists':'当前没有任务','tasks_by_uav must contain exactly UAV IDs 1 through 6':'任务分配必须完整包含六架无人机','duration_seconds must be positive':'比赛时限必须大于零','invalid return reason':'返航原因无效'}
 };
 let 当前状态=null,当前角色=null,采集状态={state:'idle'},实际轨迹={missionId:null,byUav:{}},视频源={},本机无人机ID=null,详情无人机ID=null,端口查看无人机ID=null,当前视频地址='',确认令牌=null,连接=null,提示计时=null,地形显示=true;
@@ -1006,7 +1006,9 @@ function 更新任务按钮(snapshot=当前状态){
 }
 function 显示分派反馈(message,error=false){
   const box=$('dispatchFeedback'),warnings=本次规划告警.missionId===分派反馈任务ID?本次规划告警.messages:[];
-  box.hidden=false;box.textContent=message+(warnings.length?' 注意：'+warnings.join('；'):'');box.style.color=error?'#b42318':'';
+  const excluded=分派反馈任务ID&&当前状态?.mission?.mission_id===分派反馈任务ID?Object.entries(当前状态?.dispatch_status?.excluded_uavs||{}):[];
+  const exclusionNote=excluded.length?' 本次未参与：'+excluded.map(([uid,reason])=>`UAV${uid}（${reason}）`).join('、')+'。恢复后需重新规划分派才会加入任务。':'';
+  box.hidden=false;box.textContent=message+exclusionNote+(warnings.length?' 注意：'+warnings.join('；'):'');box.style.color=error?'#b42318':'';
 }
 function 更新分派回执(snapshot){
   if(覆盖规划中||规划结果待核对||!分派反馈任务ID||snapshot?.mission?.mission_id!==分派反馈任务ID)return;
@@ -1068,7 +1070,7 @@ async function 生成比赛覆盖(){
     if(!result?.mission?.mission_id)throw new Error('后端没有返回有效任务，请核对任务状态后重试');
     requestSucceeded=true;规划结果待核对=false;当前状态=result;比赛覆盖方案=result.mission;固定规划绘制键='';分派反馈任务ID=result.mission.mission_id;本次规划告警={missionId:分派反馈任务ID,messages:result.planning_warnings||[]};
     const ids=result.dispatch_status?.assigned_uav_ids||Object.keys(result.mission.uavs||{}).map(Number);
-    const message=ids.length?'规划已分派至 '+ids.map(id=>'UAV'+id).join('、')+'，等待机载回执。':'方案已生成，当前无人机未连接，尚未下发。';
+    const message=ids.length?'规划已分派至 '+ids.map(id=>'UAV'+id).join('、')+'，等待机载回执。':'方案已生成，当前没有可参与的无人机，尚未下发。';
     显示分派反馈(message);提示(message);
     渲染(result);
   }catch(error){

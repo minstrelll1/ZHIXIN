@@ -216,7 +216,7 @@ class ActualSceneLiveHomeTest(unittest.TestCase):
             homes=homes_for(load_plan())
             def update(uid,cap=None):
                 home=homes[str(uid)]
-                app.state.orchestrator.update_telemetry(Telemetry(uav_id=uid,received_at=999.8,connected=True,
+                app.state.orchestrator.update_telemetry(Telemetry(uav_id=uid,received_at=999.8,connected=True,odom_valid=True,
                     latitude=home['latitude']+.0001,longitude=home['longitude'],gps_status=3,location_source=4,
                     gps_telemetry_age_seconds=.1,capabilities=cap if cap is not None else
                     dict(boot_id=home['boot_id'],boot_gps_home=home)))

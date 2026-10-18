@@ -74,7 +74,7 @@ class Subject2DispatchE2ETest(unittest.TestCase):
                 publisher.state.adapter.connected_uav_ids_snapshot=Mock(return_value=list(range(1,7)))
                 for uid, home in homes.items():
                     publisher.state.orchestrator.update_telemetry(Telemetry(uav_id=uid,received_at=publisher.state.orchestrator.clock(),
-                        connected=True,latitude=home['latitude']+.0001,longitude=home['longitude'],altitude=103.7,
+                        connected=True,odom_valid=True,latitude=home['latitude']+.0001,longitude=home['longitude'],altitude=103.7,
                         gps_status=3,location_source=4,gps_telemetry_age_seconds=60.,
                         capabilities=dict(boot_id=home['boot_id'],boot_gps_home=home)))
                 selection=dict(subject='subject2',planning_mode='competition',flight_profile=PROFILE,

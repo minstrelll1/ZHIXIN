@@ -88,16 +88,19 @@ class GpsPlanningReferenceTest(unittest.TestCase):
             self.assertEqual(preview["search_area"]["gps_origin"]["longitude"], 103.86102)
             self.assertIsNone(app.state.orchestrator.snapshot()["mission"])
 
-    def test_every_connected_uav_needs_gps_even_in_fixed_dalian_scene(self):
+    def test_every_eligible_uav_needs_gps_even_in_fixed_dalian_scene(self):
         with tempfile.TemporaryDirectory() as data_directory:
             app = create_app(dict(os.environ, COMPETITION_ADAPTER="distributed",
                                   COMPETITION_DATA_DIR=data_directory,
                                   COMPETITION_LOCAL_UAV_ID="1", COMPETITION_GROUND_PEERS=""))
             app.state.adapter.connected_uav_ids_snapshot = Mock(return_value=[1, 2])
             app.state.orchestrator.update_telemetry(Telemetry(
-                uav_id=1, received_at=time.time(), connected=True,
+                uav_id=1, received_at=time.time(), connected=True, odom_valid=True,
                 latitude=39.050245, longitude=121.661123,
                 gps_status=3, location_source=4,
+            ))
+            app.state.orchestrator.update_telemetry(Telemetry(
+                uav_id=2, received_at=time.time(), connected=True, odom_valid=True,
             ))
             response = TestClient(app).post("/api/v1/planning/competition-coverage", json={
                 "subject": "subject1", "coordinate_mode": "gps", "flight_profile": "dalian_nanshan",

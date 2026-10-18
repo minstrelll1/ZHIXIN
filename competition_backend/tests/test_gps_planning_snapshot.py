@@ -38,7 +38,7 @@ class GpsPlanningSnapshotTest(unittest.TestCase):
 
     def update(self, uid, **fields):
         values = dict(
-            uav_id=uid, received_at=999.8, connected=True,
+            uav_id=uid, received_at=999.8, connected=True, odom_valid=True,
             latitude=39.050245 + uid * 0.000001, longitude=121.661123,
             gps_status=3, location_source=4, gps_telemetry_age_seconds=0.1,
         )

@@ -1,4 +1,4 @@
-"""赛前固定进场/逐航点返航路径；运行时仅校验并转换坐标。"""
+"""赛前固定进场/逐航点返航目录；实飞时按本机起降点重接航路。"""
 import copy
 import hashlib
 import heapq
@@ -14,7 +14,12 @@ ALL_PROFILES = PROFILES + FINAL_PROFILES
 CLEARANCE_PROFILES = ('outdoor100', 'outdoor200', 'competition')
 SAFE_TRANSIT_PROFILES = CLEARANCE_PROFILES + ('xuchang_small', 'subject1_actual', 'subject2_actual') + FINAL_PROFILES
 BOUNDARY_CLEARANCE_M = 5.0
+FALLBACK_BOUNDARY_CLEARANCE_M = 3.0
 BOOT_HOME_PROFILES = ('subject1_actual', 'subject2_actual', 'xuchang_small') + FINAL_PROFILES
+
+
+class ClearanceRouteError(ValueError):
+    """有效场地在当前内缩间距下无法连通；允许按显式策略重试较小间距。"""
 
 
 @lru_cache(maxsize=4)
@@ -38,7 +43,7 @@ def clearance_region(boundary, distance_m, holes=()):
         raise ValueError('带扣除区的任务边界无效')
     region = polygon.buffer(-float(distance_m) - 0.02, join_style=2)
     if region.is_empty or not region.is_valid or region.geom_type != 'Polygon':
-        raise ValueError('任务区域内缩后没有连通的安全航行区域，无法满足边界间距')
+        raise ClearanceRouteError('任务区域内缩后没有连通的安全航行区域，无法满足边界间距')
     return region
 
 
@@ -72,10 +77,10 @@ def clearance_routes(boundary, departure, targets, distance_m, *, holes=(), allo
                 if (intersection.geom_type == 'LineString' and not intersection.is_empty
                         and intersection.distance(Point(candidate)) <= 2e-5):
                     return candidate
-        raise ValueError('无法通过单一连接段进入内缩安全区，请调整起降点或侦察航点')
+        raise ClearanceRouteError('无法通过单一连接段进入内缩安全区，请调整起降点或侦察航点')
 
     if not allow_target_connectors and any(not safe.covers(Point(p)) for p in targets):
-        raise ValueError('侦察航点距离任务边界不足要求的安全间距')
+        raise ClearanceRouteError('侦察航点距离任务边界不足要求的安全间距')
     start = gateway(departure, allow_outside=True)
     ends = [gateway(point) for point in targets]
     # 包含内环顶点的可见图，直线只有完全位于内缩后的可飞区才可用。
@@ -102,7 +107,7 @@ def clearance_routes(boundary, departure, targets, distance_m, *, holes=(), allo
     paths = []
     for node in range(1 + len(vertices), len(nodes)):
         if node not in distances:
-            raise ValueError('侦察航点与起降点在安全区域内无法连通')
+            raise ClearanceRouteError('侦察航点与起降点在安全区域内无法连通')
         chain = [nodes[node]]
         while node:
             node = previous[node]

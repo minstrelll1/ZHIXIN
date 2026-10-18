@@ -153,6 +153,7 @@ class CompetitionOrchestrator:
         prepared_plan: Optional[Dict[str, Any]] = None,
         recognition_selection: Optional[Dict[str, Any]] = None,
         fixed_targets: Optional[Dict[str, Any]] = None,
+        excluded_uavs: Optional[Dict[str, str]] = None,
     ) -> Dict[str, Any]:
         with self._lock:
             if self._mission and self._mission.phase not in (
@@ -504,6 +505,7 @@ class CompetitionOrchestrator:
                 planned_uavs=planned_uavs,
                 search_area=area,
                 prepared_plan=copy.deepcopy(prepared_plan.get("prepared_plan")) if prepared_plan else None,
+                excluded_uavs=dict(excluded_uavs or {}),
             )
             with self._telemetry_lock:
                 for telemetry in self._telemetry.values():
@@ -663,14 +665,14 @@ class CompetitionOrchestrator:
                 per_uav["system"] = [
                     "production_config_confirmed is false; live takeoff is locked"
                 ]
-            if self._mission is not None and not self.active_uav_ids:
-                # A disconnected fleet may still be planned so the operator can
+            if self._mission is not None and not self._mission.uavs:
+                # A fleet with no eligible aircraft may still be planned so the operator can
                 # review the complete six-UAV solution.  It must never pass
                 # preflight or accidentally transition into flight execution.
                 per_uav.setdefault("system", []).append(
-                    "no UAV is connected; this mission is planning-only"
+                    "no UAV participates; this mission is planning-only"
                 )
-            for uav_id in self.active_uav_ids:
+            for uav_id in (self._mission.uavs if self._mission is not None else self.active_uav_ids):
                 failures: List[str] = []
                 notices: List[str] = []
                 telemetry = latest.get(uav_id)
@@ -807,7 +809,7 @@ class CompetitionOrchestrator:
                     },
                 )
             self._confirmation_token = None
-            self._event("takeoff_commanded", uav_ids=self.active_uav_ids)
+            self._event("takeoff_commanded", uav_ids=list(self._mission.uavs))
             self._save()
             return self.snapshot()
 
@@ -1072,11 +1074,12 @@ class CompetitionOrchestrator:
                     ):
                         acknowledged.append(uav_id)
                 dispatch_status = {
-                    "mode": "planning_only" if not self.active_uav_ids else "assigned",
+                    "mode": "planning_only" if not self._mission.uavs else "assigned",
                     "planned_uav_ids": sorted(self._mission.planned_uavs),
-                    "assigned_uav_ids": sorted(self.active_uav_ids),
+                    "assigned_uav_ids": sorted(self._mission.uavs),
                     "acknowledged_uav_ids": sorted(acknowledged),
                     "ack_required_before_takeoff": True,
+                    "excluded_uavs": dict(self._mission.excluded_uavs),
                 }
             return {
                 "live_mode": self.live_mode,

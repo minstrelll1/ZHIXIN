@@ -217,7 +217,7 @@ class OrchestratorTest(unittest.TestCase):
         prepared = self.backend.prepare_takeoff()
         self.assertFalse(prepared["ready"])
         self.assertIn(
-            "no UAV is connected; this mission is planning-only",
+            "no UAV participates; this mission is planning-only",
             prepared["preflight"]["failures"]["system"],
         )
 

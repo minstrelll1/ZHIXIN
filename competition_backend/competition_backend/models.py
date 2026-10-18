@@ -105,6 +105,7 @@ class MissionRuntime:
     search_area: Optional[Dict[str, Any]] = None
     prepared_plan: Optional[Dict[str, Any]] = None
     events: List[Dict[str, Any]] = field(default_factory=list)
+    excluded_uavs: Dict[str, str] = field(default_factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
         # Task/plan payloads are JSON data. Copy their containers directly instead
