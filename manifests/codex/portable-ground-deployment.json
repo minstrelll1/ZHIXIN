@@ -2,9 +2,9 @@
   "schema_version": 1,
   "repository": "minstrelll1/ZHIXIN",
   "branch": "codex/portable-ground-deployment",
-  "commit": "ec1b9693a38eae4e1d21f6f3c1b48c34e35c5d9d",
-  "tree_sha": "e68eff1ec34913d641c293058a9adf730aa3071a",
-  "file_count": 452,
+  "commit": "1fcc636b74a52b74195126d83ce287f0d4a2560d",
+  "tree_sha": "c3c8c99af906361027a1f10086b1ea6f6b0b3082",
+  "file_count": 641,
   "files": [
     {
       "path": ".editorconfig",
@@ -94,8 +94,8 @@
       "path": "README.md",
       "type": "blob",
       "mode": "100644",
-      "sha": "2c9cdcfbb4b8a3eccc6dd82acbe135d1f5c1bb9b",
-      "size": 23855
+      "sha": "b6f7d94f293493066dfba8b5c701eb46baca48dd",
+      "size": 24593
     },
     {
       "path": "SU17地面端与机载端启动指令.txt",
@@ -136,8 +136,8 @@
       "path": "competition_backend/competition_backend/api.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "cbe81bf51af6adf102397afec291926c74378cbc",
-      "size": 115083
+      "sha": "0b4e0e29c28445f944bd2c2f6d2fe34165fb7b36",
+      "size": 117158
     },
     {
       "path": "competition_backend/competition_backend/assignment_protocol.py",
@@ -255,8 +255,8 @@
       "path": "competition_backend/competition_backend/config.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "70618f2388df38131cef132fa33a3914302dfd48",
-      "size": 2534
+      "sha": "09a275dafdb4b228f862d07c2907e9e1c1d1a1eb",
+      "size": 2633
     },
     {
       "path": "competition_backend/competition_backend/dalian_nanshan_area.json",
@@ -292,6 +292,20 @@
       "mode": "100644",
       "sha": "766b80192f778ac8760a85f58264e0ec6dd6b029",
       "size": 732868
+    },
+    {
+      "path": "competition_backend/competition_backend/final_scenes.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "a53324684a62e21e916d24c4a6b75dad11e9a4cc",
+      "size": 1956
+    },
+    {
+      "path": "competition_backend/competition_backend/final_scenes_prepared.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "56659e86ed2f20f82b2c962f79dab07406a1a8b9",
+      "size": 385284
     },
     {
       "path": "competition_backend/competition_backend/fixed_gps_scene.py",
@@ -360,8 +374,8 @@
       "path": "competition_backend/competition_backend/orchestrator.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "e130dca3c006a697540b020313d59208fe8d878d",
-      "size": 58419
+      "sha": "c07a29759536fe3544feadec6af7d4135c6e490a",
+      "size": 61868
     },
     {
       "path": "competition_backend/competition_backend/pcl_octree.py",
@@ -409,15 +423,15 @@
       "path": "competition_backend/competition_backend/program_manager.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "72e3d9c1d74a2f1f525c64111d32d2e20ec9a50e",
-      "size": 30307
+      "sha": "619ff3320523862b6dc331bb99908d2c69f5e750",
+      "size": 32335
     },
     {
       "path": "competition_backend/competition_backend/prometheus_connection.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "6032b6dbd82522936a4b4b9f95e57604bff12c75",
-      "size": 9373
+      "sha": "6abba75a7b37ec403f3a3e9ebb5b7fde3faacf03",
+      "size": 9324
     },
     {
       "path": "competition_backend/competition_backend/recognition_settings.py",
@@ -514,8 +528,8 @@
       "path": "competition_backend/competition_backend/subject1_reporting.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "8e0631d6793cf1f91580cc33b003c8a0dabc0b37",
-      "size": 30224
+      "sha": "9f3bc6b8daa6454f2d7bdd0061e35fabbfbc5e4e",
+      "size": 30253
     },
     {
       "path": "competition_backend/competition_backend/subject2_actual_prepared.json",
@@ -556,8 +570,8 @@
       "path": "competition_backend/competition_backend/task_region.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "69c840fdaedc32fa2a986ad1143a515044f9fc3f",
-      "size": 2976
+      "sha": "3c3b1a98b99de9178c68295b737f8d7198d864de",
+      "size": 3017
     },
     {
       "path": "competition_backend/competition_backend/tcp_adapter.py",
@@ -581,11 +595,18 @@
       "size": 25906
     },
     {
+      "path": "competition_backend/competition_backend/transit_preferences.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "2199cfb760765f487f31b67af3c672cd3a5481bd",
+      "size": 10362
+    },
+    {
       "path": "competition_backend/competition_backend/transit_routes.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "fd1dba3a58958852302db81813674f11ab63f79c",
-      "size": 27431
+      "sha": "ad455e9af73606c82e37d4a1d8e1e9cbe80fbe8f",
+      "size": 25531
     },
     {
       "path": "competition_backend/competition_backend/web/competition_esri_20170724.jpg",
@@ -605,8 +626,8 @@
       "path": "competition_backend/competition_backend/web/index.html",
       "type": "blob",
       "mode": "100644",
-      "sha": "5f6beb00436344944ec62e640df942416407be15",
-      "size": 176045
+      "sha": "5004aceca418ba230ca3c5104242f3042fd559f1",
+      "size": 179562
     },
     {
       "path": "competition_backend/competition_backend/web/military_preview.html",
@@ -619,8 +640,8 @@
       "path": "competition_backend/competition_backend/web/terrain_basemap.js",
       "type": "blob",
       "mode": "100644",
-      "sha": "355c3a4220a0f21ae5c0fe801a2e26ea4435032e",
-      "size": 8741
+      "sha": "2b04ee8708aa8671bc42f6e4f9109e25e970a6e0",
+      "size": 9109
     },
     {
       "path": "competition_backend/competition_backend/xuchang_small_area.json",
@@ -668,8 +689,8 @@
       "path": "competition_backend/config/competition.example.json",
       "type": "blob",
       "mode": "100644",
-      "sha": "6c99e72f1d1fa0f7e1e37cc2dcabcbeb4c8fbba6",
-      "size": 4824
+      "sha": "00694b019a7476d4c467fac5c98414f14101c79d",
+      "size": 5476
     },
     {
       "path": "competition_backend/pyproject.toml",
@@ -712,6 +733,13 @@
       "mode": "100644",
       "sha": "3c82822477f6a3b708fcede1f0e82e4d07fe870a",
       "size": 5153
+    },
+    {
+      "path": "competition_backend/tests/test_ascending_altitudes.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "a9704983306184d3952d8164d226df511cbe4eb3",
+      "size": 4703
     },
     {
       "path": "competition_backend/tests/test_auto_takeoff_preflight.py",
@@ -812,6 +840,13 @@
       "size": 1786
     },
     {
+      "path": "competition_backend/tests/test_final_scenes.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "ff50c407817f8f850a30c1b0c66fd013765e0b01",
+      "size": 22028
+    },
+    {
       "path": "competition_backend/tests/test_fixed_gps_scene.py",
       "type": "blob",
       "mode": "100644",
@@ -910,6 +945,13 @@
       "size": 5121
     },
     {
+      "path": "competition_backend/tests/test_multilayer_dispatch.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "e79ab1ff55a4add9fec605317f031b281c9ef1c9",
+      "size": 11456
+    },
+    {
       "path": "competition_backend/tests/test_offline_coverage_projection.py",
       "type": "blob",
       "mode": "100644",
@@ -934,8 +976,8 @@
       "path": "competition_backend/tests/test_orchestrator.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "84e200ecf37a1ed2dbb54dc6ea62f550dcca5067",
-      "size": 37654
+      "sha": "9b68964476e147f6d9d7dbe08d637f21aef4860a",
+      "size": 37717
     },
     {
       "path": "competition_backend/tests/test_peer_polling.py",
@@ -976,8 +1018,8 @@
       "path": "competition_backend/tests/test_program_boot.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "4ce0e3dbde13cf59332136467f0c5c65a032a726",
-      "size": 13589
+      "sha": "19d5dad19aff1d87c372d3033986ad4735d43eac",
+      "size": 22441
     },
     {
       "path": "competition_backend/tests/test_program_controls.py",
@@ -997,8 +1039,8 @@
       "path": "competition_backend/tests/test_program_manager.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "b0f6bede730d473be5b61c221650aa33241f4e4f",
-      "size": 20990
+      "sha": "975f700cccd4adb7e1be9bf5e61516fc0f9df8eb",
+      "size": 24144
     },
     {
       "path": "competition_backend/tests/test_program_stop.py",
@@ -1011,8 +1053,8 @@
       "path": "competition_backend/tests/test_prometheus_connection.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "56916b26ea3c8ab72f865ac6577172f83a386e54",
-      "size": 11833
+      "sha": "2dd0625cf6179db03c56e2574fcbc723c72330fe",
+      "size": 12521
     },
     {
       "path": "competition_backend/tests/test_recognition_categories.py",
@@ -1081,8 +1123,8 @@
       "path": "competition_backend/tests/test_subject1_dedup_rules.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "b597a248ff58da4bc41a53e052568637ad8f8ac0",
-      "size": 16897
+      "sha": "93de87c3723cd482d087bced0a19759ade388f3e",
+      "size": 16899
     },
     {
       "path": "competition_backend/tests/test_subject1_reporting.py",
@@ -1179,15 +1221,15 @@
       "path": "competition_backend/tests/test_xuchang_boot_homes.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "493b9d4ee6ddb52d92a24e6b2783567c954b0d5d",
-      "size": 10292
+      "sha": "507d8addfe1e68c89e3b168be06f41de014a623c",
+      "size": 10337
     },
     {
       "path": "competition_backend/tests/test_xuchang_small_scene.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "c2bda96ae9bc28578e6fa2cda6058f281b2a5510",
-      "size": 21182
+      "sha": "50c912877e314bbe4746eaa38870432b87e6a741",
+      "size": 21268
     },
     {
       "path": "competition_backend/tests/test_xuchang_transit_lanes.py",
@@ -1200,8 +1242,8 @@
       "path": "competition_backend/tests/test_xuchang_transit_lanes_integration.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "1c1074357d27da131fdae16fb9ae8cdf86de28f1",
-      "size": 10488
+      "sha": "50fab531eab5957dca7c0ec3a0eae05609842da2",
+      "size": 10524
     },
     {
       "path": "competition_development.code-workspace",
@@ -1244,6 +1286,13 @@
       "mode": "100644",
       "sha": "7e024c12decbbf0953c933c1c187dec03a50cccb",
       "size": 6509
+    },
+    {
+      "path": "competition_shared/mission_layers.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "3d5eb84fbd0dc589026e69e3723f48e73f08e1f6",
+      "size": 6068
     },
     {
       "path": "competition_shared/navigation.py",
@@ -1298,8 +1347,8 @@
       "path": "competition_shared/target_motion.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "9bcdb805342179dc4637b648ad1c91747575583d",
-      "size": 3997
+      "sha": "08e3f14cbaf46f7e1deb9a1eb6b4472e4cefc9d8",
+      "size": 4598
     },
     {
       "path": "competition_shared/target_quality.py",
@@ -1326,8 +1375,8 @@
       "path": "config/fixed_targets.json",
       "type": "blob",
       "mode": "100644",
-      "sha": "201083f6bfa1f41626d753dd41f6e885ae85b617",
-      "size": 1007
+      "sha": "2228d34f1f85923a845b77d2fe5fa5762a3261eb",
+      "size": 123
     },
     {
       "path": "config/fleet.json",
@@ -1340,7 +1389,7 @@
       "path": "config/onboard_programs.json",
       "type": "blob",
       "mode": "100644",
-      "sha": "b7c3051f72606bdce612ac6514720c0afa63914c",
+      "sha": "463ded4d94db163593f9cb7b94fe1134f13ed74f",
       "size": 1782
     },
     {
@@ -1368,15 +1417,22 @@
       "path": "docs/competition_plans_3d.html",
       "type": "blob",
       "mode": "100644",
-      "sha": "16833ee7fce768713c2e821392015b4b6511f78a",
-      "size": 729213
+      "sha": "88a06246f8b1e50c14fd35821be217fef0502042",
+      "size": 1028166
+    },
+    {
+      "path": "docs/competition_plans_legacy_3d.html",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "78adb83d9cc6a135fced37db8895e6dfe2c52a02",
+      "size": 3294114
     },
     {
       "path": "docs/completed_targets_protocol.md",
       "type": "blob",
       "mode": "100644",
-      "sha": "1e2073446f8fb29c754040976cd27bffe4955aa5",
-      "size": 4449
+      "sha": "e6e880ed7ff7389047f7bb56f67998394987ab98",
+      "size": 5423
     },
     {
       "path": "docs/dual_platform_deployment.md",
@@ -1389,8 +1445,8 @@
       "path": "docs/external_transit_routes.md",
       "type": "blob",
       "mode": "100644",
-      "sha": "c0bb671d8409fd81ae9bbcb696bcb8aa5d6291da",
-      "size": 9479
+      "sha": "243a6696ad7fc28bba346bf570ae04d759be75fa",
+      "size": 10381
     },
     {
       "path": "docs/files/satellite.jpg",
@@ -1398,6 +1454,167 @@
       "mode": "100644",
       "sha": "a491dd021bcfdc2cce5f2d4e40dc4442950aeadf",
       "size": 894146
+    },
+    {
+      "path": "docs/final_scenes_integration.txt",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "c74712be1e8629eee2b5bb1018940ad8556825d4",
+      "size": 12562
+    },
+    {
+      "path": "docs/final_scenes_program_b_examples/final_scene_1/planning_preview.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "44e3c48e71b53c8ae808c34086fb52183338c392",
+      "size": 642483
+    },
+    {
+      "path": "docs/final_scenes_program_b_examples/final_scene_1/uav1.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "e8527f7e8a243bbd8e741645c311654d871d76bd",
+      "size": 54926
+    },
+    {
+      "path": "docs/final_scenes_program_b_examples/final_scene_1/uav2.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "153eee628d128d16eed31877231dbcc2361bb3b2",
+      "size": 55093
+    },
+    {
+      "path": "docs/final_scenes_program_b_examples/final_scene_1/uav3.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "e92dcbf80c7608dae9023c2fd5b4cdd04c933e58",
+      "size": 54758
+    },
+    {
+      "path": "docs/final_scenes_program_b_examples/final_scene_1/uav4.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "002be2a118d36fba40fa3bba21def19cde375fe8",
+      "size": 55773
+    },
+    {
+      "path": "docs/final_scenes_program_b_examples/final_scene_1/uav5.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "42f3598959bc9212de38c2515358024ff3921d8a",
+      "size": 77805
+    },
+    {
+      "path": "docs/final_scenes_program_b_examples/final_scene_1/uav6.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "98a7200883b30ed8b8544540bd8bf05223de701c",
+      "size": 55381
+    },
+    {
+      "path": "docs/final_scenes_program_b_examples/final_scene_2/planning_preview.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "f21216d139220576b74197e43b129232c1f88688",
+      "size": 465732
+    },
+    {
+      "path": "docs/final_scenes_program_b_examples/final_scene_2/uav1.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "5421046322e106e9307ee5ede03aad59bfdee79f",
+      "size": 34504
+    },
+    {
+      "path": "docs/final_scenes_program_b_examples/final_scene_2/uav2.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "7093435479128495288239413421b5640d457f26",
+      "size": 42950
+    },
+    {
+      "path": "docs/final_scenes_program_b_examples/final_scene_2/uav3.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "4d6dfdb222bd90b16ee93a3ca2b3e8418602d04a",
+      "size": 43702
+    },
+    {
+      "path": "docs/final_scenes_program_b_examples/final_scene_2/uav4.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "0475be5d7a529af96ea03cf6c9ff38a0d6c58318",
+      "size": 43670
+    },
+    {
+      "path": "docs/final_scenes_program_b_examples/final_scene_2/uav5.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "c535b90181cccbeb569ffb7ee58d0b20784c9c8b",
+      "size": 42732
+    },
+    {
+      "path": "docs/final_scenes_program_b_examples/final_scene_2/uav6.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "a7b057f1a3b5400a05ed4fcc961742be0e0afeb0",
+      "size": 44132
+    },
+    {
+      "path": "docs/final_scenes_program_b_examples/index.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "67721efa4dd08b82f4e838e8e4f58869e44c287f",
+      "size": 7079
+    },
+    {
+      "path": "docs/final_scenes_program_b_examples/xuchang_small_2/planning_preview.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "44b093191b067199dbbdc8a388f34db86cde1540",
+      "size": 410007
+    },
+    {
+      "path": "docs/final_scenes_program_b_examples/xuchang_small_2/uav1.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "590a8d683460210c00830bf91e6c0a8a6fca7334",
+      "size": 41535
+    },
+    {
+      "path": "docs/final_scenes_program_b_examples/xuchang_small_2/uav2.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "80ae728064ed98fde4ff5ab724234c7e32691aa1",
+      "size": 45451
+    },
+    {
+      "path": "docs/final_scenes_program_b_examples/xuchang_small_2/uav3.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "8f6fa47d18cdc8cb509cf66cb715a20c44f9cdab",
+      "size": 45222
+    },
+    {
+      "path": "docs/final_scenes_program_b_examples/xuchang_small_2/uav4.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "514e8b433593c95c50442d168f4a118ec05d54a1",
+      "size": 46555
+    },
+    {
+      "path": "docs/final_scenes_program_b_examples/xuchang_small_2/uav5.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "6e3bd41e684e3469d76cebfed17a5246333b68bf",
+      "size": 46791
+    },
+    {
+      "path": "docs/final_scenes_program_b_examples/xuchang_small_2/uav6.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "c921b6195eda4d35fd3c64288a9f8f3e7c0baf43",
+      "size": 43382
     },
     {
       "path": "docs/gps_map_display.md",
@@ -1449,11 +1666,1061 @@
       "size": 3493
     },
     {
+      "path": "docs/planning_preview.html",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "88a06246f8b1e50c14fd35821be217fef0502042",
+      "size": 1028166
+    },
+    {
+      "path": "docs/planning_preview_data.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "8358707c1c1938abef5b3d9e863b3edb356d9c01",
+      "size": 883624
+    },
+    {
+      "path": "docs/planning_results/planning_results/README_使用说明.txt",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "9681b6ec529b88083ee73ad037486be2ac15442b",
+      "size": 5630
+    },
+    {
+      "path": "docs/planning_results/planning_results/SHA256SUMS.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "5aac1ec40c9fdeb9d5685f9a440b6fea3b8879cc",
+      "size": 5069
+    },
+    {
+      "path": "docs/planning_results/planning_results/SHA256SUMS.txt",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "472860bd012f78502da6164d27e3a9d0faf8b2f2",
+      "size": 4319
+    },
+    {
+      "path": "docs/planning_results/planning_results/boundary_sensitivity.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "593d459499240bd2290127e989a7203916c5307b",
+      "size": 2240
+    },
+    {
+      "path": "docs/planning_results/planning_results/build_exclusions_review.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "363f40e7719dd0993aa97252d09b8f92a29e9892",
+      "size": 16683
+    },
+    {
+      "path": "docs/planning_results/planning_results/build_preview.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "c81c09df7efdca35b7250ff3817be68562f3952c",
+      "size": 32128
+    },
+    {
+      "path": "docs/planning_results/planning_results/build_report.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "1aad82a42ada17825c37d83f75ac56267a1c2c6e",
+      "size": 16250
+    },
+    {
+      "path": "docs/planning_results/planning_results/candidate_comparison.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "f0a9586db83a166e7a23815cbe5ad7cd4798d5ff",
+      "size": 20057
+    },
+    {
+      "path": "docs/planning_results/planning_results/candidates/coverage_priority.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "4a403ddfe9131099c8adb2a10570df104614d9a2",
+      "size": 7665640
+    },
+    {
+      "path": "docs/planning_results/planning_results/candidates/more_reserve.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "27ec1bf985b104459a5dade9aec8645b63245c39",
+      "size": 7789823
+    },
+    {
+      "path": "docs/planning_results/planning_results/candidates/more_reserve_validation.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "8a235abedceee5da588bca0234ca4e7cf8c76f0d",
+      "size": 36684
+    },
+    {
+      "path": "docs/planning_results/planning_results/exclusions_draft.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "e73cce681b32fa1968c5cf72447dc4905e9ae795",
+      "size": 10724
+    },
+    {
+      "path": "docs/planning_results/planning_results/exclusions_notes.txt",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "c2ae46f516f13a5fa5b65ab4f7934ace0d8ef5d9",
+      "size": 3823
+    },
+    {
+      "path": "docs/planning_results/planning_results/exclusions_review.png",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "60108ad6b2fd2f7ccce2dbc7e112650a5e523487",
+      "size": 773879
+    },
+    {
+      "path": "docs/planning_results/planning_results/feasibility_bounds.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "29027f02a31b8ed7dc94ce1e61cbf898c765d2b1",
+      "size": 7784
+    },
+    {
+      "path": "docs/planning_results/planning_results/inputs/00_使用说明.txt",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "15eaf725d8bf74813c87e211d1afcd5d248d0b04",
+      "size": 2942
+    },
+    {
+      "path": "docs/planning_results/planning_results/inputs/01_完整提示词.txt",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "da834db71eb9a41abe362177949942579ad50968",
+      "size": 22784
+    },
+    {
+      "path": "docs/planning_results/planning_results/inputs/02_规划输入.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "3d690140cc8988ac7b12f77dfe7804ac8cbb76ce",
+      "size": 56741
+    },
+    {
+      "path": "docs/planning_results/planning_results/inputs/03_规划输出.schema.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "b10672da44b95b6e0b879b0cfa478c75a21f0853",
+      "size": 24827
+    },
+    {
+      "path": "docs/planning_results/planning_results/inputs/04_原始附件.docx",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "3e3393f727e0e18014b4f1a7102c16ed77aa29f2",
+      "size": 70975
+    },
+    {
+      "path": "docs/planning_results/planning_results/inputs/05_历史底图.jpg",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "a491dd021bcfdc2cce5f2d4e40dc4442950aeadf",
+      "size": 894146
+    },
+    {
+      "path": "docs/planning_results/planning_results/inputs/06_输入数据核验.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "b71fcd80199bfd8c4cabc46bc7082bdd70d047f5",
+      "size": 1455
+    },
+    {
+      "path": "docs/planning_results/planning_results/inputs/07_文件校验.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "c3628995852d2bf4dff8c82840184ff428c9c166",
+      "size": 730
+    },
+    {
+      "path": "docs/planning_results/planning_results/mission_summary.csv",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "62a17844a4102bd2707e0c3d9e8764b04dc6d267",
+      "size": 5392
+    },
+    {
+      "path": "docs/planning_results/planning_results/package_results.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "9a6e7f612b3e780be50dd2a6558d1923ebfff945",
+      "size": 2856
+    },
+    {
+      "path": "docs/planning_results/planning_results/planner.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "8b50aeb8fee4fa49c8ed1d815e05c3e67641f523",
+      "size": 37240
+    },
+    {
+      "path": "docs/planning_results/planning_results/planner_config.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "cda1a0bef8ec9a3ee65433a43b7d926f836bbe42",
+      "size": 1752
+    },
+    {
+      "path": "docs/planning_results/planning_results/planning_preview.html",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "26d85591b11f81887a991a0168d31b433aa9b900",
+      "size": 2461768
+    },
+    {
+      "path": "docs/planning_results/planning_results/planning_report.txt",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "348b7112a426bd904e5f842448aea517a7f5327a",
+      "size": 24167
+    },
+    {
+      "path": "docs/planning_results/planning_results/planning_result.geojson",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "cf562cb9c2643de5a9e3cad145cfdfeb4589c8c1",
+      "size": 5672681
+    },
+    {
+      "path": "docs/planning_results/planning_results/planning_result.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "4a403ddfe9131099c8adb2a10570df104614d9a2",
+      "size": 7665640
+    },
+    {
+      "path": "docs/planning_results/planning_results/preview_browser_check.cjs",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "e10e38ac690733406dd54bfae5c24a0d13e3d16e",
+      "size": 8241
+    },
+    {
+      "path": "docs/planning_results/planning_results/preview_evidence/final_scene_1_3d.png",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "f602950d82770c434757c656ac456db70d34780a",
+      "size": 496695
+    },
+    {
+      "path": "docs/planning_results/planning_results/preview_evidence/final_scene_1_top.png",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "4e15a723d9c51e16e697876d63c1245899572784",
+      "size": 446044
+    },
+    {
+      "path": "docs/planning_results/planning_results/preview_evidence/final_scene_2_3d.png",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "45a7252ad22e57aa2867dc8ae08962d5e8300d5e",
+      "size": 618138
+    },
+    {
+      "path": "docs/planning_results/planning_results/preview_evidence/final_scene_2_top.png",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "f50976fafd13fbe3ad866b041da05f131370d708",
+      "size": 578417
+    },
+    {
+      "path": "docs/planning_results/planning_results/preview_evidence/xuchang_small_2_3d.png",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "473899d89cda85db8045664a8e96a06b1c01cc2e",
+      "size": 576577
+    },
+    {
+      "path": "docs/planning_results/planning_results/preview_evidence/xuchang_small_2_top.png",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "3a4da0bebc57fe111b9cab3ff8bd7216cb80f2ed",
+      "size": 524346
+    },
+    {
+      "path": "docs/planning_results/planning_results/preview_notes.txt",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "b82acca51a530a6c65710357ed5e10c7d534d990",
+      "size": 2928
+    },
+    {
+      "path": "docs/planning_results/planning_results/preview_validation_report.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "b7c4b4005c307eb1fb798b6a0bef48cd8ba9f752",
+      "size": 3247
+    },
+    {
+      "path": "docs/planning_results/planning_results/reproducibility_report.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "d022ad8878d413008d15512256900ce9c1924517",
+      "size": 2873
+    },
+    {
+      "path": "docs/planning_results/planning_results/requirements.txt",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "2240c424f6b31c2a7d8a93754b2af4efe37cea97",
+      "size": 63
+    },
+    {
+      "path": "docs/planning_results/planning_results/scan_visits.csv",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "acef5d632b7b84b6eebecdafaf710083459994e2",
+      "size": 28421
+    },
+    {
+      "path": "docs/planning_results/planning_results/test_validator_tamper.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "494756dd589dc456b2ff83f8fc12c30391032412",
+      "size": 5442
+    },
+    {
+      "path": "docs/planning_results/planning_results/validate_plan.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "b384c6340533e1c96d110b45bb413d592cbc9e52",
+      "size": 50436
+    },
+    {
+      "path": "docs/planning_results/planning_results/validation_report.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "eef6acab40bafa51c1974ba89418c2f8bf62ed25",
+      "size": 36575
+    },
+    {
+      "path": "docs/planning_results/planning_results/validator_tamper_report.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "b18ba277acf6ef704cbc2969595acbcd5a2a6183",
+      "size": 1437
+    },
+    {
+      "path": "docs/planning_results/planning_results/waypoints.csv",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "5e8f93b923b7395cd1cabf4849e1cb30d3416a89",
+      "size": 30403
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/README_使用说明.txt",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "586eee754c013025acd29bb501f87934a847862f",
+      "size": 7283
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/SHA256SUMS.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "cf46fbea1544d4bae187ff68e8c8f1292a3a2fd8",
+      "size": 9694
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/SHA256SUMS.txt",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "74baf7150ec0fcfee2488f39e159f1a6656c2420",
+      "size": 8520
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/archive_provenance.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "7e52a3b5aa3791ba32bdc5b8161ea63ca71d0a97",
+      "size": 547
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/build_exclusions_review_v2.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "a0beef2a17872a27eec03829168c87c67ae9e6b4",
+      "size": 11873
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/build_preview.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "4d0424ee481791ebd6a27818331cc22a212fab20",
+      "size": 35178
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/build_report.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "c1bcc0d9419a5d176bc183598ea2689c2f8e69a6",
+      "size": 38340
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/build_return_catalog.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "3613100d6602613f0a4cff73122a7eef34ce1f7e",
+      "size": 18180
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/candidate_comparison.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "7dcf7089bc5672e3d6c042d18d5667eef3554c46",
+      "size": 20074
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/candidates/coverage_priority.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "5e7c8cb818c1c8ddfeae4f669e0cd2af7253987c",
+      "size": 8197282
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/candidates/coverage_priority_redundancy_audit.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "8d901cd737c816c0f2c3e3a5a9e29ddcf2b1bfbc",
+      "size": 105632
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/candidates/coverage_priority_return_selections.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "d6676fa2dc2194da3a751d35627897b281f6e560",
+      "size": 12533
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/candidates/more_reserve.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "bb2fdb9adedb9e34a193001b55c82ca5f96388fb",
+      "size": 8150823
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/candidates/more_reserve_redundancy_audit.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "4f5cfbd31c6b6341f2427336ee1ff68cb6291b2f",
+      "size": 100213
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/candidates/more_reserve_return_selections.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "18c3da61af6195436f7da92c3569e9f274c91eef",
+      "size": 12518
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/candidates/more_reserve_validation.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "153f2137df75814c870e959d1679bc98a2bb3383",
+      "size": 48577
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/exclusions_draft.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "7ed37bfe1c7f542de65f968d31c649e9d7d956ec",
+      "size": 12038
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/exclusions_notes.txt",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "69257707351b21a49efbab60937ea3bd5f57f4f0",
+      "size": 2239
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/exclusions_review.png",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "60ce685767526c4a41902c98dc4c7b73450f5871",
+      "size": 1313638
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/feasibility_bounds.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "e49f7233d96469a6963dfb7af9e613b2b2e41655",
+      "size": 7731
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/input_reproducibility_report.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "0b6db70baa0c206411be13e21a1c401beec74548",
+      "size": 1304
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/inputs/02_规划输入_v2.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "022a2eaf5659f18469540db5e04c4dbabfe1c7b0",
+      "size": 160180
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/inputs/03_规划输出.schema.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "b10672da44b95b6e0b879b0cfa478c75a21f0853",
+      "size": 24827
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/inputs/revision/FILES_SHA256.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "c133c05449b5a2296cb103bf9f216d61f9235ef6",
+      "size": 911
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/inputs/revision/修改方案_发给规划对话.txt",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "d04161d023b8f3f1f18eb5f62c0551fb00ac91b9",
+      "size": 18578
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/inputs/revision/修订需求.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "0d08907e985aa0d399fef4eba4d3f8eb51a8d052",
+      "size": 6770
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/inputs/revision/原方案复验报告.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "f961063155e1c103bb7883bd222fb502592bb6be",
+      "size": 36570
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/inputs/revision/当前程序B双层接口说明.txt",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "9fc94380b440e2b7fab6a8900e1351a3fc2a04fe",
+      "size": 10451
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/inputs/revision/新树林边界_含推导补点.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "3a62d2469483cca4a8ba4866f174f55915ac2778",
+      "size": 2179
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/inputs/revision/树林新旧范围对照.png",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "1d8618e8a9c847aaf38bab79fe81c0f6f341756c",
+      "size": 242044
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/inputs/revision/源文件校验结果.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "665e5af73dc2f16511dcb59ea29a308d7045f631",
+      "size": 2269
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/inputs/revision/独立核查结果.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "0d8361e4942daedb9e720be994fcb9eb226775b2",
+      "size": 27194
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/inputs/revision/阅读说明.txt",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "9bc88daa9994d82144f605d6c3cb8e70411681dc",
+      "size": 610
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/inputs/v1/00_使用说明.txt",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "15eaf725d8bf74813c87e211d1afcd5d248d0b04",
+      "size": 2942
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/inputs/v1/01_完整提示词.txt",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "da834db71eb9a41abe362177949942579ad50968",
+      "size": 22784
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/inputs/v1/02_规划输入.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "3d690140cc8988ac7b12f77dfe7804ac8cbb76ce",
+      "size": 56741
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/inputs/v1/03_规划输出.schema.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "b10672da44b95b6e0b879b0cfa478c75a21f0853",
+      "size": 24827
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/inputs/v1/04_原始附件.docx",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "3e3393f727e0e18014b4f1a7102c16ed77aa29f2",
+      "size": 70975
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/inputs/v1/05_历史底图.jpg",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "a491dd021bcfdc2cce5f2d4e40dc4442950aeadf",
+      "size": 894146
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/inputs/v1/06_输入数据核验.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "b71fcd80199bfd8c4cabc46bc7082bdd70d047f5",
+      "size": 1455
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/inputs/v1/07_文件校验.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "c3628995852d2bf4dff8c82840184ff428c9c166",
+      "size": 730
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/inputs/v1/exclusions_draft_v1.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "e73cce681b32fa1968c5cf72447dc4905e9ae795",
+      "size": 10724
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/inputs/v1/planning_result_v1.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "4a403ddfe9131099c8adb2a10570df104614d9a2",
+      "size": 7665640
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/merge_inputs.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "4bf2763b019996f7cbae94ce4d786eef0c207b17",
+      "size": 24452
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/migration_notes.txt",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "e3ba83ef435e6002ba210ef9a7a418f0d9ec1af9",
+      "size": 3711
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/mission_summary.csv",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "9f5b90b5e889204561bd024662bf7b4304b4c565",
+      "size": 6433
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/package_results.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "c68f45f887d95fd4d0be18d2159160d5c797d631",
+      "size": 4411
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/planner.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "d7c2373de4a10fb427c585891779e6245907dbed",
+      "size": 48217
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/planner_config.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "9fde1ef61bfcfa8711314b560cb014e64ffed087",
+      "size": 3033
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/planning_preview.html",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "43b0a041c1185af36049604703b25247f26f03a1",
+      "size": 1028172
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/planning_report.txt",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "ed0fc0b9b90168caa588ef1a7c90593c6e7f5904",
+      "size": 52018
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/planning_result.geojson",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "bfc7f3845a7df864ccd0341044e71986d836734c",
+      "size": 6072416
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/planning_result.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "5e7c8cb818c1c8ddfeae4f669e0cd2af7253987c",
+      "size": 8197282
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/preview_browser_check.cjs",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "9e90cc2c6e13789085bdc76d8c95da9e3f49b9ea",
+      "size": 9225
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/preview_evidence/final_scene_1_3d.png",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "84cee537d9f6e13892c74d52e454125394550569",
+      "size": 502660
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/preview_evidence/final_scene_1_top.png",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "687c026e9660d1b4615c69d28d78f8e6282a8e8f",
+      "size": 450986
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/preview_evidence/final_scene_2_3d.png",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "9d343df987c4089d7ad8a133dd0d663584e8b8f1",
+      "size": 624398
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/preview_evidence/final_scene_2_return_climb.png",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "1f232aa02ea1ce97577f252f00fef674cf25860d",
+      "size": 347169
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/preview_evidence/final_scene_2_top.png",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "0fb89729238ab1419a7b2c28811b814326cf1cca",
+      "size": 590431
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/preview_evidence/xuchang_small_2_3d.png",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "1eb7f4d3af8cb47a59d1f1bb579d253dc3d710b1",
+      "size": 578530
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/preview_evidence/xuchang_small_2_return_climb.png",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "e88755a894f61e2fe7110fb9686fead5fbf05ca7",
+      "size": 311988
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/preview_evidence/xuchang_small_2_top.png",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "a6d10af74d5a7644251ed9bb3997f3f5c9ff3c13",
+      "size": 527352
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/preview_validation_report.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "922ba0ad381c570e8da06cce506c9c4d3ae40d82",
+      "size": 3605
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/redundancy_audit.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "8d901cd737c816c0f2c3e3a5a9e29ddcf2b1bfbc",
+      "size": 105632
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/report_status.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "c34475119f23cfba1bacba08d6d9025a5554175a",
+      "size": 624
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/reproduce.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "27934b4caa78e90c0e72c27021d82d0c9504ecdf",
+      "size": 3021
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/reproducibility_report.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "93609bc3cc790cbd89796aedec2ea40e0268aa4a",
+      "size": 5721
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/requirements.txt",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "2240c424f6b31c2a7d8a93754b2af4efe37cea97",
+      "size": 63
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/return_catalog.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "67d3c3e9c044d6d30e3342a7788abac495045a4d",
+      "size": 988085
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/return_catalog.schema.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "018eea8206efe47f4ad8a7fada209135510bfd56",
+      "size": 16390
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/return_catalog_negative_tests.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "97ad67f96d51da1222c38f591c948c9cf3724eab",
+      "size": 3037
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/return_catalog_notes.txt",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "881544d257054c5d9f31c0e3add9cc8eef0dc922",
+      "size": 5956
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/return_catalog_validation_report.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "a79f237576da23299d43ab517bb78fccfb55fabd",
+      "size": 7103
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/return_climb_sensitivity.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "eeec422027e3187ba1d76f88098bcd982fdc7d2a",
+      "size": 30588
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/return_selections.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "d6676fa2dc2194da3a751d35627897b281f6e560",
+      "size": 12533
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/revision_diff.csv",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "8f5411c8ba2fb3c0af599fce298008c330a4cb2e",
+      "size": 58793
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/revision_diff.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "1b42113c24e7ecfefb44eaef0952585be15cc6f6",
+      "size": 90226
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/scan_visits.csv",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "673bb8242c13ac2ba57be8c02611e12d701a8a0f",
+      "size": 28053
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/terrain_mask_audit.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "d58d59b71e54f7e21d6c8d859debe67f66bf7ccb",
+      "size": 322154
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/terrain_mask_review.png",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "0b67f58f38b015916d8bbfd7fa915ddeff14d80b",
+      "size": 1301228
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/terrain_sensitivity_results.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "6b4d46d10a263de078c231bb30fad727665bb4b2",
+      "size": 28192
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/test_return_catalog_tamper.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "daf4107865e2622098b5bd0710536b83eb180e46",
+      "size": 4265
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/test_validator_tamper.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "b1ee698a3090a4772554697aca4cd6099d33eafc",
+      "size": 9392
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/topic_mapping.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "d07748c7a93ff7cb2085e108ca76d63228de24fd",
+      "size": 781762
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/validate_plan.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "518b1bad1bb5a35938fec1f43e4cdc9ca2f8cf58",
+      "size": 69295
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/validate_return_catalog.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "2e81b0c0a58e221aa1d0570b0a08f5fee0038da8",
+      "size": 20239
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/validation_report.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "fd0d98efd63df14a592dfa4374846a2d32d3185e",
+      "size": 48487
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/validator_tamper_report.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "ae134abbbf162c6299995aa709b3c5dd3dc39c4e",
+      "size": 2335
+    },
+    {
+      "path": "docs/planning_results_v2/planning_results_v2/waypoints.csv",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "44eee3618c97ec0bb611c6e06b91622dd6d1ace9",
+      "size": 30100
+    },
+    {
       "path": "docs/portable_ground_deployment.md",
       "type": "blob",
       "mode": "100644",
-      "sha": "97f1a7be8db56dd63026c82829c38d841247d560",
-      "size": 4156
+      "sha": "9764082a2a92552c5d77c79aea05a6b0b7c311f5",
+      "size": 5724
+    },
+    {
+      "path": "docs/program_b_layers_handoff_20261017/00_阅读说明.txt",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "0de0a5056297f9e29d27fb523dbad24fb5099e99",
+      "size": 4041
+    },
+    {
+      "path": "docs/program_b_layers_handoff_20261017/01_接口约定.txt",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "169cd0cd251a5d11db81745bce22931a0d9e8ae4",
+      "size": 10452
+    },
+    {
+      "path": "docs/program_b_layers_handoff_20261017/02_双层GPS_六机全部消息.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "3321b3ed8958f969181d17663f79836afc15a388",
+      "size": 166758
+    },
+    {
+      "path": "docs/program_b_layers_handoff_20261017/03_双层GPS_UAV1完整示例.txt",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "8e22664c0fd977def575cd465b2d9663b0682f3c",
+      "size": 14793
+    },
+    {
+      "path": "docs/program_b_layers_handoff_20261017/04_旧单层GPS_六机全部消息.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "ffa8fcd24e0e19c89962c17d6e6e32532cff156f",
+      "size": 150015
+    },
+    {
+      "path": "docs/program_b_layers_handoff_20261017/05_旧单层GPS_UAV1完整示例.txt",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "af600f99aaa72bdacdab6a2f03c50fe0fba4bf13",
+      "size": 13872
+    },
+    {
+      "path": "docs/program_b_layers_handoff_20261017/06_双层XYZ_六机全部消息.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "1e08ee449a4dd0f331b4ac9fe8baab1fa09c7225",
+      "size": 149670
+    },
+    {
+      "path": "docs/program_b_layers_handoff_20261017/07_双层XYZ_UAV1完整示例.txt",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "113bd3239e5db0875df9da1fc5cbdf00ff1e938e",
+      "size": 12701
+    },
+    {
+      "path": "docs/program_b_layers_handoff_20261017/FILES_SHA256.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "1d8f6cddee44e62fef019fd03442e494a37e0815",
+      "size": 846
+    },
+    {
+      "path": "docs/program_b_subject2_layers.txt",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "4f577c8a9892fb0d24d429f891472588be984c02",
+      "size": 10649
+    },
+    {
+      "path": "docs/program_b_subject2_layers_example.json",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "e2499795243e91f847ca35ea3a3a74fc03518932",
+      "size": 130500
     },
     {
       "path": "docs/program_b_telemetry.md",
@@ -1606,8 +2873,8 @@
       "path": "docs/subject1_reporting.md",
       "type": "blob",
       "mode": "100644",
-      "sha": "49da5428e14e71ec7decbbe1a90b9dca6745ddfc",
-      "size": 15632
+      "sha": "62bd308f18a046e5b1c6c2419cea6c7e4898aa0c",
+      "size": 16872
     },
     {
       "path": "docs/subject2_actual_coverage.png",
@@ -2068,8 +3335,8 @@
       "path": "src/su17_competition_executor/launch/onboard_task_executor.launch",
       "type": "blob",
       "mode": "100644",
-      "sha": "a48ff7c6c4eeec299d43f77bae1bfaa149e56bbb",
-      "size": 3267
+      "sha": "065cff380b42bec41a61f43d305a4a92b7a647dc",
+      "size": 3409
     },
     {
       "path": "src/su17_competition_executor/package.xml",
@@ -2082,8 +3349,8 @@
       "path": "src/su17_competition_executor/scripts/onboard_task_executor.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "5bdd13abe2f9d78717f7784214520f618284fa40",
-      "size": 114892
+      "sha": "0d1b4ae9100091f3b5e0917392b32430bc4f701d",
+      "size": 119015
     },
     {
       "path": "src/su17_competition_executor/setup.py",
@@ -2131,8 +3398,8 @@
       "path": "src/su17_competition_executor/src/su17_competition_executor/task_protocol.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "f3c6e43f93015f5108ea61e519cd951432a8046b",
-      "size": 7736
+      "sha": "0fe494c5fab6746b92ea7c335de8ab074297a94c",
+      "size": 8025
     },
     {
       "path": "src/su17_competition_executor/src/su17_competition_executor/tcp_link.py",
@@ -2145,8 +3412,8 @@
       "path": "src/su17_competition_executor/src/su17_competition_executor/transit_protocol.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "b3df84e7feff070bafb4358171c53268b1d7d822",
-      "size": 6213
+      "sha": "952c81d565be3757f5f435471657376f6f1ea995",
+      "size": 6675
     },
     {
       "path": "src/su17_competition_executor/test/test_automatic_takeoff.py",
@@ -2166,8 +3433,8 @@
       "path": "src/su17_competition_executor/test/test_executor_autonomy.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "27116266c33da7ad64139a05475e7931986b8c47",
-      "size": 38657
+      "sha": "c514ec8ba5a9e27b6849940bdda0774a5706c01b",
+      "size": 38877
     },
     {
       "path": "src/su17_competition_executor/test/test_fixed_target_publisher.py",
@@ -2250,8 +3517,8 @@
       "path": "src/su17_image_transfer/README.md",
       "type": "blob",
       "mode": "100644",
-      "sha": "17944a07f286b7f0abde9b21ea8b8aa4ae1602a1",
-      "size": 12871
+      "sha": "9c041d90cae4122f440fdbb1bee5776c54d65a8d",
+      "size": 12986
     },
     {
       "path": "src/su17_image_transfer/config/image_transfer.yaml",
@@ -2278,8 +3545,8 @@
       "path": "src/su17_image_transfer/msg/CompletedTarget.msg",
       "type": "blob",
       "mode": "100644",
-      "sha": "25aa6a756d1fcc0259bd2dd612efa45d9a68498b",
-      "size": 589
+      "sha": "1b2f2fa10695882e5ef35cb74d8a7db7da465f7a",
+      "size": 710
     },
     {
       "path": "src/su17_image_transfer/msg/CompletedTargetArray.msg",
@@ -2334,8 +3601,8 @@
       "path": "src/su17_image_transfer/src/su17_image_transfer/frame_cache.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "828f309735b9a752f69f1dd8b3f46fa236febdfc",
-      "size": 9534
+      "sha": "d94e2d63803fc3ba10a3344e4ecc53a0d3d6c0b2",
+      "size": 9830
     },
     {
       "path": "src/su17_image_transfer/src/su17_image_transfer/protocol.py",
@@ -2355,15 +3622,15 @@
       "path": "src/su17_image_transfer/src/su17_image_transfer/submission.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "c672350684c6d0ba831a476370018aa887f46410",
-      "size": 21830
+      "sha": "5109c669ecb607651c12a1fd548ec6891ac7aa4d",
+      "size": 23554
     },
     {
       "path": "src/su17_image_transfer/test/test_completed_target_v2.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "ea169e0add6768199542923b7a4dc556cb732385",
-      "size": 3184
+      "sha": "bca9854a70bf8305028a814ac7bbd27eb8b25649",
+      "size": 3868
     },
     {
       "path": "src/su17_image_transfer/test/test_final_reconciliation.py",
@@ -2415,6 +3682,13 @@
       "size": 915
     },
     {
+      "path": "src/su17_image_transfer/test/test_static_nearest_position.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "d41443a385b142d3b15a530c46439f431509941c",
+      "size": 7747
+    },
+    {
       "path": "src/su17_image_transfer/test/test_submission.py",
       "type": "blob",
       "mode": "100644",
@@ -2432,8 +3706,8 @@
       "path": "src/su17_image_transfer/test/test_target_motion.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "473c5969fbd07c4a01a001bbea81dda6b6eb005d",
-      "size": 9340
+      "sha": "e1f1c0ef3cff335f65e4e828c6abac2e6e0de639",
+      "size": 10813
     },
     {
       "path": "src/su17_image_transfer/test/test_target_time.py",
@@ -2597,6 +3871,13 @@
       "size": 40691
     },
     {
+      "path": "tools/build_final_scene_handoff.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "a9462f78b8dd9d481035e28cbba63684047352e2",
+      "size": 5062
+    },
+    {
       "path": "tools/build_ground_app.ps1",
       "type": "blob",
       "mode": "100644",
@@ -2618,11 +3899,18 @@
       "size": 1187
     },
     {
+      "path": "tools/build_planning_preview.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "040eed1845fb38645f3dd35341f688a6bea3a9d8",
+      "size": 10342
+    },
+    {
       "path": "tools/build_plans_3d.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "08e8d506377185631188e317862422273cc096bc",
-      "size": 22527
+      "sha": "763c83a13538a708b2a0d2fffe16c861a1ed9591",
+      "size": 26613
     },
     {
       "path": "tools/build_subject1_actual_overview.py",
@@ -2721,6 +4009,13 @@
       "mode": "100644",
       "sha": "51723714aa674c2224b0a2c8da00608c11634637",
       "size": 5144
+    },
+    {
+      "path": "tools/import_final_scenes.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "dbe1ea9bc5157758a50408259ad352e816643a88",
+      "size": 12850
     },
     {
       "path": "tools/inspect_groundstation_pointcloud.py",
@@ -2849,11 +4144,18 @@
       "size": 10523
     },
     {
+      "path": "tools/refine_dual_roundtrip.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "be474a8f6c75a2c5977242f81db3cb64c6890e46",
+      "size": 9901
+    },
+    {
       "path": "tools/remote_programs.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "ca11c47152cdef9cdda1f0addd51f137b7d9ac9c",
-      "size": 33468
+      "sha": "349e314a7f66e4e3c1388883adbe005f1ddd996e",
+      "size": 37956
     },
     {
       "path": "tools/remote_prometheus.py",
@@ -2926,6 +4228,13 @@
       "size": 5333
     },
     {
+      "path": "tools/templates/planning_preview.html",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "1e362a663856ec9600d61def611fc91696ef11c9",
+      "size": 33126
+    },
+    {
       "path": "tools/tests/test_bootstrap_copy.ps1",
       "type": "blob",
       "mode": "100644",
@@ -2987,6 +4296,13 @@
       "mode": "100644",
       "sha": "b0ec1aacad3488c525fb1f8c6581517a9c47b46b",
       "size": 483
+    },
+    {
+      "path": "tools/tests/test_final_scenes_ui.js",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "16932097f1fdbd278263064501f5ee7e0c40d649",
+      "size": 9239
     },
     {
       "path": "tools/tests/test_gps_card.js",
@@ -3062,8 +4378,15 @@
       "path": "tools/tests/test_plan_dispatch_ui.js",
       "type": "blob",
       "mode": "100644",
-      "sha": "12730142b2dfb449f473ee52d1da140599cf4357",
-      "size": 12732
+      "sha": "6bb3e3b6e0483a3699c0c9458e758c3b0fbcbb30",
+      "size": 12979
+    },
+    {
+      "path": "tools/tests/test_planning_preview.js",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "7c4d5bd9aeb06c62019d40b5bf04987524923501",
+      "size": 5210
     },
     {
       "path": "tools/tests/test_powershell_encoding.ps1",
@@ -3171,5 +4494,5 @@
       "size": 804
     }
   ],
-  "generated_at": "2026-10-17T07:48:06+00:00"
+  "generated_at": "2026-10-18T08:09:59+00:00"
 }
