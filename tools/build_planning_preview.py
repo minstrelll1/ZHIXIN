@@ -41,6 +41,11 @@ def build_data():
         def to_gps(north, west, z=None):
             return (p['longitude']-west/p['west_m_per_degree'], p['latitude']+north/p['north_m_per_degree'])
         required = transform(to_local, shape(scene['effective_area_geometry_wgs84']))
+        for exemption in area.get('coverage_exempt_areas', []):
+            scene['exclusions'].append(copy.deepcopy(exemption))
+            required = required.difference(transform(to_local, shape(exemption['geometry_wgs84'])))
+        if area.get('coverage_exempt_areas'):
+            scene['effective_area_geometry_wgs84'] = mapping(transform(to_gps, required))
         scene_disks = {'upper': [], 'lower': []}
         catalog['scenes'][sid] = {}
         def coverage(disks, region):

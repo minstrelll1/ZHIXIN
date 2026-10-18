@@ -1,4 +1,4 @@
-"""距离择优只更新定位来源；保存原始证据、分类和累计识别质量。"""
+"""静目标整条记录按水平距离择优；原始证据和动静复核保持可追溯。"""
 import json
 from pathlib import Path
 import tempfile
@@ -51,14 +51,16 @@ class NearestPositionTest(unittest.TestCase):
             self.assertEqual(5.,audit['static_position_selection'][0]['horizontal_distance_m'])
             self.assertEqual('same-id',audit['static_position_selection'][0]['target_id'])
 
-    def test_static_and_converted_static_use_nearest_position_but_latest_quality(self):
+    def test_static_and_converted_static_use_entire_nearest_record(self):
         for moving in (False, True):
             with self.subTest(moving=moving), tempfile.TemporaryDirectory() as directory:
                 root=Path(directory)
                 self.add(root,'near',moving=moving,receipt=1,stamp=1700000000,
-                    horizontal_distance_m=5.,detection_count=1,tracking_success=False,confidence=.3)
+                    horizontal_distance_m=5.,detection_count=1,tracking_success=False,confidence=.3,
+                    category_id=8,category='工事',target_type='building2')
                 self.add(root,'middle',moving=moving,receipt=2,stamp=1700000005,
-                    longitude=113.000001,horizontal_distance_m=10.,detection_count=4)
+                    longitude=113.000001,horizontal_distance_m=10.,detection_count=4,
+                    category_id=13,category='人',target_type='solider3')
                 self.add(root,'latest',moving=moving,receipt=3,stamp=1700000010,
                     longitude=113.000002,horizontal_distance_m=20.,detection_count=8,tracking_success=True,confidence=.9)
                 files={p:p.read_bytes() for p in (root/'UAV1').rglob('*') if p.is_file()}
@@ -68,10 +70,12 @@ class NearestPositionTest(unittest.TestCase):
                 self.assertEqual([113.,34.],feature['geometry']['coordinates'])
                 self.assertEqual('2023-11-15T06:13:20.000+08:00',props['timestamp'])
                 self.assertTrue(props['imagePath'].endswith('_near.jpg'))
-                self.assertEqual(.9,props['confidence'])
+                self.assertEqual(.3,props['confidence'])
+                self.assertEqual('工事',props['targetType'])
+                self.assertEqual('工事2',props['targetModel'])
                 decision=json.loads(path.with_name('dedup-decisions.json').read_text(encoding='utf8'))
-                self.assertEqual(8,decision['quality_ranking'][0]['detection_count'])
-                self.assertTrue(decision['quality_ranking'][0]['tracking_success'])
+                self.assertEqual(1,decision['quality_ranking'][0]['detection_count'])
+                self.assertFalse(decision['quality_ranking'][0]['tracking_success'])
                 self.assertEqual(5.,audit['static_position_selection'][0]['horizontal_distance_m'])
                 self.assertEqual(moving,audit['static_position_selection'][0]['converted_to_static'])
                 self.assertEqual(files,{p:p.read_bytes() for p in files})

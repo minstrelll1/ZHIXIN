@@ -1683,6 +1683,12 @@ def create_app(environment=None, audit=None) -> FastAPI:
             raise
         mission = result.get("mission") or {}
         if role["task_publisher"] and mission.get("subject") == "subject1":
+            from competition_shared.reporting_selection import save_reporting_selection
+            try:
+                save_reporting_selection(image_root, mission["mission_id"], recognition_selection)
+            except (OSError, ValueError) as error:
+                # 结果整理配置故障不反转已完成的分派，也不改变飞行控制流程。
+                audit.record("本次任务上报类别快照保存失败", mission_id=mission.get("mission_id"), error=str(error))
             auto_subject1_reporter.note_mission(mission.get("mission_id"), mission.get("uavs"))
         if isinstance(adapter, DistributedFleetAdapter):
             assigned_uav_ids = list(orchestrator.active_uav_ids)

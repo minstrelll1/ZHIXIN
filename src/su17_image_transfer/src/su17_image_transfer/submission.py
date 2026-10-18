@@ -355,14 +355,17 @@ def _update_subject1_submission_locked(output_root, mission_dir, mission_id, tea
                 key=lambda entry: (quality_rank(entry[0], _confidence(entry[0])), entry[2]),
             )
         else:
-            # 类别、置信度、累计识别质量沿用最后反馈，定位单独按最近距离选取。
-            metadata = item["latest"]
-            best_observation, best_image, _ = max(item["observations"], key=lambda entry: entry[2])
+            # 静目标（含动转静）的完整输出和排序质量来自同一条最近有效观测。
             (position_metadata, position_image, position_rank), position_rule = _static_position_record(item['observations'])
+            metadata = best_observation = position_metadata
+            best_image = position_image
             static_position_selection.append(dict(source_uav=item['source_uav'], target_id=target_id,
                 rule=position_rule, horizontal_distance_m=position_metadata.get('horizontal_distance_m')
                     if position_rule=='minimum_horizontal_distance' else None,
                 coordinates=_position(position_metadata), timestamp=_iso_from_metadata(position_metadata),
+                selected_target_type=category_fields(metadata)[0], selected_target_model=_target_model(metadata),
+                selected_quality=quality_metadata(metadata), selected_confidence=_confidence(metadata),
+                selection_scope='entire_observation',
                 source_json=str(Path(position_rank[2]).relative_to(output_root)),
                 latest_source_json=str(Path(item['latest_rank'][2]).relative_to(output_root)),
                 converted_to_static=motion_audit['converted_to_static']))
@@ -438,9 +441,11 @@ def _update_subject1_submission_locked(output_root, mission_dir, mission_id, tea
     }
     if publisher_dedup:
         from competition_shared.subject1_dedup import consolidate
+        from competition_shared.reporting_selection import load_reporting_selection
 
         _atomic_json(mission_dir / "raw-targets.json", document)
-        document, decisions = consolidate(document)
+        selection = load_reporting_selection(output_root, mission_id)
+        document, decisions = consolidate(document, recognition_selection=selection)
         decisions["motion_reclassifications"] = [row for row in motion_classification if row["converted_to_static"]]
         _atomic_json(mission_dir / "dedup-decisions.json", decisions)
     # 编号只作用于最终赛事文件；原始回传和去重记录继续保留源 ID。
@@ -448,7 +453,8 @@ def _update_subject1_submission_locked(output_root, mission_dir, mission_id, tea
     if publisher_dedup:
         format_audit["deduplication"] = {
             key: decisions[key] for key in ("raw_count", "deduplicated_count", "result_count",
-                                            "backfilled_count", "backfilled", "selection", "static_quality_order", "moving_quality_order")
+                                            "backfilled_count", "backfilled", "selection", "static_quality_order", "moving_quality_order",
+                                            "representative_quality_order", "person_selection")
         }
     format_audit["image_copy_errors"] = image_copy_errors
     format_audit["category_records"] = category_records

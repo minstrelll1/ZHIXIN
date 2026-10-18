@@ -196,7 +196,8 @@ class Subject1Reporter:
         if not already_deduplicated:
             format_audit['deduplication'] = {key: decisions.get(key) for key in
                 ('raw_count', 'deduplicated_count', 'result_count', 'backfilled_count', 'backfilled',
-                 'selection', 'static_quality_order', 'moving_quality_order')}
+                 'selection', 'static_quality_order', 'moving_quality_order',
+                 'representative_quality_order', 'person_selection')}
         if local_path is not None:
             try:
                 audit_path = (local_path.with_suffix('.format.json') if local_path.parent == self.root

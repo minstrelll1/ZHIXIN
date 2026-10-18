@@ -6,7 +6,9 @@ import bisect
 import copy
 import datetime as dt
 import math
+import re
 from .target_quality import quality_rank
+from .recognition import optional_recognition_selection
 
 
 STATIC_DISTANCE_M = 10.0
@@ -192,10 +194,40 @@ def _submission_moving_kind(feature):
     return {"人": "人员", "车": "车辆"}.get(raw, raw)
 
 
-def consolidate(document, *, max_targets=MAX_SUBMISSION_TARGETS):
+def _person_number(feature):
+    props = feature.get('properties', {})
+    if props.get('targetType') not in ('人员', '人'):
+        return None
+    match = re.fullmatch(r'(?:运动的)?人员([1-4])', str(props.get('targetModel', '')))
+    return int(match.group(1)) if match else None
+
+
+def _person_preferences(selection):
+    ids = selection['category_ids']
+    return {'固定': [cid-10 for cid in ids if 11 <= cid <= 14],
+            '移动': [cid-14 for cid in ids if 15 <= cid <= 18]}
+
+
+def _unselected_person(feature, preferences):
+    props = feature.get('properties', {})
+    options = preferences.get(props.get('targetCategory'), [])
+    return bool(options and props.get('targetType') in ('人员', '人')
+                and _person_number(feature) not in options)
+
+
+def _static_representative_key(feature, preferences):
+    success, count, score = _quality(feature)
+    vehicle_or_building = feature.get('properties', {}).get('targetType') in ('车辆', '车', '工事', '建筑物')
+    return (-int(vehicle_or_building), int(_unselected_person(feature, preferences)),
+            -count, -success, -score, str(feature.get('id', '')), str(feature.get('_source_uav', '')))
+
+
+def consolidate(document, *, max_targets=MAX_SUBMISSION_TARGETS, recognition_selection=None):
     """同机和跨机判重后，动人员/车辆各最多3个，其余名额给静目标。"""
     if type(max_targets) is not int or max_targets < 1:
         raise ValueError("上报目标数量必须是正整数")
+    recognition_selection = optional_recognition_selection(recognition_selection)
+    preferences = _person_preferences(recognition_selection)
     result = copy.deepcopy(document)
     raw = result.get("features", [])
     if not isinstance(raw, list):
@@ -217,9 +249,10 @@ def consolidate(document, *, max_targets=MAX_SUBMISSION_TARGETS):
     for group in groups:
         if all(_kind(member)[0] == "移动" for member in group["members"]):
             winner = max(group["members"], key=lambda member: (
+                not _unselected_person(member, preferences),
                 min(MAX_MOVING_TRACK_POINTS, len(_track(member))), _quality(member), str(member.get("id", ""))))
         else:
-            winner = _ordered(group["members"])[0]
+            winner = min(group["members"], key=lambda member: _static_representative_key(member, preferences))
         winners.append(winner)
         for member in group["members"]:
             if member is winner:
@@ -238,19 +271,34 @@ def consolidate(document, *, max_targets=MAX_SUBMISSION_TARGETS):
 
     # 动目标只从去重代表中选择，不能拿同一目标的多机副本凑满3个。
     moving_selected, moving_counts = [], {kind: 0 for kind in MOVING_CATEGORY_LIMITS}
-    for candidate in _ordered(winners):
+    primary = [f for f in winners if not _unselected_person(f, preferences)]
+    for candidate in _ordered(primary):
         kind = _submission_moving_kind(candidate)
         if (kind in MOVING_CATEGORY_LIMITS and moving_counts[kind] < MOVING_CATEGORY_LIMITS[kind]
                 and len(moving_selected) < max_targets):
             moving_selected.append(candidate)
             moving_counts[kind] += 1
     static_slots = max_targets - len(moving_selected)
-    selected = _submission_order([f for f in winners if _kind(f)[0] == "固定"])[:static_slots]
+    selected = _submission_order([f for f in primary if _kind(f)[0] == "固定"])[:static_slots]
     selected.extend(moving_selected)
+    # 只有优先候选不足16时才纳入其他人员型号；仍是去重后的真实目标，动人员最多3个。
+    for candidate in _submission_order([f for f in winners if _unselected_person(f, preferences)]):
+        if len(selected) >= max_targets:
+            break
+        kind = _submission_moving_kind(candidate)
+        if kind is not None and (kind not in MOVING_CATEGORY_LIMITS or moving_counts[kind] >= MOVING_CATEGORY_LIMITS[kind]):
+            continue
+        selected.append(candidate)
+        if kind is not None:
+            moving_counts[kind] += 1
+            moving_selected.append(candidate)
+    static_slots = max_targets - len(moving_selected)
     backfilled = []
     if len(raw) >= max_targets and len(selected) < max_targets:
         static_candidates = [f for f in merged_candidates if _kind(f)[0] == "固定"]
-        for candidate in _submission_order(static_candidates)[:max_targets-len(selected)]:
+        # 保留原有足量候选时的静目标补位，优先本次所选人员型号。
+        static_candidates = sorted(_submission_order(static_candidates), key=lambda f: _unselected_person(f, preferences))
+        for candidate in static_candidates[:max_targets-len(selected)]:
             selected.append(candidate)
             winner = represented_by[id(candidate)]
             backfilled.append({"id": candidate.get("id"), "source_uav": candidate.get("_source_uav"),
@@ -259,6 +307,26 @@ def consolidate(document, *, max_targets=MAX_SUBMISSION_TARGETS):
                                "quality": candidate.get("_quality", {}), "score": _confidence(candidate),
                                "reason": "有效候选达到要求数量，按静目标最终排序从合并的静目标候选补足上报数量"})
     features = _submission_order(selected)
+    person_remappings = []
+    person_counts = {category: {number: 0 for number in numbers} for category, numbers in preferences.items()}
+    for feature in features:
+        category = _kind(feature)[0]
+        number = _person_number(feature)
+        if number in person_counts.get(category, {}):
+            person_counts[category][number] += 1
+    for feature in features:
+        if not _unselected_person(feature, preferences):
+            continue
+        props = feature['properties']; category = props['targetCategory']
+        number = min(preferences[category], key=lambda n: (person_counts[category][n], n))
+        # 赛方型号统一为人员N；动静属性只由targetCategory和几何表达。
+        model = '人员' + str(number)
+        person_remappings.append(dict(id=feature.get('id'), source_uav=feature.get('_source_uav'),
+            target_category=category, original_model=props.get('targetModel'), submitted_model=model,
+            selected_category_id=(14 if category == '移动' else 10)+number,
+            reason='优先候选不足上报上限，真实人员补位并映射为本次所选且当前数量最少的同动静人员型号'))
+        props['targetModel'] = model
+        person_counts[category][number] += 1
     selected_ids = {id(feature) for feature in features}
     omitted = []
     for feature in _submission_order(winners):
@@ -310,5 +378,9 @@ def consolidate(document, *, max_targets=MAX_SUBMISSION_TARGETS):
                     "quality_order": ["detection_count", "tracking_success", "confidence"],
                     "static_quality_order": ["detection_count", "tracking_success", "confidence"],
                     "moving_quality_order": ["tracking_success", "detection_count", "confidence"],
-                    "representative_quality_order": ["tracking_success", "detection_count", "confidence"],
+                    "representative_quality_order": ["vehicle_or_building", "selected_person_model", "detection_count", "tracking_success", "confidence"],
+                    "person_selection": dict(recognition_selection=recognition_selection,
+                        preferred_models=preferences, remappings=person_remappings,
+                        unselected_group_policy='preserve_original_if_no_person_model_selected',
+                        final_model_counts=person_counts),
                     "selection": selection}

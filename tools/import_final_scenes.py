@@ -11,6 +11,8 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'competition_backend'))
 from competition_backend.final_scenes import PATH, NAMES, altitude_profile, departure_for, digest
 from refine_dual_roundtrip import refine_scenes
+from exempt_final_takeoff_area import exclude_takeoff_area
+from refine_final_pond_north import refine_pond_north
 
 
 def swap_xuchang_uav3_uav6(scene):
@@ -161,6 +163,8 @@ def compile_bundle(archive):
                 transit_geometry=dict(boundary_m=boundary, departure_m=home['home_nw_m'], excluded_polygons_m=holes,
                                       boundary_clearance_m=5., vehicles=vehicles))
     refine_scenes(scenes, source)
+    refine_pond_north(scenes)
+    exclude_takeoff_area(scenes, source)
     scenes['xuchang_small_2'] = swap_xuchang_uav3_uav6(scenes['xuchang_small_2'])
     return dict(schema_version=1, source_archive_sha256=hashlib.sha256(Path(archive).read_bytes()).hexdigest(),
                 source_plan_sha256=sha, sha256=digest(scenes), scenes=scenes)
