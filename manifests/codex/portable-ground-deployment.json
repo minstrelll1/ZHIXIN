@@ -2,9 +2,9 @@
   "schema_version": 1,
   "repository": "minstrelll1/ZHIXIN",
   "branch": "codex/portable-ground-deployment",
-  "commit": "01afb98638e2378d2e52df5f8881fda46748cff6",
-  "tree_sha": "952d48a1823f7732e04ef1530eff66033c4c4253",
-  "file_count": 645,
+  "commit": "99919c990795d2ef96a4692919a898eeadbef78a",
+  "tree_sha": "4da4261f3cb07f75a600db45f59b5f4c6c3a0f5f",
+  "file_count": 653,
   "files": [
     {
       "path": ".editorconfig",
@@ -136,8 +136,8 @@
       "path": "competition_backend/competition_backend/api.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "0cfebca0266d0b4aa72582646c8c62328f5adcdf",
-      "size": 119646
+      "sha": "46c498a98ffa64ab0f4a98d17276fee12057066c",
+      "size": 120138
     },
     {
       "path": "competition_backend/competition_backend/assignment_protocol.py",
@@ -304,8 +304,8 @@
       "path": "competition_backend/competition_backend/final_scenes_prepared.json",
       "type": "blob",
       "mode": "100644",
-      "sha": "56659e86ed2f20f82b2c962f79dab07406a1a8b9",
-      "size": 385284
+      "sha": "79ec1549d8cae1b8f69f5967572f991f96ff1608",
+      "size": 381283
     },
     {
       "path": "competition_backend/competition_backend/fixed_gps_scene.py",
@@ -528,8 +528,8 @@
       "path": "competition_backend/competition_backend/subject1_reporting.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "9f3bc6b8daa6454f2d7bdd0061e35fabbfbc5e4e",
-      "size": 30253
+      "sha": "752573d2322b2176c6686010b517bf6717b79584",
+      "size": 30322
     },
     {
       "path": "competition_backend/competition_backend/subject2_actual_prepared.json",
@@ -854,6 +854,13 @@
       "size": 22044
     },
     {
+      "path": "competition_backend/tests/test_final_takeoff_exemption.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "214313d9db4c9e21c40f6b9b47f129abbb7027e6",
+      "size": 12371
+    },
+    {
       "path": "competition_backend/tests/test_fixed_gps_scene.py",
       "type": "blob",
       "mode": "100644",
@@ -1008,6 +1015,13 @@
       "size": 4598
     },
     {
+      "path": "competition_backend/tests/test_person_submission_selection.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "86a37c5a2ac41e794e9e9d95fdac6197a5c1c289",
+      "size": 10351
+    },
+    {
       "path": "competition_backend/tests/test_plan_jobs.py",
       "type": "blob",
       "mode": "100644",
@@ -1144,8 +1158,8 @@
       "path": "competition_backend/tests/test_subject1_dedup_rules.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "93de87c3723cd482d087bced0a19759ade388f3e",
-      "size": 16899
+      "sha": "c00069dcda6cd56fc2e1baad7f5d301c62be88a3",
+      "size": 24742
     },
     {
       "path": "competition_backend/tests/test_subject1_reporting.py",
@@ -1337,6 +1351,13 @@
       "size": 1758
     },
     {
+      "path": "competition_shared/reporting_selection.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "edb9c61abb4b0ec1437df4f8da5e39a300fd3b81",
+      "size": 2176
+    },
+    {
       "path": "competition_shared/return_events.py",
       "type": "blob",
       "mode": "100644",
@@ -1361,8 +1382,8 @@
       "path": "competition_shared/subject1_dedup.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "29df0e4d26421716e57766d33d51b3ca083f7419",
-      "size": 15335
+      "sha": "fcec6f327a99e3d734531f39db47b5d94671fe4d",
+      "size": 19138
     },
     {
       "path": "competition_shared/submission_format.py",
@@ -1417,7 +1438,7 @@
       "path": "config/onboard_programs.json",
       "type": "blob",
       "mode": "100644",
-      "sha": "463ded4d94db163593f9cb7b94fe1134f13ed74f",
+      "sha": "b7c3051f72606bdce612ac6514720c0afa63914c",
       "size": 1782
     },
     {
@@ -1445,8 +1466,8 @@
       "path": "docs/competition_plans_3d.html",
       "type": "blob",
       "mode": "100644",
-      "sha": "88a06246f8b1e50c14fd35821be217fef0502042",
-      "size": 1028166
+      "sha": "2e827b609a798a3829fc9612cd4f99a2e1f45b75",
+      "size": 1014887
     },
     {
       "path": "docs/competition_plans_legacy_3d.html",
@@ -1459,8 +1480,22 @@
       "path": "docs/completed_targets_protocol.md",
       "type": "blob",
       "mode": "100644",
-      "sha": "e6e880ed7ff7389047f7bb56f67998394987ab98",
-      "size": 5423
+      "sha": "84dc388ef48f85b6d9b7bed3b830fb2228c1902f",
+      "size": 6272
+    },
+    {
+      "path": "docs/dedup_order_revision_20261018.txt",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "fc2b4ada02ae243a40b45a8d3eae2d359ab8f9d5",
+      "size": 5632
+    },
+    {
+      "path": "docs/dedup_revision_20261018.txt",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "72de975334ec98202d5b1767a0f6cf1dd46c1e30",
+      "size": 6741
     },
     {
       "path": "docs/dual_platform_deployment.md",
@@ -1487,113 +1522,113 @@
       "path": "docs/final_scenes_integration.txt",
       "type": "blob",
       "mode": "100644",
-      "sha": "21f2c6b7a52b3c75e43f02df225408dad0184516",
-      "size": 14197
+      "sha": "b81e493fe5ae5ee71fc234e8393b79b0b34b8e28",
+      "size": 16234
     },
     {
       "path": "docs/final_scenes_program_b_examples/final_scene_1/planning_preview.json",
       "type": "blob",
       "mode": "100644",
-      "sha": "44e3c48e71b53c8ae808c34086fb52183338c392",
-      "size": 642483
+      "sha": "a7b0a7973e80479985d6852963e113d706834e67",
+      "size": 780907
     },
     {
       "path": "docs/final_scenes_program_b_examples/final_scene_1/uav1.json",
       "type": "blob",
       "mode": "100644",
-      "sha": "e8527f7e8a243bbd8e741645c311654d871d76bd",
-      "size": 54926
+      "sha": "4bf86731bccebb85e71fdaae1263cc0d492af74c",
+      "size": 53465
     },
     {
       "path": "docs/final_scenes_program_b_examples/final_scene_1/uav2.json",
       "type": "blob",
       "mode": "100644",
-      "sha": "153eee628d128d16eed31877231dbcc2361bb3b2",
-      "size": 55093
+      "sha": "2699d6ee74cb156152b6de9ee0c12d9f124858ad",
+      "size": 76420
     },
     {
       "path": "docs/final_scenes_program_b_examples/final_scene_1/uav3.json",
       "type": "blob",
       "mode": "100644",
-      "sha": "e92dcbf80c7608dae9023c2fd5b4cdd04c933e58",
-      "size": 54758
+      "sha": "c65b1ff0c3e92bb3be0e8ea55df922a7d93b7bd4",
+      "size": 75979
     },
     {
       "path": "docs/final_scenes_program_b_examples/final_scene_1/uav4.json",
       "type": "blob",
       "mode": "100644",
-      "sha": "002be2a118d36fba40fa3bba21def19cde375fe8",
-      "size": 55773
+      "sha": "ea95996a8ec43b6e6fe661a996348991ddf5005f",
+      "size": 76788
     },
     {
       "path": "docs/final_scenes_program_b_examples/final_scene_1/uav5.json",
       "type": "blob",
       "mode": "100644",
-      "sha": "42f3598959bc9212de38c2515358024ff3921d8a",
-      "size": 77805
+      "sha": "aab8d52db764974d478c0887d66370e0e0cfc629",
+      "size": 76807
     },
     {
       "path": "docs/final_scenes_program_b_examples/final_scene_1/uav6.json",
       "type": "blob",
       "mode": "100644",
-      "sha": "98a7200883b30ed8b8544540bd8bf05223de701c",
-      "size": 55381
+      "sha": "0f65e347a6f1a57098f86c6e756c4e8982f630e3",
+      "size": 76828
     },
     {
       "path": "docs/final_scenes_program_b_examples/final_scene_2/planning_preview.json",
       "type": "blob",
       "mode": "100644",
-      "sha": "f21216d139220576b74197e43b129232c1f88688",
-      "size": 465732
+      "sha": "252aba0ac9a9c57f3881e9beac9e744c2daacfbc",
+      "size": 455634
     },
     {
       "path": "docs/final_scenes_program_b_examples/final_scene_2/uav1.json",
       "type": "blob",
       "mode": "100644",
-      "sha": "5421046322e106e9307ee5ede03aad59bfdee79f",
-      "size": 34504
+      "sha": "2d9a954e69845a8eb8dcb949d314bcbcc2fa673c",
+      "size": 32718
     },
     {
       "path": "docs/final_scenes_program_b_examples/final_scene_2/uav2.json",
       "type": "blob",
       "mode": "100644",
-      "sha": "7093435479128495288239413421b5640d457f26",
-      "size": 42950
+      "sha": "70c9e8cca42529286480860f46d7805d9d4d8f8b",
+      "size": 41624
     },
     {
       "path": "docs/final_scenes_program_b_examples/final_scene_2/uav3.json",
       "type": "blob",
       "mode": "100644",
-      "sha": "4d6dfdb222bd90b16ee93a3ca2b3e8418602d04a",
-      "size": 43702
+      "sha": "7cedb5b378d6e89861938a21389ec1a9ef902664",
+      "size": 42461
     },
     {
       "path": "docs/final_scenes_program_b_examples/final_scene_2/uav4.json",
       "type": "blob",
       "mode": "100644",
-      "sha": "0475be5d7a529af96ea03cf6c9ff38a0d6c58318",
-      "size": 43670
+      "sha": "b70abac5906a71df552ca59fe53e568585019da7",
+      "size": 42377
     },
     {
       "path": "docs/final_scenes_program_b_examples/final_scene_2/uav5.json",
       "type": "blob",
       "mode": "100644",
-      "sha": "c535b90181cccbeb569ffb7ee58d0b20784c9c8b",
-      "size": 42732
+      "sha": "6d911291fe68690c9dd8e620b876252fda11df00",
+      "size": 41320
     },
     {
       "path": "docs/final_scenes_program_b_examples/final_scene_2/uav6.json",
       "type": "blob",
       "mode": "100644",
-      "sha": "a7b057f1a3b5400a05ed4fcc961742be0e0afeb0",
-      "size": 44132
+      "sha": "1409934512cc61bba4ef13b09585d4181d9a72b6",
+      "size": 42604
     },
     {
       "path": "docs/final_scenes_program_b_examples/index.json",
       "type": "blob",
       "mode": "100644",
-      "sha": "67721efa4dd08b82f4e838e8e4f58869e44c287f",
-      "size": 7079
+      "sha": "48f73afb1ad146740bd987d506fdbdbd8247c091",
+      "size": 7078
     },
     {
       "path": "docs/final_scenes_program_b_examples/xuchang_small_2/planning_preview.json",
@@ -1697,15 +1732,15 @@
       "path": "docs/planning_preview.html",
       "type": "blob",
       "mode": "100644",
-      "sha": "88a06246f8b1e50c14fd35821be217fef0502042",
-      "size": 1028166
+      "sha": "2e827b609a798a3829fc9612cd4f99a2e1f45b75",
+      "size": 1014887
     },
     {
       "path": "docs/planning_preview_data.json",
       "type": "blob",
       "mode": "100644",
-      "sha": "8358707c1c1938abef5b3d9e863b3edb356d9c01",
-      "size": 883624
+      "sha": "30e60eab6520d5cddb16740c7f1324b840100e8d",
+      "size": 872403
     },
     {
       "path": "docs/planning_results/planning_results/README_使用说明.txt",
@@ -2390,8 +2425,8 @@
       "path": "docs/planning_results_v2/planning_results_v2/planning_preview.html",
       "type": "blob",
       "mode": "100644",
-      "sha": "43b0a041c1185af36049604703b25247f26f03a1",
-      "size": 1028172
+      "sha": "d1bbe7e94a9a9a6746f87655e974bb3b943879cb",
+      "size": 1014893
     },
     {
       "path": "docs/planning_results_v2/planning_results_v2/planning_report.txt",
@@ -2761,8 +2796,8 @@
       "path": "docs/recognition_categories.md",
       "type": "blob",
       "mode": "100644",
-      "sha": "161181958e9d82370aebdf0204a4de5f673872a4",
-      "size": 2890
+      "sha": "b57eb3c8c8520239e7eecbba85cfb10db67a0f28",
+      "size": 3647
     },
     {
       "path": "docs/return_reporting.md",
@@ -2901,8 +2936,8 @@
       "path": "docs/subject1_reporting.md",
       "type": "blob",
       "mode": "100644",
-      "sha": "62bd308f18a046e5b1c6c2419cea6c7e4898aa0c",
-      "size": 16872
+      "sha": "f6372311df8fd36dc27b497b3153da655e7425c4",
+      "size": 18920
     },
     {
       "path": "docs/subject2_actual_coverage.png",
@@ -3650,8 +3685,8 @@
       "path": "src/su17_image_transfer/src/su17_image_transfer/submission.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "5109c669ecb607651c12a1fd548ec6891ac7aa4d",
-      "size": 23554
+      "sha": "1795d3ca5b321f30f3421109eaece1ed07589f85",
+      "size": 24068
     },
     {
       "path": "src/su17_image_transfer/test/test_completed_target_v2.py",
@@ -3699,8 +3734,8 @@
       "path": "src/su17_image_transfer/test/test_result_quality_v2.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "e05adf79a991f6c357e53561b8c487309b658099",
-      "size": 4177
+      "sha": "465482c5d6bda0d246c4365e832710fee78c308d",
+      "size": 4169
     },
     {
       "path": "src/su17_image_transfer/test/test_stamp_policy.py",
@@ -3713,8 +3748,8 @@
       "path": "src/su17_image_transfer/test/test_static_nearest_position.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "d41443a385b142d3b15a530c46439f431509941c",
-      "size": 7747
+      "sha": "6b7788f8ce265424adbed10a3fb53e9944692540",
+      "size": 8016
     },
     {
       "path": "src/su17_image_transfer/test/test_submission.py",
@@ -3930,8 +3965,8 @@
       "path": "tools/build_planning_preview.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "040eed1845fb38645f3dd35341f688a6bea3a9d8",
-      "size": 10342
+      "sha": "11698b5ff00f44def31025ba446b136fe5a525a6",
+      "size": 10707
     },
     {
       "path": "tools/build_plans_3d.py",
@@ -4011,6 +4046,13 @@
       "size": 4211
     },
     {
+      "path": "tools/exempt_final_takeoff_area.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "47d5ed07fcaf81c42c1eddd04b799e63bedda15c",
+      "size": 11471
+    },
+    {
       "path": "tools/export_stadium_center_summary.py",
       "type": "blob",
       "mode": "100644",
@@ -4042,8 +4084,8 @@
       "path": "tools/import_final_scenes.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "dbe1ea9bc5157758a50408259ad352e816643a88",
-      "size": 12850
+      "sha": "7a618ebc21759b87ad5984197c97d428d77342b4",
+      "size": 13034
     },
     {
       "path": "tools/inspect_groundstation_pointcloud.py",
@@ -4179,6 +4221,13 @@
       "size": 9901
     },
     {
+      "path": "tools/refine_final_pond_north.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "cfc55924eb7709a9dadf3d9ddb4e323015ea580b",
+      "size": 4725
+    },
+    {
       "path": "tools/remote_programs.py",
       "type": "blob",
       "mode": "100644",
@@ -4191,6 +4240,13 @@
       "mode": "100644",
       "sha": "1be7bc069816ec3a88fec59da8f6747749f60360",
       "size": 15735
+    },
+    {
+      "path": "tools/replay_recent_dedup.py",
+      "type": "blob",
+      "mode": "100644",
+      "sha": "23ff0b22c9b42caa9dd7e0ec1b3d485fed1eba5b",
+      "size": 12559
     },
     {
       "path": "tools/setup_onboard_ssh.ps1",
@@ -4259,8 +4315,8 @@
       "path": "tools/templates/planning_preview.html",
       "type": "blob",
       "mode": "100644",
-      "sha": "1e362a663856ec9600d61def611fc91696ef11c9",
-      "size": 33126
+      "sha": "3b3083fcdd893bbbb9f01a2759a36411299112b2",
+      "size": 33666
     },
     {
       "path": "tools/tests/test_bootstrap_copy.ps1",
@@ -4522,5 +4578,5 @@
       "size": 804
     }
   ],
-  "generated_at": "2026-10-18T12:06:31+00:00"
+  "generated_at": "2026-10-18T14:52:39+00:00"
 }
