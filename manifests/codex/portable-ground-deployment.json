@@ -2,8 +2,8 @@
   "schema_version": 1,
   "repository": "minstrelll1/ZHIXIN",
   "branch": "codex/portable-ground-deployment",
-  "commit": "06bf20acdfcc1e4bbdcf6ba7531c46561a2ee22d",
-  "tree_sha": "4f76461971c156e5ba9e2f02eb5f957c6cf694a5",
+  "commit": "403ecd3318e66faa1415d603491d824ebbba2e8c",
+  "tree_sha": "11c2e03c3349e5d8b27f50bacdd72fe127f5a71d",
   "file_count": 653,
   "files": [
     {
@@ -458,7 +458,7 @@
       "path": "competition_backend/competition_backend/return_report_schedule.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "ad4dee2793b7084506260de578d38916d374b814",
+      "sha": "0d8edc8e20b15b19246dad41725b9cc4a90be866",
       "size": 5221
     },
     {
@@ -528,8 +528,8 @@
       "path": "competition_backend/competition_backend/subject1_reporting.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "752573d2322b2176c6686010b517bf6717b79584",
-      "size": 30322
+      "sha": "a985b78c36ff8c8ced55a10b9f15f6e1cd6de009",
+      "size": 30364
     },
     {
       "path": "competition_backend/competition_backend/subject2_actual_prepared.json",
@@ -626,7 +626,7 @@
       "path": "competition_backend/competition_backend/web/index.html",
       "type": "blob",
       "mode": "100644",
-      "sha": "f4ae0c0da2643d2e803d7e6ee1e8a24c2debdf34",
+      "sha": "c10d18a31e6a1d0412271d5633f8d59f9ef7671d",
       "size": 180246
     },
     {
@@ -1116,8 +1116,8 @@
       "path": "competition_backend/tests/test_return_report_schedule.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "ebdb6e915523cdd2f066f7cceb15356d6188bc50",
-      "size": 6416
+      "sha": "00531725078273032ed91d46958a3c684e64c1fb",
+      "size": 6526
     },
     {
       "path": "competition_backend/tests/test_scaled_scene_plans.py",
@@ -1165,8 +1165,8 @@
       "path": "competition_backend/tests/test_subject1_reporting.py",
       "type": "blob",
       "mode": "100644",
-      "sha": "872ffdf154c4e54808b585d4bfe243888e73c8c0",
-      "size": 25294
+      "sha": "a3405b10b736a273490f75ec7a444146313ccc93",
+      "size": 27459
     },
     {
       "path": "competition_backend/tests/test_subject2_actual_scene.py",
@@ -2803,8 +2803,8 @@
       "path": "docs/return_reporting.md",
       "type": "blob",
       "mode": "100644",
-      "sha": "5e742bb88bd031ec2652f65fccfd949f27ed76a0",
-      "size": 8589
+      "sha": "8b6b0fc13a224fff9302245a0f717bcdac32e877",
+      "size": 8972
     },
     {
       "path": "docs/six_ground_computers_setup.txt",
@@ -4578,5 +4578,5 @@
       "size": 804
     }
   ],
-  "generated_at": "2026-10-18T23:27:40+00:00"
+  "generated_at": "2026-10-19T08:36:42+00:00"
 }
