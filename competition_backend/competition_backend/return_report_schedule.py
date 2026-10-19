@@ -7,8 +7,8 @@ class ReturnReportSchedule:
     RETURN_DELAY = 3.0
     RETURN_INTERVAL = 2.0
     RETURN_COUNT = 10
-    CLOCK_START = 1440.0
-    CLOCK_END = 1530.0
+    CLOCK_START = 1740.0
+    CLOCK_END = 1830.0
     CLOCK_INTERVAL = 5.0
 
     def __init__(self):

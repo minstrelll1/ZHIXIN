@@ -312,7 +312,7 @@ class Subject1Reporter:
 class AutoSubject1Reporter:
     """只在任务发布端按当前比赛计时上报本次科目一任务。"""
 
-    TRIGGER_SECONDS = 24 * 60
+    TRIGGER_SECONDS = 29 * 60
     INTERVAL_SECONDS = 5
 
     def __init__(self, image_root, competition_clock, is_publisher, audit=None,
@@ -445,8 +445,8 @@ class AutoSubject1Reporter:
                     or not current.get('is_authority') or not self.is_publisher()):
                 raise RuntimeError('比赛会话或发布端身份已变化，本次不再发送旧任务结果')
             if (reasons == ['competition_time']
-                    and not 1440 <= float(current.get('elapsed_seconds', 0)) < 1530):
-                raise RuntimeError('比赛时间已离开24分至25分30秒窗口，取消尚未发送的计时上报')
+                    and not self._schedule.CLOCK_START <= float(current.get('elapsed_seconds', 0)) < self._schedule.CLOCK_END):
+                raise RuntimeError('比赛时间已离开29分至30分30秒窗口，取消尚未发送的计时上报')
             receipt = reporter.submit(prepared['draft_id'], scheduled=True)
             outcome = dict(attempt=number, mission_id=mission_id, state=receipt['state'],
                            http_status=receipt['http_status'], detail=receipt['detail'],

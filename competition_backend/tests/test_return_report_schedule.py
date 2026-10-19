@@ -29,39 +29,41 @@ class ScheduleTest(unittest.TestCase):
         self.assertFalse(self.observe(telemetry(), 200))
         self.assertFalse(self.plan.due(201, 1000))
 
-    def test_return_wins_before_timer_even_when_delay_crosses_24_minutes(self):
+    def test_return_wins_before_timer_even_when_delay_crosses_29_minutes(self):
         self.observe(telemetry(), 97)
-        self.assertFalse(self.plan.due(97, 1439))
+        self.assertFalse(self.plan.due(97, 1739))
         self.assertEqual('all_participants_returned',self.plan.selected_strategy)
-        self.assertFalse(self.plan.due(98, 1440))
+        self.assertFalse(self.plan.due(98, 1740))
         for n in range(10):
-            self.assertEqual(['all_participants_returned'],self.plan.due(100+2*n,1442+2*n))
-        self.assertFalse(self.plan.due(140,1482))
+            self.assertEqual(['all_participants_returned'],self.plan.due(100+2*n,1742+2*n))
+        self.assertFalse(self.plan.due(140,1782))
         self.assertEqual(0,self.plan.snapshot()['clock_attempts'])
 
     def test_clock_wins_and_late_sixth_return_does_not_add_requests(self):
         self.observe(telemetry(5),97)
-        self.assertEqual(['competition_time'],self.plan.due(100,1440))
+        self.assertEqual(['competition_time'],self.plan.due(100,1740))
         self.observe(telemetry(),101)
-        self.assertFalse(self.plan.due(104,1444))
-        self.assertEqual(['competition_time'],self.plan.due(105,1445))
+        self.assertFalse(self.plan.due(104,1744))
+        self.assertEqual(['competition_time'],self.plan.due(105,1745))
         self.assertEqual(0,self.plan.return_attempts)
-        self.assertFalse(self.plan.due(190,1530))
+        self.assertFalse(self.plan.due(190,1830))
 
     def test_delayed_telemetry_compares_sixth_event_age_to_timer(self):
         self.observe(telemetry(age=20),100)
-        self.assertEqual(['all_participants_returned'],self.plan.due(100,1445))
+        self.assertEqual(['all_participants_returned'],self.plan.due(100,1745))
         self.assertEqual('all_participants_returned',self.plan.selected_strategy)
 
     def test_clock_window_eighteen_slots_no_rewind_replay_or_catchup(self):
-        self.assertFalse(self.plan.due(0, 1439.99))
+        for elapsed in (1440, 1530, 1739.999):
+            self.assertFalse(self.plan.due(0, elapsed))
+            self.assertIsNone(self.plan.selected_strategy)
         for n in range(18):
-            self.assertEqual(['competition_time'], self.plan.due(100+5*n, 1440+5*n))
-        self.assertFalse(self.plan.due(190, 1530))
-        self.assertFalse(self.plan.due(195, 1440))
+            self.assertEqual(['competition_time'], self.plan.due(100+5*n, 1740+5*n))
+        self.assertFalse(self.plan.due(190, 1830))
+        self.assertFalse(self.plan.due(195, 1740))
         later = ReturnReportSchedule()
-        self.assertEqual(['competition_time'], later.due(0, 1452))
-        self.assertFalse(later.due(1, 1453))
+        self.assertEqual(['competition_time'], later.due(0, 1752))
+        self.assertFalse(later.due(1, 1753))
         self.assertEqual(1, later.snapshot()['clock_attempts'])
 
     def test_reconnect_uses_event_age_without_counting_old_task_or_generic_landing(self):
@@ -107,7 +109,7 @@ class PartialFleetTest(unittest.TestCase):
         self.assertFalse(self.plan.due(39.99, 860))
         for n in range(10):
             self.assertEqual(['all_participants_returned'], self.plan.due(40+2*n, 860+2*n))
-        self.assertFalse(self.plan.due(1000, 1440))
+        self.assertFalse(self.plan.due(1000, 1740))
         self.assertEqual([1, 2, 4, 5], self.plan.snapshot()['participant_uav_ids'])
 
     def test_no_takeoff_no_return_trigger_and_no_shrink_on_disconnect(self):
@@ -118,7 +120,7 @@ class PartialFleetTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.plan.set_participants([1])
         self.assertFalse(self.plan.due(100, 1000))
-        self.assertEqual(['competition_time'], self.plan.due(100, 1440))
+        self.assertEqual(['competition_time'], self.plan.due(100, 1740))
 
     def test_single_aircraft_and_empty_list_not_vacuously_complete(self):
         with self.assertRaises(ValueError):

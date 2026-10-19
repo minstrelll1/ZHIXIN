@@ -295,21 +295,25 @@ class SubmissionReportTest(unittest.TestCase):
 
     def test_auto_report_uses_current_mission_during_competition_window(self):
         with tempfile.TemporaryDirectory() as tmp:
-            state = dict(running=True, is_authority=True, session_id='competition-a', elapsed_seconds=1439)
+            state = dict(running=True, is_authority=True, session_id='competition-a', elapsed_seconds=1739)
             clock = Mock(snapshot=lambda: dict(state))
             auto = report.AutoSubject1Reporter(tmp, clock, lambda: True)
             auto.note_mission('subject1-old')
             auto.note_mission('subject1-current')
+            snapshot = auto.snapshot()
+            self.assertEqual(1740, snapshot['trigger_elapsed_seconds'])
+            self.assertEqual(1740, snapshot['clock_start_seconds'])
+            self.assertEqual(1830, snapshot['clock_end_seconds'])
             with patch.object(report.Subject1Reporter, 'build', return_value=sample()) as build, \
                     patch.object(report.Subject1Reporter, 'submit', return_value=dict(
                         state='http_received', http_status=200, detail='已收到')) as submit:
                 self.assertFalse(auto.tick(now=100))
-                state['elapsed_seconds'] = 1440
+                state['elapsed_seconds'] = 1740
                 self.assertTrue(auto.tick(now=100))
                 self.assertFalse(auto.tick(now=104.9))
-                state['elapsed_seconds'] = 1440
+                state['elapsed_seconds'] = 1740
                 for number in range(2, 19):
-                    state["elapsed_seconds"] = 1440 + (number - 1) * 5
+                    state["elapsed_seconds"] = 1740 + (number - 1) * 5
                     self.assertTrue(auto.tick(now=100 + (number - 1) * 5))
                 deadline = time.monotonic() + 3
                 while auto.snapshot()['attempts_finished'] != 18 and time.monotonic() < deadline:
@@ -318,13 +322,40 @@ class SubmissionReportTest(unittest.TestCase):
                 self.assertEqual(submit.call_count, 18)
                 self.assertEqual([call.args[0] for call in build.call_args_list], ['subject1-current'] * 18)
                 self.assertEqual(auto.snapshot()['last_result']['state'], 'http_received')
-                state['elapsed_seconds'] = 1530
+                state['elapsed_seconds'] = 1830
                 self.assertFalse(auto.tick(now=190))
             state['session_id'] = 'competition-b'
-            state['elapsed_seconds'] = 1500
+            state['elapsed_seconds'] = 1800
             self.assertFalse(auto.tick(now=140))  # 新比赛不能沿用上一场任务。
             self.assertIsNone(auto.snapshot()['mission_id'])
             self.assertEqual(auto.snapshot()['attempts_started'], 0)
+
+    def test_send_time_check_uses_29_minute_window_without_restricting_return_upload(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            state = dict(running=True, is_authority=True, session_id='competition-a', elapsed_seconds=1740)
+            auto = report.AutoSubject1Reporter(tmp, Mock(snapshot=lambda: dict(state)), lambda: True)
+            auto.note_mission('subject1-current')
+            with patch.object(report.Subject1Reporter, 'build', return_value=sample()), \
+                    patch.object(report.Subject1Reporter, 'prepare', return_value={'draft_id': 'test-draft'}), \
+                    patch.object(report.Subject1Reporter, 'submit', return_value=dict(
+                        state='http_received', http_status=200, detail='模拟回执')) as submit:
+                cases = [(1440, 'competition_time', False),
+                         (1739.999, 'competition_time', False),
+                         (1740, 'competition_time', True),
+                         (1829.999, 'competition_time', True),
+                         (1830, 'competition_time', False),
+                         (1440, 'all_participants_returned', True),
+                         (1830, 'all_participants_returned', True)]
+                for number, (elapsed, reason, expected) in enumerate(cases, 1):
+                    with self.subTest(elapsed=elapsed, reason=reason):
+                        state['elapsed_seconds'] = elapsed
+                        submit.reset_mock()
+                        auto._submit_once('competition-a', 'subject1-current', number, [reason])
+                        self.assertEqual(expected, submit.called)
+                        if expected:
+                            submit.assert_called_once_with('test-draft', scheduled=True)
+                        else:
+                            self.assertIn('29分至30分30秒窗口', auto.snapshot()['last_result']['detail'])
 
     def test_four_participant_report_connects_takeoff_list_and_preserves_it(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -357,7 +388,7 @@ class SubmissionReportTest(unittest.TestCase):
 
     def test_auto_report_only_runs_on_publisher_and_reports_missing_results(self):
         with tempfile.TemporaryDirectory() as tmp:
-            state = dict(running=True, is_authority=True, session_id='competition-a', elapsed_seconds=1440)
+            state = dict(running=True, is_authority=True, session_id='competition-a', elapsed_seconds=1740)
             role = [False]
             auto = report.AutoSubject1Reporter(tmp, Mock(snapshot=lambda: dict(state)), lambda: role[0])
             auto.note_mission('subject1-current')

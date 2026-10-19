@@ -1098,9 +1098,9 @@ let 成果草稿=null,成果操作中=false;
 function 更新科目一自动上报状态(automatic){
   if(!automatic){$('subject1AutoStatus').textContent='自动上报状态暂不可用。';return}
   if(!automatic.enabled){$('subject1AutoStatus').textContent='自动上报仅由任务发布端执行。';return}
-  if(!automatic.mission_id){$('subject1AutoStatus').textContent='等待本次科目一任务规划；先满足者生效：本次起飞机全部成功返航3秒后每2秒上报10次，或24分至25分30秒每5秒上报。';return}
+  if(!automatic.mission_id){$('subject1AutoStatus').textContent='等待本次科目一任务规划；先满足者生效：本次起飞机全部成功返航3秒后每2秒上报10次，或29分至30分30秒每5秒上报。';return}
   const started=automatic.attempts_started||0,finished=automatic.attempts_finished||0;
-  $('subject1AutoStatus').textContent=`本次任务 ${automatic.mission_id}：成功返航 ${(automatic.returned_uav_ids||[]).length}/${(automatic.participant_uav_ids||[]).length} 架；起飞参与机 ${(automatic.participant_uav_ids||[]).map(id=>'UAV'+id).join('、')||'等待一键起飞'}；返航触发上报 ${automatic.return_attempts||0}/10 次，计时触发 ${automatic.clock_attempts||0} 次。实际请求 ${started} 次，已结束 ${finished} 次。只执行先触发的一套：全部参与机到点下降3秒后每2秒10次，或24分至25分30秒每5秒一次。当前：${automatic.selected_strategy==='all_participants_returned'?'返航触发':automatic.selected_strategy==='competition_time'?'计时触发':'等待触发'}。${automatic.last_result?.detail||''}`;
+  $('subject1AutoStatus').textContent=`本次任务 ${automatic.mission_id}：成功返航 ${(automatic.returned_uav_ids||[]).length}/${(automatic.participant_uav_ids||[]).length} 架；起飞参与机 ${(automatic.participant_uav_ids||[]).map(id=>'UAV'+id).join('、')||'等待一键起飞'}；返航触发上报 ${automatic.return_attempts||0}/10 次，计时触发 ${automatic.clock_attempts||0} 次。实际请求 ${started} 次，已结束 ${finished} 次。只执行先触发的一套：全部参与机到点下降3秒后每2秒10次，或29分至30分30秒每5秒一次。当前：${automatic.selected_strategy==='all_participants_returned'?'返航触发':automatic.selected_strategy==='competition_time'?'计时触发':'等待触发'}。${automatic.last_result?.detail||''}`;
 }
 setInterval(()=>{if($('subject1ReportDialog').open)更新科目一自动上报状态(当前状态?.subject1_auto_report)},1000);
 function 清除成果草稿(){成果草稿=null;$('sendSubject1Report').disabled=true;$('downloadSubject1Report').hidden=true;$('subject1ReportSummary').textContent='内容已改变，请重新生成并校验。'}
